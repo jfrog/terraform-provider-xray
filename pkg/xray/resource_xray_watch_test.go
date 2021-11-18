@@ -13,8 +13,8 @@ import (
 func TestAccWatch_basic(t *testing.T) {
 	watchName := fmt.Sprintf("test-watch-%d", randomInt())
 	policyName := fmt.Sprintf("security1%d", randomInt())
-	watchDesc := "watch created by xray acceptance tests" // unreadable: invalid length: -8986924103884912440
-	resourceName := "xray_watch.test1"
+	watchDesc := "watch created by xray acceptance tests"
+	resourceName := "xray_watch_all_repos.test1"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -53,7 +53,7 @@ func TestAccWatch_basic(t *testing.T) {
 	filterValue := "Debian"
 	updatedDesc := "updated watch description"
 	updatedValue := "Docker"
-	resourceName := "xray_watch.test"
+	resourceName := "xray_watch_all_repos.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -100,7 +100,7 @@ func TestAccWatch_builds(t *testing.T) {
 	policyName := "test-policy"
 	watchDesc := "watch created by xray acceptance tests"
 	binMgrId := "artifactory-id"
-	resourceName := "xray_watch.test"
+	resourceName := "xray_watch_all_repos.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -148,7 +148,7 @@ func testAccCheckWatchDestroy(s *terraform.State) error {
 	client := provider.Meta().(*resty.Client)
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type == "xray_watch" {
+		if rs.Type == "xray_watch_all_repos" {
 			watch := Watch{}
 			resp, err := client.R().SetResult(watch).Get("xray/api/v2/watches/" + rs.Primary.ID)
 			if err != nil {
@@ -158,7 +158,7 @@ func testAccCheckWatchDestroy(s *terraform.State) error {
 				return err
 			}
 
-			return fmt.Errorf("error: Watch %s still exists %s", rs.Primary.ID, *watch.GeneralData.Name)
+			return fmt.Errorf("error: Watch %s still exists %s", rs.Primary.ID, watch.GeneralData.Name)
 
 		}
 		if rs.Type == "xray_security_policy" {
@@ -207,7 +207,7 @@ resource "xray_security_policy" "security1" {
   }
 }
 
-resource "xray_watch" "test1" {
+resource "xray_watch_all_repos" "test1" {
   name        = "%s"
   description = "%s"
   active = true
@@ -284,7 +284,7 @@ resource "xray_security_policy" "security1" {
 //	}
 //}
 //
-//resource "xray_watch" "test" {
+//resource "xray_watch_all_repos" "test" {
 //	name  = "%s"
 //	description = "%s"
 //	resources {
@@ -326,7 +326,7 @@ resource "xray_security_policy" "security1" {
 //	}
 //}
 //
-//resource "xray_watch" "test" {
+//resource "xray_watch_all_repos" "test" {
 //	name = "%s"
 //	description = "%s"
 //	resources {

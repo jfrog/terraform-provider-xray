@@ -135,6 +135,14 @@ func mergeMaps(schemata ...map[string]interface{}) map[string]interface{} {
 	}
 	return result
 }
+
+func copyInterfaceMap(source map[string]interface{}, target map[string]interface{}) map[string]interface{} {
+	for k, v := range source {
+		target[k] = v
+	}
+	return target
+}
+
 func mergeSchema(schemata ...map[string]*schema.Schema) map[string]*schema.Schema {
 	result := map[string]*schema.Schema{}
 	for _, schma := range schemata {
@@ -161,6 +169,17 @@ func mkNames(name, resource string) (int, string, string) {
 }
 
 type Lens func(key string, value interface{}) []error
+
+type Schema map[string]*schema.Schema
+
+func schemaHasKey(skeema map[string]*schema.Schema) HclPredicate {
+	return func(key string) bool {
+		_, ok := skeema[key]
+		return ok
+	}
+}
+
+type HclPredicate func(hcl string) bool
 
 func mkLens(d *schema.ResourceData) Lens {
 	var errors []error
