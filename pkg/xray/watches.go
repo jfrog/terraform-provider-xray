@@ -2,32 +2,47 @@ package xray
 
 import (
 	"context"
-	"fmt"
-	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"log"
 	"net/http"
-	"reflect"
-	"regexp"
-	"strings"
+
+	"github.com/go-resty/resty/v2"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-const watchesEndpoint = "xray/api/v2/watches"
-
-type Identifiable interface {
-	Id() string
-}
-
-type Watch struct {
-	GeneralData      *WatchGeneralData     `hcl:"general_data" json:"general_data,omitempty"`
-	AssignedPolicies []WatchAssignedPolicy `hcl:"assigned_policies" json:"assigned_policies,omitempty"`
-	WatchRecepients  []string              `hcl:"watch_recipients" json:"watch_recipients,omitempty"`
-}
-
 type WatchGeneralData struct {
-	Name        string `hcl:"name" json:"name,omitempty"`
-	Description string `hcl:"description" json:"description,omitempty"`
-	Active      *bool  `hcl:"active" json:"active,omitempty"`
+	Name        *string `json:"name,omitempty"`
+	Description *string `json:"description,omitempty"`
+	Active      *bool   `json:"active,omitempty"`
+}
+
+type WatchFilterValue struct {
+	Key   *string `json:"key,omitempty"`
+	Value *string `json:"value,omitempty"`
+}
+
+//WatchFilterValueWrapper is a wrapper around WatchFilterValue which handles the API returning both a string and an object for the watch filter value
+//type WatchFilterValueWrapper struct {
+//	WatchFilterValue
+//	IsPropertyFilter bool `json:”-”`
+//}
+
+type WatchFilter struct {
+	Type  *string `json:"type,omitempty"`
+	Value *string `json:"value,omitempty"`
+}
+
+type WatchProjectResource struct {
+	Type            *string        `json:"type,omitempty"`
+	BinaryManagerId *string        `json:"bin_mgr_id,omitempty"`
+	Filters         *[]WatchFilter `json:"filters,omitempty"`
+	// Watch a repo
+	Name *string `json:"name,omitempty"`
+}
+
+type WatchProjectResources struct {
+	Resources *[]WatchProjectResource `json:"resources,omitempty"`
 }
 
 type WatchAssignedPolicy struct {
@@ -35,297 +50,216 @@ type WatchAssignedPolicy struct {
 	Type *string `json:"type,omitempty"`
 }
 
-func (bp WatchGeneralData) Id() string {
-	fmt.Println(bp.Id())
-	return bp.Id()
+type Watch struct {
+	GeneralData      *WatchGeneralData      `json:"general_data,omitempty"`
+	ProjectResources *WatchProjectResources `json:"project_resources,omitempty"`
+	AssignedPolicies *[]WatchAssignedPolicy `json:"assigned_policies,omitempty"`
 }
 
-func mkWatchCreate(unpack UnpackFunc, read schema.ReadContextFunc) schema.CreateContextFunc {
+func expandWatch(d *schema.ResourceData) *Watch {
+	watch := new(Watch)
 
-	return func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-		watch, key, err := unpack(d)
-		fmt.Println(key) // test
-		if err != nil {
-			return diag.FromErr(err)
-		}
-		// watch must be a pointer   *** DM in RT provider it's not a pointer, and it works. Why?
-		// it's nil in both cases now
-		_, err = m.(*resty.Client).R().AddRetryCondition(retryOnMergeError).SetBody(watch).Post(watchesEndpoint)
-
-		if err != nil {
-			return diag.FromErr(err)
-		}
-		d.SetId(key)
-		return read(ctx, d, m)
+	gd := &WatchGeneralData{
+		Name: StringPtr(d.Get("name").(string)),
 	}
+	if v, ok := d.GetOk("description"); ok {
+		gd.Description = StringPtr(v.(string))
+	}
+	if v, ok := d.GetOk("active"); ok {
+		gd.Active = BoolPtr(v.(bool))
+	}
+	watch.GeneralData = gd
+
+	pr := &WatchProjectResources{}
+	if v, ok := d.GetOk("resources"); ok {
+		r := &[]WatchProjectResource{}
+		for _, res := range v.([]interface{}) {
+			*r = append(*r, *expandProjectResource(res))
+		}
+		pr.Resources = r
+	}
+	watch.ProjectResources = pr
+
+	ap := &[]WatchAssignedPolicy{}
+	if v, ok := d.GetOk("assigned_policies"); ok {
+		for _, pol := range v.([]interface{}) {
+			*ap = append(*ap, *expandAssignedPolicy(pol))
+		}
+	}
+	watch.AssignedPolicies = ap
+
+	return watch
 }
 
-func mkWatchRead(pack PackFunc, construct Constructor) schema.ReadContextFunc {
-	return func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-		repo := construct()
-		// watch must be a pointer
-		resp, err := m.(*resty.Client).R().SetResult(repo).Get(watchesEndpoint + d.Id())
+func expandProjectResource(rawCfg interface{}) *WatchProjectResource {
+	resource := new(WatchProjectResource)
 
-		if err != nil {
-			if resp != nil && (resp.StatusCode() == http.StatusNotFound) {
-				d.SetId("")
-				return nil
-			}
-			return diag.FromErr(err)
-		}
-		return diag.FromErr(pack(repo, d))
+	cfg := rawCfg.(map[string]interface{})
+	resource.Type = StringPtr(cfg["type"].(string))
+
+	// should be in a separate resource?
+	if v, ok := cfg["bin_mgr_id"]; ok {
+		resource.BinaryManagerId = StringPtr(v.(string))
 	}
+	if v, ok := cfg["name"]; ok {
+		resource.Name = StringPtr(v.(string))
+	}
+	//TODO:  use same approach as for assigned policies?
+	if v, ok := cfg["filters"]; ok {
+		resourceFilters := expandFilters(v.([]interface{}))
+		resource.Filters = &resourceFilters
+	}
+
+	return resource
 }
 
-func mkWatchUpdate(unpack UnpackFunc, read schema.ReadContextFunc) schema.UpdateContextFunc {
-	return func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-		repo, key, err := unpack(d)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-		// repo must be a pointer
-		_, err = m.(*resty.Client).R().AddRetryCondition(retryOnMergeError).SetBody(repo).Put(watchesEndpoint + d.Id())
-		if err != nil {
-			return diag.FromErr(err)
-		}
+func expandFilters(l []interface{}) []WatchFilter {
+	filters := make([]WatchFilter, 0, len(l))
 
-		d.SetId(key)
-		return read(ctx, d, m)
+	for _, raw := range l {
+		filter := new(WatchFilter)
+		f := raw.(map[string]interface{})
+		filter.Type = StringPtr(f["type"].(string))
+		filter.Value = StringPtr(f["value"].(string))
+
+		//valueWrapper := new(WatchFilterValueWrapper)
+		//fv := new(WatchFilterValue)
+		//fv.Value = StringPtr(f["value"].(string))
+		//valueWrapper.WatchFilterValue = *fv
+		//filter.Value = valueWrapper
+
+		filters = append(filters, *filter)
 	}
+
+	return filters
 }
 
-func deleteWatch(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	resp, err := m.(*resty.Client).R().Delete(watchesEndpoint + d.Id())
+func expandAssignedPolicy(rawCfg interface{}) *WatchAssignedPolicy {
+	policy := new(WatchAssignedPolicy)
 
-	if err != nil && (resp != nil && resp.StatusCode() == http.StatusNotFound) {
-		d.SetId("")
-		return nil
-	}
-	return diag.FromErr(err)
+	cfg := rawCfg.(map[string]interface{})
+	policy.Name = StringPtr(cfg["name"].(string))
+	policy.Type = StringPtr(cfg["type"].(string))
+
+	return policy
 }
 
-type ReadFunc func(d *schema.ResourceData, m interface{}) error
-
-// Constructor Must return a pointer to a struct. When just returning a struct, resty gets confused and thinks it's a map
-type Constructor func() interface{}
-
-// UnpackFunc must return a pointer to a struct and the resource id
-type UnpackFunc func(s *schema.ResourceData) (interface{}, string, error)
-
-type PackFunc func(repo interface{}, d *schema.ResourceData) error
-
-var retryOnMergeError = func() func(response *resty.Response, _r error) bool {
-	var mergeAndSaveRegex = regexp.MustCompile(".*Could not merge and save new descriptor.*")
-	return func(response *resty.Response, _r error) bool {
-		return mergeAndSaveRegex.MatchString(string(response.Body()[:]))
+func flattenProjectResources(resources *WatchProjectResources) []interface{} {
+	if resources == nil || resources.Resources == nil {
+		return []interface{}{}
 	}
-}()
 
-var baseWatchSchema = map[string]*schema.Schema{
-	"name": {
-		Type:     schema.TypeString,
-		Required: true,
-		ForceNew: true,
-	},
-	"description": {
-		Type:     schema.TypeString,
-		Optional: true,
-	},
-	"active": {
-		Type:     schema.TypeBool,
-		Optional: true,
-	},
-	"assigned_policies": {
-		Type:     schema.TypeList,
-		Required: true,
-		Elem: &schema.Resource{
-			Schema: map[string]*schema.Schema{
-				"name": {
-					Type:     schema.TypeString,
-					Required: true,
-				},
-				"type": {
-					Type:     schema.TypeString,
-					Required: true,
-				},
-			},
-		},
-	},
-	"watch_recipients": {
-		Type:     schema.TypeList,
-		Optional: true,
-		Elem: &schema.Schema{
-			Type: schema.TypeString,
-		},
-	},
+	var l []interface{}
+	for _, res := range *resources.Resources {
+		m := make(map[string]interface{})
+		m["type"] = res.Type
+		if res.Name != nil {
+			m["name"] = res.Name
+		}
+		if res.BinaryManagerId != nil {
+			m["bin_mgr_id"] = res.BinaryManagerId
+		}
+		m["filters"] = flattenFilters(res.Filters)
+		l = append(l, m)
+	}
+
+	return l
 }
 
-func unpackBaseWatch(s *schema.ResourceData) WatchGeneralData {
-	d := &ResourceData{s}
-	return WatchGeneralData{
-		Name:        d.getString("name", false),
-		Description: d.getString("description", false),
-		Active:      d.getBoolRef("active", false),
+func flattenFilters(filters *[]WatchFilter) []interface{} {
+	if filters == nil {
+		return []interface{}{}
 	}
+
+	var l []interface{}
+	for _, f := range *filters {
+		m := make(map[string]interface{})
+		m["type"] = f.Type
+		m["value"] = f.Value
+		//m["value"] = f.Value.WatchFilterValue.Value
+		l = append(l, m)
+	}
+
+	return l
 }
 
-type AutoMapper func(field reflect.StructField, thing reflect.Value) map[string]interface{}
+func flattenAssignedPolicies(policies *[]WatchAssignedPolicy) []interface{} {
+	if policies == nil {
+		return []interface{}{}
+	}
 
-func checkForHcl(mapper AutoMapper) AutoMapper {
-	return func(field reflect.StructField, thing reflect.Value) map[string]interface{} {
-		if field.Tag.Get("hcl") != "" {
-			return mapper(field, thing)
-		}
-		return map[string]interface{}{}
+	var l []interface{}
+	for _, p := range *policies {
+		m := make(map[string]interface{})
+		m["name"] = p.Name
+		m["type"] = p.Type
+		l = append(l, m)
 	}
-}
-func findInspector(kind reflect.Kind) AutoMapper {
-	switch kind {
-	case reflect.Struct:
-		return func(f reflect.StructField, t reflect.Value) map[string]interface{} {
-			return lookup(t.Interface())
-		}
-	case reflect.Ptr:
-		return func(field reflect.StructField, thing reflect.Value) map[string]interface{} {
-			deref := reflect.Indirect(thing)
-			if deref.CanAddr() {
-				result := deref.Interface()
-				if deref.Kind() == reflect.Struct {
-					result = []interface{}{lookup(deref.Interface())}
-				}
-				return map[string]interface{}{
-					fieldToHcl(field): result,
-				}
-			}
-			return map[string]interface{}{}
-		}
-	case reflect.Slice:
-		return func(field reflect.StructField, thing reflect.Value) map[string]interface{} {
-			return map[string]interface{}{
-				fieldToHcl(field): castToInterfaceArr(thing.Interface().([]string)),
-			}
-		}
-	}
-	return func(field reflect.StructField, thing reflect.Value) map[string]interface{} {
-		return map[string]interface{}{
-			fieldToHcl(field): thing.Interface(),
-		}
-	}
+
+	return l
 }
 
-// fieldToHcl this function is meant to use the HCL provided in the tag, or create a snake_case from the field name
-// it actually works as expected, but dynamically working with these names was catching edge cases everywhere and
-// it was/is a time sink to catch.
-func fieldToHcl(field reflect.StructField) string {
+func resourceXrayWatchCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	var diags diag.Diagnostics
+	watch := expandWatch(d)
+	_, err := m.(*resty.Client).R().SetBody(watch).Post("xray/api/v2/watches")
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
-	if field.Tag.Get("hcl") != "" {
-		return field.Tag.Get("hcl")
-	}
-	var lowerFields []string
-	rgx := regexp.MustCompile("([A-Z][a-z]+)")
-	fields := rgx.FindAllStringSubmatch(field.Name, -1)
-	for _, matches := range fields {
-		for _, match := range matches[1:] {
-			lowerFields = append(lowerFields, strings.ToLower(match))
-		}
-	}
-	result := strings.Join(lowerFields, "_")
-	return result
+	d.SetId(*watch.GeneralData.Name) // ID may be returned according to the API docs, but not in go-xray
+	resourceXrayWatchRead(ctx, d, m)
+	return diags
 }
 
-func lookup(payload interface{}) map[string]interface{} {
+func resourceXrayWatchRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	var diags diag.Diagnostics
+	watch := Watch{}
+	resp, err := m.(*resty.Client).R().SetResult(&watch).Get("xray/api/v2/watches/" + d.Id())
+	if err != nil {
 
-	values := map[string]interface{}{}
-	var t = reflect.TypeOf(payload)
-	var v = reflect.ValueOf(payload)
-	if t.Kind() == reflect.Ptr {
-		t = t.Elem()
-		v = v.Elem()
-	}
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-		thing := v.Field(i)
-		typeInspector := findInspector(thing.Kind())
-		for key, value := range typeInspector(field, thing) {
-			if _, ok := values[key]; !ok {
-				values[key] = value
-			}
+		if resp != nil && resp.StatusCode() == http.StatusNotFound {
+			log.Printf("[WARN] Xray watch (%s) not found, removing from state", d.Id())
+			d.SetId("")
+			return nil
 		}
+		return diags
 	}
-	return values
+
+	if err := d.Set("description", watch.GeneralData.Description); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("active", watch.GeneralData.Active); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("resources", flattenProjectResources(watch.ProjectResources)); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("assigned_policies", flattenAssignedPolicies(watch.AssignedPolicies)); err != nil {
+		return diag.FromErr(err)
+	}
+
+	return diags
 }
 
-func anyHclPredicate(predicates ...HclPredicate) HclPredicate {
-	return func(hcl string) bool {
-		for _, predicate := range predicates {
-			if predicate(hcl) {
-				return true
-			}
-		}
-		return false
+func resourceXrayWatchUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	var diags diag.Diagnostics
+	watch := expandWatch(d)
+	_, err := m.(*resty.Client).R().SetBody(watch).Put("xray/api/v2/watches/" + d.Id())
+	if err != nil {
+		return diag.FromErr(err)
 	}
-}
-func allHclPredicate(predicates ...HclPredicate) HclPredicate {
-	return func(hcl string) bool {
-		for _, predicate := range predicates {
-			if !predicate(hcl) {
-				return false
-			}
-		}
-		return true
-	}
+
+	d.SetId(*watch.GeneralData.Name)
+	resourceXrayWatchRead(ctx, d, m)
+	return diags
 }
 
-var noClass = ignoreHclPredicate("class", "rclass")
-
-func ignoreHclPredicate(names ...string) HclPredicate {
-	set := map[string]interface{}{}
-	for _, name := range names {
-		set[name] = nil
+func resourceXrayWatchDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	var diags diag.Diagnostics
+	_, err := m.(*resty.Client).R().Delete("xray/api/v2/watches/" + d.Id())
+	if err != nil {
+		return diag.FromErr(err)
 	}
-	return func(hcl string) bool {
-		_, found := set[hcl]
-		return !found
-	}
-}
-
-var defaultPacker = universalPack(noClass)
-
-// universalPack consider making this a function that takes a predicate of what to include and returns
-// a function that does the job. This would allow for the legacy code to specify which keys to keep and not
-func universalPack(predicate HclPredicate) func(payload interface{}, d *schema.ResourceData) error {
-
-	return func(payload interface{}, d *schema.ResourceData) error {
-		setValue := mkLens(d)
-
-		var errors []error
-
-		values := lookup(payload)
-
-		for hcl, value := range values {
-			if predicate != nil && predicate(hcl) {
-				errors = setValue(hcl, value)
-			}
-		}
-
-		if errors != nil && len(errors) > 0 {
-			return fmt.Errorf("failed saving state %q", errors)
-		}
-		return nil
-	}
-}
-
-func mkResourceSchema(skeema map[string]*schema.Schema, packer PackFunc, unpack UnpackFunc, constructor Constructor) *schema.Resource {
-	var reader = mkWatchRead(packer, constructor)
-	return &schema.Resource{
-		CreateContext: mkWatchCreate(unpack, reader),
-		ReadContext:   reader,
-		UpdateContext: mkWatchUpdate(unpack, reader),
-		DeleteContext: deleteWatch,
-		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
-		},
-
-		Schema: skeema,
-	}
+	return diags
 }

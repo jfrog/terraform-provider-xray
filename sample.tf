@@ -164,30 +164,30 @@ resource "xray_security_policy" "security1" {
 resource "xray_watch" "test" {
   name        = "watch-npm-local-repo"
   description = "apply a severity-based policy to the npm local repo"
-  active = true
+  active      = true
 
   resources {
-    type       = "repository"
-    name       = "example-repo-local"
+    type = "repository"
+    name = "example-repo-local"
     //bin_mgr_id = "example-com-artifactory-instance"
-    repo_type  = "local"
+    repo_type = "local"
     filters {
       type  = "package-type"
       value = "Npm"
     }
   }
 
-//  resources {
-//    type       = "repository"
-//    name       = artifactory_remote_repository.npm-remote.key
-//    bin_mgr_id = "default"
-//    repo_type  = "remote"
-//
-//    filters {
-//      type  = "package-type"
-//      value = "Npm"
-//    }
-//  }
+  //  resources {
+  //    type       = "repository"
+  //    name       = artifactory_remote_repository.npm-remote.key
+  //    bin_mgr_id = "default"
+  //    repo_type  = "remote"
+  //
+  //    filters {
+  //      type  = "package-type"
+  //      value = "Npm"
+  //    }
+  //  }
 
   assigned_policies {
     name = xray_security_policy.security1.name

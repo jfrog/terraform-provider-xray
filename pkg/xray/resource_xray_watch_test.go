@@ -10,11 +10,28 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
+var tempStructWatch = map[string]string{
+	"resource_name":        "",
+	"watch_name":           "xray-watch",
+	"description":          "This is a new watch created by TF Provider",
+	"active":               "true",
+	"watch_type":           "all-repos",
+	"filter_type_0":        "regex",
+	"filter_value_0":       ".*",
+	"policy_name":          "xray-policy",
+	"assigned_policy_type": "security",
+	"watch_recipient_0":    "test@email.com",
+	"watch_recipient_1":    "test1@email.com",
+}
+
 func TestAccWatch_basic(t *testing.T) {
-	watchName := fmt.Sprintf("test-watch-%d", randomInt())
-	policyName := fmt.Sprintf("security1%d", randomInt())
-	watchDesc := "watch created by xray acceptance tests"
-	resourceName := "xray_watch_all_repos.test1"
+	_, fqrn, resourceName := mkNames("watch-", "xray_watch")
+	tempStruct := make(map[string]string)
+	copyStringMap(tempStructWatch, tempStruct)
+
+	tempStruct["resource_name"] = resourceName
+	tempStruct["watch_name"] = "xray-watch-1"
+	tempStruct["policy_name"] = fmt.Sprintf("xray-policy-%d", randomInt())
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -22,24 +39,70 @@ func TestAccWatch_basic(t *testing.T) {
 		ProviderFactories: testAccProviders,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccXrayWatchBasic(watchName, watchDesc, policyName),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", watchName),
-				),
+				Config: executeTemplate(fqrn, allReposWatchTemplate, tempStruct),
+				Check:  verifyXrayWatch(fqrn, tempStruct),
 			},
 			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: false,
-			},
-			{
-				Config: testAccXrayWatchUnassigned(policyName),
+				Config: testAccXrayWatchUnassigned(tempStruct["policy_name"]),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckWatchDoesntExist(resourceName),
+					testAccCheckWatchDoesntExist(fqrn),
 				),
 			},
 		},
 	})
+}
+
+const allReposWatchTemplate = `resource "xray_security_policy" "security" {
+  name        = "{{ .policy_name }}"
+  description = "Security policy description"
+  type        = "security"
+  rules {
+    name     = "rule-name-severity"
+    priority = 1
+    criteria {
+      min_severity = "High"
+    }
+    actions {
+      webhooks = []
+      mails    = ["test@email.com"]
+      block_download {
+        unscanned = true
+        active    = true
+      }
+      block_release_bundle_distribution  = true
+      fail_build                         = true
+      notify_watch_recipients            = true
+      notify_deployer                    = true
+      create_ticket_enabled              = false  
+      build_failure_grace_period_in_days = 5   
+    }
+  }
+}
+
+resource "xray_watch" "{{ .resource_name }}" {
+  name        	= "{{ .watch_name }}"
+  description 	= "{{ .description }}"
+  active 		= {{ .active }}
+
+  resources {
+	type       	= "{{ .watch_type }}"
+	filters {
+		type  	= "{{ .filter_type_0 }}"
+		value	= "{{ .filter_value_0 }}"
+	}
+}
+  assigned_policies {
+  	name 	= xray_security_policy.security.name
+  	type 	= "{{ .assigned_policy_type }}"
+}
+  watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
+}`
+
+func verifyXrayWatch(fqrn string, tempStruct map[string]string) resource.TestCheckFunc {
+	return resource.ComposeTestCheckFunc(
+		resource.TestCheckResourceAttr(fqrn, "name", tempStruct["watch_name"]),
+		resource.TestCheckResourceAttr(fqrn, "description", tempStruct["description"]),
+	)
 }
 
 // These two tests are commented out because repoName and binMgrId must be real values but neither are terraformable so can't be put into these tests
@@ -53,7 +116,7 @@ func TestAccWatch_basic(t *testing.T) {
 	filterValue := "Debian"
 	updatedDesc := "updated watch description"
 	updatedValue := "Docker"
-	resourceName := "xray_watch_all_repos.test"
+	resourceName := "xray_watch.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -100,7 +163,7 @@ func TestAccWatch_builds(t *testing.T) {
 	policyName := "test-policy"
 	watchDesc := "watch created by xray acceptance tests"
 	binMgrId := "artifactory-id"
-	resourceName := "xray_watch_all_repos.test"
+	resourceName := "xray_watch.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -148,7 +211,7 @@ func testAccCheckWatchDestroy(s *terraform.State) error {
 	client := provider.Meta().(*resty.Client)
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type == "xray_watch_all_repos" {
+		if rs.Type == "xray_watch" {
 			watch := Watch{}
 			resp, err := client.R().SetResult(watch).Get("xray/api/v2/watches/" + rs.Primary.ID)
 			if err != nil {
@@ -158,7 +221,7 @@ func testAccCheckWatchDestroy(s *terraform.State) error {
 				return err
 			}
 
-			return fmt.Errorf("error: Watch %s still exists %s", rs.Primary.ID, watch.GeneralData.Name)
+			return fmt.Errorf("error: Watch %s still exists %s", rs.Primary.ID, *watch.GeneralData.Name)
 
 		}
 		if rs.Type == "xray_security_policy" {
@@ -178,61 +241,11 @@ func testAccCheckWatchDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccXrayWatchBasic(name, description, policyName string) string {
-	return fmt.Sprintf(`
-resource "xray_security_policy" "security1" {
-  name        = "%s"
-  description = "Security policy description"
-  type        = "security"
-  rules {
-    name     = "rule-name-severity"
-    priority = 1
-    criteria {
-      min_severity = "High"
-    }
-    actions {
-      webhooks = []
-      mails    = ["test@email.com"]
-      block_download {
-        unscanned = true
-        active    = true
-      }
-      block_release_bundle_distribution  = true
-      fail_build                         = true
-      notify_watch_recipients            = true
-      notify_deployer                    = true
-      create_ticket_enabled              = false  
-      build_failure_grace_period_in_days = 5   
-    }
-  }
-}
-
-resource "xray_watch_all_repos" "test1" {
-  name        = "%s"
-  description = "%s"
-  active = true
-
-  resources {
-    type       = "all-repos"
-    filters {
-      type  = "package-type"
-      value = "Npm"
-    }
-  }
-  assigned_policies {
-    name = xray_security_policy.security1.name
-    type = "security"
-  }
-  watch_recipients = ["test@email.com"]
-}
-`, policyName, name, description)
-}
-
 // Since policies can't be deleted if they have a watch assigned, we need to force terraform to delete the watch first
 // by removing it from the code at the end of every test step
 func testAccXrayWatchUnassigned(policyName string) string {
 	return fmt.Sprintf(`
-resource "xray_security_policy" "security1" {
+resource "xray_security_policy" "security" {
   name        = "%s"
   description = "Security policy description"
   type        = "security"
@@ -284,7 +297,7 @@ resource "xray_security_policy" "security1" {
 //	}
 //}
 //
-//resource "xray_watch_all_repos" "test" {
+//resource "xray_watch" "test" {
 //	name  = "%s"
 //	description = "%s"
 //	resources {
@@ -326,7 +339,7 @@ resource "xray_security_policy" "security1" {
 //	}
 //}
 //
-//resource "xray_watch_all_repos" "test" {
+//resource "xray_watch" "test" {
 //	name = "%s"
 //	description = "%s"
 //	resources {
