@@ -24,7 +24,7 @@ var tempStructWatch = map[string]string{
 	"watch_recipient_1":    "test1@email.com",
 }
 
-func TestAccWatch_basic(t *testing.T) {
+func TestAccWatch_allRepos(t *testing.T) {
 	_, fqrn, resourceName := mkNames("watch-", "xray_watch")
 	tempStruct := make(map[string]string)
 	copyStringMap(tempStructWatch, tempStruct)
@@ -40,6 +40,37 @@ func TestAccWatch_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: executeTemplate(fqrn, allReposWatchTemplate, tempStruct),
+				Check:  verifyXrayWatch(fqrn, tempStruct),
+			},
+			{
+				Config: testAccXrayWatchUnassigned(tempStruct["policy_name"]),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckWatchDoesntExist(fqrn),
+				),
+			},
+		},
+	})
+}
+
+// To verify watch for single repo we need to create a new repository with Xray indexing enabled
+// We need to figure out how to use external providers in the tests. Documented approach didn't work
+// testAccPreCheck() is creating a local repo using the API call
+func TestAccWatch_repository(t *testing.T) {
+	_, fqrn, resourceName := mkNames("watch-", "xray_watch")
+	tempStruct := make(map[string]string)
+	copyStringMap(tempStructWatch, tempStruct)
+
+	tempStruct["resource_name"] = resourceName
+	tempStruct["watch_name"] = "xray-watch-1"
+	tempStruct["policy_name"] = fmt.Sprintf("xray-policy-%d", randomInt())
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheckWatch(t) },
+		CheckDestroy:      testAccCheckWatchDestroy,
+		ProviderFactories: testAccProviders,
+		Steps: []resource.TestStep{
+			{
+				Config: executeTemplate(fqrn, repositoryWatchTemplate, tempStruct),
 				Check:  verifyXrayWatch(fqrn, tempStruct),
 			},
 			{
@@ -86,6 +117,55 @@ resource "xray_watch" "{{ .resource_name }}" {
 
   resources {
 	type       	= "{{ .watch_type }}"
+	filters {
+		type  	= "{{ .filter_type_0 }}"
+		value	= "{{ .filter_value_0 }}"
+	}
+}
+  assigned_policies {
+  	name 	= xray_security_policy.security.name
+  	type 	= "{{ .assigned_policy_type }}"
+}
+  watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
+}`
+
+const repositoryWatchTemplate = `resource "xray_security_policy" "security" {
+  name        = "{{ .policy_name }}"
+  description = "Security policy description"
+  type        = "security"
+  rules {
+    name     = "rule-name-severity"
+    priority = 1
+    criteria {
+      min_severity = "High"
+    }
+    actions {
+      webhooks = []
+      mails    = ["test@email.com"]
+      block_download {
+        unscanned = true
+        active    = true
+      }
+      block_release_bundle_distribution  = true
+      fail_build                         = true
+      notify_watch_recipients            = true
+      notify_deployer                    = true
+      create_ticket_enabled              = false  
+      build_failure_grace_period_in_days = 5   
+    }
+  }
+}
+
+
+resource "xray_watch" "{{ .resource_name }}" {
+  name        	= "{{ .watch_name }}"
+  description 	= "{{ .description }}"
+  active 		= {{ .active }}
+
+  resources {
+	type       	= "repository"
+	bin_mgr_id  = "default"
+	name		= "libs-release-local"
 	filters {
 		type  	= "{{ .filter_type_0 }}"
 		value	= "{{ .filter_value_0 }}"

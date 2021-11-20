@@ -2,8 +2,10 @@ package xray
 
 import (
 	"context"
+	"fmt"
 	"github.com/go-resty/resty/v2"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -43,11 +45,42 @@ func getTestResty(t *testing.T) *resty.Client {
 
 func testAccPreCheck(t *testing.T) {
 	restyClient := getTestResty(t)
-	// TODO check the payload and make sure it's the right license type
-	_, err := restyClient.R().Get("/artifactory/api/system/licenses/")
-	if err != nil {
-		t.Fatal(err)
+	resp, errLicense := restyClient.R().Get("/artifactory/api/system/licenses/")
+	s := fmt.Sprintf("%s", resp.Body())
+	if errLicense != nil {
+		t.Fatal(errLicense)
 	}
+	if !strings.Contains(fmt.Sprint(s), "Enterprise") {
+		t.Fatal(s, "\nArtifactory requires Enterprise license to work with Terraform!")
+	}
+	ctx := context.Background()
+	provider, _ := testAccProviders["xray"]()
+	oldErr := provider.Configure(ctx, terraform.NewResourceConfigRaw(nil))
+	if oldErr != nil {
+		t.Fatal(oldErr)
+	}
+}
+
+func testAccPreCheckWatch(t *testing.T) {
+	restyClient := getTestResty(t)
+	resp, errLicense := restyClient.R().Get("/artifactory/api/system/licenses/")
+	s := fmt.Sprintf("%s", resp.Body())
+	if errLicense != nil {
+		t.Fatal(errLicense)
+	}
+	if !strings.Contains(fmt.Sprint(s), "Enterprise") {
+		t.Fatal(s, "\nArtifactory requires Enterprise license to work with Terraform!")
+	}
+
+	// Create a local repository with Xray indexing enabled. It will be used in the tests
+	body := "{\n\"rclass\":\"local\",\n\"xrayIndex\":true\n}"
+	_, errRepo := restyClient.R().SetBody(body).Put("artifactory/api/repositories/libs-release-local")
+	repoExists := strings.Contains(fmt.Sprint(errRepo), "Case insensitive repository key already exists")
+	repoCreated := strings.Contains(fmt.Sprint(errRepo), "Successfully created repository")
+	if !repoExists && !repoCreated {
+		t.Fatal(errRepo)
+	}
+
 	ctx := context.Background()
 	provider, _ := testAccProviders["xray"]()
 	oldErr := provider.Configure(ctx, terraform.NewResourceConfigRaw(nil))
