@@ -74,13 +74,14 @@ func testAccPreCheckWatch(t *testing.T) {
 
 	// Create a local repository with Xray indexing enabled. It will be used in the tests
 	body := "{\n\"rclass\":\"local\",\n\"xrayIndex\":true\n}"
-	_, errRepo := restyClient.R().SetBody(body).Put("artifactory/api/repositories/libs-release-local")
-	repoExists := strings.Contains(fmt.Sprint(errRepo), "Case insensitive repository key already exists")
-	repoCreated := strings.Contains(fmt.Sprint(errRepo), "Successfully created repository")
-	if !repoExists && !repoCreated {
-		t.Fatal(errRepo)
+	for _, repo := range []string{"libs-release-local", "libs-release-local-1"} {
+		_, errRepo := restyClient.R().SetBody(body).Put("artifactory/api/repositories/" + repo)
+		repoExists := strings.Contains(fmt.Sprint(errRepo), "Case insensitive repository key already exists")
+		repoCreated := strings.Contains(fmt.Sprint(errRepo), "Successfully created repository")
+		if !repoExists && !repoCreated {
+			t.Fatal(errRepo)
+		}
 	}
-
 	ctx := context.Background()
 	provider, _ := testAccProviders["xray"]()
 	oldErr := provider.Configure(ctx, terraform.NewResourceConfigRaw(nil))

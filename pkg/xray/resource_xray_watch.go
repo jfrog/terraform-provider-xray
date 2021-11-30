@@ -30,7 +30,7 @@ func resourceXrayWatch() *schema.Resource {
 				Type:     schema.TypeBool,
 				Optional: true,
 			},
-			"resources": {
+			"resource": {
 				Type:     schema.TypeList,
 				Required: true,
 				Elem: &schema.Resource{
@@ -48,7 +48,7 @@ func resourceXrayWatch() *schema.Resource {
 							Optional:    true,
 							Description: "The name of the repository. Enable Xray indexing must be enabled on the repo",
 						},
-						"filters": {
+						"filter": { // Plural replaced for the HCL sake
 							Type:     schema.TypeList,
 							Optional: true,
 							Elem: &schema.Resource{
@@ -69,8 +69,9 @@ func resourceXrayWatch() *schema.Resource {
 					},
 				},
 			},
-
-			"assigned_policies": {
+			// "assigned_policies" in the API call body. Plural is replaced in lue of better reflection of the
+			// actual functionality (see HCL examples)
+			"assigned_policy": {
 				Type:     schema.TypeList,
 				Required: true,
 				Elem: &schema.Resource{

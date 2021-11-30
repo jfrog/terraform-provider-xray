@@ -22,12 +22,6 @@ type WatchFilterValue struct {
 	Value *string `json:"value,omitempty"`
 }
 
-//WatchFilterValueWrapper is a wrapper around WatchFilterValue which handles the API returning both a string and an object for the watch filter value
-//type WatchFilterValueWrapper struct {
-//	WatchFilterValue
-//	IsPropertyFilter bool `json:”-”`
-//}
-
 type WatchFilter struct {
 	Type  *string `json:"type,omitempty"`
 	Value *string `json:"value,omitempty"`
@@ -71,7 +65,7 @@ func expandWatch(d *schema.ResourceData) *Watch {
 	watch.GeneralData = gd
 
 	pr := &WatchProjectResources{}
-	if v, ok := d.GetOk("resources"); ok {
+	if v, ok := d.GetOk("resource"); ok {
 		r := &[]WatchProjectResource{}
 		for _, res := range v.([]interface{}) {
 			*r = append(*r, *expandProjectResource(res))
@@ -81,7 +75,7 @@ func expandWatch(d *schema.ResourceData) *Watch {
 	watch.ProjectResources = pr
 
 	ap := &[]WatchAssignedPolicy{}
-	if v, ok := d.GetOk("assigned_policies"); ok {
+	if v, ok := d.GetOk("assigned_policy"); ok {
 		for _, pol := range v.([]interface{}) {
 			*ap = append(*ap, *expandAssignedPolicy(pol))
 		}
@@ -97,15 +91,14 @@ func expandProjectResource(rawCfg interface{}) *WatchProjectResource {
 	cfg := rawCfg.(map[string]interface{})
 	resource.Type = StringPtr(cfg["type"].(string))
 
-	// should be in a separate resource?
 	if v, ok := cfg["bin_mgr_id"]; ok {
 		resource.BinaryManagerId = StringPtr(v.(string))
 	}
 	if v, ok := cfg["name"]; ok {
 		resource.Name = StringPtr(v.(string))
 	}
-	//TODO:  use same approach as for assigned policies?
-	if v, ok := cfg["filters"]; ok {
+
+	if v, ok := cfg["filter"]; ok {
 		resourceFilters := expandFilters(v.([]interface{}))
 		resource.Filters = &resourceFilters
 	}
@@ -119,15 +112,8 @@ func expandFilters(l []interface{}) []WatchFilter {
 	for _, raw := range l {
 		filter := new(WatchFilter)
 		f := raw.(map[string]interface{})
-		filter.Type = StringPtr(f["type"].(string))
+		filter.Type = StringPtr(f["type"].(string)) // TODO: recognize the type of the filter
 		filter.Value = StringPtr(f["value"].(string))
-
-		//valueWrapper := new(WatchFilterValueWrapper)
-		//fv := new(WatchFilterValue)
-		//fv.Value = StringPtr(f["value"].(string))
-		//valueWrapper.WatchFilterValue = *fv
-		//filter.Value = valueWrapper
-
 		filters = append(filters, *filter)
 	}
 
@@ -159,7 +145,7 @@ func flattenProjectResources(resources *WatchProjectResources) []interface{} {
 		if res.BinaryManagerId != nil {
 			m["bin_mgr_id"] = res.BinaryManagerId
 		}
-		m["filters"] = flattenFilters(res.Filters)
+		m["filter"] = flattenFilters(res.Filters)
 		l = append(l, m)
 	}
 
@@ -232,10 +218,10 @@ func resourceXrayWatchRead(ctx context.Context, d *schema.ResourceData, m interf
 	if err := d.Set("active", watch.GeneralData.Active); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("resources", flattenProjectResources(watch.ProjectResources)); err != nil {
+	if err := d.Set("resource", flattenProjectResources(watch.ProjectResources)); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("assigned_policies", flattenAssignedPolicies(watch.AssignedPolicies)); err != nil {
+	if err := d.Set("assigned_policy", flattenAssignedPolicies(watch.AssignedPolicies)); err != nil {
 		return diag.FromErr(err)
 	}
 

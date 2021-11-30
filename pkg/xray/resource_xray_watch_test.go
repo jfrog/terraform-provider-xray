@@ -18,20 +18,23 @@ var tempStructWatch = map[string]string{
 	"watch_type":           "all-repos",
 	"filter_type_0":        "regex",
 	"filter_value_0":       ".*",
-	"policy_name":          "xray-policy",
+	"filter_type_1":        "package-type",
+	"filter_value_1":       "Docker",
+	"policy_name_0":        "xray-policy-0",
+	"policy_name_1":        "xray-policy-1",
 	"assigned_policy_type": "security",
 	"watch_recipient_0":    "test@email.com",
 	"watch_recipient_1":    "test1@email.com",
 }
 
-func TestAccWatch_allRepos(t *testing.T) {
+func TestAccWatch_allReposSinglePolicy(t *testing.T) {
 	_, fqrn, resourceName := mkNames("watch-", "xray_watch")
 	tempStruct := make(map[string]string)
 	copyStringMap(tempStructWatch, tempStruct)
 
 	tempStruct["resource_name"] = resourceName
-	tempStruct["watch_name"] = "xray-watch-1"
-	tempStruct["policy_name"] = fmt.Sprintf("xray-policy-%d", randomInt())
+	tempStruct["watch_name"] = fmt.Sprintf("xray-watch-%d", randomInt())
+	tempStruct["policy_name_0"] = fmt.Sprintf("xray-policy-%d", randomInt())
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -39,29 +42,46 @@ func TestAccWatch_allRepos(t *testing.T) {
 		ProviderFactories: testAccProviders,
 		Steps: []resource.TestStep{
 			{
-				Config: executeTemplate(fqrn, allReposWatchTemplate, tempStruct),
+				Config: executeTemplate(fqrn, allReposSinglePolicyWatchTemplate, tempStruct),
 				Check:  verifyXrayWatch(fqrn, tempStruct),
-			},
-			{
-				Config: testAccXrayWatchUnassigned(tempStruct["policy_name"]),
-				Check: resource.ComposeTestCheckFunc(
-					testAccCheckWatchDoesntExist(fqrn),
-				),
 			},
 		},
 	})
 }
 
-// To verify watch for single repo we need to create a new repository with Xray indexing enabled
-// We need to figure out how to use external providers in the tests. Documented approach didn't work
-// testAccPreCheck() is creating a local repo using the API call
-func TestAccWatch_repository(t *testing.T) {
+func TestAccWatch__allReposMultiplePolicies(t *testing.T) {
 	_, fqrn, resourceName := mkNames("watch-", "xray_watch")
 	tempStruct := make(map[string]string)
 	copyStringMap(tempStructWatch, tempStruct)
 
 	tempStruct["resource_name"] = resourceName
-	tempStruct["watch_name"] = "xray-watch-1"
+	tempStruct["watch_name"] = fmt.Sprintf("xray-watch-%d", randomInt())
+	tempStruct["policy_name_0"] = fmt.Sprintf("xray-policy-%d", randomInt())
+	tempStruct["policy_name_1"] = fmt.Sprintf("xray-policy-%d", randomInt())
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckWatchDestroy,
+		ProviderFactories: testAccProviders,
+		Steps: []resource.TestStep{
+			{
+				Config: executeTemplate(fqrn, allReposMultiplePoliciesWatchTemplate, tempStruct),
+				Check:  verifyXrayWatch(fqrn, tempStruct),
+			},
+		},
+	})
+}
+
+// To verify the watch for a single repo we need to create a new repository with Xray indexing enabled
+// testAccPreCheckWatch() is creating a local repo with Xray indexing enabled using the API call
+// We need to figure out how to use external providers (like Artifactory) in the tests. Documented approach didn't work
+func TestAccWatch_singleRepository(t *testing.T) {
+	_, fqrn, resourceName := mkNames("watch-", "xray_watch")
+	tempStruct := make(map[string]string)
+	copyStringMap(tempStructWatch, tempStruct)
+
+	tempStruct["resource_name"] = resourceName
+	tempStruct["watch_name"] = fmt.Sprintf("xray-watch-%d", randomInt())
 	tempStruct["policy_name"] = fmt.Sprintf("xray-policy-%d", randomInt())
 
 	resource.Test(t, resource.TestCase{
@@ -70,21 +90,41 @@ func TestAccWatch_repository(t *testing.T) {
 		ProviderFactories: testAccProviders,
 		Steps: []resource.TestStep{
 			{
-				Config: executeTemplate(fqrn, repositoryWatchTemplate, tempStruct),
+				Config: executeTemplate(fqrn, singleRepositoryWatchTemplate, tempStruct),
 				Check:  verifyXrayWatch(fqrn, tempStruct),
-			},
-			{
-				Config: testAccXrayWatchUnassigned(tempStruct["policy_name"]),
-				Check: resource.ComposeTestCheckFunc(
-					testAccCheckWatchDoesntExist(fqrn),
-				),
 			},
 		},
 	})
 }
 
-const allReposWatchTemplate = `resource "xray_security_policy" "security" {
-  name        = "{{ .policy_name }}"
+func TestAccWatch_multipleRepositories(t *testing.T) {
+	_, fqrn, resourceName := mkNames("watch-", "xray_watch")
+	tempStruct := make(map[string]string)
+	copyStringMap(tempStructWatch, tempStruct)
+
+	tempStruct["resource_name"] = resourceName
+	tempStruct["watch_name"] = fmt.Sprintf("xray-watch-%d", randomInt())
+	tempStruct["policy_name"] = fmt.Sprintf("xray-policy-%d", randomInt())
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheckWatch(t) },
+		CheckDestroy:      testAccCheckWatchDestroy,
+		ProviderFactories: testAccProviders,
+		Steps: []resource.TestStep{
+			{
+				Config: executeTemplate(fqrn, multipleRepositoriesWatchTemplate, tempStruct),
+				Check:  verifyXrayWatch(fqrn, tempStruct),
+			},
+			{
+				Config: executeTemplate(fqrn, multipleRepositoriesWatchTemplate, tempStruct),
+				Check:  verifyXrayWatch(fqrn, tempStruct),
+			},
+		},
+	})
+}
+
+const allReposSinglePolicyWatchTemplate = `resource "xray_security_policy" "security" {
+  name        = "{{ .policy_name_0 }}"
   description = "Security policy description"
   type        = "security"
   rules {
@@ -115,21 +155,107 @@ resource "xray_watch" "{{ .resource_name }}" {
   description 	= "{{ .description }}"
   active 		= {{ .active }}
 
-  resources {
+  resource {
 	type       	= "{{ .watch_type }}"
-	filters {
+	filter {
 		type  	= "{{ .filter_type_0 }}"
 		value	= "{{ .filter_value_0 }}"
 	}
 }
-  assigned_policies {
+  assigned_policy {
   	name 	= xray_security_policy.security.name
-  	type 	= "{{ .assigned_policy_type }}"
+  	type 	= "security"
 }
+
   watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
 }`
 
-const repositoryWatchTemplate = `resource "xray_security_policy" "security" {
+const allReposMultiplePoliciesWatchTemplate = `resource "xray_security_policy" "security" {
+  name        = "{{ .policy_name_0 }}"
+  description = "Security policy description"
+  type        = "security"
+  rules {
+    name     = "rule-name-severity"
+    priority = 1
+    criteria {
+      min_severity = "High"
+    }
+    actions {
+      webhooks = []
+      mails    = ["test@email.com"]
+      block_download {
+        unscanned = true
+        active    = true
+      }
+      block_release_bundle_distribution  = true
+      fail_build                         = true
+      notify_watch_recipients            = true
+      notify_deployer                    = true
+      create_ticket_enabled              = false  
+      build_failure_grace_period_in_days = 5   
+    }
+  }
+}
+
+resource "xray_license_policy" "license" {
+  name        = "{{ .policy_name_1 }}"
+  description = "License policy description"
+  type        = "license"
+  rules {
+    name     = "License_rule"
+    priority = 1
+    criteria {
+      allowed_licenses         = ["Apache-1.0", "Apache-2.0"]
+      allow_unknown            = false
+      multi_license_permissive = true
+    }
+    actions {
+      webhooks = []
+      mails    = ["test@email.com"]
+      block_download {
+        unscanned = true
+        active    = true
+      }
+      block_release_bundle_distribution  = false
+      fail_build                         = true
+      notify_watch_recipients            = true
+      notify_deployer                    = true
+      create_ticket_enabled              = false 
+      custom_severity                    = "High"
+      build_failure_grace_period_in_days = 5 
+    }
+  }
+}
+
+resource "xray_watch" "{{ .resource_name }}" {
+  name        	= "{{ .watch_name }}"
+  description 	= "{{ .description }}"
+  active 		= {{ .active }}
+
+  resource {
+	type       	= "{{ .watch_type }}"
+	filter {
+		type  	= "{{ .filter_type_0 }}"
+		value	= "{{ .filter_value_0 }}"
+	}
+	filter {
+		type  	= "{{ .filter_type_1 }}"
+		value	= "{{ .filter_value_1 }}"
+	}
+}
+  assigned_policy {
+  	name 	= xray_security_policy.security.name
+  	type 	= "security"
+}
+  assigned_policy {
+  	name 	= xray_license_policy.license.name
+  	type 	= "license"
+}
+
+  watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
+}`
+
+const singleRepositoryWatchTemplate = `resource "xray_security_policy" "security" {
   name        = "{{ .policy_name }}"
   description = "Security policy description"
   type        = "security"
@@ -156,133 +282,90 @@ const repositoryWatchTemplate = `resource "xray_security_policy" "security" {
   }
 }
 
-
 resource "xray_watch" "{{ .resource_name }}" {
   name        	= "{{ .watch_name }}"
   description 	= "{{ .description }}"
   active 		= {{ .active }}
 
-  resources {
+  resource {
 	type       	= "repository"
 	bin_mgr_id  = "default"
 	name		= "libs-release-local"
-	filters {
+	filter {
 		type  	= "{{ .filter_type_0 }}"
 		value	= "{{ .filter_value_0 }}"
 	}
 }
-  assigned_policies {
+  assigned_policy {
   	name 	= xray_security_policy.security.name
   	type 	= "{{ .assigned_policy_type }}"
 }
   watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
 }`
 
+const multipleRepositoriesWatchTemplate = `resource "xray_security_policy" "security" {
+  name        = "{{ .policy_name }}"
+  description = "Security policy description"
+  type        = "security"
+  rules {
+    name     = "rule-name-severity"
+    priority = 1
+    criteria {
+      min_severity = "High"
+    }
+    actions {
+      webhooks = []
+      mails    = ["test@email.com"]
+      block_download {
+        unscanned = true
+        active    = true
+      }
+      block_release_bundle_distribution  = true
+      fail_build                         = true
+      notify_watch_recipients            = true
+      notify_deployer                    = true
+      create_ticket_enabled              = false  
+      build_failure_grace_period_in_days = 5   
+    }
+  }
+}
+
+resource "xray_watch" "{{ .resource_name }}" {
+  name        	= "{{ .watch_name }}"
+  description 	= "{{ .description }}"
+  active 		= {{ .active }}
+
+  resource {
+	type       	= "repository"
+	bin_mgr_id  = "default"
+	name		= "libs-release-local"
+	filter {
+		type  	= "{{ .filter_type_0 }}"
+		value	= "{{ .filter_value_0 }}"
+	}
+}
+  resource {
+	type       	= "repository"
+	bin_mgr_id  = "default"
+	name		= "libs-release-local-1"
+	filter {
+		type  	= "{{ .filter_type_0 }}"
+		value	= "{{ .filter_value_0 }}"
+	}
+}
+  assigned_policy {
+  	name 	= xray_security_policy.security.name
+  	type 	= "{{ .assigned_policy_type }}"
+}
+  watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
+}`
+
+// TODO: add more verifications
 func verifyXrayWatch(fqrn string, tempStruct map[string]string) resource.TestCheckFunc {
 	return resource.ComposeTestCheckFunc(
 		resource.TestCheckResourceAttr(fqrn, "name", tempStruct["watch_name"]),
 		resource.TestCheckResourceAttr(fqrn, "description", tempStruct["description"]),
 	)
-}
-
-// These two tests are commented out because repoName and binMgrId must be real values but neither are terraformable so can't be put into these tests
-// I have tested this with some real values, but for obvious privacy reasons am not leaving those real values in here
-/*func TestAccWatch_filters(t *testing.T) {
-	watchName := "test-watch"
-	watchDesc := "watch created by xray acceptance tests"
-	repoName := "repo-name"
-	binMgrId := "artifactory-id"
-	policyName := fmt.Sprintf("test-policy%d",randomInt())
-	filterValue := "Debian"
-	updatedDesc := "updated watch description"
-	updatedValue := "Docker"
-	resourceName := "xray_watch.test"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		CheckDestroy: testAccCheckWatchDestroy,
-		ProviderFactories: testAccProviders,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccXrayWatchFilters(watchName, watchDesc, repoName, binMgrId, policyName, filterValue),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", watchName),
-					resource.TestCheckResourceAttr(resourceName, "description", watchDesc),
-					resource.TestCheckResourceAttr(resourceName, "resources.0.filters.0.type", "package-type"),
-					resource.TestCheckResourceAttr(resourceName, "resources.0.filters.0.value", filterValue),
-					resource.TestCheckResourceAttr(resourceName, "resources.0.type", "repository"),
-				),
-			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: false,
-			},
-			{
-				Config: testAccXrayWatchFilters(watchName, updatedDesc, repoName, binMgrId, policyName, updatedValue),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", watchName),
-					resource.TestCheckResourceAttr(resourceName, "description", updatedDesc),
-					resource.TestCheckResourceAttr(resourceName, "resources.0.filters.0.type", "package-type"),
-					resource.TestCheckResourceAttr(resourceName, "resources.0.filters.0.value", updatedValue),
-					resource.TestCheckResourceAttr(resourceName, "resources.0.type", "repository"),
-				),
-			},
-			{
-				Config: testAccXrayWatchUnassigned(policyName),
-				Check: resource.ComposeTestCheckFunc(
-					testAccCheckWatchDoesntExist(resourceName),
-				),
-			},
-		},
-	})
-}
-
-func TestAccWatch_builds(t *testing.T) {
-	watchName := "test-watch"
-	policyName := "test-policy"
-	watchDesc := "watch created by xray acceptance tests"
-	binMgrId := "artifactory-id"
-	resourceName := "xray_watch.test"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		CheckDestroy: testAccCheckWatchDestroy,
-		ProviderFactories: testAccProviders,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccXrayWatchBuilds(watchName, watchDesc, policyName, binMgrId),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", watchName),
-					resource.TestCheckResourceAttr(resourceName, "description", watchDesc),
-					resource.TestCheckResourceAttr(resourceName, "resources.0.type", "all-builds"),
-					resource.TestCheckResourceAttr(resourceName, "assigned_policies.0.name", policyName),
-					resource.TestCheckResourceAttr(resourceName, "assigned_policies.0.type", "security"),
-				),
-			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: false,
-			},
-			{
-				Config: testAccXrayWatchUnassigned(policyName),
-				Check: resource.ComposeTestCheckFunc(
-					testAccCheckWatchDoesntExist(resourceName),
-				),
-			},
-		},
-	})
-}*/
-
-func testAccCheckWatchDoesntExist(resourceName string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		_, ok := s.RootModule().Resources[resourceName]
-		if ok {
-			return fmt.Errorf("watch %s exists when it shouldn't", resourceName)
-		}
-		return nil
-	}
 }
 
 func testAccCheckWatchDestroy(s *terraform.State) error {
@@ -316,123 +399,21 @@ func testAccCheckWatchDestroy(s *terraform.State) error {
 			}
 			return fmt.Errorf("error: Policy %s still exists %s", rs.Primary.ID, *policy.Name)
 		}
+		if rs.Type == "xray_license_policy" {
+			policy, resp, err := getPolicy(rs.Primary.ID, client)
+
+			if err != nil {
+				if resp != nil && resp.StatusCode() == http.StatusInternalServerError &&
+					err.Error() != fmt.Sprintf("{\"error\":\"Failed to find Policy %s\"}", rs.Primary.ID) {
+					continue
+				}
+				return err
+			}
+			return fmt.Errorf("error: Policy %s still exists %s", rs.Primary.ID, *policy.Name)
+		}
 	}
 
 	return nil
 }
-
-// Since policies can't be deleted if they have a watch assigned, we need to force terraform to delete the watch first
-// by removing it from the code at the end of every test step
-func testAccXrayWatchUnassigned(policyName string) string {
-	return fmt.Sprintf(`
-resource "xray_security_policy" "security" {
-  name        = "%s"
-  description = "Security policy description"
-  type        = "security"
-  rules {
-    name     = "rule-name-severity"
-    priority = 1
-    criteria {
-      min_severity = "High"
-    }
-    actions {
-      webhooks = []
-      mails    = ["test@email.com"]
-      block_download {
-        unscanned = true
-        active    = true
-      }
-      block_release_bundle_distribution  = true
-      fail_build                         = true
-      notify_watch_recipients            = true
-      notify_deployer                    = true
-      create_ticket_enabled              = false  
-      build_failure_grace_period_in_days = 5   
-    }
-  }
-}
-`, policyName)
-}
-
-// You seemingly can't do filters with all-repos - it's an example in the docs but doesn't seem possible via the web ui
-//func testAccXrayWatchFilters(name, description, repoName, binMgrId, policyName, filterValue string) string {
-//	return fmt.Sprintf(`
-//resource "xray_policy" "test" {
-//	name  = "%s"
-//	description = "test policy description"
-//	type = "security"
-//
-//	rules {
-//		name = "rule-name"
-//		priority = 1
-//		criteria {
-//			min_severity = "High"
-//		}
-//		actions {
-//			block_download {
-//				unscanned = true
-//				active = true
-//			}
-//		}
-//	}
-//}
-//
-//resource "xray_watch" "test" {
-//	name  = "%s"
-//	description = "%s"
-//	resources {
-//		type = "repository"
-//		name = "%s"
-//		bin_mgr_id = "%s"
-//		filters {
-//			type = "package-type"
-//			value = "%s"
-//		}
-//	}
-//	assigned_policies {
-//		name = xray_policy.test.name
-//		type = "security"
-//	}
-//}
-//`, policyName, name, description, repoName, binMgrId, filterValue)
-//}
-//
-//func testAccXrayWatchBuilds(name, description, policyName, binMgrId string) string {
-//	return fmt.Sprintf(`
-//resource "xray_policy" "test" {
-//	name  = "%s"
-//	description = "test policy description"
-//	type = "security"
-//
-//	rules {
-//		name = "rule-name"
-//		priority = 1
-//		criteria {
-//			min_severity = "High"
-//		}
-//		actions {
-//			block_download {
-//				unscanned = true
-//				active = true
-//			}
-//		}
-//	}
-//}
-//
-//resource "xray_watch" "test" {
-//	name = "%s"
-//	description = "%s"
-//	resources {
-//		type = "all-builds"
-//		name = "All Builds"
-//		bin_mgr_id = "%s"
-//	}
-//	assigned_policies {
-//		name = xray_policy.test.name
-//		type = "security"
-//	}
-//}
-//`, policyName, name, description, binMgrId)
-//}
 
 // TODO for bonus points - test builds with complex filters eg "filters":[{"type":"ant-patterns","value":{"ExcludePatterns":[],"IncludePatterns":["*"]}
