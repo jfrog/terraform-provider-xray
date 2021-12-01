@@ -1,8 +1,10 @@
 package xray
 
 import (
+	"context"
 	"fmt"
 	"github.com/go-resty/resty/v2"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"net/http"
@@ -43,12 +45,13 @@ func Provider() *schema.Provider {
 		},
 	}
 
-	p.ConfigureFunc = func(d *schema.ResourceData) (interface{}, error) {
+	p.ConfigureContextFunc = func(ctx context.Context, data *schema.ResourceData) (interface{}, diag.Diagnostics) {
 		terraformVersion := p.TerraformVersion
 		if terraformVersion == "" {
-			terraformVersion = "0.11+compatible"
+			terraformVersion = "0.13+compatible"
 		}
-		return providerConfigure(d, terraformVersion)
+		configuration, err := providerConfigure(data, terraformVersion)
+		return configuration, diag.FromErr(err)
 	}
 
 	return p
