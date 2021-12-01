@@ -73,7 +73,7 @@ func TestAccWatch__allReposMultiplePolicies(t *testing.T) {
 }
 
 // To verify the watch for a single repo we need to create a new repository with Xray indexing enabled
-// testAccPreCheckWatch() is creating a local repo with Xray indexing enabled using the API call
+// testAccCreateRepos() is creating a local repos with Xray indexing enabled using the API call
 // We need to figure out how to use external providers (like Artifactory) in the tests. Documented approach didn't work
 func TestAccWatch_singleRepository(t *testing.T) {
 	_, fqrn, resourceName := mkNames("watch-", "xray_watch")
@@ -82,10 +82,15 @@ func TestAccWatch_singleRepository(t *testing.T) {
 
 	tempStruct["resource_name"] = resourceName
 	tempStruct["watch_name"] = fmt.Sprintf("xray-watch-%d", randomInt())
-	tempStruct["policy_name"] = fmt.Sprintf("xray-policy-%d", randomInt())
+	tempStruct["policy_name_0"] = fmt.Sprintf("xray-policy-%d", randomInt())
+	tempStruct["watch_type"] = "repository"
+	repos := []string{"libs-release-local", "libs-release-local-1"}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheckWatch(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			testAccCreateRepos(t, repos)
+		},
 		CheckDestroy:      testAccCheckWatchDestroy,
 		ProviderFactories: testAccProviders,
 		Steps: []resource.TestStep{
@@ -104,10 +109,15 @@ func TestAccWatch_multipleRepositories(t *testing.T) {
 
 	tempStruct["resource_name"] = resourceName
 	tempStruct["watch_name"] = fmt.Sprintf("xray-watch-%d", randomInt())
-	tempStruct["policy_name"] = fmt.Sprintf("xray-policy-%d", randomInt())
+	tempStruct["policy_name_0"] = fmt.Sprintf("xray-policy-%d", randomInt())
+	tempStruct["watch_type"] = "repository"
+	repos := []string{"libs-release-local", "libs-release-local-1"}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheckWatch(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			testAccCreateRepos(t, repos)
+		},
 		CheckDestroy:      testAccCheckWatchDestroy,
 		ProviderFactories: testAccProviders,
 		Steps: []resource.TestStep{
@@ -115,8 +125,61 @@ func TestAccWatch_multipleRepositories(t *testing.T) {
 				Config: executeTemplate(fqrn, multipleRepositoriesWatchTemplate, tempStruct),
 				Check:  verifyXrayWatch(fqrn, tempStruct),
 			},
+		},
+	})
+}
+
+func TestAccWatch_build(t *testing.T) {
+	_, fqrn, resourceName := mkNames("watch-", "xray_watch")
+	tempStruct := make(map[string]string)
+	copyStringMap(tempStructWatch, tempStruct)
+
+	tempStruct["resource_name"] = resourceName
+	tempStruct["watch_name"] = fmt.Sprintf("xray-watch-%d", randomInt())
+	tempStruct["policy_name_0"] = fmt.Sprintf("xray-policy-%d", randomInt())
+	tempStruct["watch_type"] = "build"
+	tempStruct["build_name0"] = "release-pipeline"
+	builds := []string{tempStruct["build_name0"]}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			testAccCreateBuilds(t, builds)
+		},
+		CheckDestroy:      testAccCheckWatchDestroy,
+		ProviderFactories: testAccProviders,
+		Steps: []resource.TestStep{
 			{
-				Config: executeTemplate(fqrn, multipleRepositoriesWatchTemplate, tempStruct),
+				Config: executeTemplate(fqrn, buildWatchTemplate, tempStruct),
+				Check:  verifyXrayWatch(fqrn, tempStruct),
+			},
+		},
+	})
+}
+
+func TestAccWatch_multipleBuilds(t *testing.T) {
+	_, fqrn, resourceName := mkNames("watch-", "xray_watch")
+	tempStruct := make(map[string]string)
+	copyStringMap(tempStructWatch, tempStruct)
+
+	tempStruct["resource_name"] = resourceName
+	tempStruct["watch_name"] = fmt.Sprintf("xray-watch-%d", randomInt())
+	tempStruct["policy_name_0"] = fmt.Sprintf("xray-policy-%d", randomInt())
+	tempStruct["watch_type"] = "build"
+	tempStruct["build_name0"] = "release-pipeline"
+	tempStruct["build_name1"] = "release-pipeline1"
+	builds := []string{tempStruct["build_name0"], tempStruct["build_name1"]}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			testAccCreateBuilds(t, builds)
+		},
+		CheckDestroy:      testAccCheckWatchDestroy,
+		ProviderFactories: testAccProviders,
+		Steps: []resource.TestStep{
+			{
+				Config: executeTemplate(fqrn, multipleBuildsWatchTemplate, tempStruct),
 				Check:  verifyXrayWatch(fqrn, tempStruct),
 			},
 		},
@@ -288,7 +351,7 @@ resource "xray_watch" "{{ .resource_name }}" {
   active 		= {{ .active }}
 
   resource {
-	type       	= "repository"
+	type       	= "{{ .watch_type }}"
 	bin_mgr_id  = "default"
 	name		= "libs-release-local"
 	filter {
@@ -304,7 +367,7 @@ resource "xray_watch" "{{ .resource_name }}" {
 }`
 
 const multipleRepositoriesWatchTemplate = `resource "xray_security_policy" "security" {
-  name        = "{{ .policy_name }}"
+  name        = "{{ .policy_name_0 }}"
   description = "Security policy description"
   type        = "security"
   rules {
@@ -336,7 +399,7 @@ resource "xray_watch" "{{ .resource_name }}" {
   active 		= {{ .active }}
 
   resource {
-	type       	= "repository"
+	type       	= "{{ .watch_type }}"
 	bin_mgr_id  = "default"
 	name		= "libs-release-local"
 	filter {
@@ -360,11 +423,108 @@ resource "xray_watch" "{{ .resource_name }}" {
   watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
 }`
 
+const buildWatchTemplate = `resource "xray_security_policy" "security" {
+  name        = "{{ .policy_name_0 }}"
+  description = "Security policy description"
+  type        = "security"
+  rules {
+    name     = "rule-name-severity"
+    priority = 1
+    criteria {
+      min_severity = "High"
+    }
+    actions {
+      webhooks = []
+      mails    = ["test@email.com"]
+      block_download {
+        unscanned = true
+        active    = true
+      }
+      block_release_bundle_distribution  = true
+      fail_build                         = true
+      notify_watch_recipients            = true
+      notify_deployer                    = true
+      create_ticket_enabled              = false  
+      build_failure_grace_period_in_days = 5   
+    }
+  }
+}
+
+resource "xray_watch" "{{ .resource_name }}" {
+  name        	= "{{ .watch_name }}"
+  description 	= "{{ .description }}"
+  active 		= {{ .active }}
+
+  resource {
+	type       	= "{{ .watch_type }}"
+	bin_mgr_id  = "default"
+	name		= "{{ .build_name0 }}"
+}
+  assigned_policy {
+  	name 	= xray_security_policy.security.name
+  	type 	= "{{ .assigned_policy_type }}"
+}
+  watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
+}`
+
+const multipleBuildsWatchTemplate = `resource "xray_security_policy" "security" {
+  name        = "{{ .policy_name_0 }}"
+  description = "Security policy description"
+  type        = "security"
+  rules {
+    name     = "rule-name-severity"
+    priority = 1
+    criteria {
+      min_severity = "High"
+    }
+    actions {
+      webhooks = []
+      mails    = ["test@email.com"]
+      block_download {
+        unscanned = true
+        active    = true
+      }
+      block_release_bundle_distribution  = true
+      fail_build                         = true
+      notify_watch_recipients            = true
+      notify_deployer                    = true
+      create_ticket_enabled              = false  
+      build_failure_grace_period_in_days = 5   
+    }
+  }
+}
+
+resource "xray_watch" "{{ .resource_name }}" {
+  name        	= "{{ .watch_name }}"
+  description 	= "{{ .description }}"
+  active 		= {{ .active }}
+
+  resource {
+	type       	= "{{ .watch_type }}"
+	bin_mgr_id  = "default"
+	name		= "{{ .build_name0 }}"
+}
+
+  resource {
+	type       	= "{{ .watch_type }}"
+	bin_mgr_id  = "default"
+	name		= "{{ .build_name1 }}"
+}
+  assigned_policy {
+  	name 	= xray_security_policy.security.name
+  	type 	= "{{ .assigned_policy_type }}"
+}
+  watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
+}`
+
 // TODO: add more verifications
 func verifyXrayWatch(fqrn string, tempStruct map[string]string) resource.TestCheckFunc {
 	return resource.ComposeTestCheckFunc(
 		resource.TestCheckResourceAttr(fqrn, "name", tempStruct["watch_name"]),
 		resource.TestCheckResourceAttr(fqrn, "description", tempStruct["description"]),
+		resource.TestCheckResourceAttr(fqrn, "resource.0.type", tempStruct["watch_type"]),
+		resource.TestCheckResourceAttr(fqrn, "assigned_policy.0.name", tempStruct["policy_name_0"]),
+		resource.TestCheckResourceAttr(fqrn, "assigned_policy.0.type", tempStruct["assigned_policy_type"]),
 	)
 }
 

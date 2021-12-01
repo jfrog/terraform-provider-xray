@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 // Version for some reason isn't getting updated by the linker
@@ -103,8 +104,13 @@ func providerConfigure(d *schema.ResourceData, terraformVersion string) (interfa
 	if err != nil {
 		return nil, err
 	}
-	_, err = sendUsageRepo(restyBase, terraformVersion)
 
+	_, err = sendUsageRepo(restyBase, terraformVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	err = checkArtifactoryLicense(restyBase)
 	if err != nil {
 		return nil, err
 	}
@@ -133,4 +139,25 @@ func sendUsageRepo(restyBase *resty.Client, terraformVersion string) (interface{
 		return nil, fmt.Errorf("unable to report usage %s", err)
 	}
 	return nil, nil
+}
+
+func checkArtifactoryLicense(client *resty.Client) error {
+
+	type License struct {
+		Type         string `json:"type"`
+		ValidThrough string `json:"validThrough"`
+		LicensedTo   string `json:"licensedTo"`
+	}
+
+	license := License{}
+	_, err := client.R().SetResult(&license).Get("/artifactory/api/system/licenses/")
+	if err != nil {
+		return err
+	}
+
+	if !strings.Contains(license.Type, "Enterprise") {
+		return fmt.Errorf("Artifactory requires Enterprise license to work with Terraform!")
+	}
+
+	return nil
 }

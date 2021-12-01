@@ -43,15 +43,11 @@ func getTestResty(t *testing.T) *resty.Client {
 	return restyClient
 }
 
-func testAccPreCheck(t *testing.T) {
+func testAccPreCheck(t *testing.T) error {
 	restyClient := getTestResty(t)
-	resp, errLicense := restyClient.R().Get("/artifactory/api/system/licenses/")
-	s := fmt.Sprintf("%s", resp.Body())
-	if errLicense != nil {
-		t.Fatal(errLicense)
-	}
-	if !strings.Contains(fmt.Sprint(s), "Enterprise") {
-		t.Fatal(s, "\nArtifactory requires Enterprise license to work with Terraform!")
+	err := checkArtifactoryLicense(restyClient)
+	if err != nil {
+		return err
 	}
 	ctx := context.Background()
 	provider, _ := testAccProviders["xray"]()
@@ -59,22 +55,14 @@ func testAccPreCheck(t *testing.T) {
 	if oldErr != nil {
 		t.Fatal(oldErr)
 	}
+	return nil
 }
 
-func testAccPreCheckWatch(t *testing.T) {
+// Create a local repository with Xray indexing enabled. It will be used in the tests
+func testAccCreateRepos(t *testing.T, repos []string) {
 	restyClient := getTestResty(t)
-	resp, errLicense := restyClient.R().Get("/artifactory/api/system/licenses/")
-	s := fmt.Sprintf("%s", resp.Body())
-	if errLicense != nil {
-		t.Fatal(errLicense)
-	}
-	if !strings.Contains(fmt.Sprint(s), "Enterprise") {
-		t.Fatal(s, "\nArtifactory requires Enterprise license to work with Terraform!")
-	}
-
-	// Create a local repository with Xray indexing enabled. It will be used in the tests
 	body := "{\n\"rclass\":\"local\",\n\"xrayIndex\":true\n}"
-	for _, repo := range []string{"libs-release-local", "libs-release-local-1"} {
+	for _, repo := range repos {
 		_, errRepo := restyClient.R().SetBody(body).Put("artifactory/api/repositories/" + repo)
 		repoExists := strings.Contains(fmt.Sprint(errRepo), "Case insensitive repository key already exists")
 		repoCreated := strings.Contains(fmt.Sprint(errRepo), "Successfully created repository")
@@ -82,10 +70,23 @@ func testAccPreCheckWatch(t *testing.T) {
 			t.Fatal(errRepo)
 		}
 	}
-	ctx := context.Background()
-	provider, _ := testAccProviders["xray"]()
-	oldErr := provider.Configure(ctx, terraform.NewResourceConfigRaw(nil))
-	if oldErr != nil {
-		t.Fatal(oldErr)
+}
+
+// Create a set of builds or a single build, add the build into the Xray indexing configuration, to be able to add it to
+// the xray watch
+func testAccCreateBuilds(t *testing.T, builds []string) {
+	restyClient := getTestResty(t)
+	for _, build := range builds {
+		createBuildBody := fmt.Sprintf("{\n\"version\": \"1.0.1\",\n\"name\":\"%s\",\n\"number\":\"28\",\n \"started\":\"2021-10-30T12:00:19.893+0300\"\n}",
+			build)
+		addIndexBody := fmt.Sprintf("{\n\"names\": [\"%s\"]\n}", build)
+		respCreateBuild, errCreateBuild := restyClient.R().SetBody(createBuildBody).Put("artifactory/api/build")
+		if respCreateBuild.StatusCode() != 204 {
+			t.Fatal(errCreateBuild)
+		}
+		respAddIndexBody, errAddIndexBody := restyClient.R().SetBody(addIndexBody).Post("xray/api/v1/binMgr/builds")
+		if respAddIndexBody.StatusCode() != 200 {
+			t.Fatal(errAddIndexBody)
+		}
 	}
 }
