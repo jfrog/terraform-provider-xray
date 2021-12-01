@@ -30,7 +30,7 @@ func resourceXrayWatch() *schema.Resource {
 				Type:     schema.TypeBool,
 				Optional: true,
 			},
-			"resource": {
+			"watch_resource": {
 				Type:     schema.TypeList,
 				Required: true,
 				Elem: &schema.Resource{

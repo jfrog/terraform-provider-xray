@@ -218,7 +218,7 @@ resource "xray_watch" "{{ .resource_name }}" {
   description 	= "{{ .description }}"
   active 		= {{ .active }}
 
-  resource {
+  watch_resource {
 	type       	= "{{ .watch_type }}"
 	filter {
 		type  	= "{{ .filter_type_0 }}"
@@ -295,7 +295,7 @@ resource "xray_watch" "{{ .resource_name }}" {
   description 	= "{{ .description }}"
   active 		= {{ .active }}
 
-  resource {
+  watch_resource {
 	type       	= "{{ .watch_type }}"
 	filter {
 		type  	= "{{ .filter_type_0 }}"
@@ -319,7 +319,7 @@ resource "xray_watch" "{{ .resource_name }}" {
 }`
 
 const singleRepositoryWatchTemplate = `resource "xray_security_policy" "security" {
-  name        = "{{ .policy_name }}"
+  name        = "{{ .policy_name_0 }}"
   description = "Security policy description"
   type        = "security"
   rules {
@@ -350,7 +350,7 @@ resource "xray_watch" "{{ .resource_name }}" {
   description 	= "{{ .description }}"
   active 		= {{ .active }}
 
-  resource {
+  watch_resource {
 	type       	= "{{ .watch_type }}"
 	bin_mgr_id  = "default"
 	name		= "libs-release-local"
@@ -398,7 +398,7 @@ resource "xray_watch" "{{ .resource_name }}" {
   description 	= "{{ .description }}"
   active 		= {{ .active }}
 
-  resource {
+  watch_resource {
 	type       	= "{{ .watch_type }}"
 	bin_mgr_id  = "default"
 	name		= "libs-release-local"
@@ -407,7 +407,7 @@ resource "xray_watch" "{{ .resource_name }}" {
 		value	= "{{ .filter_value_0 }}"
 	}
 }
-  resource {
+  watch_resource {
 	type       	= "repository"
 	bin_mgr_id  = "default"
 	name		= "libs-release-local-1"
@@ -455,7 +455,7 @@ resource "xray_watch" "{{ .resource_name }}" {
   description 	= "{{ .description }}"
   active 		= {{ .active }}
 
-  resource {
+  watch_resource {
 	type       	= "{{ .watch_type }}"
 	bin_mgr_id  = "default"
 	name		= "{{ .build_name0 }}"
@@ -499,13 +499,13 @@ resource "xray_watch" "{{ .resource_name }}" {
   description 	= "{{ .description }}"
   active 		= {{ .active }}
 
-  resource {
+  watch_resource {
 	type       	= "{{ .watch_type }}"
 	bin_mgr_id  = "default"
 	name		= "{{ .build_name0 }}"
 }
 
-  resource {
+  watch_resource {
 	type       	= "{{ .watch_type }}"
 	bin_mgr_id  = "default"
 	name		= "{{ .build_name1 }}"
@@ -522,7 +522,7 @@ func verifyXrayWatch(fqrn string, tempStruct map[string]string) resource.TestChe
 	return resource.ComposeTestCheckFunc(
 		resource.TestCheckResourceAttr(fqrn, "name", tempStruct["watch_name"]),
 		resource.TestCheckResourceAttr(fqrn, "description", tempStruct["description"]),
-		resource.TestCheckResourceAttr(fqrn, "resource.0.type", tempStruct["watch_type"]),
+		resource.TestCheckResourceAttr(fqrn, "watch_resource.0.type", tempStruct["watch_type"]),
 		resource.TestCheckResourceAttr(fqrn, "assigned_policy.0.name", tempStruct["policy_name_0"]),
 		resource.TestCheckResourceAttr(fqrn, "assigned_policy.0.type", tempStruct["assigned_policy_type"]),
 	)

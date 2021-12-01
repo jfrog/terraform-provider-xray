@@ -65,7 +65,7 @@ func expandWatch(d *schema.ResourceData) *Watch {
 	watch.GeneralData = gd
 
 	pr := &WatchProjectResources{}
-	if v, ok := d.GetOk("resource"); ok {
+	if v, ok := d.GetOk("watch_resource"); ok {
 		r := &[]WatchProjectResource{}
 		for _, res := range v.([]interface{}) {
 			*r = append(*r, *expandProjectResource(res))
@@ -162,7 +162,6 @@ func flattenFilters(filters *[]WatchFilter) []interface{} {
 		m := make(map[string]interface{})
 		m["type"] = f.Type
 		m["value"] = f.Value
-		//m["value"] = f.Value.WatchFilterValue.Value
 		l = append(l, m)
 	}
 
@@ -218,7 +217,7 @@ func resourceXrayWatchRead(ctx context.Context, d *schema.ResourceData, m interf
 	if err := d.Set("active", watch.GeneralData.Active); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("resource", flattenProjectResources(watch.ProjectResources)); err != nil {
+	if err := d.Set("watch_resource", flattenProjectResources(watch.ProjectResources)); err != nil {
 		return diag.FromErr(err)
 	}
 	if err := d.Set("assigned_policy", flattenAssignedPolicies(watch.AssignedPolicies)); err != nil {
