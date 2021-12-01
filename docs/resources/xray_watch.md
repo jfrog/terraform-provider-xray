@@ -5,18 +5,98 @@ Provides a Xray watch resource.
 ## Example Usage
 
 ```hcl
-# Create a new Xray watch for all repositories
-resource "xray_watch" "example" {
-  name  = "watch-name"
-  description = "watching all repositories"
-  resources {
+# Create a new Xray watch for all repositories, assign policies
+resource "xray_watch" "all-repos" {
+  name        = "all-repos-watch"
+  description = "Watch for all repositories, matching the filter"
+  active      = true
+  watch_resource {
     type = "all-repos"
-    name = "All Repositories"
+    filter {
+      type  = "regex"
+      value = ".*"
+    }
   }
-  assigned_policies {
-    name = xray_policy.example.name
+  assigned_policy {
+    name = xray_security_policy.security1.name
+    type = "security"
+  }
+  assigned_policy {
+    name = xray_license_policy.license1.name
     type = "license"
   }
+  watch_recipients = ["test@email.com", "test1@email.com"]
+}
+```
+```hcl
+# Create a new Xray watch for a set of repositories, assign policies
+resource "xray_watch" "repository" {
+  name        = "repository-watch"
+  description = "Watch a single repo or a list of repositories"
+  active      = true
+
+  watch_resource {
+    type       = "repository"
+    bin_mgr_id = "default"
+    name       = "your-repository-name"
+    filter {
+      type  = "regex"
+      value = ".*"
+    }
+  }
+
+  watch_resource {
+    type       = "repository"
+    bin_mgr_id = "default"
+    name       = "your-other-repository-name"
+    filter {
+      type  = "package-type"
+      value = "Docker"
+    }
+  }
+
+  assigned_policy {
+    name = xray_security_policy.security1.name
+    type = "security"
+  }
+  assigned_policy {
+    name = xray_license_policy.license1.name
+    type = "license"
+  }
+
+  watch_recipients = ["test@email.com", "test1@email.com"]
+}
+```
+
+```hcl
+# Create a new Xray watch for a set of builds, assign policies
+resource "xray_watch" "build" {
+  name        = "build-watch"
+  description = "Watch a single build or a list of builds"
+  active      = true
+
+  watch_resource {
+    type       = "build"
+    bin_mgr_id = "default"
+    name       = "your-build-name"
+  }
+
+  watch_resource {
+    type       = "build"
+    bin_mgr_id = "default"
+    name       = "your-other-build-name"
+  }
+
+  assigned_policy {
+    name = xray_security_policy.security1.name
+    type = "security"
+  }
+  assigned_policy {
+    name = xray_license_policy.license1.name
+    type = "license"
+  }
+
+  watch_recipients = ["test@email.com", "test1@email.com"]
 }
 ```
 
@@ -27,33 +107,37 @@ The following arguments are supported:
 * `name` - (Required) Name of the watch (must be unique)
 * `description` - (Optional) Description of the watch
 * `active` - (Optional) Whether or not the watch will be active
-* `resources` - (Required) Nested argument describing the resources to be watched. Defined below.
-* `assigned_policies` - (Required) Nested argument describing policies that will be applied. Defined below.
+* `watch_resource` - (Required) Nested argument describing the resources to be watched. Defined below.
+* `assigned_policy` - (Required) Nested argument describing policies that will be applied. Defined below.
 
-### resources
+### watch_resource
 
-The top-level `resources` block contains a list of one or more resource objects that each support the following:
+The top-level `watch_resource` block contains a resource object that supports the following:
 
-* `type` - (Required) Type of resource to be watched
-* `name` - (Required) A name describing the resource
-* `bin_mgr_id` - (Optional) The ID number of a binary manager resource
-* `repo_type` - (Optional) Type of repository (e.g. local or remote)
-* `filters` - (Optional) Nested argument describing filters to be applied. Defined below.
+* `type` - (Required) Type of resource to be watched. Options: `all-repos`, `repository`, `build`, `project`, `all-projects`.
+* `bin_mgr_id` - (Optional) The ID number of a binary manager resource. `default` if not set on the Artifactory side.
+* `name` - (Required) A name describing the resource.
+* `filter` - (Optional) Nested argument describing filters to be applied. Defined below.
 
-#### filters
+Multiple blocks supported.
 
-The nested `filters` block contains a list of one or more filters to be applied, each of which supports the following:
+#### filter
+
+The nested `filters` block contains a filter to be applied, supports the following:
 
 * `type` - (Required) The type of filter, such as `regex` or `package-type`
-* `value` - (Required) The value of the filter, such as the text of the regex or name of the package type
+* `value` - (Required) The value of the filter, such as the text of the regex or name of the package type.
 
-### assigned_policies
+Multiple blocks supported.
 
-The top-level `assigned_policies` block contains a list of one or more policy objects that each support the following:
+### assigned_policy
+
+The top-level `assigned_policy` block contains a policy objects that support the following:
 
 * `name` - (Required) The name of the policy that will be applied
 * `type` - (Required) The type of the policy
 
+Multiple blocks supported.
 
 ## Import
 
