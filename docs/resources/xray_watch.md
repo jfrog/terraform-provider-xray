@@ -119,6 +119,8 @@ The top-level `watch_resource` block contains a resource object that supports th
 * `name` - (Required) A name describing the resource.
 * `filter` - (Optional) Nested argument describing filters to be applied. Defined below.
 
+Please remember, to add repository to watch, Xray indexing must be enabled for that repository. 
+Build should be added to the Xray indexed resources in the Xray settings. 
 Multiple blocks supported.
 
 #### filter
