@@ -48,7 +48,7 @@ func resourceXrayWatch() *schema.Resource {
 							Optional:    true,
 							Description: "The name of the repository. Enable Xray indexing must be enabled on the repo",
 						},
-						"filter": { // Plural replaced for the HCL sake
+						"filter": {
 							Type:     schema.TypeList,
 							Optional: true,
 							Elem: &schema.Resource{
@@ -57,7 +57,7 @@ func resourceXrayWatch() *schema.Resource {
 										Type:     schema.TypeString,
 										Required: true,
 									},
-									// TODO this can be either a string or possibly a json blob
+									// TODO support Exclude and Include patterns
 									// eg "value":{"ExcludePatterns":[],"IncludePatterns":["*"]}
 									"value": {
 										Type:     schema.TypeString,
@@ -87,12 +87,12 @@ func resourceXrayWatch() *schema.Resource {
 					},
 				},
 			},
-
 			"watch_recipients": {
 				Type:     schema.TypeList,
 				Optional: true,
 				Elem: &schema.Schema{
-					Type: schema.TypeString,
+					Type:         schema.TypeString,
+					ValidateFunc: validateIsEmail,
 				},
 			},
 		},

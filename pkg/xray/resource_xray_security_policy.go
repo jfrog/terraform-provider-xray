@@ -2,6 +2,7 @@ package xray
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 func resourceXraySecurityPolicyV2() *schema.Resource {
@@ -67,8 +68,9 @@ func resourceXraySecurityPolicyV2() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"min_severity": {
-										Type:     schema.TypeString,
-										Optional: true,
+										Type:             schema.TypeString,
+										Optional:         true,
+										ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"All Severities", "Critical", "High", "Medium", "Low"}, true)),
 									},
 									"cvss_range": {
 										Type:     schema.TypeList,
@@ -77,12 +79,14 @@ func resourceXraySecurityPolicyV2() *schema.Resource {
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
 												"from": {
-													Type:     schema.TypeFloat,
-													Required: true,
+													Type:             schema.TypeFloat,
+													Required:         true,
+													ValidateDiagFunc: validation.ToDiagFunc(validation.FloatBetween(0, 10)),
 												},
 												"to": {
-													Type:     schema.TypeFloat,
-													Required: true,
+													Type:             schema.TypeFloat,
+													Required:         true,
+													ValidateDiagFunc: validation.ToDiagFunc(validation.FloatBetween(0, 10)),
 												},
 											},
 										},
