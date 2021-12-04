@@ -200,10 +200,10 @@ func resourceXrayWatchCreate(ctx context.Context, d *schema.ResourceData, m inte
 
 func resourceXrayWatchRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
-	watch := Watch{}
+	watch := unpackWatch(d)
 	resp, err := m.(*resty.Client).R().SetResult(&watch).Get("xray/api/v2/watches/" + d.Id())
-	if err != nil {
 
+	if err != nil {
 		if resp != nil && resp.StatusCode() == http.StatusNotFound {
 			log.Printf("[WARN] Xray watch (%s) not found, removing from state", d.Id())
 			d.SetId("")
@@ -211,20 +211,6 @@ func resourceXrayWatchRead(ctx context.Context, d *schema.ResourceData, m interf
 		}
 		return diags
 	}
-	// add packWatch functions, call it from here
-	if err := d.Set("description", watch.GeneralData.Description); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("active", watch.GeneralData.Active); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("watch_resource", packProjectResources(watch.ProjectResources)); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("assigned_policy", packAssignedPolicies(watch.AssignedPolicies)); err != nil {
-		return diag.FromErr(err)
-	}
-
 	return diags
 }
 
