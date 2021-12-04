@@ -1,6 +1,6 @@
 # Xray Watch Resource
 
-Provides a Xray watch resource.
+Provides an Xray watch resource.
 
 ## Example Usage
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-resty/resty/v2"
+	"net/http"
 	"os"
 	"strings"
 	"testing"
@@ -12,14 +13,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
-var testAccProviders = func() map[string]func() (*schema.Provider, error) {
-	provider := Provider()
+func testAccProviders() map[string]func() (*schema.Provider, error) {
 	return map[string]func() (*schema.Provider, error){
 		"xray": func() (*schema.Provider, error) {
-			return provider, nil
+			return Provider(), nil
 		},
 	}
-}()
+}
 
 func TestProvider(t *testing.T) {
 	if err := Provider().InternalValidate(); err != nil {
@@ -35,7 +35,7 @@ func getTestResty(t *testing.T) *resty.Client {
 	if err != nil {
 		t.Fatal(err)
 	}
-	accessToken := os.Getenv("ARTIFACTORY_ACCESS_TOKEN")
+	accessToken := os.Getenv("XRAY_ACCESS_TOKEN")
 	restyClient, err = addAuthToResty(restyClient, accessToken)
 	if err != nil {
 		t.Fatal(err)
@@ -43,50 +43,83 @@ func getTestResty(t *testing.T) *resty.Client {
 	return restyClient
 }
 
-func testAccPreCheck(t *testing.T) error {
-	restyClient := getTestResty(t)
-	err := checkArtifactoryLicense(restyClient)
-	if err != nil {
-		return err
-	}
+func testAccPreCheck(t *testing.T) {
 	ctx := context.Background()
-	provider, _ := testAccProviders["xray"]()
+	provider, _ := testAccProviders()["xray"]()
 	oldErr := provider.Configure(ctx, terraform.NewResourceConfigRaw(nil))
 	if oldErr != nil {
 		t.Fatal(oldErr)
 	}
-	return nil
 }
 
 // Create a local repository with Xray indexing enabled. It will be used in the tests
 func testAccCreateRepos(t *testing.T, repos []string) {
 	restyClient := getTestResty(t)
-	body := "{\n\"rclass\":\"local\",\n\"xrayIndex\":true\n}"
+
+	type Repository struct {
+		Rclass    string `json:"rclass"`
+		XrayIndex bool   `json:"xrayIndex"`
+	}
+
+	repository := Repository{}
+	repository.Rclass = "local"
+	repository.XrayIndex = true
 	for _, repo := range repos {
-		_, errRepo := restyClient.R().SetBody(body).Put("artifactory/api/repositories/" + repo)
+		response, errRepo := restyClient.R().SetBody(repository).Put("artifactory/api/repositories/" + repo)
 		repoExists := strings.Contains(fmt.Sprint(errRepo), "Case insensitive repository key already exists")
-		repoCreated := strings.Contains(fmt.Sprint(errRepo), "Successfully created repository")
-		if !repoExists && !repoCreated {
+		if !repoExists && response.StatusCode() != http.StatusOK {
 			t.Fatal(errRepo)
 		}
 	}
+}
+
+func testAccDeleteRepos(t *testing.T, repos []string) (*resty.Response, error) {
+	restyClient := getTestResty(t)
+	for _, repo := range repos {
+		response, errRepo := restyClient.R().Delete("artifactory/api/repositories/" + repo)
+		if response.StatusCode() != http.StatusOK {
+			t.Fatal(errRepo)
+		}
+	}
+	return nil, nil
 }
 
 // Create a set of builds or a single build, add the build into the Xray indexing configuration, to be able to add it to
 // the xray watch
 func testAccCreateBuilds(t *testing.T, builds []string) {
 	restyClient := getTestResty(t)
+
+	type BuildBody struct {
+		Version string `json:"version"`
+		Name    string `json:"name"`
+		Number  string `json:"number"`
+		Started string `json:"started"`
+	}
+
+	type XrayIndexBody struct {
+		Names []string `json:"names"`
+	}
+
 	for _, build := range builds {
-		createBuildBody := fmt.Sprintf("{\n\"version\": \"1.0.1\",\n\"name\":\"%s\",\n\"number\":\"28\",\n \"started\":\"2021-10-30T12:00:19.893+0300\"\n}",
-			build)
-		addIndexBody := fmt.Sprintf("{\n\"names\": [\"%s\"]\n}", build)
-		respCreateBuild, errCreateBuild := restyClient.R().SetBody(createBuildBody).Put("artifactory/api/build")
-		if respCreateBuild.StatusCode() != 204 {
+		buildBody := BuildBody{
+			Version: "1.0.1",
+			Name:    build,
+			Number:  "28",
+			Started: "2021-10-30T12:00:19.893+0300",
+		}
+		respCreateBuild, errCreateBuild := restyClient.R().SetBody(buildBody).Put("artifactory/api/build")
+		if respCreateBuild.StatusCode() != http.StatusNoContent {
 			t.Fatal(errCreateBuild)
 		}
-		respAddIndexBody, errAddIndexBody := restyClient.R().SetBody(addIndexBody).Post("xray/api/v1/binMgr/builds")
-		if respAddIndexBody.StatusCode() != 200 {
-			t.Fatal(errAddIndexBody)
-		}
 	}
+
+	xrayIndexBody := XrayIndexBody{
+		Names: builds,
+	}
+
+	respAddIndexBody, errAddIndexBody := restyClient.R().SetBody(xrayIndexBody).Post("xray/api/v1/binMgr/builds")
+	if respAddIndexBody.StatusCode() != http.StatusOK {
+		t.Fatal(errAddIndexBody)
+	}
+
 }

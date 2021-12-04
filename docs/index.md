@@ -33,7 +33,7 @@ The Xray provider supports only Bearer Token authentication.
 
 ### Bearer Token
 Artifactory access tokens may be used via the Authorization header by providing the `access_token` field to the provider
-block. Getting this value from the environment is supported with the `ARTIFACTORY_ACCESS_TOKEN`, `XRAY_ACCESS_TOKEN`,
+block. Getting this value from the environment is supported with the `XRAY_ACCESS_TOKEN`,
 or `JFROG_ACCESS_TOKEN` variables.
 Set `url` field to provide JFrog Xray URL. Alternatively you can set `ARTIFACTORY_URL`, `JFROG_URL` or `PROJECTS_URL` variables.
 
@@ -52,5 +52,5 @@ The following arguments are supported:
 
 * `url` - (Required) URL of Artifactory. This can also be sourced from the `ARTIFACTORY_URL`, `JFROG_URL` or `PROJECTS_URL` environment variables.
 * `access_token` - (Optional) This is a bearer token that can be given to you by your admin under `Identity and Access`.
-For Xray functionality, this is the only auth method accepted. This can also be sourced from the `ARTIFACTORY_ACCESS_TOKEN`, `XRAY_ACCESS_TOKEN`,
+For Xray functionality, this is the only auth method accepted. This can also be sourced from the `XRAY_ACCESS_TOKEN`,
   or `JFROG_ACCESS_TOKEN` environment variables.

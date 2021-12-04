@@ -3,13 +3,14 @@ package xray
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/url"
+	"strings"
+
 	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"net/http"
-	"net/url"
-	"strings"
 )
 
 // Version for some reason isn't getting updated by the linker
@@ -31,7 +32,7 @@ func Provider() *schema.Provider {
 				Type:      schema.TypeString,
 				Optional:  true,
 				Sensitive: true,
-				DefaultFunc: schema.MultiEnvDefaultFunc([]string{"XRAY_ACCESS_TOKEN", "ARTIFACTORY_ACCESS_TOKEN"},
+				DefaultFunc: schema.MultiEnvDefaultFunc([]string{"XRAY_ACCESS_TOKEN"},
 					"JFROG_ACCESS_TOKEN"),
 				Description: "This is a bearer token that can be given to you by your admin under `Identity and Access`",
 			},

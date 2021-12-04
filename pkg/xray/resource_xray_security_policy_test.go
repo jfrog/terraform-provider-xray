@@ -2,15 +2,11 @@ package xray
 
 import (
 	"fmt"
-	"net/http"
 	"regexp"
 	"strconv"
 	"testing"
 
-	"github.com/go-resty/resty/v2"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
 var tempStructSecurity = map[string]string{
@@ -43,8 +39,8 @@ func TestAccSecurityPolicy_badTypeInSecurityPolicy(t *testing.T) {
 	fqrn := "xray_security_policy." + resourceName
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckSecurityPolicyDestroy(fqrn),
-		ProviderFactories: testAccProviders,
+		CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
+		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccXraySecurityPolicy_badSecurityType(policyName, policyDesc, ruleName, rangeTo),
@@ -65,8 +61,8 @@ func TestAccSecurityPolicy_badSecurityCriteria(t *testing.T) {
 	fqrn := "xray_security_policy." + resourceName
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckSecurityPolicyDestroy(fqrn),
-		ProviderFactories: testAccProviders,
+		CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
+		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccXraySecurityPolicy_badSecurity(policyName, policyDesc, ruleName, allowedLicense),
@@ -91,8 +87,8 @@ func TestAccSecurityPolicy_badGracePeriod(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckSecurityPolicyDestroy(fqrn),
-		ProviderFactories: testAccProviders,
+		CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
+		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
 				Config:      executeTemplate(fqrn, securityPolicyCVSS, tempStruct),
@@ -115,8 +111,8 @@ func TestAccSecurityPolicy_createBlockDownloadTrueCVSS(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckSecurityPolicyDestroy(fqrn),
-		ProviderFactories: testAccProviders,
+		CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
+		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
 				Config: executeTemplate(fqrn, securityPolicyCVSS, tempStruct),
@@ -141,8 +137,8 @@ func TestAccSecurityPolicy_createBlockDownloadFalseCVSS(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckSecurityPolicyDestroy(fqrn),
-		ProviderFactories: testAccProviders,
+		CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
+		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
 				Config: executeTemplate(fqrn, securityPolicyCVSS, tempStruct),
@@ -165,8 +161,8 @@ func TestAccSecurityPolicy_createBlockDownloadTrueMinSeverity(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckSecurityPolicyDestroy(fqrn),
-		ProviderFactories: testAccProviders,
+		CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
+		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
 				Config: executeTemplate(fqrn, securityPolicyMinSeverity, tempStruct),
@@ -191,8 +187,8 @@ func TestAccSecurityPolicy_createBlockDownloadFalseMinSeverity(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckSecurityPolicyDestroy(fqrn),
-		ProviderFactories: testAccProviders,
+		CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
+		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
 				Config: executeTemplate(fqrn, securityPolicyMinSeverity, tempStruct),
@@ -217,8 +213,8 @@ func TestAccSecurityPolicy_createCVSSFloat(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckSecurityPolicyDestroy(fqrn),
-		ProviderFactories: testAccProviders,
+		CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
+		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
 				Config: executeTemplate(fqrn, securityPolicyCVSS, tempStruct),
@@ -241,8 +237,8 @@ func TestAccSecurityPolicy_blockMismatchCVSS(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckSecurityPolicyDestroy(fqrn),
-		ProviderFactories: testAccProviders,
+		CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
+		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
 				Config: executeTemplate(fqrn, securityPolicyCVSS, tempStruct),
@@ -251,22 +247,6 @@ func TestAccSecurityPolicy_blockMismatchCVSS(t *testing.T) {
 			},
 		},
 	})
-}
-
-func testAccCheckSecurityPolicyDestroy(id string) func(*terraform.State) error {
-	return func(s *terraform.State) error {
-		rs, ok := s.RootModule().Resources[id]
-		if !ok {
-			return fmt.Errorf("error: Resource id [%s] not found", id)
-		}
-		provider, _ := testAccProviders["xray"]()
-		_, resp, _ := getPolicy(rs.Primary.ID, provider.Meta().(*resty.Client))
-
-		if resp.StatusCode() == http.StatusOK {
-			return fmt.Errorf("error: Policy %s still exists", rs.Primary.ID)
-		}
-		return nil
-	}
 }
 
 func testAccXraySecurityPolicy_badSecurityType(name, description, ruleName string, rangeTo int) string {

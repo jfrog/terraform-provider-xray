@@ -528,12 +528,3 @@ func minLength(length int) func(i interface{}, k string) ([]string, []error) {
 		return nil, nil
 	}
 }
-
-func validateLicenseList(license interface{}, _ string) ([]string, []error) {
-	for _, valid := range validLicenseTypes {
-		if license == valid {
-			return nil, nil
-		}
-	}
-	return nil, []error{fmt.Errorf("%s is not a valid license", license)}
-}

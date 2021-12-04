@@ -2,14 +2,10 @@ package xray
 
 import (
 	"fmt"
-	"net/http"
 	"regexp"
 	"testing"
 
-	"github.com/go-resty/resty/v2"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
 var tempStructLicense = map[string]string{
@@ -37,7 +33,7 @@ var tempStructLicense = map[string]string{
 
 // License policy criteria are different from the security policy criteria
 // Test will try to post a new license policy with incorrect body of security policy
-// with specified cvss_range. The function expandLicenseCriteria will ignore all the
+// with specified cvss_range. The function unpackLicenseCriteria will ignore all the
 // fields except of "allow_unknown", "banned_licenses" and "allowed_licenses" if the Policy type is "license"
 func TestAccLicensePolicy_badLicenseCriteria(t *testing.T) {
 	_, fqrn, resourceName := mkNames("policy-", "xray_license_policy")
@@ -48,8 +44,8 @@ func TestAccLicensePolicy_badLicenseCriteria(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckLicensePolicyDestroy(fqrn),
-		ProviderFactories: testAccProviders,
+		CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
+		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccXrayLicensePolicy_badLicense(resourceName, policyName, policyDesc, ruleName, rangeTo),
@@ -73,8 +69,8 @@ func TestAccLicensePolicy_badGracePeriod(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckLicensePolicyDestroy(fqrn),
-		ProviderFactories: testAccProviders,
+		CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
+		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
 				Config:      executeTemplate(fqrn, licensePolicyTemplate, tempStruct),
@@ -97,8 +93,8 @@ func TestAccLicensePolicy_createAllowedLic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckLicensePolicyDestroy(fqrn),
-		ProviderFactories: testAccProviders,
+		CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
+		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
 				Config: executeTemplate(fqrn, licensePolicyTemplate, tempStruct),
@@ -120,8 +116,8 @@ func TestAccLicensePolicy_createBannedLic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckLicensePolicyDestroy(fqrn),
-		ProviderFactories: testAccProviders,
+		CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
+		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
 				Config: executeTemplate(fqrn, licensePolicyTemplate, tempStruct),
@@ -143,8 +139,8 @@ func TestAccLicensePolicy_createMultiLicensePermissiveFalse(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckLicensePolicyDestroy(fqrn),
-		ProviderFactories: testAccProviders,
+		CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
+		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
 				Config: executeTemplate(fqrn, licensePolicyTemplate, tempStruct),
@@ -168,8 +164,8 @@ func TestAccLicensePolicy_createBlockFalse(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckLicensePolicyDestroy(fqrn),
-		ProviderFactories: testAccProviders,
+		CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
+		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
 				Config: executeTemplate(fqrn, licensePolicyTemplate, tempStruct),
@@ -177,22 +173,6 @@ func TestAccLicensePolicy_createBlockFalse(t *testing.T) {
 			},
 		},
 	})
-}
-
-func testAccCheckLicensePolicyDestroy(id string) func(*terraform.State) error {
-	return func(s *terraform.State) error {
-		rs, ok := s.RootModule().Resources[id]
-		if !ok {
-			return fmt.Errorf("error: Resource id [%s] not found", id)
-		}
-		provider, _ := testAccProviders["xray"]()
-		_, resp, _ := getPolicy(rs.Primary.ID, provider.Meta().(*resty.Client))
-
-		if resp.StatusCode() == http.StatusOK {
-			return fmt.Errorf("error: Policy %s still exists", rs.Primary.ID)
-		}
-		return nil
-	}
 }
 
 func testAccXrayLicensePolicy_badLicense(resourceName, name, description, ruleName string, rangeTo int) string {

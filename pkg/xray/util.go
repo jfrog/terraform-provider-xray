@@ -126,6 +126,7 @@ func copyStringMap(source map[string]string, target map[string]string) map[strin
 	return target
 }
 
+//
 func copyInterfaceMap(source map[string]interface{}, target map[string]interface{}) map[string]interface{} {
 	for k, v := range source {
 		target[k] = v
@@ -186,6 +187,10 @@ func sendConfigurationPatch(content []byte, m interface{}) error {
 		Patch("artifactory/api/system/configuration")
 
 	return err
+}
+
+var neverRetry = func(response *resty.Response, err error) bool {
+	return false
 }
 
 func BoolPtr(v bool) *bool { return &v }

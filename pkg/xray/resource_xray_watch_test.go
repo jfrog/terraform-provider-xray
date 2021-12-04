@@ -1,11 +1,12 @@
 package xray
 
 import (
+	"context"
 	"fmt"
-	"github.com/go-resty/resty/v2"
 	"net/http"
 	"testing"
 
+	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
@@ -38,8 +39,8 @@ func TestAccWatch_allReposSinglePolicy(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckWatchDestroy,
-		ProviderFactories: testAccProviders,
+		CheckDestroy:      verifyDeleted(fqrn, testCheckWatch),
+		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
 				Config: executeTemplate(fqrn, allReposSinglePolicyWatchTemplate, tempStruct),
@@ -61,8 +62,8 @@ func TestAccWatch__allReposMultiplePolicies(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		CheckDestroy:      testAccCheckWatchDestroy,
-		ProviderFactories: testAccProviders,
+		CheckDestroy:      verifyDeleted(fqrn, testCheckWatch),
+		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
 				Config: executeTemplate(fqrn, allReposMultiplePoliciesWatchTemplate, tempStruct),
@@ -91,8 +92,8 @@ func TestAccWatch_singleRepository(t *testing.T) {
 			testAccPreCheck(t)
 			testAccCreateRepos(t, repos)
 		},
-		CheckDestroy:      testAccCheckWatchDestroy,
-		ProviderFactories: testAccProviders,
+		CheckDestroy:      verifyDeleted(fqrn, testCheckWatch),
+		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
 				Config: executeTemplate(fqrn, singleRepositoryWatchTemplate, tempStruct),
@@ -118,8 +119,8 @@ func TestAccWatch_multipleRepositories(t *testing.T) {
 			testAccPreCheck(t)
 			testAccCreateRepos(t, repos)
 		},
-		CheckDestroy:      testAccCheckWatchDestroy,
-		ProviderFactories: testAccProviders,
+		CheckDestroy:      verifyDeleted(fqrn, testCheckWatch),
+		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
 				Config: executeTemplate(fqrn, multipleRepositoriesWatchTemplate, tempStruct),
@@ -139,6 +140,7 @@ func TestAccWatch_build(t *testing.T) {
 	tempStruct["policy_name_0"] = fmt.Sprintf("xray-policy-%d", randomInt())
 	tempStruct["watch_type"] = "build"
 	tempStruct["build_name0"] = "release-pipeline"
+	tempStruct["build_name1"] = "release-pipeline1"
 	builds := []string{tempStruct["build_name0"]}
 
 	resource.Test(t, resource.TestCase{
@@ -146,8 +148,8 @@ func TestAccWatch_build(t *testing.T) {
 			testAccPreCheck(t)
 			testAccCreateBuilds(t, builds)
 		},
-		CheckDestroy:      testAccCheckWatchDestroy,
-		ProviderFactories: testAccProviders,
+		CheckDestroy:      verifyDeleted(fqrn, testCheckWatch),
+		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
 				Config: executeTemplate(fqrn, buildWatchTemplate, tempStruct),
@@ -175,8 +177,8 @@ func TestAccWatch_multipleBuilds(t *testing.T) {
 			testAccPreCheck(t)
 			testAccCreateBuilds(t, builds)
 		},
-		CheckDestroy:      testAccCheckWatchDestroy,
-		ProviderFactories: testAccProviders,
+		CheckDestroy:      verifyDeleted(fqrn, testCheckWatch),
+		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
 				Config: executeTemplate(fqrn, multipleBuildsWatchTemplate, tempStruct),
@@ -517,7 +519,6 @@ resource "xray_watch" "{{ .resource_name }}" {
   watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
 }`
 
-// TODO: add more verifications
 func verifyXrayWatch(fqrn string, tempStruct map[string]string) resource.TestCheckFunc {
 	return resource.ComposeTestCheckFunc(
 		resource.TestCheckResourceAttr(fqrn, "name", tempStruct["watch_name"]),
@@ -528,52 +529,29 @@ func verifyXrayWatch(fqrn string, tempStruct map[string]string) resource.TestChe
 	)
 }
 
-func testAccCheckWatchDestroy(s *terraform.State) error {
-	provider, _ := testAccProviders["xray"]()
+type CheckFun func(id string, request *resty.Request) (*resty.Response, error)
 
-	client := provider.Meta().(*resty.Client)
-
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type == "xray_watch" {
-			watch := Watch{}
-			resp, err := client.R().SetResult(watch).Get("xray/api/v2/watches/" + rs.Primary.ID)
-			if err != nil {
-				if resp != nil && resp.StatusCode() == http.StatusNotFound {
-					continue
-				}
-				return err
-			}
-
-			return fmt.Errorf("error: Watch %s still exists %s", rs.Primary.ID, *watch.GeneralData.Name)
-
+func verifyDeleted(id string, check CheckFun) func(*terraform.State) error {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[id]
+		if !ok {
+			return fmt.Errorf("error: Resource id [%s] not found", id)
 		}
-		if rs.Type == "xray_security_policy" {
-			policy, resp, err := getPolicy(rs.Primary.ID, client)
-
-			if err != nil {
-				if resp != nil && resp.StatusCode() == http.StatusInternalServerError &&
-					err.Error() != fmt.Sprintf("{\"error\":\"Failed to find Policy %s\"}", rs.Primary.ID) {
-					continue
+		provider, _ := testAccProviders()["xray"]()
+		provider.Configure(context.Background(), terraform.NewResourceConfigRaw(nil))
+		client := provider.Meta().(*resty.Client)
+		resp, err := check(rs.Primary.ID, client.R())
+		if err != nil {
+			if resp != nil {
+				switch resp.StatusCode() {
+				case http.StatusNotFound, http.StatusBadRequest, http.StatusInternalServerError:
+					return nil
 				}
-				return err
 			}
-			return fmt.Errorf("error: Policy %s still exists %s", rs.Primary.ID, *policy.Name)
+			return err
 		}
-		if rs.Type == "xray_license_policy" {
-			policy, resp, err := getPolicy(rs.Primary.ID, client)
-
-			if err != nil {
-				if resp != nil && resp.StatusCode() == http.StatusInternalServerError &&
-					err.Error() != fmt.Sprintf("{\"error\":\"Failed to find Policy %s\"}", rs.Primary.ID) {
-					continue
-				}
-				return err
-			}
-			return fmt.Errorf("error: Policy %s still exists %s", rs.Primary.ID, *policy.Name)
-		}
+		return fmt.Errorf("error: %s still exists", rs.Primary.ID)
 	}
-
-	return nil
 }
 
 // TODO for bonus points - test builds with complex filters eg "filters":[{"type":"ant-patterns","value":{"ExcludePatterns":[],"IncludePatterns":["*"]}

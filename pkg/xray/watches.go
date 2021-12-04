@@ -12,9 +12,9 @@ import (
 )
 
 type WatchGeneralData struct {
-	Name        *string `json:"name,omitempty"`
-	Description *string `json:"description,omitempty"`
-	Active      *bool   `json:"active,omitempty"`
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	Active      bool   `json:"active,omitempty"`
 }
 
 type WatchFilterValue struct {
@@ -23,16 +23,16 @@ type WatchFilterValue struct {
 }
 
 type WatchFilter struct {
-	Type  *string `json:"type,omitempty"`
-	Value *string `json:"value,omitempty"`
+	Type  string `json:"type,omitempty"`
+	Value string `json:"value,omitempty"`
 }
 
 type WatchProjectResource struct {
-	Type            *string        `json:"type,omitempty"`
-	BinaryManagerId *string        `json:"bin_mgr_id,omitempty"`
-	Filters         *[]WatchFilter `json:"filters,omitempty"`
+	Type            *string       `json:"type,omitempty"`
+	BinaryManagerId *string       `json:"bin_mgr_id,omitempty"`
+	Filters         []WatchFilter `json:"filters,omitempty"`
 	// Watch a repo
-	Name *string `json:"name,omitempty"`
+	Name string `json:"name,omitempty"`
 }
 
 type WatchProjectResources struct {
@@ -50,17 +50,17 @@ type Watch struct {
 	AssignedPolicies *[]WatchAssignedPolicy `json:"assigned_policies,omitempty"`
 }
 
-func expandWatch(d *schema.ResourceData) *Watch {
+func unpackWatch(d *schema.ResourceData) *Watch {
 	watch := new(Watch)
 
 	gd := &WatchGeneralData{
-		Name: StringPtr(d.Get("name").(string)),
+		Name: d.Get("name").(string),
 	}
 	if v, ok := d.GetOk("description"); ok {
-		gd.Description = StringPtr(v.(string))
+		gd.Description = v.(string)
 	}
 	if v, ok := d.GetOk("active"); ok {
-		gd.Active = BoolPtr(v.(bool))
+		gd.Active = v.(bool)
 	}
 	watch.GeneralData = gd
 
@@ -68,7 +68,7 @@ func expandWatch(d *schema.ResourceData) *Watch {
 	if v, ok := d.GetOk("watch_resource"); ok {
 		r := &[]WatchProjectResource{}
 		for _, res := range v.([]interface{}) {
-			*r = append(*r, *expandProjectResource(res))
+			*r = append(*r, *unpackProjectResource(res))
 		}
 		pr.Resources = r
 	}
@@ -77,7 +77,7 @@ func expandWatch(d *schema.ResourceData) *Watch {
 	ap := &[]WatchAssignedPolicy{}
 	if v, ok := d.GetOk("assigned_policy"); ok {
 		for _, pol := range v.([]interface{}) {
-			*ap = append(*ap, *expandAssignedPolicy(pol))
+			*ap = append(*ap, *unpackAssignedPolicy(pol))
 		}
 	}
 	watch.AssignedPolicies = ap
@@ -85,7 +85,7 @@ func expandWatch(d *schema.ResourceData) *Watch {
 	return watch
 }
 
-func expandProjectResource(rawCfg interface{}) *WatchProjectResource {
+func unpackProjectResource(rawCfg interface{}) *WatchProjectResource {
 	resource := new(WatchProjectResource)
 
 	cfg := rawCfg.(map[string]interface{})
@@ -95,32 +95,32 @@ func expandProjectResource(rawCfg interface{}) *WatchProjectResource {
 		resource.BinaryManagerId = StringPtr(v.(string))
 	}
 	if v, ok := cfg["name"]; ok {
-		resource.Name = StringPtr(v.(string))
+		resource.Name = v.(string)
 	}
 
 	if v, ok := cfg["filter"]; ok {
-		resourceFilters := expandFilters(v.([]interface{}))
-		resource.Filters = &resourceFilters
+		resourceFilters := unpackFilters(v.([]interface{}))
+		resource.Filters = resourceFilters
 	}
 
 	return resource
 }
 
-func expandFilters(l []interface{}) []WatchFilter {
-	filters := make([]WatchFilter, 0, len(l))
+func unpackFilters(list []interface{}) []WatchFilter {
+	filters := make([]WatchFilter, 0, len(list))
 
-	for _, raw := range l {
+	for _, raw := range list {
 		filter := new(WatchFilter)
 		f := raw.(map[string]interface{})
-		filter.Type = StringPtr(f["type"].(string)) // TODO: recognize the type of the filter
-		filter.Value = StringPtr(f["value"].(string))
+		filter.Type = f["type"].(string) // TODO: recognize the type of the filter
+		filter.Value = f["value"].(string)
 		filters = append(filters, *filter)
 	}
 
 	return filters
 }
 
-func expandAssignedPolicy(rawCfg interface{}) *WatchAssignedPolicy {
+func unpackAssignedPolicy(rawCfg interface{}) *WatchAssignedPolicy {
 	policy := new(WatchAssignedPolicy)
 
 	cfg := rawCfg.(map[string]interface{})
@@ -130,45 +130,46 @@ func expandAssignedPolicy(rawCfg interface{}) *WatchAssignedPolicy {
 	return policy
 }
 
-func flattenProjectResources(resources *WatchProjectResources) []interface{} {
+func packProjectResources(resources *WatchProjectResources) []interface{} {
 	if resources == nil || resources.Resources == nil {
 		return []interface{}{}
 	}
 
-	var l []interface{}
+	var list []interface{}
 	for _, res := range *resources.Resources {
-		m := make(map[string]interface{})
-		m["type"] = res.Type
-		if res.Name != nil {
-			m["name"] = res.Name
+		resourceMap := make(map[string]interface{})
+		resourceMap["type"] = res.Type
+		if len(res.Name) > 0 {
+			resourceMap["name"] = res.Name
 		}
 		if res.BinaryManagerId != nil {
-			m["bin_mgr_id"] = res.BinaryManagerId
+			resourceMap["bin_mgr_id"] = res.BinaryManagerId
 		}
-		m["filter"] = flattenFilters(res.Filters)
-		l = append(l, m)
+		resourceMap["filter"] = packFilters(res.Filters)
+		list = append(list, resourceMap)
 	}
 
-	return l
+	return list
 }
 
-func flattenFilters(filters *[]WatchFilter) []interface{} {
+func packFilters(filters []WatchFilter) []interface{} {
 	if filters == nil {
 		return []interface{}{}
 	}
 
 	var l []interface{}
-	for _, f := range *filters {
-		m := make(map[string]interface{})
-		m["type"] = f.Type
-		m["value"] = f.Value
+	for _, f := range filters {
+		m := map[string]interface{}{
+			"type":  f.Type,
+			"value": f.Value,
+		}
 		l = append(l, m)
 	}
 
 	return l
 }
 
-func flattenAssignedPolicies(policies *[]WatchAssignedPolicy) []interface{} {
+func packAssignedPolicies(policies *[]WatchAssignedPolicy) []interface{} {
 	if policies == nil {
 		return []interface{}{}
 	}
@@ -186,13 +187,13 @@ func flattenAssignedPolicies(policies *[]WatchAssignedPolicy) []interface{} {
 
 func resourceXrayWatchCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
-	watch := expandWatch(d)
+	watch := unpackWatch(d)
 	_, err := m.(*resty.Client).R().SetBody(watch).Post("xray/api/v2/watches")
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	d.SetId(*watch.GeneralData.Name) // ID may be returned according to the API docs, but not in go-xray
+	d.SetId(watch.GeneralData.Name) // ID may be returned according to the API docs, but not in go-xray
 	resourceXrayWatchRead(ctx, d, m)
 	return diags
 }
@@ -210,17 +211,17 @@ func resourceXrayWatchRead(ctx context.Context, d *schema.ResourceData, m interf
 		}
 		return diags
 	}
-
+	// add packWatch functions, call it from here
 	if err := d.Set("description", watch.GeneralData.Description); err != nil {
 		return diag.FromErr(err)
 	}
 	if err := d.Set("active", watch.GeneralData.Active); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("watch_resource", flattenProjectResources(watch.ProjectResources)); err != nil {
+	if err := d.Set("watch_resource", packProjectResources(watch.ProjectResources)); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("assigned_policy", flattenAssignedPolicies(watch.AssignedPolicies)); err != nil {
+	if err := d.Set("assigned_policy", packAssignedPolicies(watch.AssignedPolicies)); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -229,22 +230,31 @@ func resourceXrayWatchRead(ctx context.Context, d *schema.ResourceData, m interf
 
 func resourceXrayWatchUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
-	watch := expandWatch(d)
+	watch := unpackWatch(d)
 	_, err := m.(*resty.Client).R().SetBody(watch).Put("xray/api/v2/watches/" + d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	d.SetId(*watch.GeneralData.Name)
+	d.SetId(watch.GeneralData.Name)
 	resourceXrayWatchRead(ctx, d, m)
 	return diags
 }
 
 func resourceXrayWatchDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
-	_, err := m.(*resty.Client).R().Delete("xray/api/v2/watches/" + d.Id())
-	if err != nil {
+	resp, err := m.(*resty.Client).R().Delete("xray/api/v2/watches/" + d.Id())
+	if err != nil && resp.StatusCode() == http.StatusNotFound {
+		d.SetId("")
 		return diag.FromErr(err)
 	}
 	return diags
+}
+
+func checkWatch(id string, request *resty.Request) (*resty.Response, error) {
+	return request.Get("xray/api/v2/watches/" + id)
+}
+
+func testCheckWatch(id string, request *resty.Request) (*resty.Response, error) {
+	return checkWatch(id, request.AddRetryCondition(neverRetry))
 }

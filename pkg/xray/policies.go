@@ -67,7 +67,7 @@ type Policy struct {
 	Modified    *string       `json:"modified,omitempty"`
 }
 
-func expandPolicy(d *schema.ResourceData) (*Policy, error) {
+func unpackPolicy(d *schema.ResourceData) (*Policy, error) {
 	policy := new(Policy)
 
 	policy.Name = StringPtr(d.Get("name").(string))
@@ -80,13 +80,13 @@ func expandPolicy(d *schema.ResourceData) (*Policy, error) {
 	if v, ok := d.GetOk("author"); ok {
 		policy.Author = StringPtr(v.(string))
 	}
-	policyRules, err := expandRules(d.Get("rules").([]interface{}), policy.Type)
+	policyRules, err := unpackRules(d.Get("rules").([]interface{}), policy.Type)
 	policy.Rules = &policyRules
 
 	return policy, err
 }
 
-func expandRules(configured []interface{}, policyType *string) (policyRules []PolicyRule, err error) {
+func unpackRules(configured []interface{}, policyType *string) (policyRules []PolicyRule, err error) {
 	rules := make([]PolicyRule, 0, len(configured))
 
 	for _, raw := range configured {
@@ -95,14 +95,14 @@ func expandRules(configured []interface{}, policyType *string) (policyRules []Po
 		rule.Name = StringPtr(data["name"].(string))
 		rule.Priority = IntPtr(data["priority"].(int))
 		if *policyType == "license" {
-			rule.Criteria, err = expandLicenseCriteria(data["criteria"].([]interface{}))
+			rule.Criteria, err = unpackLicenseCriteria(data["criteria"].([]interface{}))
 		}
 		if *policyType == "security" {
-			rule.Criteria, err = expandSecurityCriteria(data["criteria"].([]interface{}))
+			rule.Criteria, err = unpackSecurityCriteria(data["criteria"].([]interface{}))
 		}
 
 		if v, ok := data["actions"]; ok {
-			rule.Actions = expandActions(v.([]interface{}))
+			rule.Actions = unpackActions(v.([]interface{}))
 		}
 		rules = append(rules, *rule)
 	}
@@ -110,7 +110,7 @@ func expandRules(configured []interface{}, policyType *string) (policyRules []Po
 	return rules, err
 }
 
-func expandLicenseCriteria(l []interface{}) (*PolicyRuleCriteria, error) {
+func unpackLicenseCriteria(l []interface{}) (*PolicyRuleCriteria, error) {
 	if len(l) == 0 {
 		return nil, nil
 	}
@@ -120,10 +120,10 @@ func expandLicenseCriteria(l []interface{}) (*PolicyRuleCriteria, error) {
 		criteria.AllowUnknown = BoolPtr(m["allow_unknown"].(bool))
 	}
 	if (m["banned_licenses"]) != nil {
-		criteria.BannedLicenses = expandLicenses(m["banned_licenses"].([]interface{}))
+		criteria.BannedLicenses = unpackLicenses(m["banned_licenses"].([]interface{}))
 	}
 	if (m["allowed_licenses"]) != nil {
-		criteria.AllowedLicenses = expandLicenses(m["allowed_licenses"].([]interface{}))
+		criteria.AllowedLicenses = unpackLicenses(m["allowed_licenses"].([]interface{}))
 	}
 	if (m["multi_license_permissive"]) != nil {
 		criteria.MultiLicensePermissive = BoolPtr(m["multi_license_permissive"].(bool))
@@ -132,7 +132,7 @@ func expandLicenseCriteria(l []interface{}) (*PolicyRuleCriteria, error) {
 	return criteria, nil
 }
 
-func expandSecurityCriteria(l []interface{}) (*PolicyRuleCriteria, error) {
+func unpackSecurityCriteria(l []interface{}) (*PolicyRuleCriteria, error) {
 	if len(l) == 0 {
 		return nil, nil
 	}
@@ -143,12 +143,12 @@ func expandSecurityCriteria(l []interface{}) (*PolicyRuleCriteria, error) {
 		criteria.MinimumSeverity = m["min_severity"].(string)
 	}
 	if (m["cvss_range"]) != nil {
-		criteria.CVSSRange = expandCVSSRange(m["cvss_range"].([]interface{}))
+		criteria.CVSSRange = unpackCVSSRange(m["cvss_range"].([]interface{}))
 	}
 	return criteria, nil
 }
 
-func expandCVSSRange(l []interface{}) *PolicyCVSSRange {
+func unpackCVSSRange(l []interface{}) *PolicyCVSSRange {
 	if len(l) == 0 {
 		return nil
 	}
@@ -161,7 +161,7 @@ func expandCVSSRange(l []interface{}) *PolicyCVSSRange {
 	return cvssrange
 }
 
-func expandLicenses(l []interface{}) *[]string {
+func unpackLicenses(l []interface{}) *[]string {
 	if len(l) == 0 {
 		return nil
 	}
@@ -173,7 +173,7 @@ func expandLicenses(l []interface{}) *[]string {
 	return &licenses
 }
 
-func expandActions(l []interface{}) *PolicyRuleActions {
+func unpackActions(l []interface{}) *PolicyRuleActions {
 	if len(l) == 0 {
 		return nil
 	}
@@ -248,15 +248,15 @@ func expandActions(l []interface{}) *PolicyRuleActions {
 	return actions
 }
 
-func flattenLicenseRules(rules []PolicyRule) []interface{} {
+func packLicenseRules(rules []PolicyRule) []interface{} {
 	l := make([]interface{}, len(rules))
 
 	for i, rule := range rules {
 		m := map[string]interface{}{
 			"name":     *rule.Name,
 			"priority": *rule.Priority,
-			"criteria": flattenLicenseCriteria(rule.Criteria),
-			"actions":  flattenActions(rule.Actions),
+			"criteria": packLicenseCriteria(rule.Criteria),
+			"actions":  packActions(rule.Actions),
 		}
 		l[i] = m
 	}
@@ -264,15 +264,15 @@ func flattenLicenseRules(rules []PolicyRule) []interface{} {
 	return l
 }
 
-func flattenSecurityRules(rules []PolicyRule) []interface{} {
+func packSecurityRules(rules []PolicyRule) []interface{} {
 	l := make([]interface{}, len(rules))
 
 	for i, rule := range rules {
 		m := map[string]interface{}{
 			"name":     *rule.Name,
 			"priority": *rule.Priority,
-			"criteria": flattenSecurityCriteria(rule.Criteria),
-			"actions":  flattenActions(rule.Actions),
+			"criteria": packSecurityCriteria(rule.Criteria),
+			"actions":  packActions(rule.Actions),
 		}
 		l[i] = m
 	}
@@ -280,7 +280,7 @@ func flattenSecurityRules(rules []PolicyRule) []interface{} {
 	return l
 }
 
-func flattenLicenseCriteria(criteria *PolicyRuleCriteria) []interface{} {
+func packLicenseCriteria(criteria *PolicyRuleCriteria) []interface{} {
 	if criteria == nil {
 		return []interface{}{}
 	}
@@ -302,21 +302,21 @@ func flattenLicenseCriteria(criteria *PolicyRuleCriteria) []interface{} {
 	return []interface{}{m}
 }
 
-func flattenSecurityCriteria(criteria *PolicyRuleCriteria) []interface{} {
+func packSecurityCriteria(criteria *PolicyRuleCriteria) []interface{} {
 	if criteria == nil {
 		return []interface{}{}
 	}
 	m := map[string]interface{}{}
 
 	if criteria.CVSSRange != nil {
-		m["cvss_range"] = flattenCVSSRange(criteria.CVSSRange)
+		m["cvss_range"] = packCVSSRange(criteria.CVSSRange)
 	}
 	m["min_severity"] = criteria.MinimumSeverity
 
 	return []interface{}{m}
 }
 
-func flattenCVSSRange(cvss *PolicyCVSSRange) []interface{} {
+func packCVSSRange(cvss *PolicyCVSSRange) []interface{} {
 	if cvss == nil {
 		return []interface{}{}
 	}
@@ -328,13 +328,13 @@ func flattenCVSSRange(cvss *PolicyCVSSRange) []interface{} {
 	return []interface{}{m}
 }
 
-func flattenActions(actions *PolicyRuleActions) []interface{} {
+func packActions(actions *PolicyRuleActions) []interface{} {
 	if actions == nil {
 		return []interface{}{}
 	}
 
 	m := map[string]interface{}{
-		"block_download": flattenBlockDownload(actions.BlockDownload),
+		"block_download": packBlockDownload(actions.BlockDownload),
 	}
 	if actions.Webhooks != nil {
 		m["webhooks"] = *actions.Webhooks
@@ -367,7 +367,7 @@ func flattenActions(actions *PolicyRuleActions) []interface{} {
 	return []interface{}{m}
 }
 
-func flattenBlockDownload(bd *BlockDownloadSettings) []interface{} {
+func packBlockDownload(bd *BlockDownloadSettings) []interface{} {
 	if bd == nil {
 		return []interface{}{}
 	}
@@ -385,7 +385,7 @@ func flattenBlockDownload(bd *BlockDownloadSettings) []interface{} {
 
 // Create Xray policy
 func resourceXrayPolicyCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	policy, err := expandPolicy(d)
+	policy, err := unpackPolicy(d)
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 	if err != nil {
@@ -440,12 +440,12 @@ func resourceXrayPolicyRead(ctx context.Context, d *schema.ResourceData, m inter
 		return diag.FromErr(err)
 	}
 	if *policy.Type == "license" {
-		if err := d.Set("rules", flattenLicenseRules(*policy.Rules)); err != nil {
+		if err := d.Set("rules", packLicenseRules(*policy.Rules)); err != nil {
 			return diag.FromErr(err)
 		}
 	}
 	if *policy.Type == "security" {
-		if err := d.Set("rules", flattenSecurityRules(*policy.Rules)); err != nil {
+		if err := d.Set("rules", packSecurityRules(*policy.Rules)); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -453,7 +453,7 @@ func resourceXrayPolicyRead(ctx context.Context, d *schema.ResourceData, m inter
 }
 
 func resourceXrayPolicyUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	policy, err := expandPolicy(d)
+	policy, err := unpackPolicy(d)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -469,9 +469,18 @@ func resourceXrayPolicyUpdate(ctx context.Context, d *schema.ResourceData, m int
 func resourceXrayPolicyDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
-	_, err := m.(*resty.Client).R().Delete("xray/api/v2/policies/" + d.Id())
-	if err != nil {
+	resp, err := m.(*resty.Client).R().Delete("xray/api/v2/policies/" + d.Id())
+	if err != nil && resp.StatusCode() == http.StatusInternalServerError {
+		d.SetId("")
 		return diag.FromErr(err)
 	}
 	return diags
+}
+
+func checkPolicy(id string, request *resty.Request) (*resty.Response, error) {
+	return request.Get("xray/api/v2/policies/" + id)
+}
+
+func testCheckPolicy(id string, request *resty.Request) (*resty.Response, error) {
+	return checkPolicy(id, request.AddRetryCondition(neverRetry))
 }
