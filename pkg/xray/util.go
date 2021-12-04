@@ -126,14 +126,6 @@ func copyStringMap(source map[string]string, target map[string]string) map[strin
 	return target
 }
 
-//
-func copyInterfaceMap(source map[string]interface{}, target map[string]interface{}) map[string]interface{} {
-	for k, v := range source {
-		target[k] = v
-	}
-	return target
-}
-
 func mergeMaps(schemata ...map[string]interface{}) map[string]interface{} {
 	result := map[string]interface{}{}
 	for _, schma := range schemata {

@@ -11,7 +11,7 @@ terraform {
 provider "xray" {
   // Supply the following env vars:
   // ARTIFACTORY_URL (or JFROG_URL / PROJECTS_URL)
-  // ARTIFACTORY_ACCESS_TOKEN (or XRAY_ACCESS_TOKEN / JFROG_ACCESS_TOKEN)
+  // XRAY_ACCESS_TOKEN or JFROG_ACCESS_TOKEN
 }
 
 resource "random_id" "randid" {
