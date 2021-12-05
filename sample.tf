@@ -114,7 +114,7 @@ resource "xray_license_policy" "license2" {
     name     = "License_rule"
     priority = 1
     criteria {
-      banned_licenses          = ["Apache-3.0", "Apache-4.0"]
+      banned_licenses          = ["Apache-1.1", "APAFML"]
       allow_unknown            = false
       multi_license_permissive = false
     }

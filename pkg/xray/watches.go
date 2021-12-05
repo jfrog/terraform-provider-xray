@@ -18,8 +18,8 @@ type WatchGeneralData struct {
 }
 
 type WatchFilterValue struct {
-	Key   *string `json:"key,omitempty"`
-	Value *string `json:"value,omitempty"`
+	Key   string `json:"key,omitempty"`
+	Value string `json:"value,omitempty"`
 }
 
 type WatchFilter struct {
@@ -28,32 +28,32 @@ type WatchFilter struct {
 }
 
 type WatchProjectResource struct {
-	Type            *string       `json:"type,omitempty"`
-	BinaryManagerId *string       `json:"bin_mgr_id,omitempty"`
+	Type            string        `json:"type,omitempty"`
+	BinaryManagerId string        `json:"bin_mgr_id,omitempty"`
 	Filters         []WatchFilter `json:"filters,omitempty"`
 	// Watch a repo
 	Name string `json:"name,omitempty"`
 }
 
 type WatchProjectResources struct {
-	Resources *[]WatchProjectResource `json:"resources,omitempty"`
+	Resources []WatchProjectResource `json:"resources,omitempty"`
 }
 
 type WatchAssignedPolicy struct {
-	Name *string `json:"name,omitempty"`
-	Type *string `json:"type,omitempty"`
+	Name string `json:"name,omitempty"`
+	Type string `json:"type,omitempty"`
 }
 
 type Watch struct {
-	GeneralData      *WatchGeneralData      `json:"general_data,omitempty"`
-	ProjectResources *WatchProjectResources `json:"project_resources,omitempty"`
-	AssignedPolicies *[]WatchAssignedPolicy `json:"assigned_policies,omitempty"`
+	GeneralData      WatchGeneralData      `json:"general_data,omitempty"`
+	ProjectResources WatchProjectResources `json:"project_resources,omitempty"`
+	AssignedPolicies []WatchAssignedPolicy `json:"assigned_policies,omitempty"`
 }
 
 func unpackWatch(d *schema.ResourceData) *Watch {
 	watch := new(Watch)
 
-	gd := &WatchGeneralData{
+	gd := WatchGeneralData{
 		Name: d.Get("name").(string),
 	}
 	if v, ok := d.GetOk("description"); ok {
@@ -64,20 +64,20 @@ func unpackWatch(d *schema.ResourceData) *Watch {
 	}
 	watch.GeneralData = gd
 
-	pr := &WatchProjectResources{}
+	pr := WatchProjectResources{}
 	if v, ok := d.GetOk("watch_resource"); ok {
-		r := &[]WatchProjectResource{}
+		r := []WatchProjectResource{}
 		for _, res := range v.([]interface{}) {
-			*r = append(*r, *unpackProjectResource(res))
+			r = append(r, unpackProjectResource(res))
 		}
 		pr.Resources = r
 	}
 	watch.ProjectResources = pr
 
-	ap := &[]WatchAssignedPolicy{}
+	ap := []WatchAssignedPolicy{}
 	if v, ok := d.GetOk("assigned_policy"); ok {
 		for _, pol := range v.([]interface{}) {
-			*ap = append(*ap, *unpackAssignedPolicy(pol))
+			ap = append(ap, unpackAssignedPolicy(pol))
 		}
 	}
 	watch.AssignedPolicies = ap
@@ -85,14 +85,14 @@ func unpackWatch(d *schema.ResourceData) *Watch {
 	return watch
 }
 
-func unpackProjectResource(rawCfg interface{}) *WatchProjectResource {
+func unpackProjectResource(rawCfg interface{}) WatchProjectResource {
 	resource := new(WatchProjectResource)
 
 	cfg := rawCfg.(map[string]interface{})
-	resource.Type = StringPtr(cfg["type"].(string))
+	resource.Type = cfg["type"].(string)
 
 	if v, ok := cfg["bin_mgr_id"]; ok {
-		resource.BinaryManagerId = StringPtr(v.(string))
+		resource.BinaryManagerId = v.(string)
 	}
 	if v, ok := cfg["name"]; ok {
 		resource.Name = v.(string)
@@ -103,11 +103,11 @@ func unpackProjectResource(rawCfg interface{}) *WatchProjectResource {
 		resource.Filters = resourceFilters
 	}
 
-	return resource
+	return *resource
 }
 
 func unpackFilters(list []interface{}) []WatchFilter {
-	filters := make([]WatchFilter, 0, len(list))
+	var filters []WatchFilter
 
 	for _, raw := range list {
 		filter := new(WatchFilter)
@@ -120,29 +120,29 @@ func unpackFilters(list []interface{}) []WatchFilter {
 	return filters
 }
 
-func unpackAssignedPolicy(rawCfg interface{}) *WatchAssignedPolicy {
+func unpackAssignedPolicy(rawCfg interface{}) WatchAssignedPolicy {
 	policy := new(WatchAssignedPolicy)
 
 	cfg := rawCfg.(map[string]interface{})
-	policy.Name = StringPtr(cfg["name"].(string))
-	policy.Type = StringPtr(cfg["type"].(string))
+	policy.Name = cfg["name"].(string)
+	policy.Type = cfg["type"].(string)
 
-	return policy
+	return *policy
 }
 
-func packProjectResources(resources *WatchProjectResources) []interface{} {
-	if resources == nil || resources.Resources == nil {
+func packProjectResources(resources WatchProjectResources) []interface{} {
+	if len(resources.Resources) == 0 {
 		return []interface{}{}
 	}
 
 	var list []interface{}
-	for _, res := range *resources.Resources {
-		resourceMap := make(map[string]interface{})
+	for _, res := range resources.Resources {
+		resourceMap := map[string]interface{}{}
 		resourceMap["type"] = res.Type
 		if len(res.Name) > 0 {
 			resourceMap["name"] = res.Name
 		}
-		if res.BinaryManagerId != nil {
+		if len(res.BinaryManagerId) > 0 {
 			resourceMap["bin_mgr_id"] = res.BinaryManagerId
 		}
 		resourceMap["filter"] = packFilters(res.Filters)
@@ -169,13 +169,13 @@ func packFilters(filters []WatchFilter) []interface{} {
 	return l
 }
 
-func packAssignedPolicies(policies *[]WatchAssignedPolicy) []interface{} {
+func packAssignedPolicies(policies []WatchAssignedPolicy) []interface{} {
 	if policies == nil {
 		return []interface{}{}
 	}
 
 	var l []interface{}
-	for _, p := range *policies {
+	for _, p := range policies {
 		m := make(map[string]interface{})
 		m["name"] = p.Name
 		m["type"] = p.Type
