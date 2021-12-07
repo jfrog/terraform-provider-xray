@@ -32,9 +32,10 @@ func resourceXrayLicensePolicyV2() *schema.Resource {
 				Description: "More verbose description of the policy",
 			},
 			"type": {
-				Type:        schema.TypeString,
-				Required:    true,
-				Description: "Type of the policy",
+				Type:             schema.TypeString,
+				Required:         true,
+				Description:      "Type of the policy",
+				ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"Security", "License"}, true)),
 			},
 			"author": {
 				Type:        schema.TypeString,
