@@ -193,7 +193,7 @@ func resourceXrayWatchCreate(ctx context.Context, d *schema.ResourceData, m inte
 		return diag.FromErr(err)
 	}
 
-	d.SetId(watch.GeneralData.Name) // ID may be returned according to the API docs, but not in go-xray
+	d.SetId(watch.GeneralData.Name)
 	resourceXrayWatchRead(ctx, d, m)
 	return diags
 }
@@ -235,12 +235,4 @@ func resourceXrayWatchDelete(ctx context.Context, d *schema.ResourceData, m inte
 		return diag.FromErr(err)
 	}
 	return diags
-}
-
-func checkWatch(id string, request *resty.Request) (*resty.Response, error) {
-	return request.Get("xray/api/v2/watches/" + id)
-}
-
-func testCheckWatch(id string, request *resty.Request) (*resty.Response, error) {
-	return checkWatch(id, request.AddRetryCondition(neverRetry))
 }
