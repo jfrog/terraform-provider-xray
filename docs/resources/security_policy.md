@@ -13,7 +13,7 @@ Creates an xray policy using V2 of the underlying APIs. Please note: It's only c
 ## Example Usage
 
 ```terraform
-resource "xray_security_policy" "security1" {
+resource "xray_security_policy" "min_severity" {
   name        = "test-security-policy-severity"
   description = "Security policy description"
   type        = "security"
@@ -40,7 +40,7 @@ resource "xray_security_policy" "security1" {
   }
 }
 
-resource "xray_security_policy" "security2" {
+resource "xray_security_policy" "cvss_score" {
   name        = "test-security-policy-cvss"
   description = "Security policy description"
   type        = "security"

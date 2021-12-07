@@ -1,4 +1,4 @@
-resource "xray_license_policy" "license1" {
+resource "xray_license_policy" "allowed_licenses" {
   name        = "test-license-policy-allowed"
   description = "License policy, allow certain licenses"
   type        = "license"
@@ -29,7 +29,7 @@ resource "xray_license_policy" "license1" {
   }
 }
 
-resource "xray_license_policy" "license2" {
+resource "xray_license_policy" "banned_licenses" {
   name        = "test-license-policy-banned"
   description = "License policy, block certain licenses"
   type        = "license"

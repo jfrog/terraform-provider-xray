@@ -25,11 +25,11 @@ resource "xray_watch" "all-repos" {
     }
   }
   assigned_policy {
-    name = xray_security_policy.security1.name
+    name = xray_security_policy.allowed_licenses.name
     type = "security"
   }
   assigned_policy {
-    name = xray_license_policy.license1.name
+    name = xray_license_policy.banned_licenses.name
     type = "license"
   }
   watch_recipients = ["test@email.com", "test1@email.com"]
@@ -61,11 +61,11 @@ resource "xray_watch" "repository" {
   }
 
   assigned_policy {
-    name = xray_security_policy.security1.name
+    name = xray_security_policy.min_severity.name
     type = "security"
   }
   assigned_policy {
-    name = xray_license_policy.license1.name
+    name = xray_license_policy.cvss_range.name
     type = "license"
   }
 
@@ -90,11 +90,11 @@ resource "xray_watch" "build" {
   }
 
   assigned_policy {
-    name = xray_security_policy.security1.name
+    name = xray_security_policy.min_severity.name
     type = "security"
   }
   assigned_policy {
-    name = xray_license_policy.license1.name
+    name = xray_license_policy.cvss_range.name
     type = "license"
   }
 
