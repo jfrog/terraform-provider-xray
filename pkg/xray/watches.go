@@ -217,8 +217,13 @@ func resourceXrayWatchRead(ctx context.Context, d *schema.ResourceData, m interf
 func resourceXrayWatchUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 	watch := unpackWatch(d)
-	_, err := m.(*resty.Client).R().SetBody(watch).Put("xray/api/v2/watches/" + d.Id())
+	resp, err := m.(*resty.Client).R().SetBody(watch).Put("xray/api/v2/watches/" + d.Id())
 	if err != nil {
+		if resp != nil && resp.StatusCode() == http.StatusNotFound {
+			log.Printf("[WARN] Xray watch (%s) not found, removing from state", d.Id())
+			d.SetId("")
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 
