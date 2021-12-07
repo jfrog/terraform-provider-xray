@@ -2,7 +2,6 @@ package xray
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 func resourceXrayWatch() *schema.Resource {
@@ -44,7 +43,7 @@ func resourceXrayWatch() *schema.Resource {
 							Type:             schema.TypeString,
 							Required:         true,
 							Description:      "Type of resource to be watched. Options: `all-repos`, `repository`, `build`, `project`, `all-projects`.",
-							ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"all-repos", "repository", "build", "project", "all-projects"}, true)),
+							ValidateDiagFunc: inList("all-repos", "repository", "build", "project", "all-projects"),
 						},
 						"bin_mgr_id": {
 							Type:        schema.TypeString,
@@ -67,7 +66,7 @@ func resourceXrayWatch() *schema.Resource {
 										Type:             schema.TypeString,
 										Required:         true,
 										Description:      "The type of filter, such as `regex`, `package-type` or `ant-patterns`",
-										ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"regex", "package-type", "ant-patterns"}, true)),
+										ValidateDiagFunc: inList("regex", "package-type", "ant-patterns"),
 									},
 									// TODO support Exclude and Include patterns
 									// eg "value":{"ExcludePatterns":[],"IncludePatterns":["*"]}
@@ -99,7 +98,7 @@ func resourceXrayWatch() *schema.Resource {
 							Type:             schema.TypeString,
 							Required:         true,
 							Description:      "The type of the policy",
-							ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"security", "license"}, true)),
+							ValidateDiagFunc: inList("security", "license"),
 						},
 					},
 				},

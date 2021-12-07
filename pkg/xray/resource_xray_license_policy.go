@@ -2,7 +2,6 @@ package xray
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 func resourceXrayLicensePolicyV2() *schema.Resource {
@@ -35,7 +34,7 @@ func resourceXrayLicensePolicyV2() *schema.Resource {
 				Type:             schema.TypeString,
 				Required:         true,
 				Description:      "Type of the policy",
-				ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"Security", "License"}, true)),
+				ValidateDiagFunc: inList("Security", "License"),
 			},
 			"author": {
 				Type:        schema.TypeString,
@@ -182,7 +181,7 @@ func resourceXrayLicensePolicyV2() *schema.Resource {
 										Optional:         true,
 										Default:          "High",
 										Description:      "The severity of violation to be triggered if the `criteria` are met.",
-										ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"Critical", "High", "Medium", "Low"}, true)),
+										ValidateDiagFunc: inList("Critical", "High", "Medium", "Low"),
 									},
 									"build_failure_grace_period_in_days": {
 										Type:        schema.TypeInt,

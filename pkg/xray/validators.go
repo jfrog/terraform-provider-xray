@@ -528,3 +528,7 @@ func minLength(length int) func(i interface{}, k string) ([]string, []error) {
 		return nil, nil
 	}
 }
+
+func inList(strings ...string) schema.SchemaValidateDiagFunc {
+	return validation.ToDiagFunc(validation.StringInSlice(strings, true))
+}

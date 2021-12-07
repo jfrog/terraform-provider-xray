@@ -35,7 +35,7 @@ func resourceXraySecurityPolicyV2() *schema.Resource {
 				Type:             schema.TypeString,
 				Required:         true,
 				Description:      "Type of the policy",
-				ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"Security", "License"}, true)),
+				ValidateDiagFunc: inList("Security", "License"),
 			},
 			"author": {
 				Type:        schema.TypeString,
@@ -80,7 +80,7 @@ func resourceXraySecurityPolicyV2() *schema.Resource {
 										Type:             schema.TypeString,
 										Optional:         true,
 										Description:      "The minimum security vulnerability severity that will be impacted by the policy.",
-										ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"All Severities", "Critical", "High", "Medium", "Low"}, true)),
+										ValidateDiagFunc: inList("All Severities", "Critical", "High", "Medium", "Low"),
 									},
 									"cvss_range": {
 										Type:        schema.TypeList,
