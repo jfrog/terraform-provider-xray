@@ -3,11 +3,12 @@ package xray
 import (
 	"context"
 	"fmt"
-	"github.com/go-resty/resty/v2"
 	"net/http"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/go-resty/resty/v2"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
@@ -29,16 +30,16 @@ func TestProvider(t *testing.T) {
 
 func getTestResty(t *testing.T) *resty.Client {
 	if v := os.Getenv("ARTIFACTORY_URL"); v == "" {
-		t.Fatal("ARTIFACTORY_URL must be set for acceptance tests")
+		t.Error("ARTIFACTORY_URL must be set for acceptance tests")
 	}
 	restyClient, err := buildResty(os.Getenv("ARTIFACTORY_URL"))
 	if err != nil {
-		t.Fatal(err)
+		t.Error(err)
 	}
 	accessToken := os.Getenv("XRAY_ACCESS_TOKEN")
 	restyClient, err = addAuthToResty(restyClient, accessToken)
 	if err != nil {
-		t.Fatal(err)
+		t.Error(err)
 	}
 	return restyClient
 }
@@ -48,12 +49,12 @@ func testAccPreCheck(t *testing.T) {
 	provider, _ := testAccProviders()["xray"]()
 	oldErr := provider.Configure(ctx, terraform.NewResourceConfigRaw(nil))
 	if oldErr != nil {
-		t.Fatal(oldErr)
+		t.Error(oldErr)
 	}
 }
 
 // Create a local repository with Xray indexing enabled. It will be used in the tests
-func testAccCreateRepos(t *testing.T, repos []string) {
+func testAccCreateRepos(t *testing.T, repo string) {
 	restyClient := getTestResty(t)
 
 	type Repository struct {
@@ -64,24 +65,21 @@ func testAccCreateRepos(t *testing.T, repos []string) {
 	repository := Repository{}
 	repository.Rclass = "local"
 	repository.XrayIndex = true
-	for _, repo := range repos {
-		response, errRepo := restyClient.R().SetBody(repository).Put("artifactory/api/repositories/" + repo)
-		repoExists := strings.Contains(fmt.Sprint(errRepo), "Case insensitive repository key already exists")
-		if !repoExists && response.StatusCode() != http.StatusOK {
-			t.Fatal(errRepo)
-		}
+	response, errRepo := restyClient.R().SetBody(repository).Put("artifactory/api/repositories/" + repo)
+	//Artifactory can return 400 for several reasons, this is why we are checking the response body
+	repoExists := strings.Contains(fmt.Sprint(errRepo), "Case insensitive repository key already exists")
+	if !repoExists && response.StatusCode() != http.StatusOK {
+		t.Error(errRepo)
 	}
 }
 
-func testAccDeleteRepos(t *testing.T, repos []string) (*resty.Response, error) {
+func testAccDeleteRepo(t *testing.T, repo string) {
 	restyClient := getTestResty(t)
-	for _, repo := range repos {
-		response, errRepo := restyClient.R().Delete("artifactory/api/repositories/" + repo)
-		if response.StatusCode() != http.StatusOK {
-			t.Fatal(errRepo)
-		}
+
+	response, errRepo := restyClient.R().Delete("artifactory/api/repositories/" + repo)
+	if errRepo != nil || response.StatusCode() != http.StatusOK {
+		t.Logf("The repository %s wasn't removed", repo)
 	}
-	return nil, nil
 }
 
 // Create a set of builds or a single build, add the build into the Xray indexing configuration, to be able to add it to
@@ -109,7 +107,7 @@ func testAccCreateBuilds(t *testing.T, builds []string) {
 		}
 		respCreateBuild, errCreateBuild := restyClient.R().SetBody(buildBody).Put("artifactory/api/build")
 		if respCreateBuild.StatusCode() != http.StatusNoContent {
-			t.Fatal(errCreateBuild)
+			t.Error(errCreateBuild)
 		}
 	}
 
@@ -119,7 +117,7 @@ func testAccCreateBuilds(t *testing.T, builds []string) {
 
 	respAddIndexBody, errAddIndexBody := restyClient.R().SetBody(xrayIndexBody).Post("xray/api/v1/binMgr/builds")
 	if respAddIndexBody.StatusCode() != http.StatusOK {
-		t.Fatal(errAddIndexBody)
+		t.Error(errAddIndexBody)
 	}
 
 }

@@ -2,56 +2,57 @@ package xray
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 	"net/http"
 
-	"github.com/go-resty/resty/v2"
-
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/go-resty/resty/v2"
 )
 
 type WatchGeneralData struct {
 	Name        string `json:"name"`
-	Description string `json:"description,omitempty"`
-	Active      bool   `json:"active,omitempty"`
+	Description string `json:"description"`
+	Active      bool   `json:"active"`
 }
 
 type WatchFilterValue struct {
-	Key   string `json:"key,omitempty"`
-	Value string `json:"value,omitempty"`
+	Key   string `json:"key"`
+	Value string `json:"value"`
 }
 
 type WatchFilter struct {
-	Type  string `json:"type,omitempty"`
-	Value string `json:"value,omitempty"`
+	Type  string `json:"type"`
+	Value string `json:"value"`
 }
 
 type WatchProjectResource struct {
-	Type            string        `json:"type,omitempty"`
-	BinaryManagerId string        `json:"bin_mgr_id,omitempty"`
-	Filters         []WatchFilter `json:"filters,omitempty"`
+	Type            string        `json:"type"`
+	BinaryManagerId string        `json:"bin_mgr_id"`
+	Filters         []WatchFilter `json:"filters"`
 	// Watch a repo
-	Name string `json:"name,omitempty"`
+	Name string `json:"name"`
 }
 
 type WatchProjectResources struct {
-	Resources []WatchProjectResource `json:"resources,omitempty"`
+	Resources []WatchProjectResource `json:"resources"`
 }
 
 type WatchAssignedPolicy struct {
-	Name string `json:"name,omitempty"`
-	Type string `json:"type,omitempty"`
+	Name string `json:"name"`
+	Type string `json:"type"`
 }
 
 type Watch struct {
-	GeneralData      WatchGeneralData      `json:"general_data,omitempty"`
-	ProjectResources WatchProjectResources `json:"project_resources,omitempty"`
-	AssignedPolicies []WatchAssignedPolicy `json:"assigned_policies,omitempty"`
+	GeneralData      WatchGeneralData      `json:"general_data"`
+	ProjectResources WatchProjectResources `json:"project_resources"`
+	AssignedPolicies []WatchAssignedPolicy `json:"assigned_policies"`
+	WatchRecipients  []string              `json:"watch_recipients"`
 }
 
-func unpackWatch(d *schema.ResourceData) *Watch {
-	watch := new(Watch)
+func unpackWatch(d *schema.ResourceData) Watch {
+	watch := Watch{}
 
 	gd := WatchGeneralData{
 		Name: d.Get("name").(string),
@@ -67,7 +68,7 @@ func unpackWatch(d *schema.ResourceData) *Watch {
 	pr := WatchProjectResources{}
 	if v, ok := d.GetOk("watch_resource"); ok {
 		r := []WatchProjectResource{}
-		for _, res := range v.([]interface{}) {
+		for _, res := range v.(*schema.Set).List() {
 			r = append(r, unpackProjectResource(res))
 		}
 		pr.Resources = r
@@ -76,11 +77,22 @@ func unpackWatch(d *schema.ResourceData) *Watch {
 
 	ap := []WatchAssignedPolicy{}
 	if v, ok := d.GetOk("assigned_policy"); ok {
-		for _, pol := range v.([]interface{}) {
+		policies := v.(*schema.Set).List()
+		for _, pol := range policies {
 			ap = append(ap, unpackAssignedPolicy(pol))
 		}
 	}
 	watch.AssignedPolicies = ap
+
+	var watchRecipients []string
+
+	if v, ok := d.GetOk("watch_recipients"); ok {
+		recipients := v.(*schema.Set).List()
+		for _, watchRec := range recipients {
+			watchRecipients = append(watchRecipients, watchRec.(string))
+		}
+	}
+	watch.WatchRecipients = watchRecipients
 
 	return watch
 }
@@ -112,7 +124,7 @@ func unpackFilters(list []interface{}) []WatchFilter {
 	for _, raw := range list {
 		filter := new(WatchFilter)
 		f := raw.(map[string]interface{})
-		filter.Type = f["type"].(string) // TODO: recognize the type of the filter
+		filter.Type = f["type"].(string)
 		filter.Value = f["value"].(string)
 		filters = append(filters, *filter)
 	}
@@ -200,9 +212,8 @@ func resourceXrayWatchCreate(ctx context.Context, d *schema.ResourceData, m inte
 
 func resourceXrayWatchRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
-	watch := unpackWatch(d)
+	watch := Watch{}
 	resp, err := m.(*resty.Client).R().SetResult(&watch).Get("xray/api/v2/watches/" + d.Id())
-
 	if err != nil {
 		if resp != nil && resp.StatusCode() == http.StatusNotFound {
 			log.Printf("[WARN] Xray watch (%s) not found, removing from state", d.Id())
@@ -211,6 +222,19 @@ func resourceXrayWatchRead(ctx context.Context, d *schema.ResourceData, m interf
 		}
 		return diags
 	}
+	if err := d.Set("description", watch.GeneralData.Description); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("active", watch.GeneralData.Active); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("watch_resource", packProjectResources(watch.ProjectResources)); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("assigned_policy", packAssignedPolicies(watch.AssignedPolicies)); err != nil {
+		return diag.FromErr(err)
+	}
+
 	return diags
 }
 

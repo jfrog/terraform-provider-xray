@@ -101,13 +101,13 @@ resource "xray_license_policy" "banned_licenses" {
 
 Required:
 
-- **criteria** (Block List, Min: 1, Max: 1) Nested block describing the criteria for the policy. Described below (see [below for nested schema](#nestedblock--rules--criteria))
+- **criteria** (Block Set, Min: 1) Nested block describing the criteria for the policy. Described below (see [below for nested schema](#nestedblock--rules--criteria))
 - **name** (String) Name of the rule
-- **priority** (Number) Integer describing the rule priority
+- **priority** (Number) Integer describing the rule priority. Must be at least 1
 
 Optional:
 
-- **actions** (Block List, Max: 1) Nested block describing the actions to be applied by the policy. Described below. (see [below for nested schema](#nestedblock--rules--actions))
+- **actions** (Block Set, Max: 1) Nested block describing the actions to be applied by the policy. Described below. (see [below for nested schema](#nestedblock--rules--actions))
 
 <a id="nestedblock--rules--criteria"></a>
 ### Nested Schema for `rules.criteria`
@@ -115,8 +115,8 @@ Optional:
 Optional:
 
 - **allow_unknown** (Boolean) A violation will be generated for artifacts with unknown licenses (`true` or `false`).
-- **allowed_licenses** (List of String) A list of OSS license names that may be attached to a component.
-- **banned_licenses** (List of String) A list of OSS license names that may not be attached to a component.
+- **allowed_licenses** (Set of String) A list of OSS license names that may be attached to a component.
+- **banned_licenses** (Set of String) A list of OSS license names that may not be attached to a component.
 - **multi_license_permissive** (Boolean) Do not generate a violation if at least one license is valid in cases whereby multiple licenses were detected on the component
 
 
@@ -125,7 +125,7 @@ Optional:
 
 Required:
 
-- **block_download** (Block List, Min: 1, Max: 1) Nested block describing artifacts that should be blocked for download if a violation is triggered. Described below. (see [below for nested schema](#nestedblock--rules--actions--block_download))
+- **block_download** (Block Set, Min: 1, Max: 1) Nested block describing artifacts that should be blocked for download if a violation is triggered. Described below. (see [below for nested schema](#nestedblock--rules--actions--block_download))
 
 Optional:
 
@@ -134,10 +134,10 @@ Optional:
 - **create_ticket_enabled** (Boolean) Create Jira Ticket for this Policy Violation. Requires configured Jira integration.
 - **custom_severity** (String) The severity of violation to be triggered if the `criteria` are met.
 - **fail_build** (Boolean) Whether or not the related CI build should be marked as failed if a violation is triggered. This option is only available when the policy is applied to an `xray_watch` resource with a `type` of `builds`.
-- **mails** (List of String) A list of email addressed that will get emailed when a violation is triggered.
+- **mails** (Set of String) A list of email addressed that will get emailed when a violation is triggered.
 - **notify_deployer** (Boolean) Sends an email message to component deployer with details about the generated Violations.
 - **notify_watch_recipients** (Boolean) Sends an email message to all configured recipients inside a specific watch with details about the generated Violations.
-- **webhooks** (List of String) A list of Xray-configured webhook URLs to be invoked if a violation is triggered.
+- **webhooks** (Set of String) A list of Xray-configured webhook URLs to be invoked if a violation is triggered.
 
 <a id="nestedblock--rules--actions--block_download"></a>
 ### Nested Schema for `rules.actions.block_download`

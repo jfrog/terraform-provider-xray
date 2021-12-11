@@ -9,7 +9,7 @@ terraform {
 }
 
 provider "xray" {
-  url = "artifactory.site.com/xray"
+  url          = "artifactory.site.com/xray"
   access_token = "abc..xy"
   // Also user can supply the following env vars:
   // ARTIFACTORY_URL or JFROG_URL
@@ -73,7 +73,7 @@ resource "xray_license_policy" "license_policy" {
       notify_deployer                    = true
       create_ticket_enabled              = false // set to true only if Jira integration is enabled
       custom_severity                    = "High"
-      build_failure_grace_period_in_days = 5     // use only if fail_build is enabled
+      build_failure_grace_period_in_days = 5 // use only if fail_build is enabled
 
     }
   }

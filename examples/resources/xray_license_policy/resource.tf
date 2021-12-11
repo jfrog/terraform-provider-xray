@@ -21,9 +21,9 @@ resource "xray_license_policy" "allowed_licenses" {
       fail_build                         = true
       notify_watch_recipients            = true
       notify_deployer                    = true
-      create_ticket_enabled              = false   // set to true only if Jira integration is enabled
+      create_ticket_enabled              = false // set to true only if Jira integration is enabled
       custom_severity                    = "High"
-      build_failure_grace_period_in_days = 5       // use only if fail_build is enabled
+      build_failure_grace_period_in_days = 5 // use only if fail_build is enabled
 
     }
   }

@@ -37,9 +37,9 @@ var tempStructLicense = map[string]string{
 // fields except of "allow_unknown", "banned_licenses" and "allowed_licenses" if the Policy type is "license"
 func TestAccLicensePolicy_badLicenseCriteria(t *testing.T) {
 	_, fqrn, resourceName := mkNames("policy-", "xray_license_policy")
-	policyName := "terraform-license-policy-1"
+	policyName := fmt.Sprintf("terraform-license-policy-1-%d", randomInt())
 	policyDesc := "policy created by xray acceptance tests"
-	ruleName := "test-license-rule-1"
+	ruleName := fmt.Sprintf("test-license-rule-1-%d", randomInt())
 	rangeTo := 5
 
 	resource.Test(t, resource.TestCase{
@@ -62,8 +62,8 @@ func TestAccLicensePolicy_badGracePeriod(t *testing.T) {
 	copyStringMap(tempStructLicense, tempStruct)
 
 	tempStruct["resource_name"] = resourceName
-	tempStruct["policy_name"] = "terraform-security-policy-2"
-	tempStruct["rule_name"] = "test-license-rule-2"
+	tempStruct["policy_name"] = fmt.Sprintf("terraform-security-policy-2-%d", randomInt())
+	tempStruct["rule_name"] = fmt.Sprintf("test-license-rule-2-%d", randomInt())
 	tempStruct["fail_build"] = "false"
 	tempStruct["grace_period_days"] = "5"
 
@@ -86,8 +86,8 @@ func TestAccLicensePolicy_createAllowedLic(t *testing.T) {
 	copyStringMap(tempStructLicense, tempStruct)
 
 	tempStruct["resource_name"] = resourceName
-	tempStruct["policy_name"] = "terraform-license-policy-3"
-	tempStruct["rule_name"] = "test-license-rule-3"
+	tempStruct["policy_name"] = fmt.Sprintf("terraform-license-policy-3-%d", randomInt())
+	tempStruct["rule_name"] = fmt.Sprintf("test-license-rule-3-%d", randomInt())
 	tempStruct["multi_license_permissive"] = "true"
 	tempStruct["allowedOrBanned"] = "allowed_licenses"
 
@@ -110,8 +110,8 @@ func TestAccLicensePolicy_createBannedLic(t *testing.T) {
 	copyStringMap(tempStructLicense, tempStruct)
 
 	tempStruct["resource_name"] = resourceName
-	tempStruct["policy_name"] = "terraform-license-policy-4"
-	tempStruct["rule_name"] = "test-license-rule-4"
+	tempStruct["policy_name"] = fmt.Sprintf("terraform-license-policy-4-%d", randomInt())
+	tempStruct["rule_name"] = fmt.Sprintf("test-license-rule-4-%d", randomInt())
 	tempStruct["allowedOrBanned"] = "banned_licenses"
 
 	resource.Test(t, resource.TestCase{
@@ -133,8 +133,8 @@ func TestAccLicensePolicy_createMultiLicensePermissiveFalse(t *testing.T) {
 	copyStringMap(tempStructLicense, tempStruct)
 
 	tempStruct["resource_name"] = resourceName
-	tempStruct["policy_name"] = "terraform-license-policy-5"
-	tempStruct["rule_name"] = "test-license-rule-5"
+	tempStruct["policy_name"] = fmt.Sprintf("terraform-license-policy-5-%d", randomInt())
+	tempStruct["rule_name"] = fmt.Sprintf("test-license-rule-5-%d", randomInt())
 	tempStruct["allowedOrBanned"] = "banned_licenses"
 
 	resource.Test(t, resource.TestCase{
@@ -156,8 +156,8 @@ func TestAccLicensePolicy_createBlockFalse(t *testing.T) {
 	copyStringMap(tempStructLicense, tempStruct)
 
 	tempStruct["resource_name"] = resourceName
-	tempStruct["policy_name"] = "terraform-license-policy-6"
-	tempStruct["rule_name"] = "test-license-rule-6"
+	tempStruct["policy_name"] = fmt.Sprintf("terraform-license-policy-6-%d", randomInt())
+	tempStruct["rule_name"] = fmt.Sprintf("test-license-rule-6-%d", randomInt())
 	tempStruct["block_unscanned"] = "true"
 	tempStruct["block_active"] = "true"
 	tempStruct["allowedOrBanned"] = "banned_licenses"

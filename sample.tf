@@ -9,7 +9,7 @@ terraform {
 }
 
 provider "xray" {
-  url = "artifactory.site.com/xray"
+  url          = "artifactory.site.com/xray"
   access_token = "abc..xy"
   // Also user can supply the following env vars:
   // ARTIFACTORY_URL or JFROG_URL

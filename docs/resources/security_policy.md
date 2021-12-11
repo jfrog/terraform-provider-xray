@@ -96,13 +96,13 @@ resource "xray_security_policy" "cvss_score" {
 
 Required:
 
-- **criteria** (Block List, Min: 1, Max: 1) Nested block describing the criteria for the policy. Described below. (see [below for nested schema](#nestedblock--rules--criteria))
+- **criteria** (Block Set, Min: 1, Max: 1) Nested block describing the criteria for the policy. Described below. (see [below for nested schema](#nestedblock--rules--criteria))
 - **name** (String) Name of the rule
-- **priority** (Number) Integer describing the rule priority
+- **priority** (Number) Integer describing the rule priority. Must be at least 1
 
 Optional:
 
-- **actions** (Block List, Max: 1) Nested block describing the actions to be applied by the policy. Described below. (see [below for nested schema](#nestedblock--rules--actions))
+- **actions** (Block Set, Max: 1) Nested block describing the actions to be applied by the policy. Described below. (see [below for nested schema](#nestedblock--rules--actions))
 
 <a id="nestedblock--rules--criteria"></a>
 ### Nested Schema for `rules.criteria`
@@ -127,7 +127,7 @@ Required:
 
 Required:
 
-- **block_download** (Block List, Min: 1, Max: 1) Nested block describing artifacts that should be blocked for download if a violation is triggered. Described below. (see [below for nested schema](#nestedblock--rules--actions--block_download))
+- **block_download** (Block Set, Min: 1, Max: 1) Nested block describing artifacts that should be blocked for download if a violation is triggered. Described below. (see [below for nested schema](#nestedblock--rules--actions--block_download))
 
 Optional:
 
@@ -135,10 +135,10 @@ Optional:
 - **build_failure_grace_period_in_days** (Number) Allow grace period for certain number of days. All violations will be ignored during this time. To be used only if `fail_build` is enabled.
 - **create_ticket_enabled** (Boolean) Create Jira Ticket for this Policy Violation. Requires configured Jira integration.
 - **fail_build** (Boolean) Whether or not the related CI build should be marked as failed if a violation is triggered. This option is only available when the policy is applied to an `xray_watch` resource with a `type` of `builds`.
-- **mails** (List of String) A list of email addressed that will get emailed when a violation is triggered.
+- **mails** (Set of String) A list of email addressed that will get emailed when a violation is triggered.
 - **notify_deployer** (Boolean) Sends an email message to component deployer with details about the generated Violations.
 - **notify_watch_recipients** (Boolean) Sends an email message to all configured recipients inside a specific watch with details about the generated Violations.
-- **webhooks** (List of String) A list of Xray-configured webhook URLs to be invoked if a violation is triggered.
+- **webhooks** (Set of String) A list of Xray-configured webhook URLs to be invoked if a violation is triggered.
 
 <a id="nestedblock--rules--actions--block_download"></a>
 ### Nested Schema for `rules.actions.block_download`

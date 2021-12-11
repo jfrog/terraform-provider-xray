@@ -64,12 +64,13 @@ func resourceXraySecurityPolicyV2() *schema.Resource {
 							Description: "Name of the rule",
 						},
 						"priority": {
-							Type:        schema.TypeInt,
-							Required:    true,
-							Description: "Integer describing the rule priority",
+							Type:             schema.TypeInt,
+							Required:         true,
+							ValidateDiagFunc: validation.ToDiagFunc(validation.IntAtLeast(1)),
+							Description:      "Integer describing the rule priority. Must be at least 1",
 						},
 						"criteria": {
-							Type:        schema.TypeList,
+							Type:        schema.TypeSet,
 							Required:    true,
 							MinItems:    1,
 							MaxItems:    1,
@@ -108,14 +109,14 @@ func resourceXraySecurityPolicyV2() *schema.Resource {
 							},
 						},
 						"actions": {
-							Type:        schema.TypeList,
+							Type:        schema.TypeSet,
 							Optional:    true,
 							MaxItems:    1,
 							Description: "Nested block describing the actions to be applied by the policy. Described below.",
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"webhooks": {
-										Type:        schema.TypeList,
+										Type:        schema.TypeSet,
 										Optional:    true,
 										Description: "A list of Xray-configured webhook URLs to be invoked if a violation is triggered.",
 										Elem: &schema.Schema{
@@ -123,7 +124,7 @@ func resourceXraySecurityPolicyV2() *schema.Resource {
 										},
 									},
 									"mails": {
-										Type:        schema.TypeList,
+										Type:        schema.TypeSet,
 										Optional:    true,
 										Description: "A list of email addressed that will get emailed when a violation is triggered.",
 										Elem: &schema.Schema{
@@ -132,7 +133,7 @@ func resourceXraySecurityPolicyV2() *schema.Resource {
 										},
 									},
 									"block_download": {
-										Type:        schema.TypeList,
+										Type:        schema.TypeSet,
 										Required:    true,
 										MaxItems:    1,
 										Description: "Nested block describing artifacts that should be blocked for download if a violation is triggered. Described below.",

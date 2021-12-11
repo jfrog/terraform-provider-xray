@@ -107,7 +107,7 @@ resource "xray_watch" "build" {
 
 ### Required
 
-- **assigned_policy** (Block List, Min: 1) Nested argument describing policies that will be applied. Defined below. (see [below for nested schema](#nestedblock--assigned_policy))
+- **assigned_policy** (Block Set, Min: 1) Nested argument describing policies that will be applied. Defined below. (see [below for nested schema](#nestedblock--assigned_policy))
 - **name** (String) Name of the watch (must be unique)
 - **watch_resource** (Block List, Min: 1) Nested argument describing the resources to be watched. Defined below. (see [below for nested schema](#nestedblock--watch_resource))
 
@@ -116,7 +116,7 @@ resource "xray_watch" "build" {
 - **active** (Boolean) Whether or not the watch will be active
 - **description** (String) Description of the watch
 - **id** (String) The ID of this resource.
-- **watch_recipients** (List of String) A list of email addressed that will get emailed when a violation is triggered.
+- **watch_recipients** (Set of String) A list of email addressed that will get emailed when a violation is triggered.
 
 <a id="nestedblock--assigned_policy"></a>
 ### Nested Schema for `assigned_policy`

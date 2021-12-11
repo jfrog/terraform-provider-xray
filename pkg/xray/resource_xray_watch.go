@@ -34,7 +34,7 @@ func resourceXrayWatch() *schema.Resource {
 				Description: "Whether or not the watch will be active",
 			},
 			"watch_resource": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Required:    true,
 				Description: "Nested argument describing the resources to be watched. Defined below.",
 				Elem: &schema.Resource{
@@ -81,10 +81,10 @@ func resourceXrayWatch() *schema.Resource {
 					},
 				},
 			},
-			// "assigned_policies" in the API call body. Plural is replaced for better reflection of the
+			// Key is "assigned_policies" in the API call body. Plural is used for better reflection of the
 			// actual functionality (see HCL examples)
 			"assigned_policy": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Required:    true,
 				Description: "Nested argument describing policies that will be applied. Defined below.",
 				Elem: &schema.Resource{
@@ -104,7 +104,7 @@ func resourceXrayWatch() *schema.Resource {
 				},
 			},
 			"watch_recipients": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "A list of email addressed that will get emailed when a violation is triggered.",
 				Elem: &schema.Schema{

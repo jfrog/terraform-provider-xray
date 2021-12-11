@@ -31,9 +31,9 @@ var tempStructSecurity = map[string]string{
 // Teh test will try to create a security policy with the type of "license"
 // The Policy criteria will be ignored in this case
 func TestAccSecurityPolicy_badTypeInSecurityPolicy(t *testing.T) {
-	policyName := "terraform-security-policy-1"
+	policyName := fmt.Sprintf("terraform-security-policy-1-%d", randomInt())
 	policyDesc := "policy created by xray acceptance tests"
-	ruleName := "test-security-rule-1"
+	ruleName := fmt.Sprintf("test-security-rule-1-%d", randomInt())
 	rangeTo := 5
 	resourceName := "policy-" + strconv.Itoa(randomInt())
 	fqrn := "xray_security_policy." + resourceName
@@ -53,9 +53,9 @@ func TestAccSecurityPolicy_badTypeInSecurityPolicy(t *testing.T) {
 // The test will try to use "allowed_licenses" in the security policy criteria
 // That field is acceptable only in license policy. No API call, expected to fail on the TF resource verification
 func TestAccSecurityPolicy_badSecurityCriteria(t *testing.T) {
-	policyName := "terraform-security-policy-2"
+	policyName := fmt.Sprintf("terraform-security-policy-2-%d", randomInt())
 	policyDesc := "policy created by xray acceptance tests"
-	ruleName := "test-security-rule-2"
+	ruleName := fmt.Sprintf("test-security-rule-2-%d", randomInt())
 	allowedLicense := "BSD-4-Clause"
 	resourceName := "policy-" + strconv.Itoa(randomInt())
 	fqrn := "xray_security_policy." + resourceName
@@ -80,8 +80,8 @@ func TestAccSecurityPolicy_badGracePeriod(t *testing.T) {
 	copyStringMap(tempStructSecurity, tempStruct)
 
 	tempStruct["resource_name"] = resourceName
-	tempStruct["policy_name"] = "terraform-security-policy-3"
-	tempStruct["rule_name"] = "test-security-rule-3"
+	tempStruct["policy_name"] = fmt.Sprintf("terraform-security-policy-3-%d", randomInt())
+	tempStruct["rule_name"] = fmt.Sprintf("test-security-rule-3-%d", randomInt())
 	tempStruct["fail_build"] = "false"
 	tempStruct["grace_period_days"] = "5"
 
@@ -105,8 +105,8 @@ func TestAccSecurityPolicy_createBlockDownloadTrueCVSS(t *testing.T) {
 	copyStringMap(tempStructSecurity, tempStruct)
 
 	tempStruct["resource_name"] = resourceName
-	tempStruct["policy_name"] = "terraform-security-policy-4"
-	tempStruct["rule_name"] = "test-security-rule-4"
+	tempStruct["policy_name"] = fmt.Sprintf("terraform-security-policy-4-%d", randomInt())
+	tempStruct["rule_name"] = fmt.Sprintf("test-security-rule-4-%d", randomInt())
 	tempStruct["cvssOrSeverity"] = "cvss"
 
 	resource.Test(t, resource.TestCase{
@@ -129,8 +129,8 @@ func TestAccSecurityPolicy_createBlockDownloadFalseCVSS(t *testing.T) {
 	copyStringMap(tempStructSecurity, tempStruct)
 
 	tempStruct["resource_name"] = resourceName
-	tempStruct["policy_name"] = "terraform-security-policy-5"
-	tempStruct["rule_name"] = "test-security-rule-5"
+	tempStruct["policy_name"] = fmt.Sprintf("terraform-security-policy-5-%d", randomInt())
+	tempStruct["rule_name"] = fmt.Sprintf("test-security-rule-5-%d", randomInt())
 	tempStruct["block_unscanned"] = "false"
 	tempStruct["block_active"] = "false"
 	tempStruct["cvssOrSeverity"] = "cvss"
@@ -155,8 +155,8 @@ func TestAccSecurityPolicy_createBlockDownloadTrueMinSeverity(t *testing.T) {
 	copyStringMap(tempStructSecurity, tempStruct)
 
 	tempStruct["resource_name"] = resourceName
-	tempStruct["policy_name"] = "terraform-security-policy-6"
-	tempStruct["rule_name"] = "test-security-rule-6"
+	tempStruct["policy_name"] = fmt.Sprintf("terraform-security-policy-6-%d", randomInt())
+	tempStruct["rule_name"] = fmt.Sprintf("test-security-rule-6-%d", randomInt())
 	tempStruct["cvssOrSeverity"] = "severity"
 
 	resource.Test(t, resource.TestCase{
@@ -179,8 +179,8 @@ func TestAccSecurityPolicy_createBlockDownloadFalseMinSeverity(t *testing.T) {
 	copyStringMap(tempStructSecurity, tempStruct)
 
 	tempStruct["resource_name"] = resourceName
-	tempStruct["policy_name"] = "terraform-security-policy-7"
-	tempStruct["rule_name"] = "test-security-rule-7"
+	tempStruct["policy_name"] = fmt.Sprintf("terraform-security-policy-7-%d", randomInt())
+	tempStruct["rule_name"] = fmt.Sprintf("test-security-rule-7-%d", randomInt())
 	tempStruct["block_unscanned"] = "false"
 	tempStruct["block_active"] = "false"
 	tempStruct["cvssOrSeverity"] = "severity"
@@ -205,8 +205,8 @@ func TestAccSecurityPolicy_createCVSSFloat(t *testing.T) {
 	copyStringMap(tempStructSecurity, tempStruct)
 
 	tempStruct["resource_name"] = resourceName
-	tempStruct["policy_name"] = "terraform-security-policy-8"
-	tempStruct["rule_name"] = "test-security-rule-8"
+	tempStruct["policy_name"] = fmt.Sprintf("terraform-security-policy-8-%d", randomInt())
+	tempStruct["rule_name"] = fmt.Sprintf("test-security-rule-8-%d", randomInt())
 	tempStruct["cvss_from"] = "1.5"
 	tempStruct["cvss_to"] = "5.3"
 	tempStruct["cvssOrSeverity"] = "cvss"
@@ -230,8 +230,8 @@ func TestAccSecurityPolicy_blockMismatchCVSS(t *testing.T) {
 	copyStringMap(tempStructSecurity, tempStruct)
 
 	tempStruct["resource_name"] = resourceName
-	tempStruct["policy_name"] = "terraform-security-policy-9"
-	tempStruct["rule_name"] = "test-security-rule-9"
+	tempStruct["policy_name"] = fmt.Sprintf("terraform-security-policy-9-%d", randomInt())
+	tempStruct["rule_name"] = fmt.Sprintf("test-security-rule-9-%d", randomInt())
 	tempStruct["block_unscanned"] = "true"
 	tempStruct["block_active"] = "false"
 

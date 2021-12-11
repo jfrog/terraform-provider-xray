@@ -2,6 +2,7 @@ package xray
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 func resourceXrayLicensePolicyV2() *schema.Resource {
@@ -63,20 +64,20 @@ func resourceXrayLicensePolicyV2() *schema.Resource {
 							Description: "Name of the rule",
 						},
 						"priority": {
-							Type:        schema.TypeInt,
-							Required:    true,
-							Description: "Integer describing the rule priority",
+							Type:             schema.TypeInt,
+							Required:         true,
+							ValidateDiagFunc: validation.ToDiagFunc(validation.IntAtLeast(1)),
+							Description:      "Integer describing the rule priority. Must be at least 1",
 						},
 						"criteria": {
-							Type:        schema.TypeList,
+							Type:        schema.TypeSet,
 							Required:    true,
 							Description: "Nested block describing the criteria for the policy. Described below",
 							MinItems:    1,
-							MaxItems:    1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"banned_licenses": {
-										Type:        schema.TypeList,
+										Type:        schema.TypeSet,
 										Optional:    true,
 										Description: "A list of OSS license names that may not be attached to a component.",
 										Elem: &schema.Schema{
@@ -85,7 +86,7 @@ func resourceXrayLicensePolicyV2() *schema.Resource {
 										},
 									},
 									"allowed_licenses": {
-										Type:        schema.TypeList,
+										Type:        schema.TypeSet,
 										Optional:    true,
 										Description: "A list of OSS license names that may be attached to a component.",
 										Elem: &schema.Schema{
@@ -96,25 +97,27 @@ func resourceXrayLicensePolicyV2() *schema.Resource {
 									"allow_unknown": {
 										Type:        schema.TypeBool,
 										Optional:    true,
+										Default:     true,
 										Description: "A violation will be generated for artifacts with unknown licenses (`true` or `false`).",
 									},
 									"multi_license_permissive": {
 										Type:        schema.TypeBool,
 										Optional:    true,
+										Default:     false,
 										Description: "Do not generate a violation if at least one license is valid in cases whereby multiple licenses were detected on the component",
 									},
 								},
 							},
 						},
 						"actions": {
-							Type:        schema.TypeList,
+							Type:        schema.TypeSet,
 							Optional:    true,
 							Description: "Nested block describing the actions to be applied by the policy. Described below.",
 							MaxItems:    1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"webhooks": {
-										Type:        schema.TypeList,
+										Type:        schema.TypeSet,
 										Optional:    true,
 										Description: "A list of Xray-configured webhook URLs to be invoked if a violation is triggered.",
 										Elem: &schema.Schema{
@@ -122,7 +125,7 @@ func resourceXrayLicensePolicyV2() *schema.Resource {
 										},
 									},
 									"mails": {
-										Type:        schema.TypeList,
+										Type:        schema.TypeSet,
 										Optional:    true,
 										Description: "A list of email addressed that will get emailed when a violation is triggered.",
 										Elem: &schema.Schema{
@@ -131,7 +134,7 @@ func resourceXrayLicensePolicyV2() *schema.Resource {
 										},
 									},
 									"block_download": {
-										Type:        schema.TypeList,
+										Type:        schema.TypeSet,
 										Required:    true,
 										Description: "Nested block describing artifacts that should be blocked for download if a violation is triggered. Described below.",
 										MaxItems:    1,
@@ -184,10 +187,11 @@ func resourceXrayLicensePolicyV2() *schema.Resource {
 										ValidateDiagFunc: inList("Critical", "High", "Medium", "Low"),
 									},
 									"build_failure_grace_period_in_days": {
-										Type:        schema.TypeInt,
-										Optional:    true,
-										Description: "Allow grace period for certain number of days. All violations will be ignored during this time. To be used only if `fail_build` is enabled.",
-										Default:     3,
+										Type:             schema.TypeInt,
+										Optional:         true,
+										Description:      "Allow grace period for certain number of days. All violations will be ignored during this time. To be used only if `fail_build` is enabled.",
+										Default:          3,
+										ValidateDiagFunc: validation.ToDiagFunc(validation.IntAtLeast(0)),
 									},
 								},
 							},
