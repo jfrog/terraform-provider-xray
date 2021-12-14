@@ -97,7 +97,7 @@ func resourceXrayWatch() *schema.Resource {
 						"type": {
 							Type:             schema.TypeString,
 							Required:         true,
-							Description:      "The type of the policy",
+							Description:      "The type of the policy - security or license",
 							ValidateDiagFunc: inList("security", "license"),
 						},
 					},

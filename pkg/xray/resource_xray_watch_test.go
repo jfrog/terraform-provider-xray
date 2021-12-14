@@ -57,8 +57,8 @@ func TestAccWatch_allReposMultiplePolicies(t *testing.T) {
 
 	tempStruct["resource_name"] = resourceName
 	tempStruct["watch_name"] = fmt.Sprintf("xray-watch-%d", randomInt())
-	tempStruct["policy_name_0"] = fmt.Sprintf("xray-policy-%d", randomInt())
-	tempStruct["policy_name_1"] = fmt.Sprintf("xray-policy-%d", randomInt())
+	tempStruct["policy_name_0"] = fmt.Sprintf("xray-policy-1%d", randomInt())
+	tempStruct["policy_name_1"] = fmt.Sprintf("xray-policy-2%d", randomInt())
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
@@ -77,6 +77,10 @@ func TestAccWatch_allReposMultiplePolicies(t *testing.T) {
 					resource.TestCheckResourceAttr(fqrn, "name", tempStruct["watch_name"]),
 					resource.TestCheckResourceAttr(fqrn, "description", tempStruct["description"]),
 					resource.TestCheckResourceAttr(fqrn, "watch_resource.0.type", tempStruct["watch_type"]),
+					resource.TestCheckResourceAttr(fqrn, "assigned_policy.0.name", tempStruct["policy_name_0"]),
+					resource.TestCheckResourceAttr(fqrn, "assigned_policy.0.type", "security"),
+					resource.TestCheckResourceAttr(fqrn, "assigned_policy.1.name", tempStruct["policy_name_1"]),
+					resource.TestCheckResourceAttr(fqrn, "assigned_policy.1.type", "license"),
 				),
 			},
 		},

@@ -12,7 +12,7 @@ default: build
 
 install:
 	mkdir -p ${BUILD_PATH} && \
-		(test -f ${BINARY_NAME} || go build -ldflags="-X 'xray.Version=${NEXT_VERSION}'") && \
+		(test -f ${BINARY_NAME} || go build -ldflags="-X '${PKG_VERSION_PATH}.Version=${NEXT_VERSION}'") && \
 		mv ${BINARY_NAME} ${BUILD_PATH} && \
 		terraform init
 
@@ -28,7 +28,7 @@ build: fmtcheck
 
 debug_install:
 	mkdir -p ${BUILD_PATH} && \
-		(test -f ${BINARY_NAME} || go build -gcflags "all=-N -l" -ldflags="-X 'xray.Version=${NEXT_VERSION}-develop'") && \
+		(test -f ${BINARY_NAME} || go build -gcflags "all=-N -l" -ldflags="-X '${PKG_VERSION_PATH}.Version=${NEXT_VERSION}-develop'") && \
 		mv ${BINARY_NAME} ${BUILD_PATH} && \
 		terraform init
 
@@ -41,10 +41,13 @@ attach:
 	dlv --listen=:2345 --headless=true --api-version=2 --accept-multiclient attach $$(pgrep terraform-provider-xray)
 
 acceptance: fmtcheck
-	export TF_ACC=1
-	test -n ARTIFACTORY_USERNAME && test -n ARTIFACTORY_URL && test -n XRAY_ACCESS_TOKEN \
-		&& go test -v -parallel 20 ./pkg/...
-
+ifndef ARTIFACTORY_URL
+$(error ARTIFACTORY_URL is not set)
+endif
+ifndef XRAY_ACCESS_TOKEN
+$(error XRAY_ACCESS_TOKEN is not set)
+endif
+	export TF_ACC=1 && go test -v -parallel 20 ./pkg/...
 
 fmt:
 	@echo "==> Fixing source code with gofmt..."

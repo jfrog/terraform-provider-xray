@@ -25,6 +25,8 @@ type PolicyRuleCriteria struct {
 	// Since CVSSRange is conflicting with MinimumSeverity, Xray will throw an error if .
 	// Pointer can be set to nil value, so we can remove CVSSRange entirely only
 	// if it's a pointer.
+	// The nil pointer is used in conjunction with the omitempty flag in the JSON tag,
+	// to remove the key completely in the payload.
 
 	// License Criteria
 	AllowUnknown           *bool    `json:"allow_unknown,omitempty"`            // Omitempty is used because the empty field is conflicting with MultiLicensePermissive
@@ -233,8 +235,7 @@ func unpackActions(l *schema.Set) PolicyRuleActions {
 		actions.FailureGracePeriodDays = v.(int)
 	}
 	if v, ok := m["custom_severity"]; ok {
-		cs := v.(string)
-		actions.CustomSeverity = cs
+		actions.CustomSeverity = v.(string)
 	}
 
 	return actions
