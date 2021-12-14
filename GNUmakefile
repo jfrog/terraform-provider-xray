@@ -41,12 +41,6 @@ attach:
 	dlv --listen=:2345 --headless=true --api-version=2 --accept-multiclient attach $$(pgrep terraform-provider-xray)
 
 acceptance: fmtcheck
-ifndef ARTIFACTORY_URL
-$(error ARTIFACTORY_URL is not set)
-endif
-ifndef XRAY_ACCESS_TOKEN
-$(error XRAY_ACCESS_TOKEN is not set)
-endif
 	export TF_ACC=1 && go test -v -parallel 20 ./pkg/...
 
 fmt:
