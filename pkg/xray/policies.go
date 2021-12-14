@@ -338,7 +338,6 @@ func packBlockDownload(bd BlockDownloadSettings) []interface{} {
 func resourceXrayPolicyCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	policy, err := unpackPolicy(d)
 	// Warning or errors can be collected in a slice type
-	var diags diag.Diagnostics
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -348,8 +347,7 @@ func resourceXrayPolicyCreate(ctx context.Context, d *schema.ResourceData, m int
 	}
 
 	d.SetId(policy.Name)
-	resourceXrayPolicyRead(ctx, d, m)
-	return diags
+	return resourceXrayPolicyRead(ctx, d, m)
 }
 
 func getPolicy(id string, client *resty.Client) (Policy, *resty.Response, error) {
@@ -359,12 +357,10 @@ func getPolicy(id string, client *resty.Client) (Policy, *resty.Response, error)
 }
 func resourceXrayPolicyRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	policy, resp, err := getPolicy(d.Id(), m.(*resty.Client))
-	var diags diag.Diagnostics
 	if err != nil {
 		if resp != nil && resp.StatusCode() == http.StatusNotFound {
 			log.Printf("[WARN] Xray policy (%s) not found, removing from state", d.Id())
 			d.SetId("")
-			return nil
 		}
 		return diag.FromErr(err)
 	}
@@ -393,7 +389,7 @@ func resourceXrayPolicyRead(ctx context.Context, d *schema.ResourceData, m inter
 		return diag.FromErr(err)
 	}
 
-	return diags
+	return nil
 }
 
 func resourceXrayPolicyUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -412,11 +408,10 @@ func resourceXrayPolicyUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 func resourceXrayPolicyDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	// Warning or errors can be collected in a slice type
-	var diags diag.Diagnostics
 	resp, err := m.(*resty.Client).R().Delete("xray/api/v2/policies/" + d.Id())
 	if err != nil && resp.StatusCode() == http.StatusInternalServerError {
 		d.SetId("")
 		return diag.FromErr(err)
 	}
-	return diags
+	return nil
 }

@@ -185,7 +185,6 @@ func packAssignedPolicies(policies []WatchAssignedPolicy) []interface{} {
 }
 
 func resourceXrayWatchCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	var diags diag.Diagnostics
 	watch := unpackWatch(d)
 	_, err := m.(*resty.Client).R().SetBody(watch).Post("xray/api/v2/watches")
 	if err != nil {
@@ -193,21 +192,18 @@ func resourceXrayWatchCreate(ctx context.Context, d *schema.ResourceData, m inte
 	}
 
 	d.SetId(watch.GeneralData.Name)
-	resourceXrayWatchRead(ctx, d, m)
-	return diags
+	return resourceXrayWatchRead(ctx, d, m)
 }
 
 func resourceXrayWatchRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	var diags diag.Diagnostics
 	watch := Watch{}
 	resp, err := m.(*resty.Client).R().SetResult(&watch).Get("xray/api/v2/watches/" + d.Id())
 	if err != nil {
 		if resp != nil && resp.StatusCode() == http.StatusNotFound {
 			log.Printf("[WARN] Xray watch (%s) not found, removing from state", d.Id())
 			d.SetId("")
-			return nil
 		}
-		return diags
+		return diag.FromErr(err)
 	}
 	if err := d.Set("description", watch.GeneralData.Description); err != nil {
 		return diag.FromErr(err)
@@ -222,33 +218,29 @@ func resourceXrayWatchRead(ctx context.Context, d *schema.ResourceData, m interf
 		return diag.FromErr(err)
 	}
 
-	return diags
+	return nil
 }
 
 func resourceXrayWatchUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	var diags diag.Diagnostics
 	watch := unpackWatch(d)
 	resp, err := m.(*resty.Client).R().SetBody(watch).Put("xray/api/v2/watches/" + d.Id())
 	if err != nil {
 		if resp != nil && resp.StatusCode() == http.StatusNotFound {
 			log.Printf("[WARN] Xray watch (%s) not found, removing from state", d.Id())
 			d.SetId("")
-			return nil
 		}
 		return diag.FromErr(err)
 	}
 
 	d.SetId(watch.GeneralData.Name)
-	resourceXrayWatchRead(ctx, d, m)
-	return diags
+	return resourceXrayWatchRead(ctx, d, m)
 }
 
 func resourceXrayWatchDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	var diags diag.Diagnostics
 	resp, err := m.(*resty.Client).R().Delete("xray/api/v2/watches/" + d.Id())
 	if err != nil && resp.StatusCode() == http.StatusNotFound {
 		d.SetId("")
 		return diag.FromErr(err)
 	}
-	return diags
+	return nil
 }
