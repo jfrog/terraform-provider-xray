@@ -18,7 +18,7 @@ resource "xray_license_policy" "allowed_licenses" {
   description = "License policy, allow certain licenses"
   type        = "license"
 
-  rules {
+  rule {
     name     = "License_rule"
     priority = 1
 
@@ -53,7 +53,7 @@ resource "xray_license_policy" "banned_licenses" {
   description = "License policy, block certain licenses"
   type        = "license"
 
-  rules {
+  rule {
     name     = "License_rule"
     priority = 1
 
@@ -89,7 +89,7 @@ resource "xray_license_policy" "banned_licenses" {
 ### Required
 
 - **name** (String) Name of the policy (must be unique)
-- **rules** (Block List, Min: 1) Nested block describing the policy rules. Described below (see [below for nested schema](#nestedblock--rules))
+- **rule** (Block List, Min: 1) Nested block describing a policy rule. Described below (see [below for nested schema](#nestedblock--rule))
 - **type** (String) Type of the policy
 
 ### Optional
@@ -103,21 +103,21 @@ resource "xray_license_policy" "banned_licenses" {
 - **created** (String) Creation timestamp
 - **modified** (String) Modification timestamp
 
-<a id="nestedblock--rules"></a>
-### Nested Schema for `rules`
+<a id="nestedblock--rule"></a>
+### Nested Schema for `rule`
 
 Required:
 
-- **criteria** (Block Set, Min: 1) Nested block describing the criteria for the policy. Described below (see [below for nested schema](#nestedblock--rules--criteria))
+- **criteria** (Block Set, Min: 1) Nested block describing the criteria for the policy. Described below (see [below for nested schema](#nestedblock--rule--criteria))
 - **name** (String) Name of the rule
 - **priority** (Number) Integer describing the rule priority. Must be at least 1
 
 Optional:
 
-- **actions** (Block Set, Max: 1) Nested block describing the actions to be applied by the policy. Described below. (see [below for nested schema](#nestedblock--rules--actions))
+- **actions** (Block Set, Max: 1) Nested block describing the actions to be applied by the policy. Described below. (see [below for nested schema](#nestedblock--rule--actions))
 
-<a id="nestedblock--rules--criteria"></a>
-### Nested Schema for `rules.criteria`
+<a id="nestedblock--rule--criteria"></a>
+### Nested Schema for `rule.criteria`
 
 Optional:
 
@@ -127,12 +127,12 @@ Optional:
 - **multi_license_permissive** (Boolean) Do not generate a violation if at least one license is valid in cases whereby multiple licenses were detected on the component
 
 
-<a id="nestedblock--rules--actions"></a>
-### Nested Schema for `rules.actions`
+<a id="nestedblock--rule--actions"></a>
+### Nested Schema for `rule.actions`
 
 Required:
 
-- **block_download** (Block Set, Min: 1, Max: 1) Nested block describing artifacts that should be blocked for download if a violation is triggered. Described below. (see [below for nested schema](#nestedblock--rules--actions--block_download))
+- **block_download** (Block Set, Min: 1, Max: 1) Nested block describing artifacts that should be blocked for download if a violation is triggered. Described below. (see [below for nested schema](#nestedblock--rule--actions--block_download))
 
 Optional:
 
@@ -146,8 +146,8 @@ Optional:
 - **notify_watch_recipients** (Boolean) Sends an email message to all configured recipients inside a specific watch with details about the generated Violations.
 - **webhooks** (Set of String) A list of Xray-configured webhook URLs to be invoked if a violation is triggered.
 
-<a id="nestedblock--rules--actions--block_download"></a>
-### Nested Schema for `rules.actions.block_download`
+<a id="nestedblock--rule--actions--block_download"></a>
+### Nested Schema for `rule.actions.block_download`
 
 Required:
 

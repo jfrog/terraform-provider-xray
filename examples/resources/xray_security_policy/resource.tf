@@ -3,7 +3,7 @@ resource "xray_security_policy" "min_severity" {
   description = "Security policy description"
   type        = "security"
 
-  rules {
+  rule {
     name     = "rule-name-severity"
     priority = 1
 
@@ -34,7 +34,7 @@ resource "xray_security_policy" "cvss_score" {
   description = "Security policy description"
   type        = "security"
 
-  rules {
+  rule {
     name     = "rule-name-cvss"
     priority = 1
 

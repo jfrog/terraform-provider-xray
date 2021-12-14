@@ -12,7 +12,7 @@ provider "xray" {
   url          = "artifactory.site.com/xray"
   access_token = "abc..xy"
   // Also user can supply the following env vars:
-  // ARTIFACTORY_URL or JFROG_URL
+  // JFROG_URL or XRAY_URL
   // XRAY_ACCESS_TOKEN or JFROG_ACCESS_TOKEN
 }
 
@@ -25,7 +25,7 @@ resource "xray_security_policy" "security1" {
   description = "Security policy description"
   type        = "security"
 
-  rules {
+  rule {
     name     = "rule-name-severity"
     priority = 1
 
@@ -56,7 +56,7 @@ resource "xray_security_policy" "security2" {
   description = "Security policy description"
   type        = "security"
 
-  rules {
+  rule {
     name     = "rule-name-cvss"
     priority = 1
 
@@ -91,7 +91,7 @@ resource "xray_license_policy" "license1" {
   description = "License policy, allow certain licenses"
   type        = "license"
 
-  rules {
+  rule {
     name     = "License_rule"
     priority = 1
 
@@ -125,7 +125,7 @@ resource "xray_license_policy" "license2" {
   description = "License policy, block certain licenses"
   type        = "license"
 
-  rules {
+  rule {
     name     = "License_rule"
     priority = 1
 

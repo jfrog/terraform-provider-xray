@@ -181,7 +181,7 @@ resource "xray_security_policy" "%s" {
 	name = "%s"
 	description = "%s"
 	type = "license"
-	rules {
+	rule {
 		name = "%s"
 		priority = 1
 		criteria {
@@ -205,22 +205,22 @@ func verifyLicensePolicy(fqrn string, tempStruct map[string]string, allowedOrBan
 	return resource.ComposeTestCheckFunc(
 		resource.TestCheckResourceAttr(fqrn, "name", tempStruct["policy_name"]),
 		resource.TestCheckResourceAttr(fqrn, "description", tempStruct["policy_description"]),
-		resource.TestCheckResourceAttr(fqrn, "rules.0.name", tempStruct["rule_name"]),
-		resource.TestCheckResourceAttr(fqrn, "rules.0.criteria.0.allow_unknown", tempStruct["allow_unknown"]),
-		resource.TestCheckResourceAttr(fqrn, "rules.0.criteria.0.multi_license_permissive", tempStruct["multi_license_permissive"]),
-		resource.TestCheckResourceAttr(fqrn, fmt.Sprintf("rules.0.criteria.0.%s.0", allowedOrBanned), tempStruct["license_0"]),
-		resource.TestCheckResourceAttr(fqrn, fmt.Sprintf("rules.0.criteria.0.%s.1", allowedOrBanned), tempStruct["license_1"]),
-		resource.TestCheckResourceAttr(fqrn, "rules.0.actions.0.mails.0", tempStruct["mails_0"]),
-		resource.TestCheckResourceAttr(fqrn, "rules.0.actions.0.mails.1", tempStruct["mails_1"]),
-		resource.TestCheckResourceAttr(fqrn, "rules.0.actions.0.block_release_bundle_distribution", tempStruct["block_release_bundle_distribution"]),
-		resource.TestCheckResourceAttr(fqrn, "rules.0.actions.0.fail_build", tempStruct["fail_build"]),
-		resource.TestCheckResourceAttr(fqrn, "rules.0.actions.0.notify_watch_recipients", tempStruct["notify_watch_recipients"]),
-		resource.TestCheckResourceAttr(fqrn, "rules.0.actions.0.notify_deployer", tempStruct["notify_deployer"]),
-		resource.TestCheckResourceAttr(fqrn, "rules.0.actions.0.create_ticket_enabled", tempStruct["create_ticket_enabled"]),
-		resource.TestCheckResourceAttr(fqrn, "rules.0.actions.0.build_failure_grace_period_in_days", tempStruct["grace_period_days"]),
-		resource.TestCheckResourceAttr(fqrn, "rules.0.actions.0.block_download.0.active", tempStruct["block_active"]),
-		resource.TestCheckResourceAttr(fqrn, "rules.0.actions.0.block_download.0.unscanned", tempStruct["block_unscanned"]),
-		resource.TestCheckResourceAttr(fqrn, "rules.0.actions.0.custom_severity", tempStruct["custom_severity"]),
+		resource.TestCheckResourceAttr(fqrn, "rule.0.name", tempStruct["rule_name"]),
+		resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.allow_unknown", tempStruct["allow_unknown"]),
+		resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.multi_license_permissive", tempStruct["multi_license_permissive"]),
+		resource.TestCheckResourceAttr(fqrn, fmt.Sprintf("rule.0.criteria.0.%s.0", allowedOrBanned), tempStruct["license_0"]),
+		resource.TestCheckResourceAttr(fqrn, fmt.Sprintf("rule.0.criteria.0.%s.1", allowedOrBanned), tempStruct["license_1"]),
+		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.mails.0", tempStruct["mails_0"]),
+		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.mails.1", tempStruct["mails_1"]),
+		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.block_release_bundle_distribution", tempStruct["block_release_bundle_distribution"]),
+		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.fail_build", tempStruct["fail_build"]),
+		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.notify_watch_recipients", tempStruct["notify_watch_recipients"]),
+		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.notify_deployer", tempStruct["notify_deployer"]),
+		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.create_ticket_enabled", tempStruct["create_ticket_enabled"]),
+		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.build_failure_grace_period_in_days", tempStruct["grace_period_days"]),
+		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.block_download.0.active", tempStruct["block_active"]),
+		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.block_download.0.unscanned", tempStruct["block_unscanned"]),
+		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.custom_severity", tempStruct["custom_severity"]),
 	)
 }
 
@@ -228,7 +228,7 @@ const licensePolicyTemplate = `resource "xray_license_policy" "{{ .resource_name
 	name = "{{ .policy_name }}"
 	description = "{{ .policy_description }}"
 	type = "license"
-	rules {
+	rule {
 		name = "{{ .rule_name }}"
 		priority = 1
 		criteria {	

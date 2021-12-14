@@ -25,7 +25,7 @@ resource "xray_security_policy" "security_policy" {
   description = "Security policy description"
   type        = "security"
 
-  rules {
+  rule {
     name     = "rule-name-severity"
     priority = 1
 
@@ -57,7 +57,7 @@ resource "xray_license_policy" "license_policy" {
   description = "License policy, allow certain licenses"
   type        = "license"
 
-  rules {
+  rule {
     name     = "License_rule"
     priority = 1
 

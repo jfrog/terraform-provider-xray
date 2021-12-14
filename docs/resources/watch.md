@@ -122,7 +122,7 @@ resource "xray_watch" "build" {
 
 ### Optional
 
-- **active** (Boolean) Whether or not the watch will be active
+- **active** (Boolean) Whether or not the watch is active
 - **description** (String) Description of the watch
 - **id** (String) The ID of this resource.
 - **watch_recipients** (Set of String) A list of email addressed that will get emailed when a violation is triggered.

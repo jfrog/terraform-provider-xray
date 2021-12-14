@@ -64,7 +64,7 @@ resource "xray_security_policy" "security_policy" {
   description = "Security policy description"
   type        = "security"
 
-  rules {
+  rule {
     name     = "rule-name-severity"
     priority = 1
 
@@ -96,7 +96,7 @@ resource "xray_license_policy" "license_policy" {
   description = "License policy, allow certain licenses"
   type        = "license"
 
-  rules {
+  rule {
     name     = "License_rule"
     priority = 1
 
@@ -178,4 +178,4 @@ provider "xray" {
 ### Optional
 
 - **access_token** (String, Sensitive) This is a bearer token that can be given to you by your admin under `Identity and Access`
-- **url** (String) URL of Artifactory. This can also be sourced from the `ARTIFACTORY_URL` or `JFROG_URL` environment variable. Default to 'http://localhost:8081' if not set.
+- **url** (String) URL of Artifactory. This can also be sourced from the `XRAY_URL` or `JFROG_URL` environment variable. Default to 'http://localhost:8081' if not set.

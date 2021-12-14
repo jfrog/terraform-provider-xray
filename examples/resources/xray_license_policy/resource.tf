@@ -3,7 +3,7 @@ resource "xray_license_policy" "allowed_licenses" {
   description = "License policy, allow certain licenses"
   type        = "license"
 
-  rules {
+  rule {
     name     = "License_rule"
     priority = 1
 
@@ -38,7 +38,7 @@ resource "xray_license_policy" "banned_licenses" {
   description = "License policy, block certain licenses"
   type        = "license"
 
-  rules {
+  rule {
     name     = "License_rule"
     priority = 1
 

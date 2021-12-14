@@ -29,10 +29,10 @@ func TestProvider(t *testing.T) {
 }
 
 func getTestResty(t *testing.T) *resty.Client {
-	if v := os.Getenv("ARTIFACTORY_URL"); v == "" {
-		t.Error("ARTIFACTORY_URL must be set for acceptance tests")
+	if v := os.Getenv("JFROG_URL"); v == "" {
+		t.Error("JFROG_URL must be set for acceptance tests")
 	}
-	restyClient, err := buildResty(os.Getenv("ARTIFACTORY_URL"))
+	restyClient, err := buildResty(os.Getenv("JFROG_URL"))
 	if err != nil {
 		t.Error(err)
 	}

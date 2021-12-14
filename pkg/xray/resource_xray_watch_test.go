@@ -223,7 +223,7 @@ const allReposSinglePolicyWatchTemplate = `resource "xray_security_policy" "secu
   name        = "{{ .policy_name_0 }}"
   description = "Security policy description"
   type        = "security"
-  rules {
+  rule {
     name     = "rule-name-severity"
     priority = 1
     criteria {
@@ -270,7 +270,7 @@ const allReposMultiplePoliciesWatchTemplate = `resource "xray_security_policy" "
   name        = "{{ .policy_name_0 }}"
   description = "Security policy description"
   type        = "security"
-  rules {
+  rule {
     name     = "rule-name-severity"
     priority = 1
     criteria {
@@ -297,7 +297,7 @@ resource "xray_license_policy" "license" {
   name        = "{{ .policy_name_1 }}"
   description = "License policy description"
   type        = "license"
-  rules {
+  rule {
     name     = "License_rule"
     priority = 1
     criteria {
@@ -355,7 +355,7 @@ const singleRepositoryWatchTemplate = `resource "xray_security_policy" "security
   name        = "{{ .policy_name_0 }}"
   description = "Security policy description"
   type        = "security"
-  rules {
+  rule {
     name     = "rule-name-severity"
     priority = 1
     criteria {
@@ -403,7 +403,7 @@ const multipleRepositoriesWatchTemplate = `resource "xray_security_policy" "secu
   name        = "{{ .policy_name_0 }}"
   description = "Security policy description"
   type        = "security"
-  rules {
+  rule {
     name     = "rule-name-severity"
     priority = 1
     criteria {
@@ -460,7 +460,7 @@ const buildWatchTemplate = `resource "xray_security_policy" "security" {
   name        = "{{ .policy_name_0 }}"
   description = "Security policy description"
   type        = "security"
-  rules {
+  rule {
     name     = "rule-name-severity"
     priority = 1
     criteria {
@@ -504,7 +504,7 @@ const multipleBuildsWatchTemplate = `resource "xray_security_policy" "security" 
   name        = "{{ .policy_name_0 }}"
   description = "Security policy description"
   type        = "security"
-  rules {
+  rule {
     name     = "rule-name-severity"
     priority = 1
     criteria {

@@ -84,7 +84,7 @@ func unpackPolicy(d *schema.ResourceData) (*Policy, error) {
 	if v, ok := d.GetOk("author"); ok {
 		policy.Author = v.(string)
 	}
-	policyRules, err := unpackRules(d.Get("rules").([]interface{}), policy.Type)
+	policyRules, err := unpackRules(d.Get("rule").([]interface{}), policy.Type)
 	policy.Rules = &policyRules
 
 	return policy, err
@@ -210,9 +210,9 @@ func unpackActions(l *schema.Set) PolicyRuleActions {
 			}
 			// Setting this false/false block feels like it _should_ work, since putting a false/false block in the terraform resource works fine
 			// However, it doesn't, and we end up getting this diff when running acceptance tests when this is optional in the schema
-			// rules.0.actions.0.block_download.#:           "1" => "0"
-			// rules.0.actions.0.block_download.0.active:    "false" => ""
-			// rules.0.actions.0.block_download.0.unscanned: "false" => ""
+			// rule.0.actions.0.block_download.#:           "1" => "0"
+			// rule.0.actions.0.block_download.0.active:    "false" => ""
+			// rule.0.actions.0.block_download.0.unscanned: "false" => ""
 		}
 	}
 	if v, ok := m["block_release_bundle_distribution"]; ok {
@@ -389,7 +389,7 @@ func resourceXrayPolicyRead(ctx context.Context, d *schema.ResourceData, m inter
 	if err := d.Set("modified", policy.Modified); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("rules", packRules(*policy.Rules, policy.Type)); err != nil {
+	if err := d.Set("rule", packRules(*policy.Rules, policy.Type)); err != nil {
 		return diag.FromErr(err)
 	}
 

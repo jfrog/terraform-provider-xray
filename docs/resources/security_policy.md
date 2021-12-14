@@ -18,7 +18,7 @@ resource "xray_security_policy" "min_severity" {
   description = "Security policy description"
   type        = "security"
 
-  rules {
+  rule {
     name     = "rule-name-severity"
     priority = 1
 
@@ -49,7 +49,7 @@ resource "xray_security_policy" "cvss_score" {
   description = "Security policy description"
   type        = "security"
 
-  rules {
+  rule {
     name     = "rule-name-cvss"
     priority = 1
 
@@ -86,7 +86,7 @@ resource "xray_security_policy" "cvss_score" {
 ### Required
 
 - **name** (String) Name of the policy (must be unique)
-- **rules** (Block List, Min: 1) (see [below for nested schema](#nestedblock--rules))
+- **rule** (Block List, Min: 1) Nested block describing security rule. Described below (see [below for nested schema](#nestedblock--rule))
 - **type** (String) Type of the policy
 
 ### Optional
@@ -100,29 +100,29 @@ resource "xray_security_policy" "cvss_score" {
 - **created** (String) Creation timestamp
 - **modified** (String) Modification timestamp
 
-<a id="nestedblock--rules"></a>
-### Nested Schema for `rules`
+<a id="nestedblock--rule"></a>
+### Nested Schema for `rule`
 
 Required:
 
-- **criteria** (Block Set, Min: 1, Max: 1) Nested block describing the criteria for the policy. Described below. (see [below for nested schema](#nestedblock--rules--criteria))
+- **criteria** (Block Set, Min: 1, Max: 1) Nested block describing the criteria for the policy. Described below. (see [below for nested schema](#nestedblock--rule--criteria))
 - **name** (String) Name of the rule
 - **priority** (Number) Integer describing the rule priority. Must be at least 1
 
 Optional:
 
-- **actions** (Block Set, Max: 1) Nested block describing the actions to be applied by the policy. Described below. (see [below for nested schema](#nestedblock--rules--actions))
+- **actions** (Block Set, Max: 1) Nested block describing the actions to be applied by the policy. Described below. (see [below for nested schema](#nestedblock--rule--actions))
 
-<a id="nestedblock--rules--criteria"></a>
-### Nested Schema for `rules.criteria`
+<a id="nestedblock--rule--criteria"></a>
+### Nested Schema for `rule.criteria`
 
 Optional:
 
-- **cvss_range** (Block List, Max: 1) Nested block describing a CVS score range to be impacted. Defined below. (see [below for nested schema](#nestedblock--rules--criteria--cvss_range))
+- **cvss_range** (Block List, Max: 1) Nested block describing a CVS score range to be impacted. Defined below. (see [below for nested schema](#nestedblock--rule--criteria--cvss_range))
 - **min_severity** (String) The minimum security vulnerability severity that will be impacted by the policy.
 
-<a id="nestedblock--rules--criteria--cvss_range"></a>
-### Nested Schema for `rules.criteria.cvss_range`
+<a id="nestedblock--rule--criteria--cvss_range"></a>
+### Nested Schema for `rule.criteria.cvss_range`
 
 Required:
 
@@ -131,12 +131,12 @@ Required:
 
 
 
-<a id="nestedblock--rules--actions"></a>
-### Nested Schema for `rules.actions`
+<a id="nestedblock--rule--actions"></a>
+### Nested Schema for `rule.actions`
 
 Required:
 
-- **block_download** (Block Set, Min: 1, Max: 1) Nested block describing artifacts that should be blocked for download if a violation is triggered. Described below. (see [below for nested schema](#nestedblock--rules--actions--block_download))
+- **block_download** (Block Set, Min: 1, Max: 1) Nested block describing artifacts that should be blocked for download if a violation is triggered. Described below. (see [below for nested schema](#nestedblock--rule--actions--block_download))
 
 Optional:
 
@@ -149,8 +149,8 @@ Optional:
 - **notify_watch_recipients** (Boolean) Sends an email message to all configured recipients inside a specific watch with details about the generated Violations.
 - **webhooks** (Set of String) A list of Xray-configured webhook URLs to be invoked if a violation is triggered.
 
-<a id="nestedblock--rules--actions--block_download"></a>
-### Nested Schema for `rules.actions.block_download`
+<a id="nestedblock--rule--actions--block_download"></a>
+### Nested Schema for `rule.actions.block_download`
 
 Required:
 

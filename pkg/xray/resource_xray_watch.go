@@ -2,6 +2,7 @@ package xray
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 func resourceXrayWatch() *schema.Resource {
@@ -18,10 +19,11 @@ func resourceXrayWatch() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:        schema.TypeString,
-				Required:    true,
-				ForceNew:    true,
-				Description: "Name of the watch (must be unique)",
+				Type:             schema.TypeString,
+				Required:         true,
+				ForceNew:         true,
+				Description:      "Name of the watch (must be unique)",
+				ValidateDiagFunc: validation.ToDiagFunc(validation.StringIsNotEmpty),
 			},
 			"description": {
 				Type:        schema.TypeString,
@@ -31,7 +33,7 @@ func resourceXrayWatch() *schema.Resource {
 			"active": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "Whether or not the watch will be active",
+				Description: "Whether or not the watch is active",
 			},
 			"watch_resource": {
 				Type:        schema.TypeSet,
@@ -71,9 +73,10 @@ func resourceXrayWatch() *schema.Resource {
 									// TODO support Exclude and Include patterns
 									// eg "value":{"ExcludePatterns":[],"IncludePatterns":["*"]}
 									"value": {
-										Type:        schema.TypeString,
-										Required:    true,
-										Description: "The value of the filter, such as the text of the regex or name of the package type.",
+										Type:             schema.TypeString,
+										Required:         true,
+										Description:      "The value of the filter, such as the text of the regex or name of the package type.",
+										ValidateDiagFunc: validation.ToDiagFunc(validation.StringIsNotEmpty),
 									},
 								},
 							},

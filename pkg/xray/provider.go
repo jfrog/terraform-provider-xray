@@ -24,10 +24,10 @@ func Provider() *schema.Provider {
 			"url": {
 				Type:     schema.TypeString,
 				Optional: true,
-				DefaultFunc: schema.MultiEnvDefaultFunc([]string{"JFROG_URL", "ARTIFACTORY_URL"},
+				DefaultFunc: schema.MultiEnvDefaultFunc([]string{"JFROG_URL", "XRAY_URL"},
 					"http://localhost:8081"),
 				ValidateFunc: validation.IsURLWithHTTPorHTTPS,
-				Description:  "URL of Artifactory. This can also be sourced from the `ARTIFACTORY_URL` or `JFROG_URL` environment variable. Default to 'http://localhost:8081' if not set.",
+				Description:  "URL of Artifactory. This can also be sourced from the `XRAY_URL` or `JFROG_URL` environment variable. Default to 'http://localhost:8081' if not set.",
 			},
 			"access_token": {
 				Type:             schema.TypeString,

@@ -21,10 +21,11 @@ func resourceXraySecurityPolicyV2() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:        schema.TypeString,
-				Required:    true,
-				ForceNew:    true,
-				Description: "Name of the policy (must be unique)",
+				Type:             schema.TypeString,
+				Required:         true,
+				ForceNew:         true,
+				Description:      "Name of the policy (must be unique)",
+				ValidateDiagFunc: validation.ToDiagFunc(validation.StringIsNotEmpty),
 			},
 			"description": {
 				Type:        schema.TypeString,
@@ -52,16 +53,17 @@ func resourceXraySecurityPolicyV2() *schema.Resource {
 				Computed:    true,
 				Description: "Modification timestamp",
 			},
-			"rules": {
+			"rule": {
 				Type:        schema.TypeList,
 				Required:    true,
-				Description: "",
+				Description: "Nested block describing security rule. Described below",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
-							Type:        schema.TypeString,
-							Required:    true,
-							Description: "Name of the rule",
+							Type:             schema.TypeString,
+							Required:         true,
+							Description:      "Name of the rule",
+							ValidateDiagFunc: validation.ToDiagFunc(validation.StringIsNotEmpty),
 						},
 						"priority": {
 							Type:             schema.TypeInt,
