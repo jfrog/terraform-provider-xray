@@ -335,13 +335,19 @@ func packBlockDownload(bd BlockDownloadSettings) []interface{} {
 	return []interface{}{m}
 }
 
+func getPolicy(id string, client *resty.Client) (Policy, *resty.Response, error) {
+	policy := Policy{}
+	resp, err := client.R().SetResult(&policy).Get("xray/api/v2/policies/" + id)
+	return policy, resp, err
+}
+
 func resourceXrayPolicyCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	policy, err := unpackPolicy(d)
 	// Warning or errors can be collected in a slice type
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	_, err = m.(*resty.Client).R().SetBody(policy).Post("xray/api/v2/policies")
+	_, err = m.(*resty.Client).R().AddRetryCondition(retryOnMergeError).SetBody(policy).Post("xray/api/v2/policies")
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -350,11 +356,6 @@ func resourceXrayPolicyCreate(ctx context.Context, d *schema.ResourceData, m int
 	return resourceXrayPolicyRead(ctx, d, m)
 }
 
-func getPolicy(id string, client *resty.Client) (Policy, *resty.Response, error) {
-	policy := Policy{}
-	resp, err := client.R().SetResult(&policy).Get("xray/api/v2/policies/" + id)
-	return policy, resp, err
-}
 func resourceXrayPolicyRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	policy, resp, err := getPolicy(d.Id(), m.(*resty.Client))
 	if err != nil {
@@ -397,7 +398,7 @@ func resourceXrayPolicyUpdate(ctx context.Context, d *schema.ResourceData, m int
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	_, err = m.(*resty.Client).R().SetBody(policy).Put("xray/api/v2/policies/" + d.Id())
+	_, err = m.(*resty.Client).R().AddRetryCondition(retryOnMergeError).SetBody(policy).Put("xray/api/v2/policies/" + d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -408,7 +409,7 @@ func resourceXrayPolicyUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 func resourceXrayPolicyDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	// Warning or errors can be collected in a slice type
-	resp, err := m.(*resty.Client).R().Delete("xray/api/v2/policies/" + d.Id())
+	resp, err := m.(*resty.Client).R().AddRetryCondition(retryOnMergeError).Delete("xray/api/v2/policies/" + d.Id())
 	if err != nil && resp.StatusCode() == http.StatusInternalServerError {
 		d.SetId("")
 		return diag.FromErr(err)
