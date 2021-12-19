@@ -335,6 +335,34 @@ func packBlockDownload(bd BlockDownloadSettings) []interface{} {
 	return []interface{}{m}
 }
 
+func packPolicy(policy Policy, d *schema.ResourceData) diag.Diagnostics {
+	if err := d.Set("name", policy.Name); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("type", policy.Type); err != nil {
+		return diag.FromErr(err)
+	}
+	if len(policy.Description) > 0 {
+		if err := d.Set("description", policy.Description); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+	if err := d.Set("author", policy.Author); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("created", policy.Created); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("modified", policy.Modified); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("rule", packRules(*policy.Rules, policy.Type)); err != nil {
+		return diag.FromErr(err)
+	}
+
+	return nil
+}
+
 func getPolicy(id string, client *resty.Client) (Policy, *resty.Response, error) {
 	policy := Policy{}
 	resp, err := client.R().SetResult(&policy).Get("xray/api/v2/policies/" + id)
@@ -365,31 +393,7 @@ func resourceXrayPolicyRead(ctx context.Context, d *schema.ResourceData, m inter
 		}
 		return diag.FromErr(err)
 	}
-
-	if err := d.Set("name", policy.Name); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("type", policy.Type); err != nil {
-		return diag.FromErr(err)
-	}
-	if len(policy.Description) > 0 {
-		if err := d.Set("description", policy.Description); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-	if err := d.Set("author", policy.Author); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("created", policy.Created); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("modified", policy.Modified); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("rule", packRules(*policy.Rules, policy.Type)); err != nil {
-		return diag.FromErr(err)
-	}
-
+	packPolicy(policy, d)
 	return nil
 }
 

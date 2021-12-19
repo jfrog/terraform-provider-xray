@@ -185,12 +185,34 @@ func packAssignedPolicies(policies []WatchAssignedPolicy) []interface{} {
 	return l
 }
 
+func packWatch(watch Watch, d *schema.ResourceData) diag.Diagnostics {
+	if err := d.Set("description", watch.GeneralData.Description); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("active", watch.GeneralData.Active); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("watch_resource", packProjectResources(watch.ProjectResources)); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("assigned_policy", packAssignedPolicies(watch.AssignedPolicies)); err != nil {
+		return diag.FromErr(err)
+	}
+	return nil
+}
+
 var retryOnMergeError = func() func(response *resty.Response, _r error) bool {
 	var mergeAndSaveRegex = regexp.MustCompile(".*Could not merge and save new descriptor.*")
 	return func(response *resty.Response, _r error) bool {
 		return mergeAndSaveRegex.MatchString(string(response.Body()[:]))
 	}
 }()
+
+func getWatch(id string, client *resty.Client) (Watch, *resty.Response, error) {
+	watch := Watch{}
+	resp, err := client.R().SetResult(&watch).Get("xray/api/v2/watches/" + id)
+	return watch, resp, err
+}
 
 func resourceXrayWatchCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	watch := unpackWatch(d)
@@ -204,8 +226,7 @@ func resourceXrayWatchCreate(ctx context.Context, d *schema.ResourceData, m inte
 }
 
 func resourceXrayWatchRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	watch := Watch{}
-	resp, err := m.(*resty.Client).R().SetResult(&watch).Get("xray/api/v2/watches/" + d.Id())
+	watch, resp, err := getWatch(d.Id(), m.(*resty.Client))
 	if err != nil {
 		if resp != nil && resp.StatusCode() == http.StatusNotFound {
 			log.Printf("[WARN] Xray watch (%s) not found, removing from state", d.Id())
@@ -213,19 +234,7 @@ func resourceXrayWatchRead(ctx context.Context, d *schema.ResourceData, m interf
 		}
 		return diag.FromErr(err)
 	}
-	if err := d.Set("description", watch.GeneralData.Description); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("active", watch.GeneralData.Active); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("watch_resource", packProjectResources(watch.ProjectResources)); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("assigned_policy", packAssignedPolicies(watch.AssignedPolicies)); err != nil {
-		return diag.FromErr(err)
-	}
-
+	packWatch(watch, d)
 	return nil
 }
 
