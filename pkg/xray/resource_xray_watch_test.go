@@ -99,18 +99,18 @@ func TestAccWatch_singleRepository(t *testing.T) {
 	tempStruct["watch_name"] = fmt.Sprintf("xray-watch-%d", randomInt())
 	tempStruct["policy_name_0"] = fmt.Sprintf("xray-policy-%d", randomInt())
 	tempStruct["watch_type"] = "repository"
-	repo0 := "libs-release-local"
-	repo1 := "libs-release-local-1"
+	tempStruct["repo0"] = fmt.Sprintf("libs-release-local-0-%d", randomInt())
+	tempStruct["repo1"] = fmt.Sprintf("libs-release-local-1-%d", randomInt())
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			testAccCreateRepos(t, repo0)
-			testAccCreateRepos(t, repo1)
+			testAccCreateRepos(t, tempStruct["repo0"])
+			testAccCreateRepos(t, tempStruct["repo1"])
 		},
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
-			testAccDeleteRepo(t, repo0)
-			testAccDeleteRepo(t, repo1)
+			testAccDeleteRepo(t, tempStruct["repo0"])
+			testAccDeleteRepo(t, tempStruct["repo1"])
 			testCheckPolicyDeleted("xray_security_policy.security", t, request)
 			resp, err := testCheckWatch(id, request)
 			return resp, err
@@ -135,18 +135,18 @@ func TestAccWatch_multipleRepositories(t *testing.T) {
 	tempStruct["watch_name"] = fmt.Sprintf("xray-watch-%d", randomInt())
 	tempStruct["policy_name_0"] = fmt.Sprintf("xray-policy-%d", randomInt())
 	tempStruct["watch_type"] = "repository"
-	repo0 := "libs-release-local"
-	repo1 := "libs-release-local-1"
+	tempStruct["repo0"] = fmt.Sprintf("libs-release-local-0-%d", randomInt())
+	tempStruct["repo1"] = fmt.Sprintf("libs-release-local-1-%d", randomInt())
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			testAccCreateRepos(t, repo0)
-			testAccCreateRepos(t, repo1)
+			testAccCreateRepos(t, tempStruct["repo0"])
+			testAccCreateRepos(t, tempStruct["repo1"])
 		},
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
-			testAccDeleteRepo(t, repo0)
-			testAccDeleteRepo(t, repo1)
+			testAccDeleteRepo(t, tempStruct["repo0"])
+			testAccDeleteRepo(t, tempStruct["repo1"])
 			testCheckPolicyDeleted("xray_security_policy.security", t, request)
 			resp, err := testCheckWatch(id, request)
 			return resp, err
@@ -170,8 +170,8 @@ func TestAccWatch_build(t *testing.T) {
 	tempStruct["watch_name"] = fmt.Sprintf("xray-watch-%d", randomInt())
 	tempStruct["policy_name_0"] = fmt.Sprintf("xray-policy-%d", randomInt())
 	tempStruct["watch_type"] = "build"
-	tempStruct["build_name0"] = "release-pipeline"
-	tempStruct["build_name1"] = "release-pipeline1"
+	tempStruct["build_name0"] = fmt.Sprintf("release-pipeline-%d", randomInt())
+	tempStruct["build_name1"] = fmt.Sprintf("release-pipeline1-%d", randomInt())
 	builds := []string{tempStruct["build_name0"]}
 
 	resource.Test(t, resource.TestCase{
@@ -199,8 +199,8 @@ func TestAccWatch_multipleBuilds(t *testing.T) {
 	tempStruct["watch_name"] = fmt.Sprintf("xray-watch-%d", randomInt())
 	tempStruct["policy_name_0"] = fmt.Sprintf("xray-policy-%d", randomInt())
 	tempStruct["watch_type"] = "build"
-	tempStruct["build_name0"] = "release-pipeline"
-	tempStruct["build_name1"] = "release-pipeline1"
+	tempStruct["build_name0"] = fmt.Sprintf("release-pipeline-%d", randomInt())
+	tempStruct["build_name1"] = fmt.Sprintf("release-pipeline1-%d", randomInt())
 	builds := []string{tempStruct["build_name0"], tempStruct["build_name1"]}
 
 	resource.Test(t, resource.TestCase{
@@ -386,7 +386,7 @@ resource "xray_watch" "{{ .resource_name }}" {
   watch_resource {
 	type       	= "{{ .watch_type }}"
 	bin_mgr_id  = "default"
-	name		= "libs-release-local"
+	name		= "{{ .repo0 }}"
 	filter {
 		type  	= "{{ .filter_type_0 }}"
 		value	= "{{ .filter_value_0 }}"
@@ -434,7 +434,7 @@ resource "xray_watch" "{{ .resource_name }}" {
   watch_resource {
 	type       	= "{{ .watch_type }}"
 	bin_mgr_id  = "default"
-	name		= "libs-release-local"
+	name		= "{{ .repo0 }}"
 	filter {
 		type  	= "{{ .filter_type_0 }}"
 		value	= "{{ .filter_value_0 }}"
@@ -443,7 +443,7 @@ resource "xray_watch" "{{ .resource_name }}" {
   watch_resource {
 	type       	= "repository"
 	bin_mgr_id  = "default"
-	name		= "libs-release-local-1"
+	name		= "{{ .repo1 }}"
 	filter {
 		type  	= "{{ .filter_type_0 }}"
 		value	= "{{ .filter_value_0 }}"
