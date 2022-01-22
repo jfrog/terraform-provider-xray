@@ -219,6 +219,69 @@ func TestAccWatch_multipleBuilds(t *testing.T) {
 	})
 }
 
+func TestAccWatch_allProjects(t *testing.T) {
+	_, fqrn, resourceName := mkNames("watch-", "xray_watch")
+	testData := make(map[string]string)
+	copyStringMap(testDataWatch, testData)
+
+	testData["resource_name"] = resourceName
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", randomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", randomInt())
+	testData["watch_type"] = "all-projects"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+		},
+		CheckDestroy:      verifyDeleted(fqrn, testCheckWatch),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config: executeTemplate(fqrn, allProjectsWatchTemplate, testData),
+				Check:  verifyXrayWatch(fqrn, testData),
+			},
+		},
+	})
+}
+
+func TestAccWatch_singleProject(t *testing.T) {
+	_, fqrn, resourceName := mkNames("watch-", "xray_watch")
+	testData := make(map[string]string)
+	copyStringMap(testDataWatch, testData)
+
+	testData["resource_name"] = resourceName
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", randomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", randomInt())
+	testData["watch_type"] = "project"
+	testData["project_name_0"] = "test-project11"
+	testData["project_name_1"] = "test-project1111"
+	testData["project_key_0"] = "test11"
+	testData["project_key_1"] = "test111"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			testAccCreateProject(t, testData["project_key_0"], testData["project_name_0"])
+			testAccCreateProject(t, testData["project_key_1"], testData["project_name_1"])
+		},
+		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+			testAccDeleteProject(t, testData["project_key_0"])
+			testAccDeleteProject(t, testData["project_key_1"])
+			testCheckPolicyDeleted("xray_security_policy.security", t, request)
+			resp, err := testCheckWatch(id, request)
+			return resp, err
+		}),
+
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config: executeTemplate(fqrn, singleProjectWatchTemplate, testData),
+				Check:  verifyXrayWatch(fqrn, testData),
+			},
+		},
+	})
+}
+
 const allReposSinglePolicyWatchTemplate = `resource "xray_security_policy" "security" {
   name        = "{{ .policy_name_0 }}"
   description = "Security policy description"
@@ -547,6 +610,96 @@ resource "xray_watch" "{{ .resource_name }}" {
   	name 	= xray_security_policy.security.name
   	type 	= "security"
 }
+  watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
+}`
+
+const allProjectsWatchTemplate = `resource "xray_security_policy" "security" {
+  name        = "{{ .policy_name_0 }}"
+  description = "Security policy description"
+  type        = "security"
+  rule {
+    name     = "rule-name-severity"
+    priority = 1
+    criteria {
+      min_severity = "High"
+    }
+    actions {
+      webhooks = []
+      mails    = ["test@email.com"]
+      block_download {
+        unscanned = true
+        active    = true
+      }
+      block_release_bundle_distribution  = true
+      fail_build                         = true
+      notify_watch_recipients            = true
+      notify_deployer                    = true
+      create_ticket_enabled              = false  
+      build_failure_grace_period_in_days = 5   
+    }
+  }
+}
+
+resource "xray_watch" "{{ .resource_name }}" {
+  name        	= "{{ .watch_name }}"
+  description 	= "{{ .description }}"
+  active 		= {{ .active }}
+
+  watch_resource {
+	type       	= "all-projects"
+	bin_mgr_id  = "default"
+  }
+  assigned_policy {
+  	name 	= xray_security_policy.security.name
+  	type 	= "security"
+  }
+  watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
+}`
+
+const singleProjectWatchTemplate = `resource "xray_security_policy" "security" {
+  name        = "{{ .policy_name_0 }}"
+  description = "Security policy description"
+  type        = "security"
+  rule {
+    name     = "rule-name-severity"
+    priority = 1
+    criteria {
+      min_severity = "High"
+    }
+    actions {
+      webhooks = []
+      mails    = ["test@email.com"]
+      block_download {
+        unscanned = true
+        active    = true
+      }
+      block_release_bundle_distribution  = true
+      fail_build                         = true
+      notify_watch_recipients            = true
+      notify_deployer                    = true
+      create_ticket_enabled              = false  
+      build_failure_grace_period_in_days = 5   
+    }
+  }
+}
+
+resource "xray_watch" "{{ .resource_name }}" {
+  name        	= "{{ .watch_name }}"
+  description 	= "{{ .description }}"
+  active 		= {{ .active }}
+
+  watch_resource {
+	type       	= "project"
+	name 		= "{{ .project_key_0 }}"
+  }
+  watch_resource {
+	type       	= "project"
+	name 		= "{{ .project_key_1 }}"
+  }
+  assigned_policy {
+  	name 	= xray_security_policy.security.name
+  	type 	= "security"
+  }
   watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
 }`
 
