@@ -98,19 +98,16 @@ func testAccCreateProject(t *testing.T, projectKey string, projectName string) {
 	project.ProjectKey = projectKey
 	response, errProject := restyClient.R().SetBody(project).Post("/access/api/v1/projects")
 
-	if response.StatusCode() != http.StatusCreated {
-		t.Error(errProject)
+	if errProject != nil || response.IsError() {
+		t.Error(fmt.Errorf("failed to created project %s - %s", response, errProject))
 	}
 }
 
 // Delete test projects after testing
-func testAccDeleteProject(t *testing.T, projectKey string) {
+func testAccDeleteProject(t *testing.T, projectKey string) (*resty.Response, error) {
 	restyClient := getTestResty(t)
-
 	response, errProject := restyClient.R().Delete("/access/api/v1/projects/" + projectKey)
-	if errProject != nil || response.StatusCode() != http.StatusNoContent {
-		t.Logf("The project %s wasn't removed. Error: %s", projectKey, errProject)
-	}
+	return response, errProject
 }
 
 // Create a set of builds or a single build, add the build into the Xray indexing configuration, to be able to add it to

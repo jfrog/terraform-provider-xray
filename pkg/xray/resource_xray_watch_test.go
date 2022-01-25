@@ -244,6 +244,7 @@ func TestAccWatch_allProjects(t *testing.T) {
 	})
 }
 
+//goland:noinspection GoErrorStringFormat
 func TestAccWatch_singleProject(t *testing.T) {
 	_, fqrn, resourceName := mkNames("watch-", "xray_watch")
 	testData := make(map[string]string)
@@ -253,10 +254,10 @@ func TestAccWatch_singleProject(t *testing.T) {
 	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", randomInt())
 	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", randomInt())
 	testData["watch_type"] = "project"
-	testData["project_name_0"] = "test-project11"
-	testData["project_name_1"] = "test-project1111"
-	testData["project_key_0"] = "test11"
-	testData["project_key_1"] = "test111"
+	testData["project_name_0"] = fmt.Sprintf("test-project-%d", randomInt())
+	testData["project_name_1"] = fmt.Sprintf("test-project-%d", randomInt())
+	testData["project_key_0"] = "test1"
+	testData["project_key_1"] = "test2"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -265,9 +266,18 @@ func TestAccWatch_singleProject(t *testing.T) {
 			testAccCreateProject(t, testData["project_key_1"], testData["project_name_1"])
 		},
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
-			testAccDeleteProject(t, testData["project_key_0"])
-			testAccDeleteProject(t, testData["project_key_1"])
-			testCheckPolicyDeleted("xray_security_policy.security", t, request)
+			var errors []error
+			if _, err := testAccDeleteProject(t, testData["project_key_0"]); err != nil {
+				errors = append(errors, err)
+			}
+			if _, err := testAccDeleteProject(t, testData["project_key_1"]); err != nil {
+				errors = append(errors, err)
+			}
+			if len(errors) > 0 {
+				return nil, fmt.Errorf("errors during removing projects %s", errors)
+			}
+			//watch created by TF, so it will be automatically deleted by DeleteContext function
+			testCheckPolicyDeleted(testData["policy_name_0"], t, request)
 			resp, err := testCheckWatch(id, request)
 			return resp, err
 		}),
@@ -719,4 +729,12 @@ func checkWatch(id string, request *resty.Request) (*resty.Response, error) {
 
 func testCheckWatch(id string, request *resty.Request) (*resty.Response, error) {
 	return checkWatch(id, request.AddRetryCondition(neverRetry))
+}
+
+func testCheckWatchDeleted(id string, t *testing.T, request *resty.Request) *resty.Response {
+	resp, err := checkWatch(id, request.AddRetryCondition(neverRetry))
+	if err == nil {
+		t.Errorf("Watch %s still exists!", id)
+	}
+	return resp
 }
