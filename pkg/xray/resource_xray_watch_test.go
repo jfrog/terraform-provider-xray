@@ -278,8 +278,7 @@ func TestAccWatch_singleProject(t *testing.T) {
 			}
 			//watch created by TF, so it will be automatically deleted by DeleteContext function
 			testCheckPolicyDeleted(testData["policy_name_0"], t, request)
-			resp, err := testCheckWatch(id, request)
-			return resp, err
+			return testCheckWatch(id, request)
 		}),
 
 		ProviderFactories: testAccProviders(),
@@ -729,12 +728,4 @@ func checkWatch(id string, request *resty.Request) (*resty.Response, error) {
 
 func testCheckWatch(id string, request *resty.Request) (*resty.Response, error) {
 	return checkWatch(id, request.AddRetryCondition(neverRetry))
-}
-
-func testCheckWatchDeleted(id string, t *testing.T, request *resty.Request) *resty.Response {
-	resp, err := checkWatch(id, request.AddRetryCondition(neverRetry))
-	if err == nil {
-		t.Errorf("Watch %s still exists!", id)
-	}
-	return resp
 }
