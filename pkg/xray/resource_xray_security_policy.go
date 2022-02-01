@@ -187,7 +187,6 @@ func resourceXraySecurityPolicyV2() *schema.Resource {
 									"build_failure_grace_period_in_days": {
 										Type:        schema.TypeInt,
 										Optional:    true,
-										Default:     3,
 										Description: "Allow grace period for certain number of days. All violations will be ignored during this time. To be used only if `fail_build` is enabled.",
 									},
 								},
