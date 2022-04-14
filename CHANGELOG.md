@@ -2,7 +2,7 @@
 
 IMPROVEMENTS:
 
-* added `fix_version_dependant` field to `xray_security_policy` resource. The field introduced in Xray 3.44.1 [GH-37]
+* added `fix_version_dependant` field to `xray_security_policy` resource. The field introduced in Xray 3.44.1 [GH-39]
 
 ## 1.0.0 (Mar 16, 2022)
 
