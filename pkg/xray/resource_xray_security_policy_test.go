@@ -172,6 +172,31 @@ func TestAccSecurityPolicy_createBlockDownloadTrueMinSeverity(t *testing.T) {
 	})
 }
 
+// Min severity criteria, block downloading of unscanned and active, fix_version_dependant = true
+func TestAccSecurityPolicy_createFixVersionDepMinSeverity(t *testing.T) {
+	_, fqrn, resourceName := mkNames("policy-", "xray_security_policy")
+	testData := make(map[string]string)
+	copyStringMap(testDataSecurity, testData)
+
+	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-6-%d", randomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-6-%d", randomInt())
+	testData["cvssOrSeverity"] = "severity"
+	testData["fix_version_dependant"] = "true"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config: executeTemplate(fqrn, securityPolicyMinSeverityFixVersionDep, testData),
+				Check:  verifySecurityPolicy(fqrn, testData, testData["cvssOrSeverity"]),
+			},
+		},
+	})
+}
+
 // Min severity criteria, allow downloading of unscanned and active
 func TestAccSecurityPolicy_createBlockDownloadFalseMinSeverity(t *testing.T) {
 	_, fqrn, resourceName := mkNames("policy-", "xray_security_policy")
@@ -224,6 +249,7 @@ func TestAccSecurityPolicy_createCVSSFloat(t *testing.T) {
 	})
 }
 
+//Negative test, block unscanned cannot be set without blocking of download
 func TestAccSecurityPolicy_blockMismatchCVSS(t *testing.T) {
 	_, fqrn, resourceName := mkNames("policy-", "xray_security_policy")
 	testData := make(map[string]string)
@@ -365,6 +391,32 @@ const securityPolicyMinSeverity = `resource "xray_security_policy" "{{ .resource
 		priority = 1
 		criteria {
             min_severity = "{{ .min_severity }}"
+		}
+		actions {
+			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			fail_build = {{ .fail_build }}
+			notify_watch_recipients = {{ .notify_watch_recipients }}
+			notify_deployer = {{ .notify_deployer }}
+			create_ticket_enabled = {{ .create_ticket_enabled }}
+			build_failure_grace_period_in_days = {{ .grace_period_days }}
+			block_download {
+				unscanned = {{ .block_unscanned }}
+				active = {{ .block_active }}
+			}
+		}
+	}
+}`
+
+const securityPolicyMinSeverityFixVersionDep = `resource "xray_security_policy" "{{ .resource_name }}" {
+	name = "{{ .policy_name }}"
+	description = "{{ .policy_description }}"
+	type = "security"
+	rule {
+		name = "{{ .rule_name }}"
+		priority = 1
+		criteria {
+            min_severity 		  = "{{ .min_severity }}"
+			fix_version_dependant = "{{ .fix_version_dependant }}"
 		}
 		actions {
 			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}

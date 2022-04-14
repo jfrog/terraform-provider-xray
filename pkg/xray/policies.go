@@ -19,6 +19,8 @@ type PolicyRuleCriteria struct {
 	// Security Criteria
 	MinimumSeverity string           `json:"min_severity,omitempty"` // Omitempty is used because the empty field is conflicting with CVSSRange
 	CVSSRange       *PolicyCVSSRange `json:"cvss_range,omitempty"`
+	// Omitempty is used in FixVersionDependant because an empty field throws an error in Xray below 3.44.3
+	FixVersionDependant bool `json:"fix_version_dependant,omitempty"`
 	// We use pointer for CVSSRange to address nil-verification for non-primitive types.
 	// Unlike primitive types, when the non-primitive type in the struct is set
 	// to nil, the empty key will be created in the JSON body anyway.
@@ -137,6 +139,9 @@ func unpackCriteria(d *schema.Set, policyType string) (*PolicyRuleCriteria, erro
 	} else {
 		minSev := m["min_severity"].(string)
 		cvss := unpackCVSSRange(m["cvss_range"].([]interface{}))
+		if v, ok := m["fix_version_dependant"]; ok {
+			criteria.FixVersionDependant = v.(bool)
+		}
 
 		// This is also picky about not allowing empty values to be set
 		if cvss == nil {
@@ -291,6 +296,7 @@ func packSecurityCriteria(criteria *PolicyRuleCriteria) []interface{} {
 	// cvss_range and min_severity are conflicting, only one can be present in the JSON
 	m["cvss_range"] = packCVSSRange(criteria.CVSSRange)
 	m["min_severity"] = criteria.MinimumSeverity
+	m["fix_version_dependant"] = criteria.FixVersionDependant
 
 	return []interface{}{m}
 }

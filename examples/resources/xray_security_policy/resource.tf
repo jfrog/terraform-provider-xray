@@ -9,6 +9,7 @@ resource "xray_security_policy" "min_severity" {
 
     criteria {
       min_severity = "High"
+      fix_version_dependant = false
     }
 
     actions {

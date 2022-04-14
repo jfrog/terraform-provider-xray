@@ -85,6 +85,12 @@ func resourceXraySecurityPolicyV2() *schema.Resource {
 										Description:      "The minimum security vulnerability severity that will be impacted by the policy.",
 										ValidateDiagFunc: inList("All Severities", "Critical", "High", "Medium", "Low"),
 									},
+									"fix_version_dependant": {
+										Type:        schema.TypeBool,
+										Optional:    true,
+										Default:     false,
+										Description: "Issues that do not have a fixed version are not generated until a fixed version is available.",
+									},
 									"cvss_range": {
 										Type:        schema.TypeList,
 										Optional:    true,
