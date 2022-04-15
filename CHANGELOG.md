@@ -1,3 +1,9 @@
+## 1.1.0 (Mar 16, 2022). Tested on Artifactory 7.37.13 and Xray 3.46.0
+
+IMPROVEMENTS:
+
+* added `fix_version_dependant` field to `xray_security_policy` resource. The field introduced in Xray 3.44.1 [GH-39]
+
 ## 1.0.0 (Mar 16, 2022)
 
 IMPROVEMENTS:
