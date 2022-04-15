@@ -8,13 +8,13 @@ resource "xray_security_policy" "min_severity" {
     priority = 1
 
     criteria {
-      min_severity = "High"
+      min_severity          = "High"
       fix_version_dependant = false
     }
 
     actions {
-      webhooks = []
-      mails    = ["test@email.com"]
+      webhooks                           = []
+      mails                              = ["test@email.com"]
       block_release_bundle_distribution  = true
       fail_build                         = true
       notify_watch_recipients            = true
@@ -48,8 +48,8 @@ resource "xray_security_policy" "cvss_score" {
     }
 
     actions {
-      webhooks = []
-      mails    = ["test@email.com"]
+      webhooks                           = []
+      mails                              = ["test@email.com"]
       block_release_bundle_distribution  = true
       fail_build                         = true
       notify_watch_recipients            = true

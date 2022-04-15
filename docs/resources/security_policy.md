@@ -23,13 +23,13 @@ resource "xray_security_policy" "min_severity" {
     priority = 1
 
     criteria {
-      min_severity = "High"
+      min_severity          = "High"
       fix_version_dependant = false
     }
 
     actions {
-      webhooks = []
-      mails    = ["test@email.com"]
+      webhooks                           = []
+      mails                              = ["test@email.com"]
       block_release_bundle_distribution  = true
       fail_build                         = true
       notify_watch_recipients            = true
@@ -63,8 +63,8 @@ resource "xray_security_policy" "cvss_score" {
     }
 
     actions {
-      webhooks = []
-      mails    = ["test@email.com"]
+      webhooks                           = []
+      mails                              = ["test@email.com"]
       block_release_bundle_distribution  = true
       fail_build                         = true
       notify_watch_recipients            = true
@@ -120,7 +120,7 @@ Optional:
 Optional:
 
 - **cvss_range** (Block List, Max: 1) Nested block describing a CVS score range to be impacted. Defined below. (see [below for nested schema](#nestedblock--rule--criteria--cvss_range))
-- **fix_version_dependant** (Boolean) Issues that do not have a fixed version are not generated until a fixed version is available.
+- **fix_version_dependant** (Boolean) Default value is `false`. Issues that do not have a fixed version are not generated until a fixed version is available.
 - **min_severity** (String) The minimum security vulnerability severity that will be impacted by the policy.
 
 <a id="nestedblock--rule--criteria--cvss_range"></a>

@@ -14,8 +14,8 @@ resource "xray_license_policy" "allowed_licenses" {
     }
 
     actions {
-      webhooks = []
-      mails    = ["test@email.com"]
+      webhooks                           = []
+      mails                              = ["test@email.com"]
       block_release_bundle_distribution  = false
       fail_build                         = true
       notify_watch_recipients            = true
@@ -49,8 +49,8 @@ resource "xray_license_policy" "banned_licenses" {
     }
 
     actions {
-      webhooks = []
-      mails    = ["test@email.com"]
+      webhooks                           = []
+      mails                              = ["test@email.com"]
       block_release_bundle_distribution  = false
       fail_build                         = true
       notify_watch_recipients            = true

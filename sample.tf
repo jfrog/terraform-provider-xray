@@ -30,13 +30,13 @@ resource "xray_security_policy" "security1" {
     priority = 1
 
     criteria {
-      min_severity = "High"
+      min_severity          = "High"
       fix_version_dependant = false
     }
 
     actions {
-      webhooks = []
-      mails    = ["test@email.com"]
+      webhooks                           = []
+      mails                              = ["test@email.com"]
       block_release_bundle_distribution  = true
       fail_build                         = true
       notify_watch_recipients            = true
@@ -70,8 +70,8 @@ resource "xray_security_policy" "security2" {
     }
 
     actions {
-      webhooks = []
-      mails    = ["test@email.com"]
+      webhooks                           = []
+      mails                              = ["test@email.com"]
       block_release_bundle_distribution  = true
       fail_build                         = true
       notify_watch_recipients            = true
@@ -103,8 +103,8 @@ resource "xray_license_policy" "license1" {
     }
 
     actions {
-      webhooks = []
-      mails    = ["test@email.com"]
+      webhooks                           = []
+      mails                              = ["test@email.com"]
       block_release_bundle_distribution  = false
       fail_build                         = true
       notify_watch_recipients            = true
@@ -137,8 +137,8 @@ resource "xray_license_policy" "license2" {
     }
 
     actions {
-      webhooks = []
-      mails    = ["test@email.com"]
+      webhooks                           = []
+      mails                              = ["test@email.com"]
       block_release_bundle_distribution  = false
       fail_build                         = true
       notify_watch_recipients            = true
@@ -256,8 +256,8 @@ resource "xray_watch" "all-projects" {
   active      = true
 
   watch_resource {
-    type       	= "all-projects"
-    bin_mgr_id  = "default"
+    type       = "all-projects"
+    bin_mgr_id = "default"
   }
 
   assigned_policy {
@@ -278,12 +278,12 @@ resource "xray_watch" "project" {
   active      = true
 
   watch_resource {
-    type       	= "project"
-    name        = "my-project-key"
+    type = "project"
+    name = "my-project-key"
   }
   watch_resource {
-    type       	= "project"
-    name        = "my-another-project-key"
+    type = "project"
+    name = "my-another-project-key"
   }
 
   assigned_policy {

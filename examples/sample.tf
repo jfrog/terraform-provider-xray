@@ -34,8 +34,8 @@ resource "xray_security_policy" "security_policy" {
     }
 
     actions {
-      webhooks = []
-      mails    = ["test@email.com"]
+      webhooks                           = []
+      mails                              = ["test@email.com"]
       block_release_bundle_distribution  = true
       fail_build                         = true
       notify_watch_recipients            = true
@@ -68,8 +68,8 @@ resource "xray_license_policy" "license_policy" {
     }
 
     actions {
-      webhooks = []
-      mails    = ["test@email.com"]
+      webhooks                           = []
+      mails                              = ["test@email.com"]
       block_release_bundle_distribution  = false
       fail_build                         = true
       notify_watch_recipients            = true
@@ -119,8 +119,8 @@ resource "xray_watch" "all-projects" {
   active      = true
 
   watch_resource {
-    type       	= "all-projects"
-    bin_mgr_id  = "default"
+    type       = "all-projects"
+    bin_mgr_id = "default"
   }
 
   assigned_policy {
@@ -142,12 +142,12 @@ resource "xray_watch" "project" {
   active      = true
 
   watch_resource {
-    type       	= "project"
-    name        = "test"
+    type = "project"
+    name = "test"
   }
   watch_resource {
-    type       	= "project"
-    name        = "test1"
+    type = "project"
+    name = "test1"
   }
 
   assigned_policy {
