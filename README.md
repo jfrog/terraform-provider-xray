@@ -388,15 +388,6 @@ resource "xray_watch" "project" {
 </details>
 
 
-## Release notes for v0.0.1
-Xray provider was separated from Artifactory provider. The most notable differences in the new Xray provider: 
-- Provider uses Xray API v2 for all the API calls.
-- HCL was changed and now uses singular names instead of the plurals for the repeatable elements, like `rule`, `watch_resource`, `filter` and `assigned_policy`.
-- Security policy and License policy now are separate Terraform provider resources.
-- In Schemas, TypeList was replaced by TypeSet (where it makes sense) to avoid sorting problems, when Terraform detect the change in sorted elements.
-- Added multiple validations for Schemas to verify the data on the Terraform level instead of getting errors in the API response.
-
-
 ## License requirements:
 This provider requires Xray to be added to your Artifactory installation. 
 Xray requires minimum Pro Team license (Public Marketplace version or SaaS) or Pro X license (Self-hosted).
