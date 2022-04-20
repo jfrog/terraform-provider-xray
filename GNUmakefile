@@ -26,12 +26,14 @@ release:
 	@echo "Pushed v${NEXT_VERSION}"
 
 build: fmtcheck
-	go build -ldflags="-X 'xray.Version=${NEXT_VERSION}'"
+	go build -ldflags="-X '${PKG_VERSION_PATH}.Version=${NEXT_VERSION}'"
 
 debug_install:
 	mkdir -p ${BUILD_PATH} && \
 		(test -f ${BINARY_NAME} || go build -gcflags "all=-N -l" -ldflags="-X '${PKG_VERSION_PATH}.Version=${NEXT_VERSION}-develop'") && \
 		mv ${BINARY_NAME} ${BUILD_PATH} && \
+		rm .terraform.lock.hcl && \
+		sed -i.bak 's/version = ".*"/version = "${NEXT_VERSION}"/' sample.tf && rm sample.tf.bak  && \
 		terraform init
 
 
@@ -43,7 +45,9 @@ attach:
 	dlv --listen=:2345 --headless=true --api-version=2 --accept-multiclient attach $$(pgrep terraform-provider-xray)
 
 acceptance: fmtcheck
-	export TF_ACC=1 && go test -v -parallel 20 ./pkg/...
+	export TF_ACC=true && \
+	go test -ldflags="-X '${PKG_VERSION_PATH}.Version=${NEXT_VERSION}-test'" -v -parallel 20 -timeout 20m ./pkg/...
+
 
 fmt:
 	@echo "==> Fixing source code with gofmt..."
