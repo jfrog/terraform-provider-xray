@@ -10,7 +10,7 @@ resources:
         commit: false
         pullRequestCreate: true
       cancelPendingRunsOn:
-        pullRequestUpdate: true
+        pullRequestUpdate: false
 pipelines:
   - name: tf_provider_xray_gke
     steps:
@@ -63,12 +63,12 @@ pipelines:
             - helm repo update
             - add_run_variables rt_helm_chart_version=$(helm search repo | grep "${ARTIFACTORY_DISTRIBUTION} " | awk '{$1=$1};1' |  cut -f2 -d " ")
             - echo "Helm chart version "${rt_helm_chart_version}
-            - add_run_variables artifactory_version=$(helm search repo | grep "${ARTIFACTORY_DISTRIBUTION} " | awk '{$1=$1};1' |  cut -f3 -d " ")
-            - echo "Artifactory version "${artifactory_version}
+            - add_run_variables ARTIFACTORY_VERSION=$(helm search repo | grep "${ARTIFACTORY_DISTRIBUTION} " | awk '{$1=$1};1' |  cut -f3 -d " ")
+            - echo "Artifactory version "${ARTIFACTORY_VERSION}
             - add_run_variables xray_helm_chart_version=$(helm search repo | grep "/xray" | awk '{$1=$1};1' |  cut -f2 -d " ")
             - echo "Xray Helm chart version "${xray_helm_chart_version}
-            - add_run_variables xray_version=$(helm search repo | grep "/xray" | awk '{$1=$1};1' |  cut -f3 -d " ")
-            - echo "Xray version "${xray_version}
+            - add_run_variables XRAY_VERSION=$(helm search repo | grep "/xray" | awk '{$1=$1};1' |  cut -f3 -d " ")
+            - echo "Xray version "${XRAY_VERSION}
             - echo "Installing ${ARTIFACTORY_DISTRIBUTION}"
             - MASTER_KEY=$(openssl rand -hex 32)
             - JOIN_KEY=$(openssl rand -hex 32)
@@ -129,13 +129,14 @@ pipelines:
         type: Bash
         configuration:
           priority: 1
+          timeoutSeconds: 1800 # 30 minutes
           runtime:
             type: image
             image:
               auto:
                 language: go
                 versions:
-                  - "1.16.7"
+                  - "1.18"
           integrations:
             - name: partnersSlack
             - name: gkeEnvVars
@@ -150,12 +151,12 @@ pipelines:
           onStart:
             - echo "Preparing for work..."
             - echo "Make sure that changes merged into development branch don't break the TF provider"
-          onExecute:
             - go version
             - echo "Install Terraform"
             - sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys DA418C88A3219F7B
             - sudo apt-add-repository "deb [arch=$(dpkg --print-architecture)] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
             - sudo apt install terraform && terraform -version
+          onExecute:
             - add_run_variables gitHubRepoUrl=${res_GitHubTFProviderXrayRepoJFrog_gitRepoRepositorySshUrl}
             - add_run_variables TFProviderRepo=$(echo ${gitHubRepoUrl} | sed -e 's/git@/@/g' -e 's/:/\//g')
             - add_run_variables repoFolder=$(echo "${res_GitHubTFProviderXrayRepoJFrog_gitRepoFullName}" | sed -e 's/.*\///g')
@@ -194,7 +195,7 @@ pipelines:
           onComplete:
             - echo "Complete"
 
-      - name: create_pr_to_master_branch_message
+      - name: pr_info_add_rt_version
         type: Bash
         configuration:
           integrations:
@@ -208,7 +209,7 @@ pipelines:
         execution:
           onStart:
             - echo "Preparing for work..."
-            - echo "Create and push a new tag, associated with the lates changes on develpment branch"
+            - echo "Collect information about the PR and send a Slack notification"
           onExecute:
             - printenv
             - export PR_URL=${res_GitHubTFProviderXrayRepoJFrog_commitUrl}
@@ -216,11 +217,26 @@ pipelines:
             - export PR_BRANCH=${res_GitHubTFProviderXrayRepoJFrog_headCommitRef}
             ## PR_TITLE var is used in the Slack message. We need to escape &, > and < per Slack documentation.
             ## They will be replaced with &amp;, &gt; and &lt; respectively.
-            - export PR_TITLE=$(echo ${res_GitHubTFProviderXrayRepoJFrog_commitMessage} | sed -e 's/\&/\&amp;/g' -e 's/>/\&gt;/g' -e 's/</\&lt;/g')
+            - export PR_TITLE=$(echo ${res_GitHubTFProviderXrayRepoJFrog_commitMessage:0:100}... | sed -e 's/\&/\&amp;/g' -e 's/>/\&gt;/g' -e 's/</\&lt;/g')
             - >-
               if [[ "${PR_URL}" == null ]]; then
                 echo "PR was not created (already exists from this head branch?). PR link is empty!"
                 exit 1
+              fi
+            - cd ${res_GitHubTFProviderXrayRepoJFrog_resourcePath}
+            - git checkout -b ${res_GitHubTFProviderXrayRepoJFrog_headCommitRef}
+            - sed -i -E "0,/(##\s.+\..+\..+\s\(.+\)).*/ s/(##\s.+\..+\..+\s\(.+\)).*/\1. Tested on Artifactory ${ARTIFACTORY_VERSION} and Xray ${XRAY_VERSION}/" CHANGELOG.md
+            - head -10 CHANGELOG.md
+            - git add CHANGELOG.md
+            - export REGEX="Changes to be committed*"
+            - export GIT_STATUS=$(git status)
+            - >-
+              if [[ ${GIT_STATUS} =~ ${REGEX} ]]; then
+                echo "Adding Artifactory and Xray versions to CHANGELOG.md"
+                git commit --author="JFrog CI <jfrog-solutions-ci+1@jfrog.com>" -m "JFrog Pipelines - Add Artifactory and Xray versions to CHANGELOG.md"
+                git push https://${res_GitHubTFProviderXrayRepoJFrog_gitProvider_token}${TFProviderRepo}
+              else
+                echo "There is nothing to commit, Artifactory version didn't change since last commit"
               fi
           onSuccess:
             - echo "Success"
