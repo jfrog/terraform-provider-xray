@@ -231,5 +231,5 @@ provider "xray" {
 
 ### Optional
 
-- **access_token** (String, Sensitive) This is a bearer token that can be given to you by your admin under `Identity and Access`
-- **url** (String) URL of Artifactory. This can also be sourced from the `XRAY_URL` or `JFROG_URL` environment variable. Default to 'http://localhost:8081' if not set.
+- `access_token` (String, Sensitive) This is a bearer token that can be given to you by your admin under `Identity and Access`
+- `url` (String) URL of Artifactory. This can also be sourced from the `XRAY_URL` or `JFROG_URL` environment variable. Default to 'http://localhost:8081' if not set.

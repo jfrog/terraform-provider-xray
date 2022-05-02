@@ -13,7 +13,7 @@ func resourceXrayLicensePolicyV2() *schema.Resource {
 		UpdateContext: resourceXrayPolicyUpdate,
 		DeleteContext: resourceXrayPolicyDelete,
 		Description: "Creates an Xray policy using V2 of the underlying APIs. Please note: " +
-			"It's only compatible with Bearer token auth method (Identity and Access => Access Tokens",
+			"It's only compatible with Bearer token auth method (Identity and Access => Access Tokens)",
 
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,

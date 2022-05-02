@@ -1,3 +1,11 @@
+## 1.1.1 (Apr 29, 2022). Tested on Artifactory 7.37.15 and Xray 3.47.3
+
+IMPROVEMENTS:
+
+* documentation reorganized, added subcategories and templates. 
+[GH-44](https://github.com/jfrog/terraform-provider-xray/pull/44).
+
+
 ## 1.1.0 (Apr 15, 2022). Tested on Artifactory 7.37.14 and Xray 3.47.3
 
 IMPROVEMENTS:
