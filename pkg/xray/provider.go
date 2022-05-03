@@ -3,10 +3,11 @@ package xray
 import (
 	"context"
 	"fmt"
-	"github.com/jfrog/terraform-provider-shared/validator"
 	"net/http"
 	"net/url"
 	"regexp"
+
+	"github.com/jfrog/terraform-provider-shared/validator"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"

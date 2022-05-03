@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jfrog/terraform-provider-shared/client"
+
 	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
@@ -88,11 +90,11 @@ func checkPolicy(id string, request *resty.Request) (*resty.Response, error) {
 }
 
 func testCheckPolicy(id string, request *resty.Request) (*resty.Response, error) {
-	return checkPolicy(id, request.AddRetryCondition(neverRetry))
+	return checkPolicy(id, request.AddRetryCondition(client.NeverRetry))
 }
 
 func testCheckPolicyDeleted(id string, t *testing.T, request *resty.Request) *resty.Response {
-	_, err := checkPolicy(id, request.AddRetryCondition(neverRetry))
+	_, err := checkPolicy(id, request.AddRetryCondition(client.NeverRetry))
 	if err == nil {
 		t.Logf("Policy %s still exists!", id)
 	}

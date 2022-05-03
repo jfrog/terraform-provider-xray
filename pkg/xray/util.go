@@ -7,7 +7,6 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -62,10 +61,6 @@ func mkNames(name, resource string) (int, string, string) {
 	id := randomInt()
 	n := fmt.Sprintf("%s%d", name, id)
 	return id, fmt.Sprintf("%s.%s", resource, n), n
-}
-
-var neverRetry = func(response *resty.Response, err error) bool {
-	return false
 }
 
 func BoolPtr(v bool) *bool { return &v }
