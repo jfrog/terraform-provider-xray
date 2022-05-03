@@ -2,7 +2,7 @@ package xray
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/jfrog/terraform-provider-shared/validator"
 )
 
 func resourceXrayLicensePolicyV2() *schema.Resource {
@@ -25,7 +25,7 @@ func resourceXrayLicensePolicyV2() *schema.Resource {
 				Required:         true,
 				ForceNew:         true,
 				Description:      "Name of the policy (must be unique)",
-				ValidateDiagFunc: validation.ToDiagFunc(validation.StringIsNotEmpty),
+				ValidateDiagFunc: validator.StringIsNotEmpty,
 			},
 			"description": {
 				Type:        schema.TypeString,
@@ -36,7 +36,7 @@ func resourceXrayLicensePolicyV2() *schema.Resource {
 				Type:             schema.TypeString,
 				Required:         true,
 				Description:      "Type of the policy",
-				ValidateDiagFunc: inList("Security", "License"),
+				ValidateDiagFunc: validator.StringInSlice(true, "Security", "License"),
 			},
 			"author": {
 				Type:        schema.TypeString,
@@ -63,12 +63,12 @@ func resourceXrayLicensePolicyV2() *schema.Resource {
 							Type:             schema.TypeString,
 							Required:         true,
 							Description:      "Name of the rule",
-							ValidateDiagFunc: validation.ToDiagFunc(validation.StringIsNotEmpty),
+							ValidateDiagFunc: validator.StringIsNotEmpty,
 						},
 						"priority": {
 							Type:             schema.TypeInt,
 							Required:         true,
-							ValidateDiagFunc: validation.ToDiagFunc(validation.IntAtLeast(1)),
+							ValidateDiagFunc: validator.IntAtLeast(1),
 							Description:      "Integer describing the rule priority. Must be at least 1",
 						},
 						"criteria": {
@@ -83,8 +83,8 @@ func resourceXrayLicensePolicyV2() *schema.Resource {
 										Optional:    true,
 										Description: "A list of OSS license names that may not be attached to a component.",
 										Elem: &schema.Schema{
-											Type:         schema.TypeString,
-											ValidateFunc: licenseTypeValidator,
+											Type:             schema.TypeString,
+											ValidateDiagFunc: validator.LicenseType,
 										},
 									},
 									"allowed_licenses": {
@@ -92,8 +92,8 @@ func resourceXrayLicensePolicyV2() *schema.Resource {
 										Optional:    true,
 										Description: "A list of OSS license names that may be attached to a component.",
 										Elem: &schema.Schema{
-											Type:         schema.TypeString,
-											ValidateFunc: licenseTypeValidator,
+											Type:             schema.TypeString,
+											ValidateDiagFunc: validator.LicenseType,
 										},
 									},
 									"allow_unknown": {
@@ -131,8 +131,8 @@ func resourceXrayLicensePolicyV2() *schema.Resource {
 										Optional:    true,
 										Description: "A list of email addressed that will get emailed when a violation is triggered.",
 										Elem: &schema.Schema{
-											Type:         schema.TypeString,
-											ValidateFunc: validateIsEmail,
+											Type:             schema.TypeString,
+											ValidateDiagFunc: validator.IsEmail,
 										},
 									},
 									"block_download": {
@@ -186,13 +186,13 @@ func resourceXrayLicensePolicyV2() *schema.Resource {
 										Optional:         true,
 										Default:          "High",
 										Description:      "The severity of violation to be triggered if the `criteria` are met.",
-										ValidateDiagFunc: inList("Critical", "High", "Medium", "Low"),
+										ValidateDiagFunc: validator.StringInSlice(true, "Critical", "High", "Medium", "Low"),
 									},
 									"build_failure_grace_period_in_days": {
 										Type:             schema.TypeInt,
 										Optional:         true,
 										Description:      "Allow grace period for certain number of days. All violations will be ignored during this time. To be used only if `fail_build` is enabled.",
-										ValidateDiagFunc: validation.ToDiagFunc(validation.IntAtLeast(0)),
+										ValidateDiagFunc: validator.IntAtLeast(0),
 									},
 								},
 							},
