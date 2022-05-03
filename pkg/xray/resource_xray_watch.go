@@ -2,7 +2,7 @@ package xray
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/jfrog/terraform-provider-shared/validator"
 )
 
 func resourceXrayWatch() *schema.Resource {
@@ -23,7 +23,7 @@ func resourceXrayWatch() *schema.Resource {
 				Required:         true,
 				ForceNew:         true,
 				Description:      "Name of the watch (must be unique)",
-				ValidateDiagFunc: validation.ToDiagFunc(validation.StringIsNotEmpty),
+				ValidateDiagFunc: validator.StringIsNotEmpty,
 			},
 			"description": {
 				Type:        schema.TypeString,
@@ -45,7 +45,7 @@ func resourceXrayWatch() *schema.Resource {
 							Type:             schema.TypeString,
 							Required:         true,
 							Description:      "Type of resource to be watched. Options: `all-repos`, `repository`, `all-builds`, `build`, `project`, `all-projects`.",
-							ValidateDiagFunc: inList("all-repos", "repository", "all-builds", "build", "project", "all-projects"),
+							ValidateDiagFunc: validator.StringInSlice(true, "all-repos", "repository", "all-builds", "build", "project", "all-projects"),
 						},
 						"bin_mgr_id": {
 							Type:        schema.TypeString,
@@ -68,7 +68,7 @@ func resourceXrayWatch() *schema.Resource {
 										Type:             schema.TypeString,
 										Required:         true,
 										Description:      "The type of filter, such as `regex`, `package-type` or `ant-patterns`",
-										ValidateDiagFunc: inList("regex", "package-type", "ant-patterns"),
+										ValidateDiagFunc: validator.StringInSlice(true, "regex", "package-type", "ant-patterns"),
 									},
 									// TODO support Exclude and Include patterns
 									// eg "value":{"ExcludePatterns":[],"IncludePatterns":["*"]}
@@ -76,7 +76,7 @@ func resourceXrayWatch() *schema.Resource {
 										Type:             schema.TypeString,
 										Required:         true,
 										Description:      "The value of the filter, such as the text of the regex or name of the package type.",
-										ValidateDiagFunc: validation.ToDiagFunc(validation.StringIsNotEmpty),
+										ValidateDiagFunc: validator.StringIsNotEmpty,
 									},
 								},
 							},
@@ -101,7 +101,7 @@ func resourceXrayWatch() *schema.Resource {
 							Type:             schema.TypeString,
 							Required:         true,
 							Description:      "The type of the policy - security or license",
-							ValidateDiagFunc: inList("security", "license"),
+							ValidateDiagFunc: validator.StringInSlice(true, "security", "license"),
 						},
 					},
 				},
@@ -111,8 +111,8 @@ func resourceXrayWatch() *schema.Resource {
 				Optional:    true,
 				Description: "A list of email addressed that will get emailed when a violation is triggered.",
 				Elem: &schema.Schema{
-					Type:         schema.TypeString,
-					ValidateFunc: validateIsEmail,
+					Type:             schema.TypeString,
+					ValidateDiagFunc: validator.IsEmail,
 				},
 			},
 		},

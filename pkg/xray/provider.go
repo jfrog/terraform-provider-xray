@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"regexp"
 
+	"github.com/jfrog/terraform-provider-shared/validator"
+
 	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -34,7 +36,7 @@ func Provider() *schema.Provider {
 				Optional:         true,
 				Sensitive:        true,
 				DefaultFunc:      schema.MultiEnvDefaultFunc([]string{"XRAY_ACCESS_TOKEN", "JFROG_ACCESS_TOKEN"}, ""),
-				ValidateDiagFunc: validation.ToDiagFunc(validation.StringIsNotEmpty),
+				ValidateDiagFunc: validator.StringIsNotEmpty,
 				Description:      "This is a bearer token that can be given to you by your admin under `Identity and Access`",
 			},
 		},

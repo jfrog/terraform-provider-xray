@@ -8,6 +8,7 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/jfrog/terraform-provider-shared/util"
 )
 
 func resourceXraySettings() *schema.Resource {
@@ -38,9 +39,9 @@ type DbSyncDailyUpdatesTime struct {
 }
 
 func unpackDBSyncTime(s *schema.ResourceData) DbSyncDailyUpdatesTime {
-	d := &ResourceData{s}
+	d := &util.ResourceData{ResourceData: s}
 	dbSyncTime := DbSyncDailyUpdatesTime{
-		DbSyncTime: d.getString("db_sync_updates_time", false),
+		DbSyncTime: d.GetString("db_sync_updates_time", false),
 	}
 	return dbSyncTime
 }

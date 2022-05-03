@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/jfrog/terraform-provider-shared/client"
+
 	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
@@ -727,5 +729,5 @@ func checkWatch(id string, request *resty.Request) (*resty.Response, error) {
 }
 
 func testCheckWatch(id string, request *resty.Request) (*resty.Response, error) {
-	return checkWatch(id, request.AddRetryCondition(neverRetry))
+	return checkWatch(id, request.AddRetryCondition(client.NeverRetry))
 }
