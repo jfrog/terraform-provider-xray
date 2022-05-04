@@ -12,6 +12,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/jfrog/terraform-provider-shared/client"
 )
 
 func testAccProviders() map[string]func() (*schema.Provider, error) {
@@ -29,15 +30,25 @@ func TestProvider(t *testing.T) {
 }
 
 func getTestResty(t *testing.T) *resty.Client {
-	if v := os.Getenv("JFROG_URL"); v == "" {
-		t.Error("JFROG_URL must be set for acceptance tests")
+	var ok bool
+	var xrayUrl string
+	if xrayUrl, ok = os.LookupEnv("XRAY_URL"); !ok {
+		if xrayUrl, ok = os.LookupEnv("JFROG_URL"); !ok {
+			t.Fatal("XRAY_URL or JFROG_URL must be set for acceptance tests")
+		}
 	}
-	restyClient, err := buildResty(os.Getenv("JFROG_URL"))
+	restyClient, err := client.Build(xrayUrl, "")
 	if err != nil {
 		t.Error(err)
 	}
-	accessToken := os.Getenv("XRAY_ACCESS_TOKEN")
-	restyClient, err = addAuthToResty(restyClient, accessToken)
+
+	var accessToken string
+	if accessToken, ok = os.LookupEnv("XRAY_ACCESS_TOKEN"); !ok {
+		if accessToken, ok = os.LookupEnv("JFROG_ACCESS_TOKEN"); !ok {
+			t.Fatal("XRAY_ACCESS_TOKEN or JFROG_ACCESS_TOKEN must be set for acceptance tests")
+		}
+	}
+	restyClient, err = client.AddAuth(restyClient, "", accessToken)
 	if err != nil {
 		t.Error(err)
 	}
