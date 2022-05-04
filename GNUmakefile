@@ -46,7 +46,7 @@ attach:
 
 acceptance: fmtcheck
 	export TF_ACC=true && \
-	go test -ldflags="-X '${PKG_VERSION_PATH}.Version=${NEXT_VERSION}'" -v -parallel 20 -timeout 20m ./pkg/...
+	go test -ldflags="-X '${PKG_VERSION_PATH}.Version=${NEXT_VERSION}-test'" -v -parallel 20 -timeout 20m ./pkg/...
 
 
 fmt:
