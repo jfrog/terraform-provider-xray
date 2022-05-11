@@ -1,4 +1,12 @@
-## 1.1.1 (Apr 29, 2022). Tested on Artifactory 7.38.8 and Xray 3.48.2
+## 1.1.2 (May 11, 2022). Tested on Artifactory 7.38.8 and Xray 3.48.2
+
+IMPROVEMENTS:
+
+* fixed HCL example for Xray Watch.
+  [GH-47](https://github.com/jfrog/terraform-provider-xray/pull/47).
+
+
+## 1.1.1 (Apr 29, 2022). Tested on Artifactory 7.37.15 and Xray 3.47.3
 
 IMPROVEMENTS:
 
