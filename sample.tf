@@ -167,6 +167,11 @@ resource "xray_watch" "all-repos" {
       type  = "regex"
       value = ".*"
     }
+
+    filter {
+      type  = "package-type"
+      value = "Docker"
+    }
   }
 
   assigned_policy {
@@ -203,8 +208,8 @@ resource "xray_watch" "repository" {
     name       = "your-other-repository-name"
 
     filter {
-      type  = "package-type"
-      value = "Docker"
+      type  = "regex"
+      value = ".*"
     }
   }
 

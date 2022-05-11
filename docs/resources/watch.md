@@ -63,8 +63,8 @@ resource "xray_watch" "repository" {
     name       = "your-other-repository-name"
 
     filter {
-      type  = "package-type"
-      value = "Docker"
+      type  = "regex"
+      value = ".*"
     }
   }
 
@@ -175,7 +175,6 @@ resource "xray_watch" "project" {
 
 - `active` (Boolean) Whether or not the watch is active
 - `description` (String) Description of the watch
-- `id` (String) The ID of this resource.
 - `watch_recipients` (Set of String) A list of email addressed that will get emailed when a violation is triggered.
 
 <a id="nestedblock--assigned_policy"></a>
@@ -205,5 +204,5 @@ Optional:
 
 Required:
 
-- `type` (String) The type of filter, such as `regex`, `package-type` or `ant-patterns`
+- `type` (String) The type of filter, such as `regex`, `package-type` or `ant-patterns`. `package-type` works only with `all-repos` type. `ant-patterns` works only with `project`
 - `value` (String) The value of the filter, such as the text of the regex or name of the package type.
