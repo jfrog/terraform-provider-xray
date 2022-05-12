@@ -95,7 +95,6 @@ resource "xray_security_policy" "cvss_score" {
 ### Optional
 
 - `description` (String) More verbose description of the policy
-- `id` (String) The ID of this resource.
 
 ### Read-Only
 

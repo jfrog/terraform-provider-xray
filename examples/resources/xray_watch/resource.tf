@@ -47,8 +47,8 @@ resource "xray_watch" "repository" {
     name       = "your-other-repository-name"
 
     filter {
-      type  = "package-type"
-      value = "Docker"
+      type  = "regex"
+      value = ".*"
     }
   }
 

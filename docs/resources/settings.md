@@ -23,7 +23,3 @@ resource "xray_settings" "db_sync" {
 ### Required
 
 - `db_sync_updates_time` (String) The time of the Xray DB sync daily update job. Format HH:mm
-
-### Optional
-
-- `id` (String) The ID of this resource.

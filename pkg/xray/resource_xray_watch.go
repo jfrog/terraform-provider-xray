@@ -65,9 +65,10 @@ func resourceXrayWatch() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"type": {
-										Type:             schema.TypeString,
-										Required:         true,
-										Description:      "The type of filter, such as `regex`, `package-type` or `ant-patterns`",
+										Type:     schema.TypeString,
+										Required: true,
+										Description: "The type of filter, such as `regex`, `package-type` or `ant-patterns`. `package-type` works only with `all-repos` type. " +
+											"`ant-patterns` works only with `project`",
 										ValidateDiagFunc: validator.StringInSlice(true, "regex", "package-type", "ant-patterns"),
 									},
 									// TODO support Exclude and Include patterns

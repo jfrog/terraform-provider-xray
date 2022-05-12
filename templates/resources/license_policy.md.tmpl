@@ -5,7 +5,7 @@ subcategory: "Policies"
 ---
 
 Creates an Xray Policy using V2 of the underlying APIs.
-Please note: It's only compatible with Bearer token auth method (Identity and Access => Access Tokens.
+Please note: It's only compatible with Bearer token auth method (Identity and Access => Access Tokens).
 
 [Official documentation](https://www.jfrog.com/confluence/display/JFROG/Creating+Xray+Policies+and+Rules).
 
