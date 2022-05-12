@@ -1,3 +1,8 @@
+## 1.1.3 (May 12, 2022). Tested on Artifactory 7.38.8 and Xray 3.48.2
+
+* minor version bump to force release due to build failure
+
+
 ## 1.1.2 (May 11, 2022). Tested on Artifactory 7.38.8 and Xray 3.48.2
 
 IMPROVEMENTS:
