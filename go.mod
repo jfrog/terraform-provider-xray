@@ -3,7 +3,7 @@ module github.com/jfrog/terraform-provider-xray
 require (
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.14.0
-	github.com/jfrog/terraform-provider-shared v0.5.0
+	github.com/jfrog/terraform-provider-shared v0.7.0
 )
 
 require (
