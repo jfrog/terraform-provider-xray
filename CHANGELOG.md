@@ -1,3 +1,11 @@
+## 1.1.4 (May 24, 2022). Tested on Artifactory 7.38.10 and Xray 3.49.0
+
+BUG FIX:
+
+* add 'Commercial' licence to the list of allowed licenses.
+ [GH-52](https://github.com/jfrog/terraform-provider-xray/pull/52)
+
+
 ## 1.1.3 (May 12, 2022). Tested on Artifactory 7.38.8 and Xray 3.48.2
 
 * minor version bump to force release due to build failure

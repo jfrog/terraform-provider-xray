@@ -14,7 +14,7 @@ import (
 
 // Version for some reason isn't getting updated by the linker
 var Version = "0.0.1"
-var productId = "terraform-provider-xray/"  + Version
+var productId = "terraform-provider-xray/" + Version
 
 // Provider Xray provider that supports configuration via username+password or a token
 // Supported resources are policies and watches
@@ -22,9 +22,9 @@ func Provider() *schema.Provider {
 	p := &schema.Provider{
 		Schema: map[string]*schema.Schema{
 			"url": {
-				Type:     schema.TypeString,
-				Optional: true,
-				DefaultFunc: schema.MultiEnvDefaultFunc([]string{"XRAY_URL", "JFROG_URL"}, "http://localhost:8081"),
+				Type:         schema.TypeString,
+				Optional:     true,
+				DefaultFunc:  schema.MultiEnvDefaultFunc([]string{"XRAY_URL", "JFROG_URL"}, "http://localhost:8081"),
 				ValidateFunc: validation.IsURLWithHTTPorHTTPS,
 				Description:  "URL of Artifactory. This can also be sourced from the `XRAY_URL` or `JFROG_URL` environment variable. Default to 'http://localhost:8081' if not set.",
 			},
@@ -78,7 +78,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 		return nil, diag.FromErr(err)
 	}
 
-	licenseErr := util.CheckArtifactoryLicense(restyBase)
+	licenseErr := util.CheckArtifactoryLicense(restyBase, "Enterprise", "Commercial")
 	if licenseErr != nil {
 		return nil, licenseErr
 	}
