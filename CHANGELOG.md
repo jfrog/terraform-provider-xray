@@ -3,7 +3,7 @@
 BUG FIX:
 
 * add 'Commercial' licence to the list of allowed licenses.
- [GH-]()
+ [GH-52](https://github.com/jfrog/terraform-provider-xray/pull/52)
 
 
 ## 1.1.3 (May 12, 2022). Tested on Artifactory 7.38.8 and Xray 3.48.2
