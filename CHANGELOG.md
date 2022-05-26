@@ -1,3 +1,9 @@
+## 1.1.5 (May 27, 2022)
+
+IMPROVEMENTS:
+
+* Upgrade `gopkg.in/yaml.v3` to v3.0.0 for [CVE-2022-28948](https://nvd.nist.gov/vuln/detail/CVE-2022-28948) [GH-54](https://github.com/jfrog/terraform-provider-xray/pull/54)
+
 ## 1.1.4 (May 24, 2022). Tested on Artifactory 7.38.10 and Xray 3.49.0
 
 BUG FIX:
@@ -23,7 +29,7 @@ IMPROVEMENTS:
 
 IMPROVEMENTS:
 
-* documentation reorganized, added subcategories and templates. 
+* documentation reorganized, added subcategories and templates.
 [GH-44](https://github.com/jfrog/terraform-provider-xray/pull/44).
 
 
@@ -31,14 +37,14 @@ IMPROVEMENTS:
 
 IMPROVEMENTS:
 
-* added `fix_version_dependant` field to `xray_security_policy` resource. The field introduced in Xray 3.44.1 
+* added `fix_version_dependant` field to `xray_security_policy` resource. The field introduced in Xray 3.44.1
 [GH-39](https://github.com/jfrog/terraform-provider-xray/pull/39)
 
 ## 1.0.0 (Mar 16, 2022)
 
 IMPROVEMENTS:
 
-* added new resource `xray_settings` which will set Xray DB Sync Time. 
+* added new resource `xray_settings` which will set Xray DB Sync Time.
 [GH-35](https://github.com/jfrog/terraform-provider-xray/pull/35)
 
 
@@ -46,7 +52,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
-* resource/xray_watch: Add all-builds to schema validation. 
+* resource/xray_watch: Add all-builds to schema validation.
 [GH-31](https://github.com/jfrog/terraform-provider-xray/pull/31)
 
 
@@ -58,4 +64,3 @@ Xray provider was separated from Artifactory provider. The most notable differen
 - Security policy and License policy now are separate Terraform provider resources.
 - In Schemas, TypeList was replaced by TypeSet (where it makes sense) to avoid sorting problems, when Terraform detect the change in sorted elements.
 - Added multiple validations for Schemas to verify the data on the Terraform level instead of getting errors in the API response.
-
