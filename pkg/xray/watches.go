@@ -2,6 +2,7 @@ package xray
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -32,6 +33,7 @@ type WatchProjectResource struct {
 	BinaryManagerId string        `json:"bin_mgr_id"`
 	Filters         []WatchFilter `json:"filters"`
 	Name            string        `json:"name"`
+	RepoType        string        `json:"repo_type,omitempty"`
 }
 
 type WatchProjectResources struct {
@@ -105,8 +107,13 @@ func unpackProjectResource(rawCfg interface{}) WatchProjectResource {
 	if v, ok := cfg["bin_mgr_id"]; ok {
 		resource.BinaryManagerId = v.(string)
 	}
+
 	if v, ok := cfg["name"]; ok {
 		resource.Name = v.(string)
+	}
+
+	if v, ok := cfg["repo_type"]; ok {
+		resource.RepoType = v.(string)
 	}
 
 	if v, ok := cfg["filter"]; ok {
@@ -151,6 +158,9 @@ func packProjectResources(resources WatchProjectResources) []interface{} {
 		}
 		if len(res.BinaryManagerId) > 0 {
 			resourceMap["bin_mgr_id"] = res.BinaryManagerId
+		}
+		if len(res.RepoType) > 0 {
+			resourceMap["repo_type"] = res.RepoType
 		}
 		resourceMap["filter"] = packFilters(res.Filters)
 		list = append(list, resourceMap)
@@ -250,6 +260,22 @@ func resourceXrayWatchDelete(ctx context.Context, d *schema.ResourceData, m inte
 	if err != nil && resp.StatusCode() == http.StatusNotFound {
 		d.SetId("")
 		return diag.FromErr(err)
+	}
+	return nil
+}
+
+func watchResourceDiff(ctx context.Context, diff *schema.ResourceDiff, v interface{}) error {
+	watchResources := diff.Get("watch_resource").(*schema.Set).List()
+	if len(watchResources) == 0 {
+		return nil
+	}
+	for idx, watchResource := range watchResources {
+		r := watchResource.(map[string]interface{})
+		resourceType := r["type"].(string)
+		repoType := r["repo_type"].(string)
+		if resourceType == "repository" && len(repoType) == 0 {
+			return fmt.Errorf("Attribute 'repo_type' not set when 'watch_resource.type' is set to 'repository'")
+		}
 	}
 	return nil
 }
