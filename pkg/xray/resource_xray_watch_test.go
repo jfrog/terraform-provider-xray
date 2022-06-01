@@ -89,10 +89,7 @@ func TestAccWatch_allReposMultiplePolicies(t *testing.T) {
 	})
 }
 
-// To verify the watch for a single repo we need to create a new repository with Xray indexing enabled
-// testAccCreateRepos() is creating a local repos with Xray indexing enabled using the API call
-// We need to figure out how to use external providers (like Artifactory) in the tests. Documented approach didn't work
-func TestAccWatch_singleRepository(t *testing.T) {
+func makeSingleRepositoryTestCase(repoType string, t *testing.T) (*testing.T, resource.TestCase) {
 	_, fqrn, resourceName := mkNames("watch-", "xray_watch")
 	testData := make(map[string]string)
 	copyStringMap(testDataWatch, testData)
@@ -101,19 +98,16 @@ func TestAccWatch_singleRepository(t *testing.T) {
 	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", randomInt())
 	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", randomInt())
 	testData["watch_type"] = "repository"
-	testData["repo_type"] = "local"
-	testData["repo0"] = fmt.Sprintf("libs-release-local-0-%d", randomInt())
-	testData["repo1"] = fmt.Sprintf("libs-release-local-1-%d", randomInt())
+	testData["repo_type"] = repoType
+	testData["repo0"] = fmt.Sprintf("libs-release-%s-0-%d", repoType, randomInt())
 
-	resource.Test(t, resource.TestCase{
+	return t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			testAccCreateRepos(t, testData["repo0"])
-			testAccCreateRepos(t, testData["repo1"])
+			testAccCreateRepos(t, testData["repo0"], repoType)
 		},
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
 			testAccDeleteRepo(t, testData["repo0"])
-			testAccDeleteRepo(t, testData["repo1"])
 			testCheckPolicyDeleted("xray_security_policy.security", t, request)
 			resp, err := testCheckWatch(id, request)
 			return resp, err
@@ -126,7 +120,18 @@ func TestAccWatch_singleRepository(t *testing.T) {
 				Check:  verifyXrayWatch(fqrn, testData),
 			},
 		},
-	})
+	}
+}
+
+// To verify the watch for a single repo we need to create a new repository with Xray indexing enabled
+// testAccCreateRepos() is creating a repos with Xray indexing enabled using the API call
+// We need to figure out how to use external providers (like Artifactory) in the tests. Documented approach didn't work
+func TestAccWatch_singleRepository(t *testing.T) {
+	for _, repoType := range []string{"local", "remote"} {
+		t.Run(repoType, func(t *testing.T) {
+			resource.Test(makeSingleRepositoryTestCase(repoType, t))
+		})
+	}
 }
 
 func TestAccWatch_repositoryMissingRepoType(t *testing.T) {
@@ -143,7 +148,7 @@ func TestAccWatch_repositoryMissingRepoType(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			testAccCreateRepos(t, testData["repo0"])
+			testAccCreateRepos(t, testData["repo0"], "local")
 		},
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
 			testAccDeleteRepo(t, testData["repo0"])
@@ -171,14 +176,15 @@ func TestAccWatch_multipleRepositories(t *testing.T) {
 	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", randomInt())
 	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", randomInt())
 	testData["watch_type"] = "repository"
+	testData["repo_type"] = "local"
 	testData["repo0"] = fmt.Sprintf("libs-release-local-0-%d", randomInt())
 	testData["repo1"] = fmt.Sprintf("libs-release-local-1-%d", randomInt())
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			testAccCreateRepos(t, testData["repo0"])
-			testAccCreateRepos(t, testData["repo1"])
+			testAccCreateRepos(t, testData["repo0"], "local")
+			testAccCreateRepos(t, testData["repo1"], "local")
 		},
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
 			testAccDeleteRepo(t, testData["repo0"])
@@ -592,6 +598,7 @@ resource "xray_watch" "{{ .resource_name }}" {
 	type       	= "{{ .watch_type }}"
 	bin_mgr_id  = "default"
 	name		= "{{ .repo0 }}"
+	repo_type   = "{{ .repo_type }}"
 	filter {
 		type  	= "{{ .filter_type_0 }}"
 		value	= "{{ .filter_value_0 }}"
@@ -601,6 +608,7 @@ resource "xray_watch" "{{ .resource_name }}" {
 	type       	= "repository"
 	bin_mgr_id  = "default"
 	name		= "{{ .repo1 }}"
+	repo_type   = "{{ .repo_type }}"
 	filter {
 		type  	= "{{ .filter_type_0 }}"
 		value	= "{{ .filter_value_0 }}"

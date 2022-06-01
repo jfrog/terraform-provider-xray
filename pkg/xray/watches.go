@@ -269,7 +269,7 @@ func watchResourceDiff(ctx context.Context, diff *schema.ResourceDiff, v interfa
 	if len(watchResources) == 0 {
 		return nil
 	}
-	for idx, watchResource := range watchResources {
+	for _, watchResource := range watchResources {
 		r := watchResource.(map[string]interface{})
 		resourceType := r["type"].(string)
 		repoType := r["repo_type"].(string)
