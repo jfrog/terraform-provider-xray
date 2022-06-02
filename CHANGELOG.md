@@ -1,3 +1,9 @@
+## 1.1.6 (June 3, 2022)
+
+BUG FIX:
+
+* resource/xray_watch: Fix error when creating watch with remote repository by adding new attribute `repo_type` to allow user to specify whether the repository is local or remote. [GH-55](https://github.com/jfrog/terraform-provider-xray/pull/55)
+
 ## 1.1.5 (May 27, 2022). Tested on Artifactory 7.38.10 and Xray 3.49.0
 
 IMPROVEMENTS:
