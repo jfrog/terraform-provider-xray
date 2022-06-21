@@ -3,14 +3,14 @@ terraform {
   required_providers {
     xray = {
       source  = "registry.terraform.io/jfrog/xray"
-      version = "0.0.1"
+      version = "1.1.7"
     }
   }
 }
 
 provider "xray" {
-  url          = "artifactory.site.com/xray"
-  access_token = "abc..xy"
+  # url          = "artifactory.site.com/xray"
+  # access_token = "abc..xy"
   // Also user can supply the following env vars:
   // JFROG_URL or XRAY_URL
   // XRAY_ACCESS_TOKEN or JFROG_ACCESS_TOKEN
@@ -195,6 +195,7 @@ resource "xray_watch" "repository" {
     type       = "repository"
     bin_mgr_id = "default"
     name       = "your-repository-name"
+    repo_type  = "local"
 
     filter {
       type  = "regex"
@@ -206,6 +207,7 @@ resource "xray_watch" "repository" {
     type       = "repository"
     bin_mgr_id = "default"
     name       = "your-other-repository-name"
+    repo_type  = "local"
 
     filter {
       type  = "regex"
