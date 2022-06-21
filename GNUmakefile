@@ -16,7 +16,7 @@ default: build
 install:
 	rm -fR .terraform.d && \
 	mkdir -p ${BUILD_PATH} && \
-		(test -f terraform-provider-xray || GORELEASER_CURRENT_TAG=${NEXT_VERSION} GoReleaser build --single-target --rm-dist --snapshot) && \
+		(test -f terraform-provider-xray || GORELEASER_CURRENT_TAG=${NEXT_VERSION} goreleaser build --single-target --rm-dist --snapshot) && \
 		mv -v dist/terraform-provider-xray_${GORELEASER_ARCH}/terraform-provider-xray_v${NEXT_VERSION}* ${BUILD_PATH} && \
 		rm -f .terraform.lock.hcl && \
 		sed -i 's/version = ".*"/version = "${NEXT_VERSION}"/' sample.tf && \
@@ -30,7 +30,7 @@ release:
 	@echo "Pushed v${NEXT_VERSION}"
 
 build: fmtcheck
-	GORELEASER_CURRENT_TAG=${NEXT_VERSION} GoReleaser build --single-target --rm-dist --snapshot
+	GORELEASER_CURRENT_TAG=${NEXT_VERSION} goreleaser build --single-target --rm-dist --snapshot
 
 test:
 	@echo "==> Starting unit tests"
