@@ -34,6 +34,7 @@ resource "xray_watch" "repository" {
     type       = "repository"
     bin_mgr_id = "default"
     name       = "your-repository-name"
+    repo_type  = "local"
 
     filter {
       type  = "regex"
@@ -45,6 +46,7 @@ resource "xray_watch" "repository" {
     type       = "repository"
     bin_mgr_id = "default"
     name       = "your-other-repository-name"
+    repo_type  = "remote"
 
     filter {
       type  = "regex"

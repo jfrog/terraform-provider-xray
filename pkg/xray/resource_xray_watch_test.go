@@ -2,12 +2,12 @@ package xray
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
-
-	"github.com/jfrog/terraform-provider-shared/client"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/jfrog/terraform-provider-shared/client"
 )
 
 var testDataWatch = map[string]string{
@@ -89,10 +89,7 @@ func TestAccWatch_allReposMultiplePolicies(t *testing.T) {
 	})
 }
 
-// To verify the watch for a single repo we need to create a new repository with Xray indexing enabled
-// testAccCreateRepos() is creating a local repos with Xray indexing enabled using the API call
-// We need to figure out how to use external providers (like Artifactory) in the tests. Documented approach didn't work
-func TestAccWatch_singleRepository(t *testing.T) {
+func makeSingleRepositoryTestCase(repoType string, t *testing.T) (*testing.T, resource.TestCase) {
 	_, fqrn, resourceName := mkNames("watch-", "xray_watch")
 	testData := make(map[string]string)
 	copyStringMap(testDataWatch, testData)
@@ -101,18 +98,16 @@ func TestAccWatch_singleRepository(t *testing.T) {
 	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", randomInt())
 	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", randomInt())
 	testData["watch_type"] = "repository"
-	testData["repo0"] = fmt.Sprintf("libs-release-local-0-%d", randomInt())
-	testData["repo1"] = fmt.Sprintf("libs-release-local-1-%d", randomInt())
+	testData["repo_type"] = repoType
+	testData["repo0"] = fmt.Sprintf("libs-release-%s-0-%d", repoType, randomInt())
 
-	resource.Test(t, resource.TestCase{
+	return t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			testAccCreateRepos(t, testData["repo0"])
-			testAccCreateRepos(t, testData["repo1"])
+			testAccCreateRepos(t, testData["repo0"], repoType)
 		},
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
 			testAccDeleteRepo(t, testData["repo0"])
-			testAccDeleteRepo(t, testData["repo1"])
 			testCheckPolicyDeleted("xray_security_policy.security", t, request)
 			resp, err := testCheckWatch(id, request)
 			return resp, err
@@ -123,6 +118,50 @@ func TestAccWatch_singleRepository(t *testing.T) {
 			{
 				Config: executeTemplate(fqrn, singleRepositoryWatchTemplate, testData),
 				Check:  verifyXrayWatch(fqrn, testData),
+			},
+		},
+	}
+}
+
+// To verify the watch for a single repo we need to create a new repository with Xray indexing enabled
+// testAccCreateRepos() is creating a repos with Xray indexing enabled using the API call
+// We need to figure out how to use external providers (like Artifactory) in the tests. Documented approach didn't work
+func TestAccWatch_singleRepository(t *testing.T) {
+	for _, repoType := range []string{"local", "remote"} {
+		t.Run(repoType, func(t *testing.T) {
+			resource.Test(makeSingleRepositoryTestCase(repoType, t))
+		})
+	}
+}
+
+func TestAccWatch_repositoryMissingRepoType(t *testing.T) {
+	_, fqrn, resourceName := mkNames("watch-", "xray_watch")
+	testData := make(map[string]string)
+	copyStringMap(testDataWatch, testData)
+
+	testData["resource_name"] = resourceName
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", randomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", randomInt())
+	testData["watch_type"] = "repository"
+	testData["repo0"] = fmt.Sprintf("libs-release-local-0-%d", randomInt())
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			testAccCreateRepos(t, testData["repo0"], "local")
+		},
+		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+			testAccDeleteRepo(t, testData["repo0"])
+			testCheckPolicyDeleted("xray_security_policy.security", t, request)
+			resp, err := testCheckWatch(id, request)
+			return resp, err
+		}),
+
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config:      executeTemplate(fqrn, singleRepositoryInvalidWatchTemplate, testData),
+				ExpectError: regexp.MustCompile(`Attribute 'repo_type' not set when 'watch_resource\.type' is set to 'repository'`),
 			},
 		},
 	})
@@ -137,14 +176,15 @@ func TestAccWatch_multipleRepositories(t *testing.T) {
 	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", randomInt())
 	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", randomInt())
 	testData["watch_type"] = "repository"
+	testData["repo_type"] = "local"
 	testData["repo0"] = fmt.Sprintf("libs-release-local-0-%d", randomInt())
 	testData["repo1"] = fmt.Sprintf("libs-release-local-1-%d", randomInt())
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			testAccCreateRepos(t, testData["repo0"])
-			testAccCreateRepos(t, testData["repo1"])
+			testAccCreateRepos(t, testData["repo0"], "local")
+			testAccCreateRepos(t, testData["repo1"], "local")
 		},
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
 			testAccDeleteRepo(t, testData["repo0"])
@@ -314,8 +354,8 @@ const allReposSinglePolicyWatchTemplate = `resource "xray_security_policy" "secu
       fail_build                         = true
       notify_watch_recipients            = true
       notify_deployer                    = true
-      create_ticket_enabled              = false  
-      build_failure_grace_period_in_days = 5   
+      create_ticket_enabled              = false
+      build_failure_grace_period_in_days = 5
     }
   }
 }
@@ -361,8 +401,8 @@ const allReposMultiplePoliciesWatchTemplate = `resource "xray_security_policy" "
       fail_build                         = true
       notify_watch_recipients            = true
       notify_deployer                    = true
-      create_ticket_enabled              = false  
-      build_failure_grace_period_in_days = 5   
+      create_ticket_enabled              = false
+      build_failure_grace_period_in_days = 5
     }
   }
 }
@@ -390,9 +430,9 @@ resource "xray_license_policy" "license" {
       fail_build                         = true
       notify_watch_recipients            = true
       notify_deployer                    = true
-      create_ticket_enabled              = false 
+      create_ticket_enabled              = false
       custom_severity                    = "High"
-      build_failure_grace_period_in_days = 5 
+      build_failure_grace_period_in_days = 5
     }
   }
 }
@@ -446,8 +486,57 @@ const singleRepositoryWatchTemplate = `resource "xray_security_policy" "security
       fail_build                         = true
       notify_watch_recipients            = true
       notify_deployer                    = true
-      create_ticket_enabled              = false  
-      build_failure_grace_period_in_days = 5   
+      create_ticket_enabled              = false
+      build_failure_grace_period_in_days = 5
+    }
+  }
+}
+
+resource "xray_watch" "{{ .resource_name }}" {
+  name        	= "{{ .watch_name }}"
+  description 	= "{{ .description }}"
+  active 		= {{ .active }}
+
+  watch_resource {
+	type       	= "{{ .watch_type }}"
+	bin_mgr_id  = "default"
+	name		= "{{ .repo0 }}"
+	repo_type   = "{{ .repo_type }}"
+	filter {
+		type  	= "{{ .filter_type_0 }}"
+		value	= "{{ .filter_value_0 }}"
+	}
+}
+  assigned_policy {
+  	name 	= xray_security_policy.security.name
+  	type 	= "security"
+}
+  watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
+}`
+
+const singleRepositoryInvalidWatchTemplate = `resource "xray_security_policy" "security" {
+  name        = "{{ .policy_name_0 }}"
+  description = "Security policy description"
+  type        = "security"
+  rule {
+    name     = "rule-name-severity"
+    priority = 1
+    criteria {
+      min_severity = "High"
+    }
+    actions {
+      webhooks = []
+      mails    = ["test@email.com"]
+      block_download {
+        unscanned = true
+        active    = true
+      }
+      block_release_bundle_distribution  = true
+      fail_build                         = true
+      notify_watch_recipients            = true
+      notify_deployer                    = true
+      create_ticket_enabled              = false
+      build_failure_grace_period_in_days = 5
     }
   }
 }
@@ -494,8 +583,8 @@ const multipleRepositoriesWatchTemplate = `resource "xray_security_policy" "secu
       fail_build                         = true
       notify_watch_recipients            = true
       notify_deployer                    = true
-      create_ticket_enabled              = false  
-      build_failure_grace_period_in_days = 5   
+      create_ticket_enabled              = false
+      build_failure_grace_period_in_days = 5
     }
   }
 }
@@ -509,6 +598,7 @@ resource "xray_watch" "{{ .resource_name }}" {
 	type       	= "{{ .watch_type }}"
 	bin_mgr_id  = "default"
 	name		= "{{ .repo0 }}"
+	repo_type   = "{{ .repo_type }}"
 	filter {
 		type  	= "{{ .filter_type_0 }}"
 		value	= "{{ .filter_value_0 }}"
@@ -518,6 +608,7 @@ resource "xray_watch" "{{ .resource_name }}" {
 	type       	= "repository"
 	bin_mgr_id  = "default"
 	name		= "{{ .repo1 }}"
+	repo_type   = "{{ .repo_type }}"
 	filter {
 		type  	= "{{ .filter_type_0 }}"
 		value	= "{{ .filter_value_0 }}"
@@ -551,8 +642,8 @@ const buildWatchTemplate = `resource "xray_security_policy" "security" {
       fail_build                         = true
       notify_watch_recipients            = true
       notify_deployer                    = true
-      create_ticket_enabled              = false  
-      build_failure_grace_period_in_days = 5   
+      create_ticket_enabled              = false
+      build_failure_grace_period_in_days = 5
     }
   }
 }
@@ -595,8 +686,8 @@ const multipleBuildsWatchTemplate = `resource "xray_security_policy" "security" 
       fail_build                         = true
       notify_watch_recipients            = true
       notify_deployer                    = true
-      create_ticket_enabled              = false  
-      build_failure_grace_period_in_days = 5   
+      create_ticket_enabled              = false
+      build_failure_grace_period_in_days = 5
     }
   }
 }
@@ -645,8 +736,8 @@ const allProjectsWatchTemplate = `resource "xray_security_policy" "security" {
       fail_build                         = true
       notify_watch_recipients            = true
       notify_deployer                    = true
-      create_ticket_enabled              = false  
-      build_failure_grace_period_in_days = 5   
+      create_ticket_enabled              = false
+      build_failure_grace_period_in_days = 5
     }
   }
 }
@@ -688,8 +779,8 @@ const singleProjectWatchTemplate = `resource "xray_security_policy" "security" {
       fail_build                         = true
       notify_watch_recipients            = true
       notify_deployer                    = true
-      create_ticket_enabled              = false  
-      build_failure_grace_period_in_days = 5   
+      create_ticket_enabled              = false
+      build_failure_grace_period_in_days = 5
     }
   }
 }

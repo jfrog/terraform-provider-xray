@@ -64,18 +64,25 @@ func testAccPreCheck(t *testing.T) {
 	}
 }
 
-// Create a local repository with Xray indexing enabled. It will be used in the tests
-func testAccCreateRepos(t *testing.T, repo string) {
+// Create a repository with Xray indexing enabled. It will be used in the tests
+func testAccCreateRepos(t *testing.T, repo, repoType string) {
 	restyClient := getTestResty(t)
 
 	type Repository struct {
 		Rclass    string `json:"rclass"`
 		XrayIndex bool   `json:"xrayIndex"`
+		Url       string `json:"url,omitempty"`
 	}
 
-	repository := Repository{}
-	repository.Rclass = "local"
-	repository.XrayIndex = true
+	repository := Repository{
+		Rclass:    repoType,
+		XrayIndex: true,
+	}
+
+	if repoType == "remote" {
+		repository.Url = "http://tempurl.org"
+	}
+	
 	response, errRepo := restyClient.R().SetBody(repository).Put("artifactory/api/repositories/" + repo)
 	//Artifactory can return 400 for several reasons, this is why we are checking the response body
 	repoExists := strings.Contains(fmt.Sprint(errRepo), "Case insensitive repository key already exists")

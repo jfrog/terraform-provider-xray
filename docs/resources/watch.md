@@ -50,6 +50,7 @@ resource "xray_watch" "repository" {
     type       = "repository"
     bin_mgr_id = "default"
     name       = "your-repository-name"
+    repo_type  = "local"
 
     filter {
       type  = "regex"
@@ -61,6 +62,7 @@ resource "xray_watch" "repository" {
     type       = "repository"
     bin_mgr_id = "default"
     name       = "your-other-repository-name"
+    repo_type  = "remote"
 
     filter {
       type  = "regex"
@@ -198,6 +200,7 @@ Optional:
 - `bin_mgr_id` (String) The ID number of a binary manager resource. Default value is `default`. To check the list of available binary managers, use the API call `${JFROG_URL}/xray/api/v1/binMgr` as an admin user, use `binMgrId` value. More info [here](https://www.jfrog.com/confluence/display/JFROG/Xray+REST+API#XrayRESTAPI-GetBinaryManager)
 - `filter` (Block List) Nested argument describing filters to be applied. Defined below. (see [below for nested schema](#nestedblock--watch_resource--filter))
 - `name` (String) The name of the build, repository or project. Xray indexing must be enabled on the repository or build
+- `repo_type` (String) Type of repository. Only applicable when `type` is `repository`. Options: `local` or `remote`.
 
 <a id="nestedblock--watch_resource--filter"></a>
 ### Nested Schema for `watch_resource.filter`

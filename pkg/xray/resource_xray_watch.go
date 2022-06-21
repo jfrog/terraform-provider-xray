@@ -17,6 +17,8 @@ func resourceXrayWatch() *schema.Resource {
 			StateContext: schema.ImportStatePassthroughContext,
 		},
 
+		CustomizeDiff: watchResourceDiff,
+
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:             schema.TypeString,
@@ -57,6 +59,12 @@ func resourceXrayWatch() *schema.Resource {
 							Type:        schema.TypeString,
 							Optional:    true,
 							Description: "The name of the build, repository or project. Xray indexing must be enabled on the repository or build",
+						},
+						"repo_type": {
+							Type:     schema.TypeString,
+							Optional: true,
+							ValidateDiagFunc: validator.StringInSlice(true, "local", "remote"),
+							Description: "Type of repository. Only applicable when `type` is `repository`. Options: `local` or `remote`.",
 						},
 						"filter": {
 							Type:        schema.TypeList,
