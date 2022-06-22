@@ -1,3 +1,9 @@
+## 1.1.7 (June 21, 2022). Tested on Artifactory 7.39.4 and Xray 3.51.0
+
+IMPROVEMENTS:
+
+* Bump shared module version
+
 ## 1.1.6 (June 3, 2022). Tested on Artifactory 7.38.10 and Xray 3.50.3
 
 BUG FIX:
