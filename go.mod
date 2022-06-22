@@ -4,7 +4,7 @@ require (
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/hashicorp/terraform-plugin-log v0.4.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.14.0
-	github.com/jfrog/terraform-provider-shared v0.7.0
+	github.com/jfrog/terraform-provider-shared v1.1.1
 )
 
 require (
