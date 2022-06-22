@@ -14,7 +14,7 @@ BUILD_PATH=terraform.d/plugins/registry.terraform.io/jfrog/xray/${NEXT_VERSION}/
 default: build
 
 install:
-	rm -fR .terraform.d && \
+	rm -fR terraform.d && \
 	mkdir -p ${BUILD_PATH} && \
 		(test -f terraform-provider-xray || GORELEASER_CURRENT_TAG=${NEXT_VERSION} goreleaser build --single-target --rm-dist --snapshot) && \
 		mv -v dist/terraform-provider-xray_${GORELEASER_ARCH}/terraform-provider-xray_v${NEXT_VERSION}* ${BUILD_PATH} && \
