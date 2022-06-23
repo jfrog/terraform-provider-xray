@@ -1,4 +1,4 @@
-## 1.1.7 (June 21, 2022). Tested on Artifactory 7.39.4 and Xray 3.51.0
+## 1.1.7 (June 21, 2022). Tested on Artifactory 7.39.4 and Xray 3.51.3
 
 IMPROVEMENTS:
 
