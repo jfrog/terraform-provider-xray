@@ -3,7 +3,7 @@ terraform {
   required_providers {
     xray = {
       source  = "registry.terraform.io/jfrog/xray"
-      version = "1.1.5"
+      version = "1.1.7"
     }
   }
 }
@@ -195,6 +195,7 @@ resource "xray_watch" "repository" {
     type       = "repository"
     bin_mgr_id = "default"
     name       = "your-repository-name"
+    repo_type  = "local"
 
     filter {
       type  = "regex"
@@ -206,6 +207,7 @@ resource "xray_watch" "repository" {
     type       = "repository"
     bin_mgr_id = "default"
     name       = "your-other-repository-name"
+    repo_type  = "local"
 
     filter {
       type  = "regex"

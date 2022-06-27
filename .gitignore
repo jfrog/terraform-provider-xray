@@ -3,7 +3,8 @@ dist/
 .idea/
 .github/
 .modules/
-.terraform
+.terraform*
+terraform.d/
 terraform.tfstate
 terraform.tfstate.backup
 lib/
