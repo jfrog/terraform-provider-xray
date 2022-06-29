@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/jfrog/terraform-provider-shared/util"
+	"golang.org/x/exp/slices"
 )
 
 type WatchGeneralData struct {
@@ -331,9 +332,18 @@ func watchResourceDiff(ctx context.Context, diff *schema.ResourceDiff, v interfa
 	for _, watchResource := range watchResources {
 		r := watchResource.(map[string]interface{})
 		resourceType := r["type"].(string)
+
+		// validate repo_type
 		repoType := r["repo_type"].(string)
 		if resourceType == "repository" && len(repoType) == 0 {
-			return fmt.Errorf("Attribute 'repo_type' not set when 'watch_resource.type' is set to 'repository'")
+			return fmt.Errorf("attribute 'repo_type' not set when 'watch_resource.type' is set to 'repository'")
+		}
+
+		// validate type with filter and ant_filter
+		antFilters := r["ant_filter"].(*schema.Set).List()
+		antPatternsResourceTypes := []string{"all-builds", "all-projects"}
+		if !slices.Contains(antPatternsResourceTypes, resourceType) && len(antFilters) > 0 {
+			return fmt.Errorf("attribute 'ant_filter' is set when 'watch_resource.type' is not set to 'all-builds' or 'all-projects'")
 		}
 	}
 	return nil

@@ -175,7 +175,7 @@ func TestAccWatch_repositoryMissingRepoType(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      executeTemplate(fqrn, singleRepositoryInvalidWatchTemplate, testData),
-				ExpectError: regexp.MustCompile(`Attribute 'repo_type' not set when 'watch_resource\.type' is set to 'repository'`),
+				ExpectError: regexp.MustCompile(`attribute 'repo_type' not set when 'watch_resource\.type' is set to 'repository'`),
 			},
 		},
 	})
@@ -308,6 +308,30 @@ func TestAccWatch_allBuilds(t *testing.T) {
 	})
 }
 
+func TestAccWatch_invalidBuildFilter(t *testing.T) {
+	_, fqrn, resourceName := mkNames("watch-", "xray_watch")
+	testData := make(map[string]string)
+	copyStringMap(testDataWatch, testData)
+
+	testData["resource_name"] = resourceName
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", randomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", randomInt())
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+		},
+		CheckDestroy:      verifyDeleted(fqrn, testCheckWatch),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config: executeTemplate(fqrn, invalidBuildsWatchFilterTemplate, testData),
+				ExpectError: regexp.MustCompile(`attribute 'ant_filter' is set when 'watch_resource\.type' is not set to 'all-builds' or 'all-projects'`),
+			},
+		},
+	})
+}
+
 func TestAccWatch_allProjects(t *testing.T) {
 	_, fqrn, resourceName := mkNames("watch-", "xray_watch")
 	testData := make(map[string]string)
@@ -380,6 +404,31 @@ func TestAccWatch_singleProject(t *testing.T) {
 			{
 				Config: executeTemplate(fqrn, singleProjectWatchTemplate, testData),
 				Check:  verifyXrayWatch(fqrn, testData),
+			},
+		},
+	})
+}
+
+func TestAccWatch_invalidProjectFilter(t *testing.T) {
+	_, fqrn, resourceName := mkNames("watch-", "xray_watch")
+	testData := make(map[string]string)
+	copyStringMap(testDataWatch, testData)
+
+	testData["resource_name"] = resourceName
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", randomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", randomInt())
+	testData["watch_type"] = "project"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+		},
+		CheckDestroy: verifyDeleted(fqrn, testCheckWatch),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config: executeTemplate(fqrn, invalidProjectWatchFilterTemplate, testData),
+				ExpectError: regexp.MustCompile(`attribute 'ant_filter' is set when 'watch_resource\.type' is not set to 'all-builds' or 'all-projects'`),
 			},
 		},
 	})
@@ -818,6 +867,54 @@ resource "xray_watch" "{{ .resource_name }}" {
   watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
 }`
 
+const invalidBuildsWatchFilterTemplate = `resource "xray_security_policy" "security" {
+  name        = "{{ .policy_name_0 }}"
+  description = "Security policy description"
+  type        = "security"
+  rule {
+    name     = "rule-name-severity"
+    priority = 1
+    criteria {
+      min_severity = "High"
+    }
+    actions {
+      webhooks = []
+      mails    = ["test@email.com"]
+      block_download {
+        unscanned = true
+        active    = true
+      }
+      block_release_bundle_distribution  = true
+      fail_build                         = true
+      notify_watch_recipients            = true
+      notify_deployer                    = true
+      create_ticket_enabled              = false
+      build_failure_grace_period_in_days = 5
+    }
+  }
+}
+
+resource "xray_watch" "{{ .resource_name }}" {
+  name        	= "{{ .watch_name }}"
+  description 	= "{{ .description }}"
+  active 		= {{ .active }}
+
+  watch_resource {
+	type       	= "build"
+	bin_mgr_id  = "default"
+	ant_filter {
+		exclude_patterns = ["a*", "b*"]
+		include_patterns = ["ab*"]
+	}
+  }
+
+  assigned_policy {
+  	name 	= xray_security_policy.security.name
+  	type 	= "security"
+  }
+  watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
+}`
+
 const allProjectsWatchTemplate = `resource "xray_security_policy" "security" {
   name        = "{{ .policy_name_0 }}"
   description = "Security policy description"
@@ -908,6 +1005,54 @@ resource "xray_watch" "{{ .resource_name }}" {
   assigned_policy {
   	name 	= xray_security_policy.security.name
   	type 	= "security"
+  }
+  watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
+}`
+
+const invalidProjectWatchFilterTemplate = `resource "xray_security_policy" "security" {
+  name        = "{{ .policy_name_0 }}"
+  description = "Security policy description"
+  type        = "security"
+  rule {
+    name     = "rule-name-severity"
+    priority = 1
+    criteria {
+      min_severity = "High"
+    }
+    actions {
+      webhooks = []
+      mails    = ["test@email.com"]
+      block_download {
+        unscanned = true
+        active    = true
+      }
+      block_release_bundle_distribution  = true
+      fail_build                         = true
+      notify_watch_recipients            = true
+      notify_deployer                    = true
+      create_ticket_enabled              = false
+      build_failure_grace_period_in_days = 5
+    }
+  }
+}
+
+resource "xray_watch" "{{ .resource_name }}" {
+  name        = "{{ .watch_name }}"
+  description = "{{ .description }}"
+  active      = {{ .active }}
+
+  watch_resource {
+	type = "project"
+	name = "fake-project"
+	ant_filter {
+		exclude_patterns = ["a*"]
+		include_patterns = ["b*"]
+	}
+  }
+
+  assigned_policy {
+  	name = xray_security_policy.security.name
+  	type = "security"
   }
   watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
 }`
