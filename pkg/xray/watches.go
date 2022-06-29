@@ -2,14 +2,16 @@ package xray
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
-
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"strconv"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/jfrog/terraform-provider-shared/util"
 )
 
 type WatchGeneralData struct {
@@ -18,14 +20,14 @@ type WatchGeneralData struct {
 	Active      bool   `json:"active"`
 }
 
-type WatchFilterValue struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
+type WatchFilter struct {
+	Type  string          `json:"type"`
+	Value json.RawMessage `json:"value"`
 }
 
-type WatchFilter struct {
-	Type  string `json:"type"`
-	Value string `json:"value"`
+type WatchFilterAntValue struct {
+	ExcludePatterns []string `json:"ExcludePatterns"`
+	IncludePatterns []string `json:"IncludePatterns"`
 }
 
 type WatchProjectResource struct {
@@ -117,21 +119,56 @@ func unpackProjectResource(rawCfg interface{}) WatchProjectResource {
 	}
 
 	if v, ok := cfg["filter"]; ok {
-		resourceFilters := unpackFilters(v.([]interface{}))
-		resource.Filters = resourceFilters
+		filters := unpackFilters(v.(*schema.Set))
+		resource.Filters = append(resource.Filters, filters...)
+	}
+
+	if v, ok := cfg["ant_filter"]; ok {
+		antFilters := unpackAntFilters(v.(*schema.Set))
+		resource.Filters = append(resource.Filters, antFilters...)
 	}
 
 	return resource
 }
 
-func unpackFilters(list []interface{}) []WatchFilter {
+func unpackFilters(d *schema.Set) []WatchFilter {
+	tfFilters := d.List()
+
 	var filters []WatchFilter
 
-	for _, raw := range list {
-		filter := WatchFilter{}
+	for _, raw := range tfFilters {
 		f := raw.(map[string]interface{})
-		filter.Type = f["type"].(string)
-		filter.Value = f["value"].(string)
+		filter := WatchFilter{
+			Type: f["type"].(string),
+			Value: json.RawMessage(strconv.Quote(f["value"].(string))),
+		}
+		filters = append(filters, filter)
+	}
+
+	return filters
+}
+
+func unpackAntFilters(d *schema.Set) []WatchFilter {
+	tfFilters := d.List()
+
+	var filters []WatchFilter
+
+	for _, raw := range tfFilters {
+		antValue := raw.(map[string]interface{})
+
+		template := `{
+			"ExcludePatterns":[{{ range $index, $pattern := .excludePatterns}}{{if $index}},{{end}}"{{$pattern}}"{{end}}],
+			"IncludePatterns":[{{ range $index, $pattern := .includePatterns}}{{if $index}},{{end}}"{{$pattern}}"{{end}}]
+		}`
+		filterJsonString := util.ExecuteTemplate("ant_filter", template, map[string][]string{
+			"excludePatterns": util.CastToStringArr(antValue["exclude_patterns"].([]interface{})),
+			"includePatterns": util.CastToStringArr(antValue["include_patterns"].([]interface{})),
+		})
+
+		filter := WatchFilter{
+			Type: "ant-patterns",
+			Value: json.RawMessage(filterJsonString),
+		}
 		filters = append(filters, filter)
 	}
 
@@ -162,24 +199,46 @@ func packProjectResources(resources WatchProjectResources) []interface{} {
 		if len(res.RepoType) > 0 {
 			resourceMap["repo_type"] = res.RepoType
 		}
-		resourceMap["filter"] = packFilters(res.Filters)
+
+		resourceMap = packFilters(res.Filters, resourceMap)
+
 		list = append(list, resourceMap)
 	}
 
 	return list
 }
 
-func packFilters(filters []WatchFilter) []interface{} {
-	var l []interface{}
-	for _, f := range filters {
-		m := map[string]interface{}{
-			"type":  f.Type,
-			"value": f.Value,
+func packFilters(filters []WatchFilter, resources map[string]interface{}) (map[string]interface{}) {
+	var stringFilters []map[string]interface{}
+	var antFilters []map[string]interface{}
+
+	for _, filter := range filters {
+		var f map[string]interface{}
+
+		switch filter.Type {
+		case "regex", "package-type":
+			var value string
+			json.Unmarshal(filter.Value, &value)
+			f = map[string]interface{}{
+				"type":  filter.Type,
+				"value": value,
+			}
+			stringFilters = append(stringFilters, f)
+		case "ant-patterns":
+			var value WatchFilterAntValue
+			json.Unmarshal(filter.Value, &value)
+			f = map[string]interface{}{
+				"exclude_patterns": value.ExcludePatterns,
+				"include_patterns": value.IncludePatterns,
+			}
+			antFilters = append(antFilters, f)
 		}
-		l = append(l, m)
 	}
 
-	return l
+	resources["filter"] = stringFilters
+	resources["ant_filter"] = antFilters
+
+	return resources
 }
 
 func packAssignedPolicies(policies []WatchAssignedPolicy) []interface{} {
@@ -231,7 +290,7 @@ func resourceXrayWatchRead(ctx context.Context, d *schema.ResourceData, m interf
 	watch, resp, err := getWatch(d.Id(), m.(*resty.Client))
 	if err != nil {
 		if resp != nil && resp.StatusCode() == http.StatusNotFound {
-			log.Printf("[WARN] Xray watch (%s) not found, removing from state", d.Id())
+			tflog.Warn(ctx, fmt.Sprintf("Xray watch (%s) not found, removing from state", d.Id()))
 			d.SetId("")
 		}
 		return diag.FromErr(err)
@@ -245,7 +304,7 @@ func resourceXrayWatchUpdate(ctx context.Context, d *schema.ResourceData, m inte
 	resp, err := m.(*resty.Client).R().SetBody(watch).Put("xray/api/v2/watches/" + d.Id())
 	if err != nil {
 		if resp != nil && resp.StatusCode() == http.StatusNotFound {
-			log.Printf("[WARN] Xray watch (%s) not found, removing from state", d.Id())
+			tflog.Warn(ctx, fmt.Sprintf("Xray watch (%s) not found, removing from state", d.Id()))
 			d.SetId("")
 		}
 		return diag.FromErr(err)

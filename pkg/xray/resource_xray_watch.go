@@ -67,25 +67,51 @@ func resourceXrayWatch() *schema.Resource {
 							Description: "Type of repository. Only applicable when `type` is `repository`. Options: `local` or `remote`.",
 						},
 						"filter": {
-							Type:        schema.TypeList,
+							Type:        schema.TypeSet,
 							Optional:    true,
-							Description: "Nested argument describing filters to be applied. Defined below.",
+							MinItems:    1,
+							Description: "Filter for `regex` and `package-type` type",
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"type": {
 										Type:     schema.TypeString,
 										Required: true,
-										Description: "The type of filter, such as `regex`, `package-type` or `ant-patterns`. `package-type` works only with `all-repos` type. " +
-											"`ant-patterns` works only with `project`",
-										ValidateDiagFunc: validator.StringInSlice(true, "regex", "package-type", "ant-patterns"),
+										Description: "The type of filter, such as `regex` or `package-type`. `package-type` works only with `all-repos` repo_type.",
+										ValidateDiagFunc: validator.StringInSlice(true, "regex", "package-type"),
 									},
-									// TODO support Exclude and Include patterns
-									// eg "value":{"ExcludePatterns":[],"IncludePatterns":["*"]}
 									"value": {
 										Type:             schema.TypeString,
 										Required:         true,
 										Description:      "The value of the filter, such as the text of the regex or name of the package type.",
 										ValidateDiagFunc: validator.StringIsNotEmpty,
+									},
+								},
+							},
+						},
+						"ant_filter": {
+							Type:        schema.TypeSet,
+							Optional:    true,
+							MinItems:    1,
+							Description: "`ant-patterns` filter for `all-builds` and `all-projects` watch_resource.type",
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"include_patterns": {
+										Type:       schema.TypeList,
+										Elem:       &schema.Schema{
+											Type: schema.TypeString,
+										},
+										Required:    true,
+										MinItems:    1,
+										Description: "List of Ant patterns.",
+									},
+									"exclude_patterns": {
+										Type:        schema.TypeList,
+										Elem:        &schema.Schema{
+											Type: schema.TypeString,
+										},
+										Required:    true,
+										MinItems:    1,
+										Description: "List of Ant patterns.",
 									},
 								},
 							},
