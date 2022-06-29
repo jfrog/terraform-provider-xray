@@ -97,12 +97,12 @@ resource "xray_license_policy" "banned_licenses" {
 ### Optional
 
 - `description` (String) More verbose description of the policy
-- `id` (String) The ID of this resource.
 
 ### Read-Only
 
 - `author` (String) User, who created the policy
 - `created` (String) Creation timestamp
+- `id` (String) The ID of this resource.
 - `modified` (String) Modification timestamp
 
 <a id="nestedblock--rule"></a>
