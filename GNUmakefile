@@ -1,10 +1,9 @@
 TEST?=./...
 GO_ARCH=$(shell go env GOARCH)
 TARGET_ARCH=$(shell go env GOOS)_${GO_ARCH}
+GORELEASER_ARCH=${TARGET_ARCH}
 ifeq ($(GO_ARCH), amd64)
 GORELEASER_ARCH=${TARGET_ARCH}_$(shell go env GOAMD64)
-else
-GORELEASER_ARCH=${TARGET_ARCH}
 endif
 PKG_NAME=pkg/xray
 # if this path ever changes, you need to also update the 'ldflags' value in .goreleaser.yml
