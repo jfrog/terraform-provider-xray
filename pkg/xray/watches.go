@@ -203,7 +203,9 @@ func packProjectResources(ctx context.Context, resources WatchProjectResources) 
 		}
 
 		resourceMap, errors := packFilters(res.Filters, resourceMap)
-		tflog.Error(ctx, fmt.Sprintf(`failed to pack filters: %v`, errors))
+		if len(errors) > 0 {
+			tflog.Error(ctx, fmt.Sprintf(`failed to pack filters: %v`, errors))
+		}
 
 		list = append(list, resourceMap)
 	}
@@ -236,36 +238,40 @@ func packAntFilter(filter WatchFilter) (map[string]interface{}, error) {
 	return m, err
 }
 
+var packFilterMap = map[string]map[string]interface{}{
+	"regex": map[string]interface{}{
+		"func": packStringFilter,
+		"attributeName": "filter",
+	},
+	"package-type": map[string]interface{}{
+		"func": packStringFilter,
+		"attributeName": "filter",
+	},
+	"ant-patterns": map[string]interface{}{
+		"func": packAntFilter,
+		"attributeName": "ant_filter",
+	},
+}
+
 func packFilters(filters []WatchFilter, resources map[string]interface{}) (map[string]interface{}, []error) {
-	var stringFilters []map[string]interface{}
-	var antFilters []map[string]interface{}
+	resources["filter"] = []map[string]interface{}{}
+	resources["ant_filter"] = []map[string]interface{}{}
 	var errors []error
 
 	for _, filter := range filters {
-		var packFilterFunc PackFilterFunc
-		var filtersSlice *[]map[string]interface{}
-
-		switch filter.Type {
-		case "regex", "package-type":
-			packFilterFunc = packStringFilter
-			filtersSlice = &stringFilters
-		case "ant-patterns":
-			packFilterFunc = packAntFilter
-			filtersSlice = &antFilters
-		default:
+		packFilterAttribute, ok := packFilterMap[filter.Type]
+		if !ok {
 			return nil, []error{fmt.Errorf("invalid filter.Type: %s", filter.Type)}
 		}
 
-		packedFilter, err := packFilterFunc(filter)
+		packedFilter, err := packFilterAttribute["func"].(func(WatchFilter) (map[string]interface {}, error))(filter)
 		if err != nil {
 			errors = append(errors, err)
 		} else {
-			*filtersSlice = append(*filtersSlice, packedFilter)
+			attributeName := packFilterAttribute["attributeName"].(string)
+			resources[attributeName] = append(resources[attributeName].([]map[string]interface{}), packedFilter)
 		}
 	}
-
-	resources["filter"] = stringFilters
-	resources["ant_filter"] = antFilters
 
 	return resources, errors
 }
@@ -273,9 +279,10 @@ func packFilters(filters []WatchFilter, resources map[string]interface{}) (map[s
 func packAssignedPolicies(policies []WatchAssignedPolicy) []interface{} {
 	var l []interface{}
 	for _, p := range policies {
-		m := make(map[string]interface{})
-		m["name"] = p.Name
-		m["type"] = p.Type
+		m := map[string]interface{}{
+			"name": p.Name,
+			"type": p.Type,
+		}
 		l = append(l, m)
 	}
 
