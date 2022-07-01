@@ -229,14 +229,11 @@ func packStringFilter(filter WatchFilter) (map[string]interface{}, error) {
 func packAntFilter(filter WatchFilter) (map[string]interface{}, error) {
 	var value WatchFilterAntValue
 	err := json.Unmarshal(filter.Value, &value)
-	if err != nil {
-		return nil, err
-	}
-
-	return map[string]interface{}{
+	m := map[string]interface{}{
 		"exclude_patterns": value.ExcludePatterns,
 		"include_patterns": value.IncludePatterns,
-	}, nil
+	}
+	return m, err
 }
 
 func packFilters(filters []WatchFilter, resources map[string]interface{}) (map[string]interface{}, []error) {
@@ -257,7 +254,6 @@ func packFilters(filters []WatchFilter, resources map[string]interface{}) (map[s
 			filtersSlice = &antFilters
 		default:
 			return nil, []error{fmt.Errorf("invalid filter.Type: %s", filter.Type)}
-			break
 		}
 
 		packedFilter, err := packFilterFunc(filter)
