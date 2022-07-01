@@ -100,6 +100,7 @@ resource "xray_security_policy" "cvss_score" {
 
 - `author` (String) User, who created the policy
 - `created` (String) Creation timestamp
+- `id` (String) The ID of this resource.
 - `modified` (String) Modification timestamp
 
 <a id="nestedblock--rule"></a>

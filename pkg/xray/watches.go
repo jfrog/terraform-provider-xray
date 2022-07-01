@@ -2,14 +2,17 @@ package xray
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
-
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"strconv"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/jfrog/terraform-provider-shared/util"
+	"golang.org/x/exp/slices"
 )
 
 type WatchGeneralData struct {
@@ -18,14 +21,14 @@ type WatchGeneralData struct {
 	Active      bool   `json:"active"`
 }
 
-type WatchFilterValue struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
+type WatchFilter struct {
+	Type  string          `json:"type"`
+	Value json.RawMessage `json:"value"`
 }
 
-type WatchFilter struct {
-	Type  string `json:"type"`
-	Value string `json:"value"`
+type WatchFilterAntValue struct {
+	ExcludePatterns []string `json:"ExcludePatterns"`
+	IncludePatterns []string `json:"IncludePatterns"`
 }
 
 type WatchProjectResource struct {
@@ -117,21 +120,57 @@ func unpackProjectResource(rawCfg interface{}) WatchProjectResource {
 	}
 
 	if v, ok := cfg["filter"]; ok {
-		resourceFilters := unpackFilters(v.([]interface{}))
-		resource.Filters = resourceFilters
+		filters := unpackFilters(v.(*schema.Set))
+		resource.Filters = append(resource.Filters, filters...)
+	}
+
+	if v, ok := cfg["ant_filter"]; ok {
+		antFilters := unpackAntFilters(v.(*schema.Set))
+		resource.Filters = append(resource.Filters, antFilters...)
 	}
 
 	return resource
 }
 
-func unpackFilters(list []interface{}) []WatchFilter {
+func unpackFilters(d *schema.Set) []WatchFilter {
+	tfFilters := d.List()
+
 	var filters []WatchFilter
 
-	for _, raw := range list {
-		filter := WatchFilter{}
+	for _, raw := range tfFilters {
 		f := raw.(map[string]interface{})
-		filter.Type = f["type"].(string)
-		filter.Value = f["value"].(string)
+		filter := WatchFilter{
+			Type: f["type"].(string),
+			Value: json.RawMessage(strconv.Quote(f["value"].(string))),
+		}
+		filters = append(filters, filter)
+	}
+
+	return filters
+}
+
+func unpackAntFilters(d *schema.Set) []WatchFilter {
+	tfFilters := d.List()
+
+	var filters []WatchFilter
+
+	for _, raw := range tfFilters {
+		antValue := raw.(map[string]interface{})
+
+		// create JSON string from slice:
+		// from []string{"a", "b"} to `["ExcludePatterns": ["a", "b"]]`
+		excludePatterns, _ := json.Marshal(util.CastToStringArr(antValue["exclude_patterns"].([]interface{})))
+		includePatterns, _ := json.Marshal(util.CastToStringArr(antValue["include_patterns"].([]interface{})))
+		filterJsonString := fmt.Sprintf(
+			`{"ExcludePatterns": %s, "IncludePatterns": %s}`,
+			excludePatterns,
+			includePatterns,
+		)
+
+		filter := WatchFilter{
+			Type: "ant-patterns",
+			Value: json.RawMessage(filterJsonString),
+		}
 		filters = append(filters, filter)
 	}
 
@@ -148,7 +187,7 @@ func unpackAssignedPolicy(rawCfg interface{}) WatchAssignedPolicy {
 	return policy
 }
 
-func packProjectResources(resources WatchProjectResources) []interface{} {
+func packProjectResources(ctx context.Context, resources WatchProjectResources) []interface{} {
 	var list []interface{}
 	for _, res := range resources.Resources {
 		resourceMap := map[string]interface{}{}
@@ -162,19 +201,87 @@ func packProjectResources(resources WatchProjectResources) []interface{} {
 		if len(res.RepoType) > 0 {
 			resourceMap["repo_type"] = res.RepoType
 		}
-		resourceMap["filter"] = packFilters(res.Filters)
+
+		resourceMap, errors := packFilters(res.Filters, resourceMap)
+		if len(errors) > 0 {
+			tflog.Error(ctx, fmt.Sprintf(`failed to pack filters: %v`, errors))
+		}
+
 		list = append(list, resourceMap)
 	}
 
 	return list
 }
 
-func packFilters(filters []WatchFilter) []interface{} {
+type PackFilterFunc func(filter WatchFilter) (map[string]interface{}, error)
+
+func packStringFilter(filter WatchFilter) (map[string]interface{}, error) {
+	var value string
+	err := json.Unmarshal(filter.Value, &value)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]interface{}{
+		"type":  filter.Type,
+		"value": value,
+	}, nil
+}
+
+func packAntFilter(filter WatchFilter) (map[string]interface{}, error) {
+	var value WatchFilterAntValue
+	err := json.Unmarshal(filter.Value, &value)
+	m := map[string]interface{}{
+		"exclude_patterns": value.ExcludePatterns,
+		"include_patterns": value.IncludePatterns,
+	}
+	return m, err
+}
+
+var packFilterMap = map[string]map[string]interface{}{
+	"regex": map[string]interface{}{
+		"func": packStringFilter,
+		"attributeName": "filter",
+	},
+	"package-type": map[string]interface{}{
+		"func": packStringFilter,
+		"attributeName": "filter",
+	},
+	"ant-patterns": map[string]interface{}{
+		"func": packAntFilter,
+		"attributeName": "ant_filter",
+	},
+}
+
+func packFilters(filters []WatchFilter, resources map[string]interface{}) (map[string]interface{}, []error) {
+	resources["filter"] = []map[string]interface{}{}
+	resources["ant_filter"] = []map[string]interface{}{}
+	var errors []error
+
+	for _, filter := range filters {
+		packFilterAttribute, ok := packFilterMap[filter.Type]
+		if !ok {
+			return nil, []error{fmt.Errorf("invalid filter.Type: %s", filter.Type)}
+		}
+
+		packedFilter, err := packFilterAttribute["func"].(func(WatchFilter) (map[string]interface {}, error))(filter)
+		if err != nil {
+			errors = append(errors, err)
+		} else {
+			attributeName := packFilterAttribute["attributeName"].(string)
+			resources[attributeName] = append(resources[attributeName].([]map[string]interface{}), packedFilter)
+		}
+	}
+
+	return resources, errors
+}
+
+func packAssignedPolicies(policies []WatchAssignedPolicy) []interface{} {
 	var l []interface{}
-	for _, f := range filters {
+	for _, p := range policies {
 		m := map[string]interface{}{
-			"type":  f.Type,
-			"value": f.Value,
+			"name": p.Name,
+			"type": p.Type,
 		}
 		l = append(l, m)
 	}
@@ -182,26 +289,14 @@ func packFilters(filters []WatchFilter) []interface{} {
 	return l
 }
 
-func packAssignedPolicies(policies []WatchAssignedPolicy) []interface{} {
-	var l []interface{}
-	for _, p := range policies {
-		m := make(map[string]interface{})
-		m["name"] = p.Name
-		m["type"] = p.Type
-		l = append(l, m)
-	}
-
-	return l
-}
-
-func packWatch(watch Watch, d *schema.ResourceData) diag.Diagnostics {
+func packWatch(ctx context.Context, watch Watch, d *schema.ResourceData) diag.Diagnostics {
 	if err := d.Set("description", watch.GeneralData.Description); err != nil {
 		return diag.FromErr(err)
 	}
 	if err := d.Set("active", watch.GeneralData.Active); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("watch_resource", packProjectResources(watch.ProjectResources)); err != nil {
+	if err := d.Set("watch_resource", packProjectResources(ctx, watch.ProjectResources)); err != nil {
 		return diag.FromErr(err)
 	}
 	if err := d.Set("assigned_policy", packAssignedPolicies(watch.AssignedPolicies)); err != nil {
@@ -231,12 +326,12 @@ func resourceXrayWatchRead(ctx context.Context, d *schema.ResourceData, m interf
 	watch, resp, err := getWatch(d.Id(), m.(*resty.Client))
 	if err != nil {
 		if resp != nil && resp.StatusCode() == http.StatusNotFound {
-			log.Printf("[WARN] Xray watch (%s) not found, removing from state", d.Id())
+			tflog.Warn(ctx, fmt.Sprintf("Xray watch (%s) not found, removing from state", d.Id()))
 			d.SetId("")
 		}
 		return diag.FromErr(err)
 	}
-	packWatch(watch, d)
+	packWatch(ctx, watch, d)
 	return nil
 }
 
@@ -245,7 +340,7 @@ func resourceXrayWatchUpdate(ctx context.Context, d *schema.ResourceData, m inte
 	resp, err := m.(*resty.Client).R().SetBody(watch).Put("xray/api/v2/watches/" + d.Id())
 	if err != nil {
 		if resp != nil && resp.StatusCode() == http.StatusNotFound {
-			log.Printf("[WARN] Xray watch (%s) not found, removing from state", d.Id())
+			tflog.Warn(ctx, fmt.Sprintf("Xray watch (%s) not found, removing from state", d.Id()))
 			d.SetId("")
 		}
 		return diag.FromErr(err)
@@ -272,9 +367,18 @@ func watchResourceDiff(ctx context.Context, diff *schema.ResourceDiff, v interfa
 	for _, watchResource := range watchResources {
 		r := watchResource.(map[string]interface{})
 		resourceType := r["type"].(string)
+
+		// validate repo_type
 		repoType := r["repo_type"].(string)
 		if resourceType == "repository" && len(repoType) == 0 {
-			return fmt.Errorf("Attribute 'repo_type' not set when 'watch_resource.type' is set to 'repository'")
+			return fmt.Errorf("attribute 'repo_type' not set when 'watch_resource.type' is set to 'repository'")
+		}
+
+		// validate type with filter and ant_filter
+		antFilters := r["ant_filter"].(*schema.Set).List()
+		antPatternsResourceTypes := []string{"all-builds", "all-projects"}
+		if !slices.Contains(antPatternsResourceTypes, resourceType) && len(antFilters) > 0 {
+			return fmt.Errorf("attribute 'ant_filter' is set when 'watch_resource.type' is not set to 'all-builds' or 'all-projects'")
 		}
 	}
 	return nil

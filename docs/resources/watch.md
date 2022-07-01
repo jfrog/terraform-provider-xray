@@ -179,6 +179,10 @@ resource "xray_watch" "project" {
 - `description` (String) Description of the watch
 - `watch_recipients` (Set of String) A list of email addressed that will get emailed when a violation is triggered.
 
+### Read-Only
+
+- `id` (String) The ID of this resource.
+
 <a id="nestedblock--assigned_policy"></a>
 ### Nested Schema for `assigned_policy`
 
@@ -197,15 +201,25 @@ Required:
 
 Optional:
 
+- `ant_filter` (Block Set) `ant-patterns` filter for `all-builds` and `all-projects` watch_resource.type (see [below for nested schema](#nestedblock--watch_resource--ant_filter))
 - `bin_mgr_id` (String) The ID number of a binary manager resource. Default value is `default`. To check the list of available binary managers, use the API call `${JFROG_URL}/xray/api/v1/binMgr` as an admin user, use `binMgrId` value. More info [here](https://www.jfrog.com/confluence/display/JFROG/Xray+REST+API#XrayRESTAPI-GetBinaryManager)
-- `filter` (Block List) Nested argument describing filters to be applied. Defined below. (see [below for nested schema](#nestedblock--watch_resource--filter))
+- `filter` (Block Set) Filter for `regex` and `package-type` type (see [below for nested schema](#nestedblock--watch_resource--filter))
 - `name` (String) The name of the build, repository or project. Xray indexing must be enabled on the repository or build
 - `repo_type` (String) Type of repository. Only applicable when `type` is `repository`. Options: `local` or `remote`.
+
+<a id="nestedblock--watch_resource--ant_filter"></a>
+### Nested Schema for `watch_resource.ant_filter`
+
+Required:
+
+- `exclude_patterns` (List of String) List of Ant patterns.
+- `include_patterns` (List of String) List of Ant patterns.
+
 
 <a id="nestedblock--watch_resource--filter"></a>
 ### Nested Schema for `watch_resource.filter`
 
 Required:
 
-- `type` (String) The type of filter, such as `regex`, `package-type` or `ant-patterns`. `package-type` works only with `all-repos` type. `ant-patterns` works only with `project`
+- `type` (String) The type of filter, such as `regex` or `package-type`. `package-type` works only with `all-repos` repo_type.
 - `value` (String) The value of the filter, such as the text of the regex or name of the package type.

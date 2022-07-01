@@ -1,3 +1,9 @@
+## 1.2.0 (June 30, 2022). Tested on Artifactory 7.39.4 and Xray 3.51.3
+
+IMPROVEMENTS:
+
+* resource/xray_watch: Add support for Ant pattern filter for `all-builds` and `all-projects` watch resource type. PR: [#61](https://github.com/jfrog/terraform-provider-xray/pull/61). Issue: [#48](https://github.com/jfrog/terraform-provider-xray/issues/48)
+
 ## 1.1.8 (July 1, 2022). Tested on Artifactory 7.39.4 and Xray 3.51.3
 
 BUG FIXES:

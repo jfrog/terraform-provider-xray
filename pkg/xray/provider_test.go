@@ -82,7 +82,7 @@ func testAccCreateRepos(t *testing.T, repo, repoType string) {
 	if repoType == "remote" {
 		repository.Url = "http://tempurl.org"
 	}
-	
+
 	response, errRepo := restyClient.R().SetBody(repository).Put("artifactory/api/repositories/" + repo)
 	//Artifactory can return 400 for several reasons, this is why we are checking the response body
 	repoExists := strings.Contains(fmt.Sprint(errRepo), "Case insensitive repository key already exists")
@@ -124,8 +124,7 @@ func testAccCreateProject(t *testing.T, projectKey string, projectName string) {
 // Delete test projects after testing
 func testAccDeleteProject(t *testing.T, projectKey string) (*resty.Response, error) {
 	restyClient := getTestResty(t)
-	response, errProject := restyClient.R().Delete("/access/api/v1/projects/" + projectKey)
-	return response, errProject
+	return restyClient.R().Delete("/access/api/v1/projects/" + projectKey)
 }
 
 // Create a set of builds or a single build, add the build into the Xray indexing configuration, to be able to add it to
