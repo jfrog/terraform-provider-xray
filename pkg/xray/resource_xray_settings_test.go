@@ -2,6 +2,7 @@ package xray
 
 import (
 	"fmt"
+	"github.com/jfrog/terraform-provider-shared/test"
 	"regexp"
 	"testing"
 
@@ -9,7 +10,7 @@ import (
 )
 
 func TestDbSyncTime(t *testing.T) {
-	_, fqrn, resourceName := mkNames("db_sync-", "xray_settings")
+	_, fqrn, resourceName := test.MkNames("db_sync-", "xray_settings")
 	time := "18:45"
 
 	resource.Test(t, resource.TestCase{
@@ -25,7 +26,7 @@ func TestDbSyncTime(t *testing.T) {
 }
 
 func TestDbSyncTimeNegative(t *testing.T) {
-	_, _, resourceName := mkNames("db_sync-", "xray_settings")
+	_, _, resourceName := test.MkNames("db_sync-", "xray_settings")
 	var invalidTime = []string{"24:00", "24:55", "", "12:0", "string", "12pm", "9:00"}
 	for _, time := range invalidTime {
 		resource.Test(t, resource.TestCase{
