@@ -307,7 +307,7 @@ resource "xray_watch" "all-projects" {
   watch_recipients = ["test@email.com", "test1@email.com"]
 }
 
-resource "xray_watch" "all-projects" {
+resource "xray_watch" "all-projects-with-filters" {
   name        = "all-projects-watch-${random_id.randid.dec}"
   description = "Watch all the projects with Ant patterns filter"
   active      = true
