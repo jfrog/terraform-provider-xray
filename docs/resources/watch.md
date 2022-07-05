@@ -83,6 +83,34 @@ resource "xray_watch" "repository" {
   watch_recipients = ["test@email.com", "test1@email.com"]
 }
 
+resource "xray_watch" "all-builds-with-filters" {
+  name        = "build-watch"
+  description = "Watch all builds with Ant patterns filter"
+  active      = true
+
+  watch_resource {
+    type       = "all-builds"
+    bin_mgr_id = "default"
+
+    ant_filter {
+      exclude_patterns = ["a*", "b*"]
+      include_patterns = ["ab*"]
+    }
+  }
+
+  assigned_policy {
+    name = xray_security_policy.min_severity.name
+    type = "security"
+  }
+
+  assigned_policy {
+    name = xray_license_policy.cvss_range.name
+    type = "license"
+  }
+
+  watch_recipients = ["test@email.com", "test1@email.com"]
+}
+
 resource "xray_watch" "build" {
   name        = "build-watch"
   description = "Watch a single build or a list of builds"
@@ -121,6 +149,34 @@ resource "xray_watch" "all-projects" {
   watch_resource {
     type       = "all-projects"
     bin_mgr_id = "default"
+  }
+
+  assigned_policy {
+    name = xray_security_policy.min_severity.name
+    type = "security"
+  }
+
+  assigned_policy {
+    name = xray_license_policy.cvss_range.name
+    type = "license"
+  }
+
+  watch_recipients = ["test@email.com", "test1@email.com"]
+}
+
+resource "xray_watch" "all-projects-with-filters" {
+  name        = "projects-watch"
+  description = "Watch all the projects with Ant patterns filter"
+  active      = true
+
+  watch_resource {
+    type       = "all-projects"
+    bin_mgr_id = "default"
+
+    ant_filter {
+      exclude_patterns = ["a*", "b*"]
+      include_patterns = ["ab*"]
+    }
   }
 
   assigned_policy {
@@ -203,7 +259,7 @@ Optional:
 
 - `ant_filter` (Block Set) `ant-patterns` filter for `all-builds` and `all-projects` watch_resource.type (see [below for nested schema](#nestedblock--watch_resource--ant_filter))
 - `bin_mgr_id` (String) The ID number of a binary manager resource. Default value is `default`. To check the list of available binary managers, use the API call `${JFROG_URL}/xray/api/v1/binMgr` as an admin user, use `binMgrId` value. More info [here](https://www.jfrog.com/confluence/display/JFROG/Xray+REST+API#XrayRESTAPI-GetBinaryManager)
-- `filter` (Block Set) Filter for `regex` and `package-type` type (see [below for nested schema](#nestedblock--watch_resource--filter))
+- `filter` (Block Set) Filter for `regex` and `package-type` type. Works only with `all-repos` watch_resource.type. (see [below for nested schema](#nestedblock--watch_resource--filter))
 - `name` (String) The name of the build, repository or project. Xray indexing must be enabled on the repository or build
 - `repo_type` (String) Type of repository. Only applicable when `type` is `repository`. Options: `local` or `remote`.
 
@@ -221,5 +277,5 @@ Required:
 
 Required:
 
-- `type` (String) The type of filter, such as `regex` or `package-type`. `package-type` works only with `all-repos` repo_type.
+- `type` (String) The type of filter, such as `regex` or `package-type`
 - `value` (String) The value of the filter, such as the text of the regex or name of the package type.

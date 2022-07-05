@@ -70,13 +70,13 @@ func resourceXrayWatch() *schema.Resource {
 							Type:        schema.TypeSet,
 							Optional:    true,
 							MinItems:    1,
-							Description: "Filter for `regex` and `package-type` type",
+							Description: "Filter for `regex` and `package-type` type. Works only with `all-repos` watch_resource.type.",
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"type": {
 										Type:     schema.TypeString,
 										Required: true,
-										Description: "The type of filter, such as `regex` or `package-type`. `package-type` works only with `all-repos` repo_type.",
+										Description: "The type of filter, such as `regex` or `package-type`",
 										ValidateDiagFunc: validator.StringInSlice(true, "regex", "package-type"),
 									},
 									"value": {

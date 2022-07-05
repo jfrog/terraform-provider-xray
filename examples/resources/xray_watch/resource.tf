@@ -67,6 +67,34 @@ resource "xray_watch" "repository" {
   watch_recipients = ["test@email.com", "test1@email.com"]
 }
 
+resource "xray_watch" "all-builds-with-filters" {
+  name        = "build-watch"
+  description = "Watch all builds with Ant patterns filter"
+  active      = true
+
+  watch_resource {
+    type       = "all-builds"
+    bin_mgr_id = "default"
+
+    ant_filter {
+      exclude_patterns = ["a*", "b*"]
+      include_patterns = ["ab*"]
+    }
+  }
+
+  assigned_policy {
+    name = xray_security_policy.min_severity.name
+    type = "security"
+  }
+
+  assigned_policy {
+    name = xray_license_policy.cvss_range.name
+    type = "license"
+  }
+
+  watch_recipients = ["test@email.com", "test1@email.com"]
+}
+
 resource "xray_watch" "build" {
   name        = "build-watch"
   description = "Watch a single build or a list of builds"
@@ -105,6 +133,34 @@ resource "xray_watch" "all-projects" {
   watch_resource {
     type       = "all-projects"
     bin_mgr_id = "default"
+  }
+
+  assigned_policy {
+    name = xray_security_policy.min_severity.name
+    type = "security"
+  }
+
+  assigned_policy {
+    name = xray_license_policy.cvss_range.name
+    type = "license"
+  }
+
+  watch_recipients = ["test@email.com", "test1@email.com"]
+}
+
+resource "xray_watch" "all-projects-with-filters" {
+  name        = "projects-watch"
+  description = "Watch all the projects with Ant patterns filter"
+  active      = true
+
+  watch_resource {
+    type       = "all-projects"
+    bin_mgr_id = "default"
+
+    ant_filter {
+      exclude_patterns = ["a*", "b*"]
+      include_patterns = ["ab*"]
+    }
   }
 
   assigned_policy {
