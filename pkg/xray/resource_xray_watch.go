@@ -61,10 +61,10 @@ func resourceXrayWatch() *schema.Resource {
 							Description: "The name of the build, repository or project. Xray indexing must be enabled on the repository or build",
 						},
 						"repo_type": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:             schema.TypeString,
+							Optional:         true,
 							ValidateDiagFunc: validator.StringInSlice(true, "local", "remote"),
-							Description: "Type of repository. Only applicable when `type` is `repository`. Options: `local` or `remote`.",
+							Description:      "Type of repository. Only applicable when `type` is `repository`. Options: `local` or `remote`.",
 						},
 						"filter": {
 							Type:        schema.TypeSet,
@@ -74,9 +74,9 @@ func resourceXrayWatch() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"type": {
-										Type:     schema.TypeString,
-										Required: true,
-										Description: "The type of filter, such as `regex` or `package-type`. `package-type` works only with `all-repos` repo_type.",
+										Type:             schema.TypeString,
+										Required:         true,
+										Description:      "The type of filter, such as `regex` or `package-type`. `package-type` works only with `all-repos` repo_type.",
 										ValidateDiagFunc: validator.StringInSlice(true, "regex", "package-type"),
 									},
 									"value": {
@@ -96,8 +96,8 @@ func resourceXrayWatch() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"include_patterns": {
-										Type:       schema.TypeList,
-										Elem:       &schema.Schema{
+										Type: schema.TypeList,
+										Elem: &schema.Schema{
 											Type: schema.TypeString,
 										},
 										Required:    true,
@@ -105,8 +105,8 @@ func resourceXrayWatch() *schema.Resource {
 										Description: "List of Ant patterns.",
 									},
 									"exclude_patterns": {
-										Type:        schema.TypeList,
-										Elem:        &schema.Schema{
+										Type: schema.TypeList,
+										Elem: &schema.Schema{
 											Type: schema.TypeString,
 										},
 										Required:    true,

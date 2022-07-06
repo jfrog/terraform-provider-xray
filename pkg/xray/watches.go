@@ -140,7 +140,7 @@ func unpackFilters(d *schema.Set) []WatchFilter {
 	for _, raw := range tfFilters {
 		f := raw.(map[string]interface{})
 		filter := WatchFilter{
-			Type: f["type"].(string),
+			Type:  f["type"].(string),
 			Value: json.RawMessage(strconv.Quote(f["value"].(string))),
 		}
 		filters = append(filters, filter)
@@ -168,7 +168,7 @@ func unpackAntFilters(d *schema.Set) []WatchFilter {
 		)
 
 		filter := WatchFilter{
-			Type: "ant-patterns",
+			Type:  "ant-patterns",
 			Value: json.RawMessage(filterJsonString),
 		}
 		filters = append(filters, filter)
@@ -240,15 +240,15 @@ func packAntFilter(filter WatchFilter) (map[string]interface{}, error) {
 
 var packFilterMap = map[string]map[string]interface{}{
 	"regex": map[string]interface{}{
-		"func": packStringFilter,
+		"func":          packStringFilter,
 		"attributeName": "filter",
 	},
 	"package-type": map[string]interface{}{
-		"func": packStringFilter,
+		"func":          packStringFilter,
 		"attributeName": "filter",
 	},
 	"ant-patterns": map[string]interface{}{
-		"func": packAntFilter,
+		"func":          packAntFilter,
 		"attributeName": "ant_filter",
 	},
 }
@@ -264,7 +264,7 @@ func packFilters(filters []WatchFilter, resources map[string]interface{}) (map[s
 			return nil, []error{fmt.Errorf("invalid filter.Type: %s", filter.Type)}
 		}
 
-		packedFilter, err := packFilterAttribute["func"].(func(WatchFilter) (map[string]interface {}, error))(filter)
+		packedFilter, err := packFilterAttribute["func"].(func(WatchFilter) (map[string]interface{}, error))(filter)
 		if err != nil {
 			errors = append(errors, err)
 		} else {
