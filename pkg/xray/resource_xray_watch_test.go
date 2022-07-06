@@ -80,11 +80,11 @@ func TestAccWatch_allReposMultiplePolicies(t *testing.T) {
 					resource.TestCheckResourceAttr(fqrn, "description", testData["description"]),
 					resource.TestCheckResourceAttr(fqrn, "watch_resource.0.type", testData["watch_type"]),
 					resource.TestCheckTypeSetElemNestedAttrs(fqrn, "watch_resource.0.filter.*", map[string]string{
-						"type": "regex",
+						"type":  "regex",
 						"value": ".*",
 					}),
 					resource.TestCheckTypeSetElemNestedAttrs(fqrn, "watch_resource.0.filter.*", map[string]string{
-						"type": "package-type",
+						"type":  "package-type",
 						"value": "Docker",
 					}),
 					resource.TestCheckResourceAttr(fqrn, "assigned_policy.0.name", testData["policy_name_0"]),
@@ -124,10 +124,10 @@ func makeSingleRepositoryTestCase(repoType string, t *testing.T) (*testing.T, re
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, singleRepositoryWatchTemplate, testData),
-				Check:  resource.ComposeTestCheckFunc(
+				Check: resource.ComposeTestCheckFunc(
 					verifyXrayWatch(fqrn, testData),
 					resource.TestCheckTypeSetElemNestedAttrs(fqrn, "watch_resource.*.filter.*", map[string]string{
-						"type": "regex",
+						"type":  "regex",
 						"value": ".*",
 					}),
 				),
@@ -288,7 +288,7 @@ func TestAccWatch_allBuilds(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, allBuildsWatchTemplate, testData),
-				Check:  resource.ComposeTestCheckFunc(
+				Check: resource.ComposeTestCheckFunc(
 					verifyXrayWatch(fqrn, testData),
 					resource.TestCheckTypeSetElemAttr(fqrn, "watch_resource.*.ant_filter.*.exclude_patterns.*", "a*"),
 					resource.TestCheckTypeSetElemAttr(fqrn, "watch_resource.*.ant_filter.*.exclude_patterns.*", "b*"),
@@ -343,7 +343,7 @@ func TestAccWatch_allProjects(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, allProjectsWatchTemplate, testData),
-				Check:  resource.ComposeTestCheckFunc(
+				Check: resource.ComposeTestCheckFunc(
 					verifyXrayWatch(fqrn, testData),
 					resource.TestCheckTypeSetElemAttr(fqrn, "watch_resource.*.ant_filter.*.exclude_patterns.*", "a*"),
 					resource.TestCheckTypeSetElemAttr(fqrn, "watch_resource.*.ant_filter.*.exclude_patterns.*", "b*"),
@@ -413,10 +413,11 @@ func TestAccWatch_invalidProjectFilter(t *testing.T) {
 		PreCheck: func() {
 			testAccPreCheck(t)
 		},
-		CheckDestroy: verifyDeleted(fqrn, testCheckWatch),
+		CheckDestroy:      verifyDeleted(fqrn, testCheckWatch),
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
+
 				Config: util.ExecuteTemplate(fqrn, invalidProjectWatchFilterTemplate, testData),
 				ExpectError: regexp.MustCompile(`attribute 'ant_filter' is set when 'watch_resource\.type' is not set to 'all-builds' or 'all-projects'`),
 			},
