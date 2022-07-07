@@ -112,7 +112,9 @@ func unpackRules(configured []interface{}, policyType string) (policyRules []Pol
 
 	return rules, err
 }
-
+func BoolPtr(v bool) *bool {
+	return &v
+}
 func unpackCriteria(d *schema.Set, policyType string) (*PolicyRuleCriteria, error) {
 	tfCriteria := d.List()
 	if len(tfCriteria) == 0 {
@@ -152,7 +154,7 @@ func unpackCriteria(d *schema.Set, policyType string) (*PolicyRuleCriteria, erro
 	}
 	return criteria, nil
 }
-
+func Float64Ptr(v float64) *float64 { return &v }
 func unpackCVSSRange(l []interface{}) *PolicyCVSSRange {
 	if len(l) == 0 {
 		return nil

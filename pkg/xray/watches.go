@@ -239,15 +239,16 @@ func packAntFilter(filter WatchFilter) (map[string]interface{}, error) {
 }
 
 var packFilterMap = map[string]map[string]interface{}{
-	"regex": map[string]interface{}{
+
+	"regex": {
 		"func":          packStringFilter,
 		"attributeName": "filter",
 	},
-	"package-type": map[string]interface{}{
+	"package-type": {
 		"func":          packStringFilter,
 		"attributeName": "filter",
 	},
-	"ant-patterns": map[string]interface{}{
+	"ant-patterns": {
 		"func":          packAntFilter,
 		"attributeName": "ant_filter",
 	},
@@ -350,7 +351,7 @@ func resourceXrayWatchUpdate(ctx context.Context, d *schema.ResourceData, m inte
 	return resourceXrayWatchRead(ctx, d, m)
 }
 
-func resourceXrayWatchDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceXrayWatchDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	resp, err := m.(*resty.Client).R().Delete("xray/api/v2/watches/" + d.Id())
 	if err != nil && resp.StatusCode() == http.StatusNotFound {
 		d.SetId("")
@@ -359,7 +360,7 @@ func resourceXrayWatchDelete(ctx context.Context, d *schema.ResourceData, m inte
 	return nil
 }
 
-func watchResourceDiff(ctx context.Context, diff *schema.ResourceDiff, v interface{}) error {
+func watchResourceDiff(_ context.Context, diff *schema.ResourceDiff, v interface{}) error {
 	watchResources := diff.Get("watch_resource").(*schema.Set).List()
 	if len(watchResources) == 0 {
 		return nil

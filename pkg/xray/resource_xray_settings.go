@@ -53,7 +53,7 @@ func packDBSyncTime(dbSyncTime DbSyncDailyUpdatesTime, d *schema.ResourceData) d
 	return nil
 }
 
-func resourceXrayDbSyncTimeRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceXrayDbSyncTimeRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	dbSyncTime := DbSyncDailyUpdatesTime{}
 	resp, err := m.(*resty.Client).R().SetResult(&dbSyncTime).Get("xray/api/v1/configuration/dbsync/time")
 	if err != nil {
@@ -78,7 +78,7 @@ func resourceXrayDbSyncTimeUpdate(ctx context.Context, d *schema.ResourceData, m
 
 // No delete functionality provided by API for the DB sync call.
 // Delete function will remove the object from the Terraform state
-func resourceXrayDbSyncTimeDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceXrayDbSyncTimeDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	d.SetId("")
 	return nil
 }

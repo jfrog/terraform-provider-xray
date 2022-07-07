@@ -2,6 +2,8 @@ package xray
 
 import (
 	"fmt"
+	"github.com/jfrog/terraform-provider-shared/test"
+	"github.com/jfrog/terraform-provider-shared/util"
 	"regexp"
 	"testing"
 
@@ -36,10 +38,10 @@ var testDataLicense = map[string]string{
 // with specified cvss_range. The function unpackLicenseCriteria will ignore all the
 // fields except of "allow_unknown", "banned_licenses" and "allowed_licenses" if the Policy type is "license"
 func TestAccLicensePolicy_badLicenseCriteria(t *testing.T) {
-	_, fqrn, resourceName := mkNames("policy-", "xray_license_policy")
-	policyName := fmt.Sprintf("terraform-license-policy-1-%d", randomInt())
+	_, fqrn, resourceName := test.MkNames("policy-", "xray_license_policy")
+	policyName := fmt.Sprintf("terraform-license-policy-1-%d", test.RandomInt())
 	policyDesc := "policy created by xray acceptance tests"
-	ruleName := fmt.Sprintf("test-license-rule-1-%d", randomInt())
+	ruleName := fmt.Sprintf("test-license-rule-1-%d", test.RandomInt())
 	rangeTo := 5
 
 	resource.Test(t, resource.TestCase{
@@ -57,13 +59,12 @@ func TestAccLicensePolicy_badLicenseCriteria(t *testing.T) {
 
 // This test will try to create a license policy with failure grace period set, but without fail build turned on
 func TestAccLicensePolicy_badGracePeriod(t *testing.T) {
-	_, fqrn, resourceName := mkNames("policy-", "xray_license_policy")
-	testData := make(map[string]string)
-	copyStringMap(testDataLicense, testData)
+	_, fqrn, resourceName := test.MkNames("policy-", "xray_license_policy")
+	testData := util.MergeMaps(testDataLicense)
 
 	testData["resource_name"] = resourceName
-	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-2-%d", randomInt())
-	testData["rule_name"] = fmt.Sprintf("test-license-rule-2-%d", randomInt())
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-2-%d", test.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-license-rule-2-%d", test.RandomInt())
 	testData["fail_build"] = "false"
 	testData["grace_period_days"] = "5"
 
@@ -73,7 +74,7 @@ func TestAccLicensePolicy_badGracePeriod(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config:      executeTemplate(fqrn, licensePolicyTemplate, testData),
+				Config:      util.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),
 				ExpectError: regexp.MustCompile("Found Invalid Policy"),
 			},
 		},
@@ -81,13 +82,12 @@ func TestAccLicensePolicy_badGracePeriod(t *testing.T) {
 }
 
 func TestAccLicensePolicy_createAllowedLic(t *testing.T) {
-	_, fqrn, resourceName := mkNames("policy-", "xray_license_policy")
-	testData := make(map[string]string)
-	copyStringMap(testDataLicense, testData)
+	_, fqrn, resourceName := test.MkNames("policy-", "xray_license_policy")
+	testData := util.MergeMaps(testDataLicense)
 
 	testData["resource_name"] = resourceName
-	testData["policy_name"] = fmt.Sprintf("terraform-license-policy-3-%d", randomInt())
-	testData["rule_name"] = fmt.Sprintf("test-license-rule-3-%d", randomInt())
+	testData["policy_name"] = fmt.Sprintf("terraform-license-policy-3-%d", test.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-license-rule-3-%d", test.RandomInt())
 	testData["multi_license_permissive"] = "true"
 	testData["allowedOrBanned"] = "allowed_licenses"
 
@@ -97,7 +97,7 @@ func TestAccLicensePolicy_createAllowedLic(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: executeTemplate(fqrn, licensePolicyTemplate, testData),
+				Config: util.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),
 				Check:  verifyLicensePolicy(fqrn, testData, testData["allowedOrBanned"]),
 			},
 		},
@@ -105,13 +105,12 @@ func TestAccLicensePolicy_createAllowedLic(t *testing.T) {
 }
 
 func TestAccLicensePolicy_createBannedLic(t *testing.T) {
-	_, fqrn, resourceName := mkNames("policy-", "xray_license_policy")
-	testData := make(map[string]string)
-	copyStringMap(testDataLicense, testData)
+	_, fqrn, resourceName := test.MkNames("policy-", "xray_license_policy")
+	testData := util.MergeMaps(testDataLicense)
 
 	testData["resource_name"] = resourceName
-	testData["policy_name"] = fmt.Sprintf("terraform-license-policy-4-%d", randomInt())
-	testData["rule_name"] = fmt.Sprintf("test-license-rule-4-%d", randomInt())
+	testData["policy_name"] = fmt.Sprintf("terraform-license-policy-4-%d", test.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-license-rule-4-%d", test.RandomInt())
 	testData["allowedOrBanned"] = "banned_licenses"
 
 	resource.Test(t, resource.TestCase{
@@ -120,7 +119,7 @@ func TestAccLicensePolicy_createBannedLic(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: executeTemplate(fqrn, licensePolicyTemplate, testData),
+				Config: util.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),
 				Check:  verifyLicensePolicy(fqrn, testData, testData["allowedOrBanned"]),
 			},
 		},
@@ -128,13 +127,12 @@ func TestAccLicensePolicy_createBannedLic(t *testing.T) {
 }
 
 func TestAccLicensePolicy_createMultiLicensePermissiveFalse(t *testing.T) {
-	_, fqrn, resourceName := mkNames("policy-", "xray_license_policy")
-	testData := make(map[string]string)
-	copyStringMap(testDataLicense, testData)
+	_, fqrn, resourceName := test.MkNames("policy-", "xray_license_policy")
+	testData := util.MergeMaps(testDataLicense)
 
 	testData["resource_name"] = resourceName
-	testData["policy_name"] = fmt.Sprintf("terraform-license-policy-5-%d", randomInt())
-	testData["rule_name"] = fmt.Sprintf("test-license-rule-5-%d", randomInt())
+	testData["policy_name"] = fmt.Sprintf("terraform-license-policy-5-%d", test.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-license-rule-5-%d", test.RandomInt())
 	testData["allowedOrBanned"] = "banned_licenses"
 
 	resource.Test(t, resource.TestCase{
@@ -143,7 +141,7 @@ func TestAccLicensePolicy_createMultiLicensePermissiveFalse(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: executeTemplate(fqrn, licensePolicyTemplate, testData),
+				Config: util.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),
 				Check:  verifyLicensePolicy(fqrn, testData, testData["allowedOrBanned"]),
 			},
 		},
@@ -151,13 +149,12 @@ func TestAccLicensePolicy_createMultiLicensePermissiveFalse(t *testing.T) {
 }
 
 func TestAccLicensePolicy_createBlockFalse(t *testing.T) {
-	_, fqrn, resourceName := mkNames("policy-", "xray_license_policy")
-	testData := make(map[string]string)
-	copyStringMap(testDataLicense, testData)
+	_, fqrn, resourceName := test.MkNames("policy-", "xray_license_policy")
+	testData := util.MergeMaps(testDataLicense)
 
 	testData["resource_name"] = resourceName
-	testData["policy_name"] = fmt.Sprintf("terraform-license-policy-6-%d", randomInt())
-	testData["rule_name"] = fmt.Sprintf("test-license-rule-6-%d", randomInt())
+	testData["policy_name"] = fmt.Sprintf("terraform-license-policy-6-%d", test.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-license-rule-6-%d", test.RandomInt())
 	testData["block_unscanned"] = "true"
 	testData["block_active"] = "true"
 	testData["allowedOrBanned"] = "banned_licenses"
@@ -168,7 +165,7 @@ func TestAccLicensePolicy_createBlockFalse(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: executeTemplate(fqrn, licensePolicyTemplate, testData),
+				Config: util.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),
 				Check:  verifyLicensePolicy(fqrn, testData, testData["allowedOrBanned"]),
 			},
 		},
