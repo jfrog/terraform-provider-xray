@@ -1,3 +1,9 @@
+## 1.3.0 (July 6, 2022). Tested on Artifactory 7.39.4 and Xray 3.51.3
+
+NEW FEATURE:
+
+* resource/xray_workers_count: Add support to set Xray's workers count. PR: [#68](https://github.com/jfrog/terraform-provider-xray/pull/68). Project provider issue: [#56](https://github.com/jfrog/terraform-provider-project/issues/56)
+
 ## 1.2.1 (July 6, 2022). Tested on Artifactory 7.39.4 and Xray 3.51.3
 
 IMPROVEMENTS:

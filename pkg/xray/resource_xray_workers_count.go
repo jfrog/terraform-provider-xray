@@ -16,7 +16,7 @@ func resourceXrayWorkersCount() *schema.Resource {
 		"new_content": {
 			Type:        schema.TypeInt,
 			Required:    true,
-			Description: "Type of resource to be watched. Options: `all-repos`, `repository`, `all-builds`, `build`, `project`, `all-projects`.",
+			Description: "Number of workers for new content",
 		},
 	}
 
@@ -26,7 +26,7 @@ func resourceXrayWorkersCount() *schema.Resource {
 			"existing_content": {
 				Type:        schema.TypeInt,
 				Required:    true,
-				Description: "The ID number of a binary manager resource. Default value is `default`. To check the list of available binary managers, use the API call `${JFROG_URL}/xray/api/v1/binMgr` as an admin user, use `binMgrId` value. More info [here](https://www.jfrog.com/confluence/display/JFROG/Xray+REST+API#XrayRESTAPI-GetBinaryManager)",
+				Description: "Number of workers for existing content",
 			},
 		},
 	)
@@ -37,7 +37,7 @@ func resourceXrayWorkersCount() *schema.Resource {
 			Required:    true,
 			MinItems:    1,
 			MaxItems:    1,
-			Description: "",
+			Description: "The number of workers managing indexing of artifacts.",
 			Elem: &schema.Resource{
 				Schema: newExistingContentSchema,
 			},
@@ -47,17 +47,7 @@ func resourceXrayWorkersCount() *schema.Resource {
 			Required:    true,
 			MinItems:    1,
 			MaxItems:    1,
-			Description: "",
-			Elem: &schema.Resource{
-				Schema: newExistingContentSchema,
-			},
-		},
-		"analysis": {
-			Type:        schema.TypeSet,
-			Required:    true,
-			MinItems:    1,
-			MaxItems:    1,
-			Description: "",
+			Description: "The number of workers managing persistent storage needed to build the artifact relationship graph.",
 			Elem: &schema.Resource{
 				Schema: newExistingContentSchema,
 			},
@@ -67,7 +57,17 @@ func resourceXrayWorkersCount() *schema.Resource {
 			Required:    true,
 			MinItems:    1,
 			MaxItems:    1,
-			Description: "",
+			Description: "The number of workers managing alerts.",
+			Elem: &schema.Resource{
+				Schema: newExistingContentSchema,
+			},
+		},
+		"analysis": {
+			Type:        schema.TypeSet,
+			Required:    true,
+			MinItems:    1,
+			MaxItems:    1,
+			Description: "The number of workers involved in scanning analysis.",
 			Elem: &schema.Resource{
 				Schema: newExistingContentSchema,
 			},
@@ -77,7 +77,7 @@ func resourceXrayWorkersCount() *schema.Resource {
 			Required:    true,
 			MinItems:    1,
 			MaxItems:    1,
-			Description: "",
+			Description: "The number of workers involved in Impact Analysis to determine how a component with a reported issue impacts others in the system.",
 			Elem: &schema.Resource{
 				Schema: newContentSchema,
 			},
@@ -87,7 +87,7 @@ func resourceXrayWorkersCount() *schema.Resource {
 			Required:    true,
 			MinItems:    1,
 			MaxItems:    1,
-			Description: "",
+			Description: "The number of workers managing notifications.",
 			Elem: &schema.Resource{
 				Schema: newContentSchema,
 			},
