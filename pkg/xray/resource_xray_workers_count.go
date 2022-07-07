@@ -103,6 +103,33 @@ func resourceXrayWorkersCount() *schema.Resource {
 		Existing int `json:"existing_content"`
 	}
 
+	/*
+		API returns the follow JSON structure:
+		{
+		    "index": {
+		        "new_content": 4,
+		        "existing_content": 2
+		    },
+		    "persist": {
+		        "new_content": 4,
+		        "existing_content": 2
+		    },
+		    "analysis": {
+		        "new_content": 4,
+		        "existing_content": 2
+		    },
+		    "alert": {
+		        "new_content": 4,
+		        "existing_content": 2
+		    },
+		    "impact_analysis": {
+		        "new_content": 2
+		    },
+		    "notification": {
+		        "new_content": 2
+		    }
+		}
+	*/
 	type WorkersCount struct {
 		Index          NewExistingContent `json:"index"`
 		Persist        NewExistingContent `json:"persist"`
@@ -112,36 +139,36 @@ func resourceXrayWorkersCount() *schema.Resource {
 		Notification   NewContent         `json:"notification"`
 	}
 
-	var packNewExistingContent = func(d *schema.ResourceData, attr string, newExistingContent NewExistingContent) []error {
-		setValue := util.MkLens(d)
-
-		resource := workersCountSchema[attr].Elem.(*schema.Resource)
-		content := map[string]interface{}{
-			"new_content":      newExistingContent.New,
-			"existing_content": newExistingContent.Existing,
+	var newHclContentConstructor = func(src interface{}) map[string]interface{} {
+		return map[string]interface{}{
+			"new_content": src.(NewContent).New,
 		}
-		return setValue(attr, schema.NewSet(schema.HashResource(resource), []interface{}{content}))
 	}
 
-	var packNewContent = func(d *schema.ResourceData, attr string, newContent NewContent) []error {
+	var newExistingHclContentConstructor = func(src interface{}) map[string]interface{} {
+		return map[string]interface{}{
+			"new_content":      src.(NewExistingContent).New,
+			"existing_content": src.(NewExistingContent).Existing,
+		}
+	}
+
+	var packContent = func(d *schema.ResourceData, attr string, src interface{}, hclContentConstructor func(src interface{}) map[string]interface{}) []error {
 		setValue := util.MkLens(d)
 
 		resource := workersCountSchema[attr].Elem.(*schema.Resource)
-		content := map[string]interface{}{
-			"new_content": newContent.New,
-		}
+		content := hclContentConstructor(src)
 		return setValue(attr, schema.NewSet(schema.HashResource(resource), []interface{}{content}))
 	}
 
 	var packWorkersCount = func(d *schema.ResourceData, workersCount WorkersCount) diag.Diagnostics {
 		var errors []error
 
-		errors = append(errors, packNewExistingContent(d, "index", workersCount.Index)...)
-		errors = append(errors, packNewExistingContent(d, "persist", workersCount.Persist)...)
-		errors = append(errors, packNewExistingContent(d, "analysis", workersCount.Analysis)...)
-		errors = append(errors, packNewExistingContent(d, "alert", workersCount.Alert)...)
-		errors = append(errors, packNewContent(d, "impact_analysis", workersCount.ImpactAnalysis)...)
-		errors = append(errors, packNewContent(d, "notification", workersCount.Notification)...)
+		errors = append(errors, packContent(d, "index", workersCount.Index, newExistingHclContentConstructor)...)
+		errors = append(errors, packContent(d, "persist", workersCount.Persist, newExistingHclContentConstructor)...)
+		errors = append(errors, packContent(d, "analysis", workersCount.Analysis, newExistingHclContentConstructor)...)
+		errors = append(errors, packContent(d, "alert", workersCount.Alert, newExistingHclContentConstructor)...)
+		errors = append(errors, packContent(d, "impact_analysis", workersCount.ImpactAnalysis, newHclContentConstructor)...)
+		errors = append(errors, packContent(d, "notification", workersCount.Notification, newHclContentConstructor)...)
 
 		if len(errors) > 0 {
 			return diag.Errorf("failed to pack workers count %q", errors)
@@ -150,46 +177,38 @@ func resourceXrayWorkersCount() *schema.Resource {
 		return nil
 	}
 
-	var unpackNewContent = func(d *schema.ResourceData, attr string) NewContent {
-		var content NewContent
+	var unpackContent = func(d *schema.ResourceData, attr string, constructor func(map[string]interface{}) interface{}) interface{} {
+		var content interface{}
 		if v, ok := d.GetOk(attr); ok {
 			s := v.(*schema.Set).List()[0].(map[string]interface{})
-
-			content = NewContent{
-				New: s["new_content"].(int),
-			}
+			content = constructor(s)
 		}
 
 		return content
 	}
 
-	var unpackNewExistingContent = func(d *schema.ResourceData, attr string) NewExistingContent {
-		var content NewExistingContent
-		if v, ok := d.GetOk(attr); ok {
-			s := v.(*schema.Set).List()[0].(map[string]interface{})
-
-			content = NewExistingContent{
-				NewContent: NewContent{
-					New: s["new_content"].(int),
-				},
-				Existing: s["existing_content"].(int),
-			}
+	var newContentConstructor = func(s map[string]interface{}) interface{} {
+		return NewContent{
+			New: s["new_content"].(int),
 		}
+	}
 
-		return content
+	var newExistingContentConstructor = func(s map[string]interface{}) interface{} {
+		return NewExistingContent{
+			NewContent: newContentConstructor(s).(NewContent),
+			Existing:   s["existing_content"].(int),
+		}
 	}
 
 	var unpackWorkersCount = func(d *schema.ResourceData) WorkersCount {
-		workersCount := WorkersCount{}
-
-		workersCount.Index = unpackNewExistingContent(d, "index")
-		workersCount.Persist = unpackNewExistingContent(d, "persist")
-		workersCount.Analysis = unpackNewExistingContent(d, "analysis")
-		workersCount.Alert = unpackNewExistingContent(d, "alert")
-		workersCount.ImpactAnalysis = unpackNewContent(d, "impact_analysis")
-		workersCount.Notification = unpackNewContent(d, "notification")
-
-		return workersCount
+		return WorkersCount{
+			Index:          unpackContent(d, "index", newExistingContentConstructor).(NewExistingContent),
+			Persist:        unpackContent(d, "persist", newExistingContentConstructor).(NewExistingContent),
+			Analysis:       unpackContent(d, "analysis", newExistingContentConstructor).(NewExistingContent),
+			Alert:          unpackContent(d, "alert", newExistingContentConstructor).(NewExistingContent),
+			ImpactAnalysis: unpackContent(d, "impact_analysis", newContentConstructor).(NewContent),
+			Notification:   unpackContent(d, "notification", newContentConstructor).(NewContent),
+		}
 	}
 
 	var resourceXrayWorkersCountCreate = func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -225,7 +244,10 @@ func resourceXrayWorkersCount() *schema.Resource {
 			return diag.FromErr(err)
 		}
 
-		resourceXrayWorkersCountRead(ctx, d, m)
+		diagnostic := resourceXrayWorkersCountRead(ctx, d, m)
+		if diagnostic != nil {
+			return diagnostic
+		}
 
 		return diag.Diagnostics{{
 			Severity: diag.Warning,

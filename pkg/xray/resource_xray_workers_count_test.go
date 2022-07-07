@@ -42,7 +42,7 @@ func TestAccWorkersCount_create(t *testing.T) {
 	`, params)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
+		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
