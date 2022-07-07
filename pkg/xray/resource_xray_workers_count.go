@@ -192,6 +192,14 @@ func resourceXrayWorkersCount() *schema.Resource {
 		return workersCount
 	}
 
+	var resourceXrayWorkersCountCreate = func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+		return diag.Diagnostics{{
+			Severity: diag.Error,
+			Summary:  "Workers Count resource does not support create",
+			Detail:   "Workers Count can only be updated. To manage this resource in Terraform, use `terraform import` to import it into the state.",
+		}}
+	}
+
 	var resourceXrayWorkersCountRead = func(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 		workersCount := WorkersCount{}
 		resp, err := m.(*resty.Client).R().
@@ -223,14 +231,6 @@ func resourceXrayWorkersCount() *schema.Resource {
 			Severity: diag.Warning,
 			Summary:  "Xray must be restarted",
 			Detail:   "You must restart Xray to apply the changes.",
-		}}
-	}
-
-	var resourceXrayWorkersCountCreate = func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-		return diag.Diagnostics{{
-			Severity: diag.Error,
-			Summary:  "Workers Count resource does not support create",
-			Detail:   "Workers Count can only be updated. To manage this resource in Terraform, use `terraform import` to import it into the state.",
 		}}
 	}
 
