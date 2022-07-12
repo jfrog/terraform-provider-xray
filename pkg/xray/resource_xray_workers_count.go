@@ -103,33 +103,31 @@ func resourceXrayWorkersCount() *schema.Resource {
 		Existing int `json:"existing_content"`
 	}
 
-	/*
-		API returns the follow JSON structure:
-		{
-		    "index": {
-		        "new_content": 4,
-		        "existing_content": 2
-		    },
-		    "persist": {
-		        "new_content": 4,
-		        "existing_content": 2
-		    },
-		    "analysis": {
-		        "new_content": 4,
-		        "existing_content": 2
-		    },
-		    "alert": {
-		        "new_content": 4,
-		        "existing_content": 2
-		    },
-		    "impact_analysis": {
-		        "new_content": 2
-		    },
-		    "notification": {
-		        "new_content": 2
-		    }
-		}
-	*/
+	// WorkersCount uses Xray API which returns the follow JSON structure:
+	// {
+	//     "index": {
+	//         "new_content": 4,
+	//         "existing_content": 2
+	//     },
+	//     "persist": {
+	//         "new_content": 4,
+	//         "existing_content": 2
+	//     },
+	//     "analysis": {
+	//         "new_content": 4,
+	//         "existing_content": 2
+	//     },
+	//     "alert": {
+	//         "new_content": 4,
+	//         "existing_content": 2
+	//     },
+	//     "impact_analysis": {
+	//         "new_content": 2
+	//     },
+	//     "notification": {
+	//         "new_content": 2
+	//     }
+	// }
 	type WorkersCount struct {
 		Index          NewExistingContent `json:"index"`
 		Persist        NewExistingContent `json:"persist"`
@@ -161,14 +159,12 @@ func resourceXrayWorkersCount() *schema.Resource {
 	}
 
 	var packWorkersCount = func(d *schema.ResourceData, workersCount WorkersCount) diag.Diagnostics {
-		var errors []error
-
-		errors = append(errors, packContent(d, "index", workersCount.Index, newExistingHclContentConstructor)...)
-		errors = append(errors, packContent(d, "persist", workersCount.Persist, newExistingHclContentConstructor)...)
-		errors = append(errors, packContent(d, "analysis", workersCount.Analysis, newExistingHclContentConstructor)...)
-		errors = append(errors, packContent(d, "alert", workersCount.Alert, newExistingHclContentConstructor)...)
-		errors = append(errors, packContent(d, "impact_analysis", workersCount.ImpactAnalysis, newHclContentConstructor)...)
-		errors = append(errors, packContent(d, "notification", workersCount.Notification, newHclContentConstructor)...)
+		packContent(d, "index", workersCount.Index, newExistingHclContentConstructor)
+		packContent(d, "persist", workersCount.Persist, newExistingHclContentConstructor)
+		packContent(d, "analysis", workersCount.Analysis, newExistingHclContentConstructor)
+		packContent(d, "alert", workersCount.Alert, newExistingHclContentConstructor)
+		packContent(d, "impact_analysis", workersCount.ImpactAnalysis, newHclContentConstructor)
+		errors := packContent(d, "notification", workersCount.Notification, newHclContentConstructor)
 
 		if len(errors) > 0 {
 			return diag.Errorf("failed to pack workers count %q", errors)
@@ -180,6 +176,9 @@ func resourceXrayWorkersCount() *schema.Resource {
 	var unpackContent = func(d *schema.ResourceData, attr string, constructor func(map[string]interface{}) interface{}) interface{} {
 		var content interface{}
 		if v, ok := d.GetOk(attr); ok {
+			// v.(*schema.Set).List() returns []interface{}
+			// Since we limit this attribute to minItems = 1, and maxItems = 1
+			// we can pick the first item and convert it to map[string]interface{}.
 			s := v.(*schema.Set).List()[0].(map[string]interface{})
 			content = constructor(s)
 		}
