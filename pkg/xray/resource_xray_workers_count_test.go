@@ -1,0 +1,54 @@
+package xray
+
+import (
+	"regexp"
+	"testing"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/jfrog/terraform-provider-shared/util"
+)
+
+func TestAccWorkersCount_create(t *testing.T) {
+	_, _, resourceName := mkNames("workers-count-", "xray_workers_count")
+
+	params := map[string]interface{}{
+		"workersCountName": resourceName,
+	}
+	workersCountConfig := util.ExecuteTemplate("TestAccWorkersCount_create", `
+		resource "xray_workers_count" "{{ .workersCountName }}" {
+		  index {
+		    new_content      = 4
+		    existing_content = 2
+		  }
+		  persist {
+		    new_content      = 4
+		    existing_content = 2
+		  }
+		  analysis {
+		    new_content      = 4
+		    existing_content = 2
+		  }
+		  alert {
+		    new_content      = 4
+		    existing_content = 2
+		  }
+		  impact_analysis {
+		    new_content = 2
+		  }
+		  notification {
+		    new_content = 2
+		  }
+		}
+	`, params)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config:      workersCountConfig,
+				ExpectError: regexp.MustCompile(`Workers Count resource does not support create`),
+			},
+		},
+	})
+}
