@@ -9,7 +9,162 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/jfrog/terraform-provider-shared/util"
+	"github.com/jfrog/terraform-provider-shared/validator"
 )
+
+var commonActionsSchema = map[string]*schema.Schema{
+	"webhooks": {
+		Type:        schema.TypeSet,
+		Optional:    true,
+		Description: "A list of Xray-configured webhook URLs to be invoked if a violation is triggered.",
+		Elem: &schema.Schema{
+			Type: schema.TypeString,
+		},
+	},
+	"mails": {
+		Type:        schema.TypeSet,
+		Optional:    true,
+		Description: "A list of email addressed that will get emailed when a violation is triggered.",
+		Elem: &schema.Schema{
+			Type:             schema.TypeString,
+			ValidateDiagFunc: validator.IsEmail,
+		},
+	},
+	"block_download": {
+		Type:        schema.TypeSet,
+		Required:    true,
+		MaxItems:    1,
+		Description: "Block download of artifacts that meet the Artifact Filter and Severity Filter specifications for this watch",
+		Elem: &schema.Resource{
+			Schema: map[string]*schema.Schema{
+				"unscanned": {
+					Type:        schema.TypeBool,
+					Required:    true,
+					Description: "Whether or not to block download of artifacts that meet the artifact `filters` for the associated `xray_watch` resource but have not been scanned yet.",
+				},
+				"active": {
+					Type:        schema.TypeBool,
+					Required:    true,
+					Description: "Whether or not to block download of artifacts that meet the artifact and severity `filters` for the associated `xray_watch` resource.",
+				},
+			},
+		},
+	},
+	"block_release_bundle_distribution": {
+		Type:        schema.TypeBool,
+		Optional:    true,
+		Default:     true,
+		Description: "Blocks Release Bundle distribution to Edge nodes if a violation is found.",
+	},
+	"fail_build": {
+		Type:        schema.TypeBool,
+		Optional:    true,
+		Default:     true,
+		Description: "Whether or not the related CI build should be marked as failed if a violation is triggered. This option is only available when the policy is applied to an `xray_watch` resource with a `type` of `builds`.",
+	},
+	"notify_deployer": {
+		Type:        schema.TypeBool,
+		Optional:    true,
+		Default:     false,
+		Description: "Sends an email message to component deployer with details about the generated Violations.",
+	},
+	"notify_watch_recipients": {
+		Type:        schema.TypeBool,
+		Optional:    true,
+		Default:     false,
+		Description: "Sends an email message to all configured recipients inside a specific watch with details about the generated Violations.",
+	},
+	"create_ticket_enabled": {
+		Type:        schema.TypeBool,
+		Optional:    true,
+		Default:     false,
+		Description: "Create Jira Ticket for this Policy Violation. Requires configured Jira integration.",
+	},
+	"build_failure_grace_period_in_days": {
+		Type:             schema.TypeInt,
+		Optional:         true,
+		Description:      "Allow grace period for certain number of days. All violations will be ignored during this time. To be used only if `fail_build` is enabled.",
+		ValidateDiagFunc: validator.IntAtLeast(0),
+	},
+}
+
+var getPolicySchema = func(criteriaSchema map[string]*schema.Schema, actionsSchema map[string]*schema.Schema) map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		"name": {
+			Type:             schema.TypeString,
+			Required:         true,
+			ForceNew:         true,
+			Description:      "Name of the policy (must be unique)",
+			ValidateDiagFunc: validator.StringIsNotEmpty,
+		},
+		"description": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "More verbose description of the policy",
+		},
+		"type": {
+			Type:             schema.TypeString,
+			Required:         true,
+			Description:      "Type of the policy",
+			ValidateDiagFunc: validator.StringInSlice(true, "Security", "License", "Operational_Risk"),
+		},
+		"author": {
+			Type:        schema.TypeString,
+			Computed:    true,
+			Description: "User, who created the policy",
+		},
+		"created": {
+			Type:        schema.TypeString,
+			Computed:    true,
+			Description: "Creation timestamp",
+		},
+		"modified": {
+			Type:        schema.TypeString,
+			Computed:    true,
+			Description: "Modification timestamp",
+		},
+		"rule": {
+			Type:        schema.TypeList,
+			Required:    true,
+			Description: "A list of user-defined rules allowing you to trigger violations for specific vulnerability or license breaches by setting a license or security criteria, with a corresponding set of automatic actions according to your needs. Rules are processed according to the ascending order in which they are placed in the Rules list on the Policy. If a rule is met, the subsequent rules in the list will not be applied.",
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"name": {
+						Type:             schema.TypeString,
+						Required:         true,
+						Description:      "Name of the rule",
+						ValidateDiagFunc: validator.StringIsNotEmpty,
+					},
+					"priority": {
+						Type:             schema.TypeInt,
+						Required:         true,
+						ValidateDiagFunc: validator.IntAtLeast(1),
+						Description:      "Integer describing the rule priority. Must be at least 1",
+					},
+					"criteria": {
+						Type:        schema.TypeSet,
+						Required:    true,
+						MinItems:    1,
+						MaxItems:    1,
+						Description: "The set of security conditions to examine when an scanned artifact is scanned.",
+						Elem: &schema.Resource{
+							Schema: criteriaSchema,
+						},
+					},
+					"actions": {
+						Type:        schema.TypeSet,
+						Optional:    true,
+						MaxItems:    1,
+						Description: "Specifies the actions to take once a security policy violation has been triggered.",
+						Elem: &schema.Resource{
+							Schema: actionsSchema,
+						},
+					},
+				},
+			},
+		},
+	}
+}
 
 type PolicyCVSSRange struct {
 	To   *float64 `json:"to,omitempty"`
