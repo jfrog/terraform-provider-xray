@@ -5,11 +5,12 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/jfrog/terraform-provider-shared/test"
 	"github.com/jfrog/terraform-provider-shared/util"
 )
 
 func TestAccWorkersCount_create(t *testing.T) {
-	_, _, resourceName := mkNames("workers-count-", "xray_workers_count")
+	_, _, resourceName := test.MkNames("workers-count-", "xray_workers_count")
 
 	params := map[string]interface{}{
 		"workersCountName": resourceName,

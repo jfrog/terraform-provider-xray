@@ -318,7 +318,7 @@ func TestAccWatch_invalidBuildFilter(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, invalidBuildsWatchFilterTemplate, testData),
+				Config:      util.ExecuteTemplate(fqrn, invalidBuildsWatchFilterTemplate, testData),
 				ExpectError: regexp.MustCompile(`attribute 'ant_filter' is set when 'watch_resource\.type' is not set to 'all-builds' or 'all-projects'`),
 			},
 		},
@@ -418,7 +418,7 @@ func TestAccWatch_invalidProjectFilter(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 
-				Config: util.ExecuteTemplate(fqrn, invalidProjectWatchFilterTemplate, testData),
+				Config:      util.ExecuteTemplate(fqrn, invalidProjectWatchFilterTemplate, testData),
 				ExpectError: regexp.MustCompile(`attribute 'ant_filter' is set when 'watch_resource\.type' is not set to 'all-builds' or 'all-projects'`),
 			},
 		},
