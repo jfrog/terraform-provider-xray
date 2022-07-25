@@ -89,7 +89,7 @@ resource "xray_security_policy" "cvss_score" {
 ### Required
 
 - `name` (String) Name of the policy (must be unique)
-- `rule` (Block List, Min: 1) Nested block describing security rule. Described below (see [below for nested schema](#nestedblock--rule))
+- `rule` (Block List, Min: 1) A list of user-defined rules allowing you to trigger violations for specific vulnerability or license breaches by setting a license or security criteria, with a corresponding set of automatic actions according to your needs. Rules are processed according to the ascending order in which they are placed in the Rules list on the Policy. If a rule is met, the subsequent rules in the list will not be applied. (see [below for nested schema](#nestedblock--rule))
 - `type` (String) Type of the policy
 
 ### Optional
@@ -108,20 +108,20 @@ resource "xray_security_policy" "cvss_score" {
 
 Required:
 
-- `criteria` (Block Set, Min: 1, Max: 1) Nested block describing the criteria for the policy. Described below. (see [below for nested schema](#nestedblock--rule--criteria))
+- `criteria` (Block Set, Min: 1, Max: 1) The set of security conditions to examine when an scanned artifact is scanned. (see [below for nested schema](#nestedblock--rule--criteria))
 - `name` (String) Name of the rule
 - `priority` (Number) Integer describing the rule priority. Must be at least 1
 
 Optional:
 
-- `actions` (Block Set, Max: 1) Nested block describing the actions to be applied by the policy. Described below. (see [below for nested schema](#nestedblock--rule--actions))
+- `actions` (Block Set, Max: 1) Specifies the actions to take once a security policy violation has been triggered. (see [below for nested schema](#nestedblock--rule--actions))
 
 <a id="nestedblock--rule--criteria"></a>
 ### Nested Schema for `rule.criteria`
 
 Optional:
 
-- `cvss_range` (Block List, Max: 1) Nested block describing a CVS score range to be impacted. Defined below. (see [below for nested schema](#nestedblock--rule--criteria--cvss_range))
+- `cvss_range` (Block List, Max: 1) The CVSS score range to apply to the rule. This is used for a fine-grained control, rather than using the predefined severities. The score range is based on CVSS v3 scoring, and CVSS v2 score is CVSS v3 score is not available. (see [below for nested schema](#nestedblock--rule--criteria--cvss_range))
 - `fix_version_dependant` (Boolean) Default value is `false`. Issues that do not have a fixed version are not generated until a fixed version is available.
 - `min_severity` (String) The minimum security vulnerability severity that will be impacted by the policy.
 
@@ -140,7 +140,7 @@ Required:
 
 Required:
 
-- `block_download` (Block Set, Min: 1, Max: 1) Nested block describing artifacts that should be blocked for download if a violation is triggered. Described below. (see [below for nested schema](#nestedblock--rule--actions--block_download))
+- `block_download` (Block Set, Min: 1, Max: 1) Block download of artifacts that meet the Artifact Filter and Severity Filter specifications for this watch (see [below for nested schema](#nestedblock--rule--actions--block_download))
 
 Optional:
 

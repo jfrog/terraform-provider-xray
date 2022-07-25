@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
-
 func checkPolicy(id string, request *resty.Request) (*resty.Response, error) {
 	return request.Get("xray/api/v2/policies/" + id)
 }

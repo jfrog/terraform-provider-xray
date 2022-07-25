@@ -42,11 +42,12 @@ func Provider() *schema.Provider {
 		ResourcesMap: util.AddTelemetry(
 			productId,
 			map[string]*schema.Resource{
-				"xray_security_policy": resourceXraySecurityPolicyV2(),
-				"xray_license_policy":  resourceXrayLicensePolicyV2(),
-				"xray_watch":           resourceXrayWatch(),
-				"xray_settings":        resourceXraySettings(),
-				"xray_workers_count":   resourceXrayWorkersCount(),
+				"xray_security_policy":         resourceXraySecurityPolicyV2(),
+				"xray_license_policy":          resourceXrayLicensePolicyV2(),
+				"xray_operational_risk_policy": resourceXrayOperationalRiskPolicy(),
+				"xray_watch":                   resourceXrayWatch(),
+				"xray_settings":                resourceXraySettings(),
+				"xray_workers_count":           resourceXrayWorkersCount(),
 			},
 		),
 	}

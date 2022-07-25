@@ -8,11 +8,178 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/jfrog/terraform-provider-shared/util"
+	"github.com/jfrog/terraform-provider-shared/validator"
 )
+
+var commonActionsSchema = map[string]*schema.Schema{
+	"webhooks": {
+		Type:        schema.TypeSet,
+		Optional:    true,
+		Description: "A list of Xray-configured webhook URLs to be invoked if a violation is triggered.",
+		Elem: &schema.Schema{
+			Type: schema.TypeString,
+		},
+	},
+	"mails": {
+		Type:        schema.TypeSet,
+		Optional:    true,
+		Description: "A list of email addressed that will get emailed when a violation is triggered.",
+		Elem: &schema.Schema{
+			Type:             schema.TypeString,
+			ValidateDiagFunc: validator.IsEmail,
+		},
+	},
+	"block_download": {
+		Type:        schema.TypeSet,
+		Required:    true,
+		MaxItems:    1,
+		Description: "Block download of artifacts that meet the Artifact Filter and Severity Filter specifications for this watch",
+		Elem: &schema.Resource{
+			Schema: map[string]*schema.Schema{
+				"unscanned": {
+					Type:        schema.TypeBool,
+					Required:    true,
+					Description: "Whether or not to block download of artifacts that meet the artifact `filters` for the associated `xray_watch` resource but have not been scanned yet.",
+				},
+				"active": {
+					Type:        schema.TypeBool,
+					Required:    true,
+					Description: "Whether or not to block download of artifacts that meet the artifact and severity `filters` for the associated `xray_watch` resource.",
+				},
+			},
+		},
+	},
+	"block_release_bundle_distribution": {
+		Type:        schema.TypeBool,
+		Optional:    true,
+		Default:     true,
+		Description: "Blocks Release Bundle distribution to Edge nodes if a violation is found.",
+	},
+	"fail_build": {
+		Type:        schema.TypeBool,
+		Optional:    true,
+		Default:     true,
+		Description: "Whether or not the related CI build should be marked as failed if a violation is triggered. This option is only available when the policy is applied to an `xray_watch` resource with a `type` of `builds`.",
+	},
+	"notify_deployer": {
+		Type:        schema.TypeBool,
+		Optional:    true,
+		Default:     false,
+		Description: "Sends an email message to component deployer with details about the generated Violations.",
+	},
+	"notify_watch_recipients": {
+		Type:        schema.TypeBool,
+		Optional:    true,
+		Default:     false,
+		Description: "Sends an email message to all configured recipients inside a specific watch with details about the generated Violations.",
+	},
+	"create_ticket_enabled": {
+		Type:        schema.TypeBool,
+		Optional:    true,
+		Default:     false,
+		Description: "Create Jira Ticket for this Policy Violation. Requires configured Jira integration.",
+	},
+	"build_failure_grace_period_in_days": {
+		Type:             schema.TypeInt,
+		Optional:         true,
+		Description:      "Allow grace period for certain number of days. All violations will be ignored during this time. To be used only if `fail_build` is enabled.",
+		ValidateDiagFunc: validator.IntAtLeast(0),
+	},
+}
+
+var getPolicySchema = func(criteriaSchema map[string]*schema.Schema, actionsSchema map[string]*schema.Schema) map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		"name": {
+			Type:             schema.TypeString,
+			Required:         true,
+			ForceNew:         true,
+			Description:      "Name of the policy (must be unique)",
+			ValidateDiagFunc: validator.StringIsNotEmpty,
+		},
+		"description": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "More verbose description of the policy",
+		},
+		"type": {
+			Type:             schema.TypeString,
+			Required:         true,
+			Description:      "Type of the policy",
+			ValidateDiagFunc: validator.StringInSlice(true, "Security", "License", "Operational_Risk"),
+		},
+		"author": {
+			Type:        schema.TypeString,
+			Computed:    true,
+			Description: "User, who created the policy",
+		},
+		"created": {
+			Type:        schema.TypeString,
+			Computed:    true,
+			Description: "Creation timestamp",
+		},
+		"modified": {
+			Type:        schema.TypeString,
+			Computed:    true,
+			Description: "Modification timestamp",
+		},
+		"rule": {
+			Type:        schema.TypeList,
+			Required:    true,
+			Description: "A list of user-defined rules allowing you to trigger violations for specific vulnerability or license breaches by setting a license or security criteria, with a corresponding set of automatic actions according to your needs. Rules are processed according to the ascending order in which they are placed in the Rules list on the Policy. If a rule is met, the subsequent rules in the list will not be applied.",
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"name": {
+						Type:             schema.TypeString,
+						Required:         true,
+						Description:      "Name of the rule",
+						ValidateDiagFunc: validator.StringIsNotEmpty,
+					},
+					"priority": {
+						Type:             schema.TypeInt,
+						Required:         true,
+						ValidateDiagFunc: validator.IntAtLeast(1),
+						Description:      "Integer describing the rule priority. Must be at least 1",
+					},
+					"criteria": {
+						Type:        schema.TypeSet,
+						Required:    true,
+						MinItems:    1,
+						MaxItems:    1,
+						Description: "The set of security conditions to examine when an scanned artifact is scanned.",
+						Elem: &schema.Resource{
+							Schema: criteriaSchema,
+						},
+					},
+					"actions": {
+						Type:        schema.TypeSet,
+						Optional:    true,
+						MaxItems:    1,
+						Description: "Specifies the actions to take once a security policy violation has been triggered.",
+						Elem: &schema.Resource{
+							Schema: actionsSchema,
+						},
+					},
+				},
+			},
+		},
+	}
+}
 
 type PolicyCVSSRange struct {
 	To   *float64 `json:"to,omitempty"`
 	From *float64 `json:"from,omitempty"`
+}
+
+type OperationalRiskCriteria struct {
+	UseAndCondition               bool   `json:"use_and_condition"`
+	IsEOL                         bool   `json:"is_eol"`
+	ReleaseDateGreaterThanMonths  int    `json:"release_date_greater_than_months"`
+	NewerVersionsGreaterThan      int    `json:"newer_versions_greater_than"`
+	ReleaseCadencePerYearLessThan int    `json:"release_cadence_per_year_less_than"`
+	CommitsLessThan               int    `json:"commits_less_than"`
+	CommittersLessThan            int    `json:"committers_less_than"`
+	Risk                          string `json:"risk"`
 }
 
 type PolicyRuleCriteria struct {
@@ -35,6 +202,10 @@ type PolicyRuleCriteria struct {
 	MultiLicensePermissive *bool    `json:"multi_license_permissive,omitempty"` // Omitempty is used because the empty field is conflicting with AllowUnknown
 	BannedLicenses         []string `json:"banned_licenses,omitempty"`
 	AllowedLicenses        []string `json:"allowed_licenses,omitempty"`
+
+	// Operational Risk custom criteria
+	OperationalRiskCustom  *OperationalRiskCriteria `json:"op_risk_custom,omitempty"`
+	OperationalRiskMinRisk string                   `json:"op_risk_min_risk,omitempty"`
 }
 
 type BlockDownloadSettings struct {
@@ -112,9 +283,88 @@ func unpackRules(configured []interface{}, policyType string) (policyRules []Pol
 
 	return rules, err
 }
-func BoolPtr(v bool) *bool {
-	return &v
+
+func unpackSecurityCriteria(tfCriteria map[string]interface{}) *PolicyRuleCriteria {
+	criteria := new(PolicyRuleCriteria)
+
+	if v, ok := tfCriteria["fix_version_dependant"]; ok {
+		criteria.FixVersionDependant = v.(bool)
+	}
+
+	// This is also picky about not allowing empty values to be set
+	cvss := unpackCVSSRange(tfCriteria["cvss_range"].([]interface{}))
+	if cvss == nil {
+		criteria.MinimumSeverity = tfCriteria["min_severity"].(string)
+	} else {
+		criteria.CVSSRange = cvss
+	}
+
+	return criteria
 }
+
+func unpackLicenseCriteria(tfCriteria map[string]interface{}) *PolicyRuleCriteria {
+	criteria := new(PolicyRuleCriteria)
+	if v, ok := tfCriteria["allow_unknown"]; ok {
+		criteria.AllowUnknown = util.BoolPtr(v.(bool))
+	}
+	if v, ok := tfCriteria["banned_licenses"]; ok {
+		criteria.BannedLicenses = unpackLicenses(v.(*schema.Set))
+	}
+	if v, ok := tfCriteria["allowed_licenses"]; ok {
+		criteria.AllowedLicenses = unpackLicenses(v.(*schema.Set))
+	}
+	if v, ok := tfCriteria["multi_license_permissive"]; ok {
+		criteria.MultiLicensePermissive = util.BoolPtr(v.(bool))
+	}
+
+	return criteria
+}
+
+func unpackOperationalRiskCustomCriteria(tfCriteria map[string]interface{}) *OperationalRiskCriteria {
+	criteria := new(OperationalRiskCriteria)
+	if v, ok := tfCriteria["use_and_condition"]; ok {
+		criteria.UseAndCondition = v.(bool)
+	}
+	if v, ok := tfCriteria["is_eol"]; ok {
+		criteria.IsEOL = v.(bool)
+	}
+	if v, ok := tfCriteria["release_date_greater_than_months"]; ok {
+		criteria.ReleaseDateGreaterThanMonths = v.(int)
+	}
+	if v, ok := tfCriteria["newer_versions_greater_than"]; ok {
+		criteria.NewerVersionsGreaterThan = v.(int)
+	}
+	if v, ok := tfCriteria["release_cadence_per_year_less_than"]; ok {
+		criteria.ReleaseCadencePerYearLessThan = v.(int)
+	}
+	if v, ok := tfCriteria["commits_less_than"]; ok {
+		criteria.CommitsLessThan = v.(int)
+	}
+	if v, ok := tfCriteria["committers_less_than"]; ok {
+		criteria.CommittersLessThan = v.(int)
+	}
+	if v, ok := tfCriteria["risk"]; ok {
+		criteria.Risk = v.(string)
+	}
+
+	return criteria
+}
+
+func unpackOperationalRiskCriteria(tfCriteria map[string]interface{}) *PolicyRuleCriteria {
+	criteria := new(PolicyRuleCriteria)
+	if v, ok := tfCriteria["op_risk_custom"]; ok {
+		custom := v.([]interface{})
+		if len(custom) > 0 {
+			criteria.OperationalRiskCustom = unpackOperationalRiskCustomCriteria(custom[0].(map[string]interface{}))
+		}
+	}
+	if v, ok := tfCriteria["op_risk_min_risk"]; ok {
+		criteria.OperationalRiskMinRisk = v.(string)
+	}
+
+	return criteria
+}
+
 func unpackCriteria(d *schema.Set, policyType string) (*PolicyRuleCriteria, error) {
 	tfCriteria := d.List()
 	if len(tfCriteria) == 0 {
@@ -122,39 +372,47 @@ func unpackCriteria(d *schema.Set, policyType string) (*PolicyRuleCriteria, erro
 	}
 
 	m := tfCriteria[0].(map[string]interface{}) // We made this a list of one to make schema validation easier
-	criteria := new(PolicyRuleCriteria)
+	var criteria *PolicyRuleCriteria
+	// criteria := new(PolicyRuleCriteria)
 	// The API doesn't allow both severity and license criteria to be _set_, even if they have empty values
 	// So we have to figure out which group is actually empty and not even set it
 	if policyType == "license" {
-		if v, ok := m["allow_unknown"]; ok {
-			criteria.AllowUnknown = BoolPtr(v.(bool))
-		}
-		if v, ok := m["banned_licenses"]; ok {
-			criteria.BannedLicenses = unpackLicenses(v.(*schema.Set))
-		}
-		if v, ok := m["allowed_licenses"]; ok {
-			criteria.AllowedLicenses = unpackLicenses(v.(*schema.Set))
-		}
-		if v, ok := m["multi_license_permissive"]; ok {
-			criteria.MultiLicensePermissive = BoolPtr(v.(bool))
-		}
-	} else {
-		minSev := m["min_severity"].(string)
-		cvss := unpackCVSSRange(m["cvss_range"].([]interface{}))
-		if v, ok := m["fix_version_dependant"]; ok {
-			criteria.FixVersionDependant = v.(bool)
-		}
-
-		// This is also picky about not allowing empty values to be set
-		if cvss == nil {
-			criteria.MinimumSeverity = minSev
-		} else {
-			criteria.CVSSRange = cvss
-		}
+		criteria = unpackLicenseCriteria(m)
+		// if v, ok := m["allow_unknown"]; ok {
+		// 	criteria.AllowUnknown = utils.BoolPtr(v.(bool))
+		// }
+		// if v, ok := m["banned_licenses"]; ok {
+		// 	criteria.BannedLicenses = unpackLicenses(v.(*schema.Set))
+		// }
+		// if v, ok := m["allowed_licenses"]; ok {
+		// 	criteria.AllowedLicenses = unpackLicenses(v.(*schema.Set))
+		// }
+		// if v, ok := m["multi_license_permissive"]; ok {
+		// 	criteria.MultiLicensePermissive = util.BoolPtr(v.(bool))
+		// }
+	} else if policyType == "security" {
+		criteria = unpackSecurityCriteria(m)
+		// minSev := m["min_severity"].(string)
+		// cvss := unpackCVSSRange(m["cvss_range"].([]interface{}))
+		// if v, ok := m["fix_version_dependant"]; ok {
+		// 	criteria.FixVersionDependant = v.(bool)
+		// }
+		//
+		// // This is also picky about not allowing empty values to be set
+		// if cvss == nil {
+		// 	criteria.MinimumSeverity = minSev
+		// } else {
+		// 	criteria.CVSSRange = cvss
+		// }
+	} else if policyType == "operational_risk" {
+		criteria = unpackOperationalRiskCriteria(m)
 	}
+
 	return criteria, nil
 }
+
 func Float64Ptr(v float64) *float64 { return &v }
+
 func unpackCVSSRange(l []interface{}) *PolicyCVSSRange {
 	if len(l) == 0 {
 		return nil
@@ -249,7 +507,7 @@ func unpackActions(l *schema.Set) PolicyRuleActions {
 }
 
 func packRules(rules []PolicyRule, policyType string) []interface{} {
-	var l []interface{}
+	var rs []interface{}
 
 	for _, rule := range rules {
 		var criteria []interface{}
@@ -262,19 +520,50 @@ func packRules(rules []PolicyRule, policyType string) []interface{} {
 		case "security":
 			criteria = packSecurityCriteria(rule.Criteria)
 			isLicense = false
+		case "operational_risk":
+			criteria = packOperationalRiskCriteria(rule.Criteria)
+			isLicense = false
 		}
 
-		m := map[string]interface{}{
+		r := map[string]interface{}{
 			"name":     rule.Name,
 			"priority": rule.Priority,
 			"criteria": criteria,
 			"actions":  packActions(rule.Actions, isLicense),
 		}
 
-		l = append(l, m)
+		rs = append(rs, r)
 	}
 
-	return l
+	return rs
+}
+
+func packOperationalRiskCriteria(criteria *PolicyRuleCriteria) []interface{} {
+	m := map[string]interface{}{}
+
+	if len(criteria.OperationalRiskMinRisk) > 0 {
+		m["op_risk_min_risk"] = criteria.OperationalRiskMinRisk
+	}
+	if criteria.OperationalRiskCustom != nil {
+		m["op_risk_custom"] = packOperationalRiskCustom(criteria.OperationalRiskCustom)
+	}
+
+	return []interface{}{m}
+}
+
+func packOperationalRiskCustom(custom *OperationalRiskCriteria) []interface{} {
+	m := map[string]interface{}{
+		"use_and_condition":                  custom.UseAndCondition,
+		"is_eol":                             custom.IsEOL,
+		"release_date_greater_than_months":   custom.ReleaseDateGreaterThanMonths,
+		"newer_versions_greater_than":        custom.NewerVersionsGreaterThan,
+		"release_cadence_per_year_less_than": custom.ReleaseCadencePerYearLessThan,
+		"commits_less_than":                  custom.CommitsLessThan,
+		"committers_less_than":               custom.CommittersLessThan,
+		"risk":                               custom.Risk,
+	}
+
+	return []interface{}{m}
 }
 
 func packLicenseCriteria(criteria *PolicyRuleCriteria) []interface{} {
@@ -371,12 +660,6 @@ func packPolicy(policy Policy, d *schema.ResourceData) diag.Diagnostics {
 	return nil
 }
 
-func getPolicy(id string, client *resty.Client) (Policy, *resty.Response, error) {
-	policy := Policy{}
-	resp, err := client.R().SetResult(&policy).Get("xray/api/v2/policies/" + id)
-	return policy, resp, err
-}
-
 func resourceXrayPolicyCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	policy, err := unpackPolicy(d)
 	// Warning or errors can be collected in a slice type
@@ -393,7 +676,9 @@ func resourceXrayPolicyCreate(ctx context.Context, d *schema.ResourceData, m int
 }
 
 func resourceXrayPolicyRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	policy, resp, err := getPolicy(d.Id(), m.(*resty.Client))
+	policy := Policy{}
+
+	resp, err := m.(*resty.Client).R().SetResult(&policy).Get("xray/api/v2/policies/" + d.Id())
 	if err != nil {
 		if resp != nil && resp.StatusCode() == http.StatusNotFound {
 			log.Printf("[WARN] Xray policy (%s) not found, removing from state", d.Id())

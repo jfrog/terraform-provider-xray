@@ -1,8 +1,14 @@
+## 1.4.0 (July 22, 2022). Tested on Artifactory 7.41.6 and Xray 3.52.4
+
+NEW FEATURE:
+
+* resource/xray_operational_risk_policy: New resource to support 'operational_risk' policy. PR: [#71](https://github.com/jfrog/terraform-provider-xray/pull/71). Issue: [#50](https://github.com/jfrog/terraform-provider-xray/issues/50)
+
 ## 1.3.0 (July 13, 2022). Tested on Artifactory 7.39.4 and Xray 3.51.3
 
 NEW FEATURE:
 
-* resource/xray_workers_count: Add support to set Xray's workers count. PR: [#68](https://github.com/jfrog/terraform-provider-xray/pull/68). Project provider issue: [#56](https://github.com/jfrog/terraform-provider-project/issues/56)
+* resource/xray_workers_count: Add support to set Xray's workers count. PR: [#68](https://github.com/jfrog/terraform-provider-xray/pull/68). Issue: [#56](https://github.com/jfrog/terraform-provider-xray/issues/56)
 
 ## 1.2.1 (July 6, 2022). Tested on Artifactory 7.39.4 and Xray 3.51.3
 
