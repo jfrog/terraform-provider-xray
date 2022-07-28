@@ -74,7 +74,7 @@ pipelines:
             - JOIN_KEY=$(openssl rand -hex 32)
             - >-
               if [[ ${ARTIFACTORY_DISTRIBUTION} == "artifactory-ha" ]]; then
-                 helm upgrade --install artifactory-ha  jfrog/artifactory-ha --set nginx.service.ssloffload=true --set nginx.tlsSecretName=tls-ingress --set artifactory.masterKey=$MASTER_KEY --set artifactory.joinKey=$JOIN_KEY --set artifactory.license.secret=artifactory-license --set artifactory.license.dataKey=artifactory.cluster.license --set artifactory.node.replicaCount=1 --set postgresql.persistence.size=50Gi --set artifactory.persistence.size=50Gi
+                 helm upgrade --install artifactory-ha  jfrog/artifactory-ha --set nginx.service.ssloffload=true --set nginx.tlsSecretName=tls-ingress --set artifactory.masterKey=$MASTER_KEY --set artifactory.joinKey=$JOIN_KEY --set artifactory.license.secret=artifactory-license --set artifactory.license.dataKey=artifactory.cluster.license --set artifactory.node.replicaCount=1 --set postgresql.persistence.size=50Gi --set artifactory.persistence.size=50Gi --set nginx.service.loadBalancerSourceRanges='{152.215.237.185/32,52.9.243.19/32}'
                  echo "Waiting for Artifactory HA roll out"
                  kubectl rollout status deployment/artifactory-ha-nginx
                  kubectl rollout status statefulset/artifactory-ha-artifactory-ha-primary
@@ -86,7 +86,7 @@ pipelines:
                  echo "Installing JFrog Xray"
                  helm upgrade --install xray jfrog/xray --set postgresql.persistence.size=200Gi --set xray.jfrogUrl=http://artifactory-ha-nginx --set xray.masterKey=$MASTER_KEY --set xray.joinKey=$JOIN_KEY
               else
-                 helm upgrade --install artifactory  jfrog/artifactory --set nginx.service.ssloffload=true --set nginx.tlsSecretName=tls-ingress --set artifactory.masterKey=$MASTER_KEY --set artifactory.joinKey=$JOIN_KEY --set artifactory.license.secret=artifactory-license --set artifactory.license.dataKey=artifactory.cluster.license --set postgresql.persistence.size=50Gi --set artifactory.persistence.size=50Gi
+                 helm upgrade --install artifactory  jfrog/artifactory --set nginx.service.ssloffload=true --set nginx.tlsSecretName=tls-ingress --set artifactory.masterKey=$MASTER_KEY --set artifactory.joinKey=$JOIN_KEY --set artifactory.license.secret=artifactory-license --set artifactory.license.dataKey=artifactory.cluster.license --set postgresql.persistence.size=50Gi --set artifactory.persistence.size=50Gi --set nginx.service.loadBalancerSourceRanges='{152.215.237.185/32,52.9.243.19/32}'
                  echo "Waiting for Artifactory roll out"
                  kubectl rollout status deployment/artifactory-artifactory-nginx
                  kubectl rollout status statefulset/artifactory
