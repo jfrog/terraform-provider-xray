@@ -114,7 +114,7 @@ pipelines:
             - echo "Artifactory password ${NEW_RT_PASSWORD}"
           onFailure:
             - echo "JFrog Artifactory and Xray creation failed."
-            - send_notification partnersSlack --text "<${res_GitHubTFProviderXrayRepoJFrog11_gitRepoRepositoryHttpsUrl}|Terraform Provider Xray>. Pipeline failed on <${step_url}|${step_name}> step"
+            - send_notification partnersSlack --text "<${res_GitHubTFProviderXrayRepoJFrog1_gitRepoRepositoryHttpsUrl}|Terraform Provider Xray>. Pipeline failed on <${step_url}|${step_name}> step"
             - fozzie checkout native-steps
             - echo "Removing GKE cluster"
             - fozzie gke/authorize
@@ -144,7 +144,7 @@ pipelines:
           inputSteps:
             - name: fozzie_gke_jfrog_rt_xray_create
           inputResources:
-            - name: GitHubTFProviderXrayRepoJFrog11
+            - name: GitHubTFProviderXrayRepoJFrog1
           environmentVariables:
             NEW_RT_PASSWORD: ${int_gkeEnvVars_new_rt_password}
         execution:
@@ -161,10 +161,10 @@ pipelines:
             - sudo apt update
             - sudo apt install goreleaser
           onExecute:
-            - add_run_variables gitHubRepoUrl=${res_GitHubTFProviderXrayRepoJFrog11_gitRepoRepositorySshUrl}
+            - add_run_variables gitHubRepoUrl=${res_GitHubTFProviderXrayRepoJFrog1_gitRepoRepositorySshUrl}
             - add_run_variables TFProviderRepo=$(echo ${gitHubRepoUrl} | sed -e 's/git@/@/g' -e 's/:/\//g')
-            - add_run_variables repoFolder=$(echo "${res_GitHubTFProviderXrayRepoJFrog11_gitRepoFullName}" | sed -e 's/.*\///g')
-            - cd ${res_GitHubTFProviderXrayRepoJFrog11_resourcePath}
+            - add_run_variables repoFolder=$(echo "${res_GitHubTFProviderXrayRepoJFrog1_gitRepoFullName}" | sed -e 's/.*\///g')
+            - cd ${res_GitHubTFProviderXrayRepoJFrog1_resourcePath}
             - echo "Verify the code contents merged feature branch with development branch"
             - git branch && ls -al
             - echo "Add variables needed to run Terraform Provider Xray"
@@ -195,7 +195,7 @@ pipelines:
             - send_notification partnersSlack --text "Terraform Provider Xray run is completed. Version ${NEXT_PROVIDER_VERSION}."
           onFailure:
             - echo "Failure"
-            - send_notification partnersSlack --text "<${res_GitHubTFProviderXrayRepoJFrog11_gitRepoRepositoryHttpsUrl}|Terraform Provider Xray>. Pipeline failed on <${step_url}|${step_name}> step"
+            - send_notification partnersSlack --text "<${res_GitHubTFProviderXrayRepoJFrog1_gitRepoRepositoryHttpsUrl}|Terraform Provider Xray>. Pipeline failed on <${step_url}|${step_name}> step"
           onComplete:
             - echo "Complete"
 
