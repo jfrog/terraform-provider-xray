@@ -61,6 +61,7 @@ pipelines:
             # testing
             - echo "Creating Artifactory Secret"
             - echo $FOZZIE_HOME
+            - curl ifconfig.me
             - kubectl create secret generic artifactory-license --from-file=$FOZZIE_HOME/native-steps/license/artifactory.cluster.license
             - echo "Creating TLS Secret"
             - kubectl create secret tls tls-ingress --cert=$FOZZIE_HOME/native-steps/dns/tls.crt --key=$FOZZIE_HOME/native-steps/dns/tls.key
