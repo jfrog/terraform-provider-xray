@@ -56,6 +56,7 @@ pipelines:
             - fozzie checkout native-steps
             - fozzie gke/create_cluster
             - echo "Creating Artifactory Secret"
+            - echo $FOZZIE_HOME
             - kubectl create secret generic artifactory-license --from-file=$FOZZIE_HOME/native-steps/license/artifactory.cluster.license
             - echo "Creating TLS Secret"
             - kubectl create secret tls tls-ingress --cert=$FOZZIE_HOME/native-steps/dns/tls.crt --key=$FOZZIE_HOME/native-steps/dns/tls.key
