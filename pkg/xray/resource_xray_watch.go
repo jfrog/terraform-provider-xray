@@ -37,6 +37,12 @@ func resourceXrayWatch() *schema.Resource {
 				Optional:    true,
 				Description: "Whether or not the watch is active",
 			},
+			"project_key": {
+				Type:             schema.TypeString,
+				Optional:         true,
+				ValidateDiagFunc: validator.ProjectKey,
+				Description:      "Project key for assigning this watch to. Must be 3 - 10 lowercase alphanumeric characters.",
+			},
 			"watch_resource": {
 				Type:        schema.TypeSet,
 				Required:    true,

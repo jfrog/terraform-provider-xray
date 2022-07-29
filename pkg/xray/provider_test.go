@@ -129,7 +129,7 @@ func testAccDeleteProject(t *testing.T, projectKey string) (*resty.Response, err
 
 // Create a set of builds or a single build, add the build into the Xray indexing configuration, to be able to add it to
 // the xray watch
-func testAccCreateBuilds(t *testing.T, builds []string) {
+func testAccCreateBuilds(t *testing.T, builds []string, projectKey string) {
 	restyClient := getTestResty(t)
 
 	type BuildBody struct {
@@ -150,7 +150,11 @@ func testAccCreateBuilds(t *testing.T, builds []string) {
 			Number:  "28",
 			Started: "2021-10-30T12:00:19.893+0300",
 		}
-		respCreateBuild, errCreateBuild := restyClient.R().SetBody(buildBody).Put("artifactory/api/build")
+		req := restyClient.R().SetBody(buildBody)
+		if len(projectKey) > 0 {
+			req = req.SetQueryParam("project", projectKey)
+		}
+		respCreateBuild, errCreateBuild := req.Put("artifactory/api/build")
 		if respCreateBuild.StatusCode() != http.StatusNoContent {
 			t.Error(errCreateBuild)
 		}
@@ -160,7 +164,11 @@ func testAccCreateBuilds(t *testing.T, builds []string) {
 		Names: builds,
 	}
 
-	respAddIndexBody, errAddIndexBody := restyClient.R().SetBody(xrayIndexBody).Post("xray/api/v1/binMgr/builds")
+	req := restyClient.R().SetBody(xrayIndexBody)
+	if len(projectKey) > 0 {
+		req = req.SetQueryParam("projectKey", projectKey)
+	}
+	respAddIndexBody, errAddIndexBody := req.Post("xray/api/v1/binMgr/builds")
 	if respAddIndexBody.StatusCode() != http.StatusOK {
 		t.Error(errAddIndexBody)
 	}

@@ -2,12 +2,13 @@ package xray
 
 import (
 	"fmt"
-	"github.com/jfrog/terraform-provider-shared/test"
-	"github.com/jfrog/terraform-provider-shared/util"
 	"regexp"
 	"testing"
 
+	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/jfrog/terraform-provider-shared/test"
+	"github.com/jfrog/terraform-provider-shared/util"
 )
 
 var testDataLicense = map[string]string{
@@ -76,6 +77,82 @@ func TestAccLicensePolicy_badGracePeriod(t *testing.T) {
 			{
 				Config:      util.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),
 				ExpectError: regexp.MustCompile("Found Invalid Policy"),
+			},
+		},
+	})
+}
+
+func TestAccLicensePolicy_withProjectKey(t *testing.T) {
+	_, fqrn, resourceName := test.MkNames("policy-", "xray_license_policy")
+	projectKey := fmt.Sprintf("testproj%d", test.RandSelect(1, 2, 3, 4, 5))
+
+	testData := util.MergeMaps(testDataLicense)
+	testData["resource_name"] = resourceName
+	testData["project_key"] = projectKey
+	testData["policy_name"] = fmt.Sprintf("terraform-license-policy-3-%d", test.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-license-rule-3-%d", test.RandomInt())
+	testData["multi_license_permissive"] = "true"
+	testData["allowedOrBanned"] = "allowed_licenses"
+
+	template := `resource "xray_license_policy" "{{ .resource_name }}" {
+		name        = "{{ .policy_name }}"
+		description = "{{ .policy_description }}"
+		type        = "license"
+		project_key = "{{ .project_key }}"
+
+		rule {
+			name = "{{ .rule_name }}"
+			priority = 1
+			criteria {
+	          {{ .allowedOrBanned }} = ["{{ .license_0 }}","{{ .license_1 }}"]
+	          allow_unknown = {{ .allow_unknown }}
+	          multi_license_permissive = {{ .multi_license_permissive }}
+			}
+			actions {
+	          webhooks = []
+	          mails = ["{{ .mails_0 }}", "{{ .mails_1 }}"]
+	          block_download {
+					unscanned = {{ .block_unscanned }}
+					active = {{ .block_active }}
+	          }
+	          block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+	          fail_build = {{ .fail_build }}
+	          notify_watch_recipients = {{ .notify_watch_recipients }}
+	          notify_deployer = {{ .notify_deployer }}
+	          create_ticket_enabled = {{ .create_ticket_enabled }}
+	          custom_severity = "{{ .custom_severity }}"
+	          build_failure_grace_period_in_days = {{ .grace_period_days }}
+			}
+		}
+	}`
+
+	config := util.ExecuteTemplate(fqrn, template, testData)
+
+	updatedTestData := util.MergeMaps(testData)
+	updatedTestData["policy_description"] = "New description"
+	updatedConfig := util.ExecuteTemplate(fqrn, template, updatedTestData)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			CreateProject(t, projectKey)
+		},
+		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+			DeleteProject(t, projectKey)
+			return testCheckPolicy(id, request)
+		}),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					verifyLicensePolicy(fqrn, testData, testData["allowedOrBanned"]),
+					resource.TestCheckResourceAttr(fqrn, "project_key", projectKey),
+				),
+			},
+			{
+				Config: updatedConfig,
+				Check:  verifyLicensePolicy(fqrn, updatedTestData, updatedTestData["allowedOrBanned"]),
 			},
 		},
 	})
@@ -228,7 +305,7 @@ const licensePolicyTemplate = `resource "xray_license_policy" "{{ .resource_name
 	rule {
 		name = "{{ .rule_name }}"
 		priority = 1
-		criteria {	
+		criteria {
           {{ .allowedOrBanned }} = ["{{ .license_0 }}","{{ .license_1 }}"]
           allow_unknown = {{ .allow_unknown }}
           multi_license_permissive = {{ .multi_license_permissive }}
@@ -244,9 +321,9 @@ const licensePolicyTemplate = `resource "xray_license_policy" "{{ .resource_name
           fail_build = {{ .fail_build }}
           notify_watch_recipients = {{ .notify_watch_recipients }}
           notify_deployer = {{ .notify_deployer }}
-          create_ticket_enabled = {{ .create_ticket_enabled }}           
+          create_ticket_enabled = {{ .create_ticket_enabled }}
           custom_severity = "{{ .custom_severity }}"
-          build_failure_grace_period_in_days = {{ .grace_period_days }}  
+          build_failure_grace_period_in_days = {{ .grace_period_days }}
 		}
 	}
 }`

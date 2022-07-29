@@ -34,8 +34,8 @@ type WatchFilterAntValue struct {
 type WatchProjectResource struct {
 	Type            string        `json:"type"`
 	BinaryManagerId string        `json:"bin_mgr_id"`
-	Filters         []WatchFilter `json:"filters"`
-	Name            string        `json:"name"`
+	Filters         []WatchFilter `json:"filters,omitempty"`
+	Name            string        `json:"name,omitempty"`
 	RepoType        string        `json:"repo_type,omitempty"`
 }
 
@@ -49,6 +49,7 @@ type WatchAssignedPolicy struct {
 }
 
 type Watch struct {
+	ProjectKey       string                `json:"-"`
 	GeneralData      WatchGeneralData      `json:"general_data"`
 	ProjectResources WatchProjectResources `json:"project_resources"`
 	AssignedPolicies []WatchAssignedPolicy `json:"assigned_policies"`
@@ -58,38 +59,41 @@ type Watch struct {
 func unpackWatch(d *schema.ResourceData) Watch {
 	watch := Watch{}
 
-	gd := WatchGeneralData{
+	if v, ok := d.GetOk("project_key"); ok {
+		watch.ProjectKey = v.(string)
+	}
+
+	generalData := WatchGeneralData{
 		Name: d.Get("name").(string),
 	}
 	if v, ok := d.GetOk("description"); ok {
-		gd.Description = v.(string)
+		generalData.Description = v.(string)
 	}
 	if v, ok := d.GetOk("active"); ok {
-		gd.Active = v.(bool)
+		generalData.Active = v.(bool)
 	}
-	watch.GeneralData = gd
+	watch.GeneralData = generalData
 
-	pr := WatchProjectResources{}
+	projectResources := WatchProjectResources{}
 	if v, ok := d.GetOk("watch_resource"); ok {
 		var r []WatchProjectResource
 		for _, res := range v.(*schema.Set).List() {
 			r = append(r, unpackProjectResource(res))
 		}
-		pr.Resources = r
+		projectResources.Resources = r
 	}
-	watch.ProjectResources = pr
+	watch.ProjectResources = projectResources
 
-	var ap []WatchAssignedPolicy
+	var assignedPolicies []WatchAssignedPolicy
 	if v, ok := d.GetOk("assigned_policy"); ok {
 		policies := v.(*schema.Set).List()
 		for _, pol := range policies {
-			ap = append(ap, unpackAssignedPolicy(pol))
+			assignedPolicies = append(assignedPolicies, unpackAssignedPolicy(pol))
 		}
 	}
-	watch.AssignedPolicies = ap
+	watch.AssignedPolicies = assignedPolicies
 
 	var watchRecipients []string
-
 	if v, ok := d.GetOk("watch_recipients"); ok {
 		recipients := v.(*schema.Set).List()
 		for _, watchRec := range recipients {
@@ -187,12 +191,19 @@ func unpackAssignedPolicy(rawCfg interface{}) WatchAssignedPolicy {
 	return policy
 }
 
+var allTypes = []string{"all-repos", "all-builds", "all-projects"}
+
 func packProjectResources(ctx context.Context, resources WatchProjectResources) []interface{} {
-	var list []interface{}
+	var resourceMaps []interface{}
+
 	for _, res := range resources.Resources {
 		resourceMap := map[string]interface{}{}
 		resourceMap["type"] = res.Type
-		if len(res.Name) > 0 {
+		// only pack watch resource name if type isn't for all-*
+		// Xray API returns a generated name for all-* type which will
+		// cause TF to want to update the resource since it doesn't match
+		// the configuration.
+		if len(res.Name) > 0 && !slices.Contains(allTypes, res.Type) {
 			resourceMap["name"] = res.Name
 		}
 		if len(res.BinaryManagerId) > 0 {
@@ -207,10 +218,10 @@ func packProjectResources(ctx context.Context, resources WatchProjectResources) 
 			tflog.Error(ctx, fmt.Sprintf(`failed to pack filters: %v`, errors))
 		}
 
-		list = append(list, resourceMap)
+		resourceMaps = append(resourceMaps, resourceMap)
 	}
 
-	return list
+	return resourceMaps
 }
 
 type PackFilterFunc func(filter WatchFilter) (map[string]interface{}, error)
@@ -239,7 +250,6 @@ func packAntFilter(filter WatchFilter) (map[string]interface{}, error) {
 }
 
 var packFilterMap = map[string]map[string]interface{}{
-
 	"regex": {
 		"func":          packStringFilter,
 		"attributeName": "filter",
@@ -278,16 +288,16 @@ func packFilters(filters []WatchFilter, resources map[string]interface{}) (map[s
 }
 
 func packAssignedPolicies(policies []WatchAssignedPolicy) []interface{} {
-	var l []interface{}
+	var assignedPolicies []interface{}
 	for _, p := range policies {
-		m := map[string]interface{}{
+		assignedPolicy := map[string]interface{}{
 			"name": p.Name,
 			"type": p.Type,
 		}
-		l = append(l, m)
+		assignedPolicies = append(assignedPolicies, assignedPolicy)
 	}
 
-	return l
+	return assignedPolicies
 }
 
 func packWatch(ctx context.Context, watch Watch, d *schema.ResourceData) diag.Diagnostics {
@@ -303,18 +313,21 @@ func packWatch(ctx context.Context, watch Watch, d *schema.ResourceData) diag.Di
 	if err := d.Set("assigned_policy", packAssignedPolicies(watch.AssignedPolicies)); err != nil {
 		return diag.FromErr(err)
 	}
-	return nil
-}
 
-func getWatch(id string, client *resty.Client) (Watch, *resty.Response, error) {
-	watch := Watch{}
-	resp, err := client.R().SetResult(&watch).Get("xray/api/v2/watches/" + id)
-	return watch, resp, err
+	return nil
 }
 
 func resourceXrayWatchCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	watch := unpackWatch(d)
-	_, err := m.(*resty.Client).R().SetBody(watch).Post("xray/api/v2/watches")
+
+	req, err := getRestyRequest(m.(*resty.Client), watch.ProjectKey)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	_, err = req.
+		SetBody(watch).
+		Post("xray/api/v2/watches")
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -324,7 +337,20 @@ func resourceXrayWatchCreate(ctx context.Context, d *schema.ResourceData, m inte
 }
 
 func resourceXrayWatchRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	watch, resp, err := getWatch(d.Id(), m.(*resty.Client))
+	watch := Watch{}
+
+	projectKey := d.Get("project_key").(string)
+	req, err := getRestyRequest(m.(*resty.Client), projectKey)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	resp, err := req.
+		SetResult(&watch).
+		SetPathParams(map[string]string{
+			"name": d.Id(),
+		}).
+		Get("xray/api/v2/watches/{name}")
 	if err != nil {
 		if resp != nil && resp.StatusCode() == http.StatusNotFound {
 			tflog.Warn(ctx, fmt.Sprintf("Xray watch (%s) not found, removing from state", d.Id()))
@@ -332,13 +358,24 @@ func resourceXrayWatchRead(ctx context.Context, d *schema.ResourceData, m interf
 		}
 		return diag.FromErr(err)
 	}
-	packWatch(ctx, watch, d)
-	return nil
+
+	return packWatch(ctx, watch, d)
 }
 
 func resourceXrayWatchUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	watch := unpackWatch(d)
-	resp, err := m.(*resty.Client).R().SetBody(watch).Put("xray/api/v2/watches/" + d.Id())
+
+	req, err := getRestyRequest(m.(*resty.Client), watch.ProjectKey)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	resp, err := req.
+		SetBody(watch).
+		SetPathParams(map[string]string{
+			"name": d.Id(),
+		}).
+		Put("xray/api/v2/watches/{name}")
 	if err != nil {
 		if resp != nil && resp.StatusCode() == http.StatusNotFound {
 			tflog.Warn(ctx, fmt.Sprintf("Xray watch (%s) not found, removing from state", d.Id()))
@@ -352,7 +389,18 @@ func resourceXrayWatchUpdate(ctx context.Context, d *schema.ResourceData, m inte
 }
 
 func resourceXrayWatchDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	resp, err := m.(*resty.Client).R().Delete("xray/api/v2/watches/" + d.Id())
+	watch := unpackWatch(d)
+
+	req, err := getRestyRequest(m.(*resty.Client), watch.ProjectKey)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	resp, err := req.
+		SetPathParams(map[string]string{
+			"name": d.Id(),
+		}).
+		Delete("xray/api/v2/watches/{name}")
 	if err != nil && resp.StatusCode() == http.StatusNotFound {
 		d.SetId("")
 		return diag.FromErr(err)
