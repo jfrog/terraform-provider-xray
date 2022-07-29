@@ -52,16 +52,12 @@ pipelines:
             - echo "Preparing for work..."
             - echo "Create GKE cluster and deploy Artifactory and Xray, latest versions form Helm repo"
           onExecute:
-            #- GKE_CLUSTER=tf-provider-xray-$(date +%s)
-            - GKE_CLUSTER=tf-provider-xray-1659130549
+            - GKE_CLUSTER=tf-provider-xray-$(date +%s)
             - fozzie checkout native-steps
-            #- fozzie gke/create_cluster
-            - gcloud auth activate-service-account --key-file="${SERVICE_ACCOUNT_JSON}"
-            - gcloud container clusters get-credentials "${GKE_CLUSTER}" --zone "${GKE_ZONE}" --project "${GKE_PROJECT}"
-            # testing
+            - export WHITELIST_CIDR=$(curl ifconfig.me)/32 && echo ${WHITELIST_CIDR}
+            - fozzie gke/create_cluster
             - echo "Creating Artifactory Secret"
             - echo $FOZZIE_HOME
-            - curl ifconfig.me
             - kubectl create secret generic artifactory-license --from-file=$FOZZIE_HOME/native-steps/license/artifactory.cluster.license
             - echo "Creating TLS Secret"
             - kubectl create secret tls tls-ingress --cert=$FOZZIE_HOME/native-steps/dns/tls.crt --key=$FOZZIE_HOME/native-steps/dns/tls.key
