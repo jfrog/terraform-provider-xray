@@ -102,7 +102,7 @@ pipelines:
             - kubectl rollout status statefulset/xray-postgresql
             - kubectl rollout status statefulset/xray-rabbitmq
             - kubectl rollout status statefulset/xray
-            - add_run_variables jdp_url=https://${GKE_CLUSTER}-rt.jfrog.tech
+            - add_run_variables jdp_url=http://${GKE_CLUSTER}-rt.jfrog.tech
             - add_run_variables NEW_RT_PASSWORD=$NEW_RT_PASSWORD
             - export RT_URL=$(echo ${jdp_url} | sed -e 's/.*https:\/\///g') && echo ${RT_URL}
             - git clone https://${int_Partnership_GitHub_token}@github.com/jfrog/partner-integration-tests.git
