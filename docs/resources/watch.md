@@ -18,6 +18,7 @@ resource "xray_watch" "all-repos" {
   name        = "all-repos-watch"
   description = "Watch for all repositories, matching the filter"
   active      = true
+  project_key = "testproj"
 
   watch_resource {
     type = "all-repos"
@@ -45,6 +46,7 @@ resource "xray_watch" "repository" {
   name        = "repository-watch"
   description = "Watch a single repo or a list of repositories"
   active      = true
+  project_key = "testproj"
 
   watch_resource {
     type       = "repository"
@@ -87,6 +89,7 @@ resource "xray_watch" "all-builds-with-filters" {
   name        = "build-watch"
   description = "Watch all builds with Ant patterns filter"
   active      = true
+  project_key = "testproj"
 
   watch_resource {
     type       = "all-builds"
@@ -115,6 +118,7 @@ resource "xray_watch" "build" {
   name        = "build-watch"
   description = "Watch a single build or a list of builds"
   active      = true
+  project_key = "testproj"
 
   watch_resource {
     type       = "build"
@@ -145,6 +149,7 @@ resource "xray_watch" "all-projects" {
   name        = "projects-watch"
   description = "Watch all the projects"
   active      = true
+  project_key = "testproj"
 
   watch_resource {
     type       = "all-projects"
@@ -168,6 +173,7 @@ resource "xray_watch" "all-projects-with-filters" {
   name        = "projects-watch"
   description = "Watch all the projects with Ant patterns filter"
   active      = true
+  project_key = "testproj"
 
   watch_resource {
     type       = "all-projects"
@@ -196,6 +202,7 @@ resource "xray_watch" "project" {
   name        = "project-watch"
   description = "Watch selected projects"
   active      = true
+  project_key = "testproj"
 
   watch_resource {
     type = "project"
@@ -233,6 +240,7 @@ resource "xray_watch" "project" {
 
 - `active` (Boolean) Whether or not the watch is active
 - `description` (String) Description of the watch
+- `project_key` (String) Project key for assigning this watch to. Must be 3 - 10 lowercase alphanumeric characters. Support repository and build watch resource types. When specifying individual repository or build they must be already assigned to the project. Build must be added as indexed resources.
 - `watch_recipients` (Set of String) A list of email addressed that will get emailed when a violation is triggered.
 
 ### Read-Only

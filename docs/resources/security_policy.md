@@ -19,6 +19,7 @@ resource "xray_security_policy" "min_severity" {
   name        = "test-security-policy-severity"
   description = "Security policy description"
   type        = "security"
+  project_key = "testproj"
 
   rule {
     name     = "rule-name-severity"
@@ -51,6 +52,7 @@ resource "xray_security_policy" "cvss_score" {
   name        = "test-security-policy-cvss"
   description = "Security policy description"
   type        = "security"
+  project_key = "testproj"
 
   rule {
     name     = "rule-name-cvss"
@@ -95,6 +97,7 @@ resource "xray_security_policy" "cvss_score" {
 ### Optional
 
 - `description` (String) More verbose description of the policy
+- `project_key` (String) Project key for assigning this policy to. Must be 3 - 10 lowercase alphanumeric characters.
 
 ### Read-Only
 

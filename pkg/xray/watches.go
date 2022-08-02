@@ -36,6 +36,7 @@ type WatchProjectResource struct {
 	BinaryManagerId string        `json:"bin_mgr_id"`
 	Filters         []WatchFilter `json:"filters,omitempty"`
 	Name            string        `json:"name,omitempty"`
+	BuildRepo       string        `json:"build_repo,omitempty"`
 	RepoType        string        `json:"repo_type,omitempty"`
 }
 
@@ -323,6 +324,16 @@ func resourceXrayWatchCreate(ctx context.Context, d *schema.ResourceData, m inte
 	req, err := getRestyRequest(m.(*resty.Client), watch.ProjectKey)
 	if err != nil {
 		return diag.FromErr(err)
+	}
+
+	// add 'build_repo' to resource if project_key is specified.
+	// undocumented Xray API structure that is required!
+	if len(watch.ProjectKey) > 0 {
+		for idx, resource := range watch.ProjectResources.Resources {
+			if resource.Type == "build" {
+				watch.ProjectResources.Resources[idx].BuildRepo = fmt.Sprintf("%s-build-info", watch.ProjectKey)
+			}
+		}
 	}
 
 	_, err = req.

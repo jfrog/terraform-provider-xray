@@ -113,7 +113,7 @@ var getPolicySchema = func(criteriaSchema map[string]*schema.Schema, actionsSche
 			Type:             schema.TypeString,
 			Optional:         true,
 			ValidateDiagFunc: validator.ProjectKey,
-			Description:      "Project key for assigning this watch to. Must be 3 - 10 lowercase alphanumeric characters.",
+			Description:      "Project key for assigning this policy to. Must be 3 - 10 lowercase alphanumeric characters.",
 		},
 		"author": {
 			Type:        schema.TypeString,

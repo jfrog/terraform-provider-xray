@@ -65,7 +65,7 @@ func testAccPreCheck(t *testing.T) {
 }
 
 // Create a repository with Xray indexing enabled. It will be used in the tests
-func testAccCreateRepos(t *testing.T, repo, repoType string) {
+func testAccCreateRepos(t *testing.T, repo, repoType string, projectKey string) {
 	restyClient := getTestResty(t)
 
 	type Repository struct {
@@ -83,11 +83,21 @@ func testAccCreateRepos(t *testing.T, repo, repoType string) {
 		repository.Url = "http://tempurl.org"
 	}
 
-	response, errRepo := restyClient.R().SetBody(repository).Put("artifactory/api/repositories/" + repo)
+	req := restyClient.R()
+
+	res, err := req.SetBody(repository).Put("artifactory/api/repositories/" + repo)
 	//Artifactory can return 400 for several reasons, this is why we are checking the response body
-	repoExists := strings.Contains(fmt.Sprint(errRepo), "Case insensitive repository key already exists")
-	if !repoExists && response.StatusCode() != http.StatusOK {
-		t.Error(errRepo)
+	repoExists := strings.Contains(fmt.Sprint(err), "Case insensitive repository key already exists")
+	if !repoExists && res.StatusCode() != http.StatusOK {
+		t.Error(err)
+	}
+
+	if len(projectKey) > 0 {
+		path := fmt.Sprintf("access/api/v1/projects/_/attach/repositories/%s/%s", repo, projectKey)
+		res, err = req.Put(path)
+		if err != nil {
+			t.Error(err)
+		}
 	}
 }
 
@@ -139,10 +149,6 @@ func testAccCreateBuilds(t *testing.T, builds []string, projectKey string) {
 		Started string `json:"started"`
 	}
 
-	type XrayIndexBody struct {
-		Names []string `json:"names"`
-	}
-
 	for _, build := range builds {
 		buildBody := BuildBody{
 			Version: "1.0.1",
@@ -160,17 +166,20 @@ func testAccCreateBuilds(t *testing.T, builds []string, projectKey string) {
 		}
 	}
 
+	type XrayIndexBody struct {
+		IndexedBuilds []string `json:"indexed_builds"`
+	}
+
 	xrayIndexBody := XrayIndexBody{
-		Names: builds,
+		IndexedBuilds: builds,
 	}
 
 	req := restyClient.R().SetBody(xrayIndexBody)
 	if len(projectKey) > 0 {
 		req = req.SetQueryParam("projectKey", projectKey)
 	}
-	respAddIndexBody, errAddIndexBody := req.Post("xray/api/v1/binMgr/builds")
+	respAddIndexBody, errAddIndexBody := req.Put("xray/api/v1/binMgr/default/builds")
 	if respAddIndexBody.StatusCode() != http.StatusOK {
 		t.Error(errAddIndexBody)
 	}
-
 }

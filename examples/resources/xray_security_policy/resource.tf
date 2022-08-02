@@ -2,6 +2,7 @@ resource "xray_security_policy" "min_severity" {
   name        = "test-security-policy-severity"
   description = "Security policy description"
   type        = "security"
+  project_key = "testproj"
 
   rule {
     name     = "rule-name-severity"
@@ -34,6 +35,7 @@ resource "xray_security_policy" "cvss_score" {
   name        = "test-security-policy-cvss"
   description = "Security policy description"
   type        = "security"
+  project_key = "testproj"
 
   rule {
     name     = "rule-name-cvss"
