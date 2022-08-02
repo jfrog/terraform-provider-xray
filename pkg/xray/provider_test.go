@@ -4,15 +4,12 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 	"testing"
 
 	"github.com/go-resty/resty/v2"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/jfrog/terraform-provider-shared/client"
 )
 
 func testAccProviders() map[string]func() (*schema.Provider, error) {
@@ -29,32 +26,6 @@ func TestProvider(t *testing.T) {
 	}
 }
 
-func getTestResty(t *testing.T) *resty.Client {
-	var ok bool
-	var xrayUrl string
-	if xrayUrl, ok = os.LookupEnv("XRAY_URL"); !ok {
-		if xrayUrl, ok = os.LookupEnv("JFROG_URL"); !ok {
-			t.Fatal("XRAY_URL or JFROG_URL must be set for acceptance tests")
-		}
-	}
-	restyClient, err := client.Build(xrayUrl, "")
-	if err != nil {
-		t.Error(err)
-	}
-
-	var accessToken string
-	if accessToken, ok = os.LookupEnv("XRAY_ACCESS_TOKEN"); !ok {
-		if accessToken, ok = os.LookupEnv("JFROG_ACCESS_TOKEN"); !ok {
-			t.Fatal("XRAY_ACCESS_TOKEN or JFROG_ACCESS_TOKEN must be set for acceptance tests")
-		}
-	}
-	restyClient, err = client.AddAuth(restyClient, "", accessToken)
-	if err != nil {
-		t.Error(err)
-	}
-	return restyClient
-}
-
 func testAccPreCheck(t *testing.T) {
 	ctx := context.Background()
 	provider, _ := testAccProviders()["xray"]()
@@ -66,7 +37,7 @@ func testAccPreCheck(t *testing.T) {
 
 // Create a repository with Xray indexing enabled. It will be used in the tests
 func testAccCreateRepos(t *testing.T, repo, repoType string, projectKey string) {
-	restyClient := getTestResty(t)
+	restyClient := GetTestResty(t)
 
 	type Repository struct {
 		Rclass    string `json:"rclass"`
@@ -102,7 +73,7 @@ func testAccCreateRepos(t *testing.T, repo, repoType string, projectKey string) 
 }
 
 func testAccDeleteRepo(t *testing.T, repo string) {
-	restyClient := getTestResty(t)
+	restyClient := GetTestResty(t)
 
 	response, errRepo := restyClient.R().Delete("artifactory/api/repositories/" + repo)
 	if errRepo != nil || response.StatusCode() != http.StatusOK {
@@ -112,7 +83,7 @@ func testAccDeleteRepo(t *testing.T, repo string) {
 
 // Create a project. It will be used in the tests
 func testAccCreateProject(t *testing.T, projectKey string, projectName string) {
-	restyClient := getTestResty(t)
+	restyClient := GetTestResty(t)
 
 	type Project struct {
 		DisplayName string `json:"display_name"`
@@ -133,14 +104,14 @@ func testAccCreateProject(t *testing.T, projectKey string, projectName string) {
 
 // Delete test projects after testing
 func testAccDeleteProject(t *testing.T, projectKey string) (*resty.Response, error) {
-	restyClient := getTestResty(t)
+	restyClient := GetTestResty(t)
 	return restyClient.R().Delete("/access/api/v1/projects/" + projectKey)
 }
 
 // Create a set of builds or a single build, add the build into the Xray indexing configuration, to be able to add it to
 // the xray watch
 func testAccCreateBuilds(t *testing.T, builds []string, projectKey string) {
-	restyClient := getTestResty(t)
+	restyClient := GetTestResty(t)
 
 	type BuildBody struct {
 		Version string `json:"version"`

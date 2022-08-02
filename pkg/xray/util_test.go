@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"testing"
 
 	"github.com/go-resty/resty/v2"
@@ -55,15 +54,14 @@ func verifyDeleted(id string, check CheckFun) func(*terraform.State) error {
 }
 
 func GetTestResty(t *testing.T) *resty.Client {
-	artifactoryUrl := test.GetEnvVarWithFallback(t, "ARTIFACTORY_URL", "JFROG_URL")
+	artifactoryUrl := test.GetEnvVarWithFallback(t, "XRAY_URL", "JFROG_URL")
 	restyClient, err := client.Build(artifactoryUrl, "")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	accessToken := test.GetEnvVarWithFallback(t, "ARTIFACTORY_ACCESS_TOKEN", "JFROG_ACCESS_TOKEN")
-	api := os.Getenv("ARTIFACTORY_API_KEY")
-	restyClient, err = client.AddAuth(restyClient, api, accessToken)
+	accessToken := test.GetEnvVarWithFallback(t, "XRAY_ACCESS_TOKEN", "JFROG_ACCESS_TOKEN")
+	restyClient, err = client.AddAuth(restyClient, "", accessToken)
 	if err != nil {
 		t.Fatal(err)
 	}
