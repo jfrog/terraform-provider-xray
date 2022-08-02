@@ -9,8 +9,8 @@ resource "xray_operational_risk_policy" "min_risk" {
     priority = 1
 
     criteria {
-			op_risk_min_risk = "Medium"
-		}
+      op_risk_min_risk = "Medium"
+    }
 
     actions {
       webhooks                           = []
@@ -41,7 +41,7 @@ resource "xray_operational_risk_policy" "custom_criteria" {
     priority = 1
 
     criteria {
-			op_risk_custom {
+      op_risk_custom {
         use_and_condition                  = true
         is_eol                             = false
         release_date_greater_than_months   = 6
@@ -51,7 +51,7 @@ resource "xray_operational_risk_policy" "custom_criteria" {
         committers_less_than               = 1
         risk                               = "medium"
       }
-		}
+    }
 
     actions {
       webhooks                           = []
