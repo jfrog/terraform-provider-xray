@@ -2,10 +2,11 @@ package xray
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"net/http"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/jfrog/terraform-provider-shared/util"
@@ -107,6 +108,12 @@ var getPolicySchema = func(criteriaSchema map[string]*schema.Schema, actionsSche
 			Required:         true,
 			Description:      "Type of the policy",
 			ValidateDiagFunc: validator.StringInSlice(true, "Security", "License", "Operational_Risk"),
+		},
+		"project_key": {
+			Type:             schema.TypeString,
+			Optional:         true,
+			ValidateDiagFunc: validator.ProjectKey,
+			Description:      "Project key for assigning this policy to. Must be 3 - 10 lowercase alphanumeric characters.",
 		},
 		"author": {
 			Type:        schema.TypeString,
@@ -237,6 +244,7 @@ type PolicyRule struct {
 type Policy struct {
 	Name        string        `json:"name"`
 	Type        string        `json:"type"`
+	ProjectKey  string        `json:"-"`
 	Author      string        `json:"author,omitempty"` // Omitempty is used because the field is computed
 	Description string        `json:"description"`
 	Rules       *[]PolicyRule `json:"rules"`
@@ -250,6 +258,9 @@ func unpackPolicy(d *schema.ResourceData) (*Policy, error) {
 	policy.Name = d.Get("name").(string)
 	if v, ok := d.GetOk("type"); ok {
 		policy.Type = v.(string)
+	}
+	if v, ok := d.GetOk("project_key"); ok {
+		policy.ProjectKey = v.(string)
 	}
 	if v, ok := d.GetOk("description"); ok {
 		policy.Description = v.(string)
@@ -378,32 +389,8 @@ func unpackCriteria(d *schema.Set, policyType string) (*PolicyRuleCriteria, erro
 	// So we have to figure out which group is actually empty and not even set it
 	if policyType == "license" {
 		criteria = unpackLicenseCriteria(m)
-		// if v, ok := m["allow_unknown"]; ok {
-		// 	criteria.AllowUnknown = utils.BoolPtr(v.(bool))
-		// }
-		// if v, ok := m["banned_licenses"]; ok {
-		// 	criteria.BannedLicenses = unpackLicenses(v.(*schema.Set))
-		// }
-		// if v, ok := m["allowed_licenses"]; ok {
-		// 	criteria.AllowedLicenses = unpackLicenses(v.(*schema.Set))
-		// }
-		// if v, ok := m["multi_license_permissive"]; ok {
-		// 	criteria.MultiLicensePermissive = util.BoolPtr(v.(bool))
-		// }
 	} else if policyType == "security" {
 		criteria = unpackSecurityCriteria(m)
-		// minSev := m["min_severity"].(string)
-		// cvss := unpackCVSSRange(m["cvss_range"].([]interface{}))
-		// if v, ok := m["fix_version_dependant"]; ok {
-		// 	criteria.FixVersionDependant = v.(bool)
-		// }
-		//
-		// // This is also picky about not allowing empty values to be set
-		// if cvss == nil {
-		// 	criteria.MinimumSeverity = minSev
-		// } else {
-		// 	criteria.CVSSRange = cvss
-		// }
 	} else if policyType == "operational_risk" {
 		criteria = unpackOperationalRiskCriteria(m)
 	}
@@ -666,7 +653,13 @@ func resourceXrayPolicyCreate(ctx context.Context, d *schema.ResourceData, m int
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	_, err = m.(*resty.Client).R().SetBody(policy).Post("xray/api/v2/policies")
+
+	req, err := getRestyRequest(m.(*resty.Client), policy.ProjectKey)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	_, err = req.SetBody(policy).Post("xray/api/v2/policies")
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -678,16 +671,26 @@ func resourceXrayPolicyCreate(ctx context.Context, d *schema.ResourceData, m int
 func resourceXrayPolicyRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	policy := Policy{}
 
-	resp, err := m.(*resty.Client).R().SetResult(&policy).Get("xray/api/v2/policies/" + d.Id())
+	projectKey := d.Get("project_key").(string)
+	req, err := getRestyRequest(m.(*resty.Client), projectKey)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	resp, err := req.
+		SetResult(&policy).
+		SetPathParams(map[string]string{
+			"name": d.Id(),
+		}).
+		Get("xray/api/v2/policies/{name}")
 	if err != nil {
 		if resp != nil && resp.StatusCode() == http.StatusNotFound {
-			log.Printf("[WARN] Xray policy (%s) not found, removing from state", d.Id())
+			tflog.Warn(ctx, fmt.Sprintf("Xray policy (%s) not found, removing from state", d.Id()))
 			d.SetId("")
 		}
 		return diag.FromErr(err)
 	}
-	packPolicy(policy, d)
-	return nil
+	return packPolicy(policy, d)
 }
 
 func resourceXrayPolicyUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -695,7 +698,18 @@ func resourceXrayPolicyUpdate(ctx context.Context, d *schema.ResourceData, m int
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	_, err = m.(*resty.Client).R().SetBody(policy).Put("xray/api/v2/policies/" + d.Id())
+
+	req, err := getRestyRequest(m.(*resty.Client), policy.ProjectKey)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	_, err = req.
+		SetBody(policy).
+		SetPathParams(map[string]string{
+			"name": d.Id(),
+		}).
+		Put("xray/api/v2/policies/{name}")
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -705,8 +719,22 @@ func resourceXrayPolicyUpdate(ctx context.Context, d *schema.ResourceData, m int
 }
 
 func resourceXrayPolicyDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	policy, err := unpackPolicy(d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	req, err := getRestyRequest(m.(*resty.Client), policy.ProjectKey)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	// Warning or errors can be collected in a slice type
-	resp, err := m.(*resty.Client).R().Delete("xray/api/v2/policies/" + d.Id())
+	resp, err := req.
+		SetPathParams(map[string]string{
+			"name": d.Id(),
+		}).
+		Delete("xray/api/v2/policies/{name}")
 	if err != nil && resp.StatusCode() == http.StatusInternalServerError {
 		d.SetId("")
 		return diag.FromErr(err)

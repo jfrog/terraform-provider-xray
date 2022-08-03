@@ -1,9 +1,11 @@
 package xray
 
 import (
+	"fmt"
 	"regexp"
 	"testing"
 
+	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/jfrog/terraform-provider-shared/test"
 	"github.com/jfrog/terraform-provider-shared/util"
@@ -23,6 +25,74 @@ var testDataOperationalRisk = map[string]string{
 	"grace_period_days":                 "5",
 	"block_unscanned":                   "true",
 	"block_active":                      "true",
+}
+
+func TestAccOperationalRiskPolicy_withProjectKey(t *testing.T) {
+	_, fqrn, resourceName := test.MkNames("policy-", "xray_operational_risk_policy")
+	projectKey := fmt.Sprintf("testproj%d", test.RandSelect(1, 2, 3, 4, 5))
+
+	template := `resource "xray_operational_risk_policy" "{{ .resource_name }}" {
+		name        = "{{ .policy_name }}"
+		description = "{{ .policy_description }}"
+		type        = "operational_risk"
+		project_key = "{{ .project_key }}"
+
+		rule {
+			name = "{{ .rule_name }}"
+			priority = 1
+			criteria {
+				op_risk_min_risk = "{{ .op_risk_min_risk }}"
+			}
+			actions {
+				block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+				fail_build = {{ .fail_build }}
+				notify_watch_recipients = {{ .notify_watch_recipients }}
+				notify_deployer = {{ .notify_deployer }}
+				create_ticket_enabled = {{ .create_ticket_enabled }}
+				build_failure_grace_period_in_days = {{ .grace_period_days }}
+				block_download {
+					unscanned = {{ .block_unscanned }}
+					active = {{ .block_active }}
+				}
+			}
+		}
+	}`
+
+	testData := util.MergeMaps(testDataOperationalRisk)
+	testData["resource_name"] = resourceName
+	testData["project_key"] = projectKey
+	testData["op_risk_min_risk"] = "Medium"
+
+	config := util.ExecuteTemplate(fqrn, template, testData)
+
+	updatedTestData := util.MergeMaps(testData)
+	updatedTestData["policy_description"] = "New description"
+	updatedConfig := util.ExecuteTemplate(fqrn, template, updatedTestData)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			CreateProject(t, projectKey)
+		},
+		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+			DeleteProject(t, projectKey)
+			return testCheckPolicy(id, request)
+		}),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					verifyOpertionalRiskPolicy(fqrn, testData),
+					resource.TestCheckResourceAttr(fqrn, "project_key", projectKey),
+				),
+			},
+			{
+				Config: updatedConfig,
+				Check:  verifyOpertionalRiskPolicy(fqrn, updatedTestData),
+			},
+		},
+	})
 }
 
 func TestAccOperationalRiskPolicy_minRiskCriteria(t *testing.T) {

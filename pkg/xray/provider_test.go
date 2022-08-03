@@ -4,15 +4,12 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 	"testing"
 
 	"github.com/go-resty/resty/v2"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/jfrog/terraform-provider-shared/client"
 )
 
 func testAccProviders() map[string]func() (*schema.Provider, error) {
@@ -29,32 +26,6 @@ func TestProvider(t *testing.T) {
 	}
 }
 
-func getTestResty(t *testing.T) *resty.Client {
-	var ok bool
-	var xrayUrl string
-	if xrayUrl, ok = os.LookupEnv("XRAY_URL"); !ok {
-		if xrayUrl, ok = os.LookupEnv("JFROG_URL"); !ok {
-			t.Fatal("XRAY_URL or JFROG_URL must be set for acceptance tests")
-		}
-	}
-	restyClient, err := client.Build(xrayUrl, "")
-	if err != nil {
-		t.Error(err)
-	}
-
-	var accessToken string
-	if accessToken, ok = os.LookupEnv("XRAY_ACCESS_TOKEN"); !ok {
-		if accessToken, ok = os.LookupEnv("JFROG_ACCESS_TOKEN"); !ok {
-			t.Fatal("XRAY_ACCESS_TOKEN or JFROG_ACCESS_TOKEN must be set for acceptance tests")
-		}
-	}
-	restyClient, err = client.AddAuth(restyClient, "", accessToken)
-	if err != nil {
-		t.Error(err)
-	}
-	return restyClient
-}
-
 func testAccPreCheck(t *testing.T) {
 	ctx := context.Background()
 	provider, _ := testAccProviders()["xray"]()
@@ -65,8 +36,8 @@ func testAccPreCheck(t *testing.T) {
 }
 
 // Create a repository with Xray indexing enabled. It will be used in the tests
-func testAccCreateRepos(t *testing.T, repo, repoType string) {
-	restyClient := getTestResty(t)
+func testAccCreateRepos(t *testing.T, repo, repoType string, projectKey string) {
+	restyClient := GetTestResty(t)
 
 	type Repository struct {
 		Rclass    string `json:"rclass"`
@@ -83,16 +54,26 @@ func testAccCreateRepos(t *testing.T, repo, repoType string) {
 		repository.Url = "http://tempurl.org"
 	}
 
-	response, errRepo := restyClient.R().SetBody(repository).Put("artifactory/api/repositories/" + repo)
+	req := restyClient.R()
+
+	res, err := req.SetBody(repository).Put("artifactory/api/repositories/" + repo)
 	//Artifactory can return 400 for several reasons, this is why we are checking the response body
-	repoExists := strings.Contains(fmt.Sprint(errRepo), "Case insensitive repository key already exists")
-	if !repoExists && response.StatusCode() != http.StatusOK {
-		t.Error(errRepo)
+	repoExists := strings.Contains(fmt.Sprint(err), "Case insensitive repository key already exists")
+	if !repoExists && res.StatusCode() != http.StatusOK {
+		t.Error(err)
+	}
+
+	if len(projectKey) > 0 {
+		path := fmt.Sprintf("access/api/v1/projects/_/attach/repositories/%s/%s", repo, projectKey)
+		res, err = req.Put(path)
+		if err != nil {
+			t.Error(err)
+		}
 	}
 }
 
 func testAccDeleteRepo(t *testing.T, repo string) {
-	restyClient := getTestResty(t)
+	restyClient := GetTestResty(t)
 
 	response, errRepo := restyClient.R().Delete("artifactory/api/repositories/" + repo)
 	if errRepo != nil || response.StatusCode() != http.StatusOK {
@@ -102,7 +83,7 @@ func testAccDeleteRepo(t *testing.T, repo string) {
 
 // Create a project. It will be used in the tests
 func testAccCreateProject(t *testing.T, projectKey string, projectName string) {
-	restyClient := getTestResty(t)
+	restyClient := GetTestResty(t)
 
 	type Project struct {
 		DisplayName string `json:"display_name"`
@@ -123,24 +104,20 @@ func testAccCreateProject(t *testing.T, projectKey string, projectName string) {
 
 // Delete test projects after testing
 func testAccDeleteProject(t *testing.T, projectKey string) (*resty.Response, error) {
-	restyClient := getTestResty(t)
+	restyClient := GetTestResty(t)
 	return restyClient.R().Delete("/access/api/v1/projects/" + projectKey)
 }
 
 // Create a set of builds or a single build, add the build into the Xray indexing configuration, to be able to add it to
 // the xray watch
-func testAccCreateBuilds(t *testing.T, builds []string) {
-	restyClient := getTestResty(t)
+func testAccCreateBuilds(t *testing.T, builds []string, projectKey string) {
+	restyClient := GetTestResty(t)
 
 	type BuildBody struct {
 		Version string `json:"version"`
 		Name    string `json:"name"`
 		Number  string `json:"number"`
 		Started string `json:"started"`
-	}
-
-	type XrayIndexBody struct {
-		Names []string `json:"names"`
 	}
 
 	for _, build := range builds {
@@ -150,19 +127,30 @@ func testAccCreateBuilds(t *testing.T, builds []string) {
 			Number:  "28",
 			Started: "2021-10-30T12:00:19.893+0300",
 		}
-		respCreateBuild, errCreateBuild := restyClient.R().SetBody(buildBody).Put("artifactory/api/build")
+		req := restyClient.R().SetBody(buildBody)
+		if len(projectKey) > 0 {
+			req = req.SetQueryParam("project", projectKey)
+		}
+		respCreateBuild, errCreateBuild := req.Put("artifactory/api/build")
 		if respCreateBuild.StatusCode() != http.StatusNoContent {
 			t.Error(errCreateBuild)
 		}
 	}
 
-	xrayIndexBody := XrayIndexBody{
-		Names: builds,
+	type XrayIndexBody struct {
+		IndexedBuilds []string `json:"indexed_builds"`
 	}
 
-	respAddIndexBody, errAddIndexBody := restyClient.R().SetBody(xrayIndexBody).Post("xray/api/v1/binMgr/builds")
+	xrayIndexBody := XrayIndexBody{
+		IndexedBuilds: builds,
+	}
+
+	req := restyClient.R().SetBody(xrayIndexBody)
+	if len(projectKey) > 0 {
+		req = req.SetQueryParam("projectKey", projectKey)
+	}
+	respAddIndexBody, errAddIndexBody := req.Put("xray/api/v1/binMgr/default/builds")
 	if respAddIndexBody.StatusCode() != http.StatusOK {
 		t.Error(errAddIndexBody)
 	}
-
 }

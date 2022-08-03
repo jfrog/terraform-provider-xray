@@ -2,13 +2,14 @@ package xray
 
 import (
 	"fmt"
-	"github.com/jfrog/terraform-provider-shared/test"
-	"github.com/jfrog/terraform-provider-shared/util"
 	"regexp"
 	"strconv"
 	"testing"
 
+	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/jfrog/terraform-provider-shared/test"
+	"github.com/jfrog/terraform-provider-shared/util"
 )
 
 var testDataSecurity = map[string]string{
@@ -94,6 +95,79 @@ func TestAccSecurityPolicy_badGracePeriod(t *testing.T) {
 			{
 				Config:      util.ExecuteTemplate(fqrn, securityPolicyCVSS, testData),
 				ExpectError: regexp.MustCompile("Found Invalid Policy"),
+			},
+		},
+	})
+}
+
+func TestAccSecurityPolicy_withProjectKey(t *testing.T) {
+	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
+	projectKey := fmt.Sprintf("testproj%d", test.RandSelect(1, 2, 3, 4, 5))
+
+	testData := util.MergeMaps(testDataSecurity)
+	testData["resource_name"] = resourceName
+	testData["project_key"] = projectKey
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-4-%d", test.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-4-%d", test.RandomInt())
+	testData["cvssOrSeverity"] = "cvss"
+
+	template := `resource "xray_security_policy" "{{ .resource_name }}" {
+		name        = "{{ .policy_name }}"
+		description = "{{ .policy_description }}"
+		type        = "security"
+		project_key = "{{ .project_key }}"
+
+		rule {
+			name = "{{ .rule_name }}"
+			priority = 1
+			criteria {
+				cvss_range {
+					from = {{ .cvss_from }}
+					to = {{ .cvss_to }}
+				}
+			}
+			actions {
+				block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+				fail_build = {{ .fail_build }}
+				notify_watch_recipients = {{ .notify_watch_recipients }}
+				notify_deployer = {{ .notify_deployer }}
+				create_ticket_enabled = {{ .create_ticket_enabled }}
+				build_failure_grace_period_in_days = {{ .grace_period_days }}
+				block_download {
+					unscanned = {{ .block_unscanned }}
+					active = {{ .block_active }}
+				}
+			}
+		}
+	}`
+
+	config := util.ExecuteTemplate(fqrn, template, testData)
+
+	updatedTestData := util.MergeMaps(testData)
+	updatedTestData["policy_description"] = "New description"
+	updatedConfig := util.ExecuteTemplate(fqrn, template, updatedTestData)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			CreateProject(t, projectKey)
+		},
+		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+			DeleteProject(t, projectKey)
+			return testCheckPolicy(id, request)
+		}),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					verifySecurityPolicy(fqrn, testData, testData["cvssOrSeverity"]),
+					resource.TestCheckResourceAttr(fqrn, "project_key", projectKey),
+				),
+			},
+			{
+				Config: updatedConfig,
+				Check:  verifyOpertionalRiskPolicy(fqrn, updatedTestData),
 			},
 		},
 	})
@@ -355,7 +429,7 @@ const securityPolicyCVSS = `resource "xray_security_policy" "{{ .resource_name }
 	rule {
 		name = "{{ .rule_name }}"
 		priority = 1
-		criteria {	
+		criteria {
 			cvss_range {
 				from = {{ .cvss_from }}
 				to = {{ .cvss_to }}

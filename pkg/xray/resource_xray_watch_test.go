@@ -53,6 +53,97 @@ func TestAccWatch_allReposSinglePolicy(t *testing.T) {
 	})
 }
 
+func TestAccWatch_allReposWithProjectKey(t *testing.T) {
+	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
+	projectKey := fmt.Sprintf("testproj%d", test.RandSelect(1, 2, 3, 4, 5))
+
+	testData := util.MergeMaps(testDataWatch)
+
+	testData["resource_name"] = resourceName
+	testData["project_key"] = projectKey
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+
+	template := `resource "xray_security_policy" "security" {
+	  name        = "{{ .policy_name_0 }}"
+	  description = "Security policy description"
+	  type        = "security"
+	  rule {
+		name     = "rule-name-severity"
+		priority = 1
+		criteria {
+		  min_severity = "High"
+		}
+		actions {
+		  webhooks = []
+		  mails    = ["test@email.com"]
+		  block_download {
+			unscanned = true
+			active    = true
+		  }
+		  block_release_bundle_distribution  = true
+		  fail_build                         = true
+		  notify_watch_recipients            = true
+		  notify_deployer                    = true
+		  create_ticket_enabled              = false
+		  build_failure_grace_period_in_days = 5
+		}
+	  }
+	}
+
+	resource "xray_watch" "{{ .resource_name }}" {
+	  name        	= "{{ .watch_name }}"
+	  description 	= "{{ .description }}"
+	  active 		= {{ .active }}
+	  project_key   = "{{ .project_key }}"
+
+	  watch_resource {
+		type       	= "{{ .watch_type }}"
+		filter {
+			type  	= "{{ .filter_type_0 }}"
+			value	= "{{ .filter_value_0 }}"
+		}
+	  }
+	  assigned_policy {
+		name 	= xray_security_policy.security.name
+		type 	= "security"
+	  }
+
+	  watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
+	}`
+	config := util.ExecuteTemplate(fqrn, template, testData)
+
+	updatedTestData := util.MergeMaps(testData)
+	updatedTestData["description"] = "New description"
+	updatedConfig := util.ExecuteTemplate(fqrn, template, updatedTestData)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			CreateProject(t, projectKey)
+		},
+		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+			DeleteProject(t, projectKey)
+			resp, err := testCheckWatch(id, request)
+			return resp, err
+		}),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					verifyXrayWatch(fqrn, testData),
+					resource.TestCheckResourceAttr(fqrn, "project_key", projectKey),
+				),
+			},
+			{
+				Config: updatedConfig,
+				Check:  verifyXrayWatch(fqrn, updatedTestData),
+			},
+		},
+	})
+}
+
 func TestAccWatch_allReposMultiplePolicies(t *testing.T) {
 	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
 	testData := util.MergeMaps(testDataWatch)
@@ -111,7 +202,7 @@ func makeSingleRepositoryTestCase(repoType string, t *testing.T) (*testing.T, re
 	return t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			testAccCreateRepos(t, testData["repo0"], repoType)
+			testAccCreateRepos(t, testData["repo0"], repoType, "")
 		},
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
 			testAccDeleteRepo(t, testData["repo0"])
@@ -147,6 +238,94 @@ func TestAccWatch_singleRepository(t *testing.T) {
 	}
 }
 
+func TestAccWatch_singleRepositoryWithProjectKey(t *testing.T) {
+	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
+	repoKey := fmt.Sprintf("local-%d", test.RandomInt())
+	projectKey := fmt.Sprintf("testproj%d", test.RandSelect(1, 2, 3, 4, 5))
+
+	testData := util.MergeMaps(testDataWatch)
+	testData["resource_name"] = resourceName
+	testData["project_key"] = projectKey
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["watch_type"] = "repository"
+	testData["repo_type"] = "local"
+	testData["repo0"] = repoKey
+
+	template := `resource "xray_security_policy" "security" {
+	  name        = "{{ .policy_name_0 }}"
+	  description = "Security policy description"
+	  type        = "security"
+	  rule {
+	    name     = "rule-name-severity"
+	    priority = 1
+	    criteria {
+	      min_severity = "High"
+	    }
+	    actions {
+	      webhooks = []
+	      mails    = ["test@email.com"]
+	      block_download {
+	        unscanned = true
+	        active    = true
+	      }
+	      block_release_bundle_distribution  = true
+	      fail_build                         = true
+	      notify_watch_recipients            = true
+	      notify_deployer                    = true
+	      create_ticket_enabled              = false
+	      build_failure_grace_period_in_days = 5
+	    }
+	  }
+	}
+
+	resource "xray_watch" "{{ .resource_name }}" {
+	  name        	= "{{ .watch_name }}"
+	  description 	= "{{ .description }}"
+	  active 		= {{ .active }}
+	  project_key   = "{{ .project_key }}"
+
+	  watch_resource {
+		type       	= "{{ .watch_type }}"
+		bin_mgr_id  = "default"
+		name		= "{{ .repo0 }}"
+		repo_type   = "{{ .repo_type }}"
+	  }
+	  assigned_policy {
+	  	name 	= xray_security_policy.security.name
+	  	type 	= "security"
+	  }
+	  watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
+	}`
+
+	config := util.ExecuteTemplate(fqrn, template, testData)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			CreateProject(t, projectKey)
+			testAccCreateRepos(t, repoKey, "local", projectKey)
+		},
+		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+			testAccDeleteRepo(t, repoKey)
+			DeleteProject(t, projectKey)
+			resp, err := testCheckWatch(id, request)
+			return resp, err
+		}),
+
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					verifyXrayWatch(fqrn, testData),
+					resource.TestCheckResourceAttr(fqrn, "project_key", projectKey),
+				),
+			},
+		},
+	})
+}
+
 func TestAccWatch_repositoryMissingRepoType(t *testing.T) {
 	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
 	testData := util.MergeMaps(testDataWatch)
@@ -160,7 +339,7 @@ func TestAccWatch_repositoryMissingRepoType(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			testAccCreateRepos(t, testData["repo0"], "local")
+			testAccCreateRepos(t, testData["repo0"], "local", "")
 		},
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
 			testAccDeleteRepo(t, testData["repo0"])
@@ -194,8 +373,8 @@ func TestAccWatch_multipleRepositories(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			testAccCreateRepos(t, testData["repo0"], "local")
-			testAccCreateRepos(t, testData["repo1"], "local")
+			testAccCreateRepos(t, testData["repo0"], "local", "")
+			testAccCreateRepos(t, testData["repo1"], "local", "")
 		},
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
 			testAccDeleteRepo(t, testData["repo0"])
@@ -229,7 +408,7 @@ func TestAccWatch_build(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			testAccCreateBuilds(t, builds)
+			testAccCreateBuilds(t, builds, "")
 		},
 		CheckDestroy:      verifyDeleted(fqrn, testCheckWatch),
 		ProviderFactories: testAccProviders(),
@@ -237,6 +416,184 @@ func TestAccWatch_build(t *testing.T) {
 			{
 				Config: util.ExecuteTemplate(fqrn, buildWatchTemplate, testData),
 				Check:  verifyXrayWatch(fqrn, testData),
+			},
+		},
+	})
+}
+
+func TestAccWatch_buildWithProjectKey(t *testing.T) {
+	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
+	projectKey := fmt.Sprintf("testproj%d", test.RandSelect(1, 2, 3, 4, 5))
+
+	testData := util.MergeMaps(testDataWatch)
+	testData["resource_name"] = resourceName
+	testData["project_key"] = projectKey
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["watch_type"] = "build"
+	testData["build_name0"] = fmt.Sprintf("release-pipeline-%d", test.RandomInt())
+
+	template := `resource "xray_security_policy" "security" {
+	  name        = "{{ .policy_name_0 }}"
+	  description = "Security policy description"
+	  type        = "security"
+	  rule {
+	    name     = "rule-name-severity"
+	    priority = 1
+	    criteria {
+	      min_severity = "High"
+	    }
+	    actions {
+	      webhooks = []
+	      mails    = ["test@email.com"]
+	      block_download {
+	        unscanned = true
+	        active    = true
+	      }
+	      block_release_bundle_distribution  = true
+	      fail_build                         = true
+	      notify_watch_recipients            = true
+	      notify_deployer                    = true
+	      create_ticket_enabled              = false
+	      build_failure_grace_period_in_days = 5
+	    }
+	  }
+	}
+
+	resource "xray_watch" "{{ .resource_name }}" {
+	  name        	= "{{ .watch_name }}"
+	  description 	= "{{ .description }}"
+	  active 		= {{ .active }}
+	  project_key   = "{{ .project_key }}"
+
+	  watch_resource {
+		type       	= "{{ .watch_type }}"
+		bin_mgr_id  = "default"
+		name		= "{{ .build_name0 }}"
+	  }
+	  assigned_policy {
+	  	name 	= xray_security_policy.security.name
+	  	type 	= "security"
+	  }
+	  watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
+	}`
+	config := util.ExecuteTemplate(fqrn, template, testData)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			CreateProject(t, projectKey)
+			testAccCreateBuilds(t, []string{testData["build_name0"]}, projectKey)
+		},
+		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+			DeleteProject(t, projectKey)
+			resp, err := testCheckWatch(id, request)
+			return resp, err
+		}),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					verifyXrayWatch(fqrn, testData),
+					resource.TestCheckResourceAttr(fqrn, "project_key", projectKey),
+				),
+			},
+		},
+	})
+}
+
+func TestAccWatch_allBuildsWithProjectKey(t *testing.T) {
+	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
+	projectKey := fmt.Sprintf("testproj%d", test.RandSelect(1, 2, 3, 4, 5))
+
+	testData := util.MergeMaps(testDataWatch)
+	testData["resource_name"] = resourceName
+	testData["project_key"] = projectKey
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["watch_type"] = "all-builds"
+
+	template := `resource "xray_security_policy" "security" {
+	  name        = "{{ .policy_name_0 }}"
+	  description = "Security policy description"
+	  type        = "security"
+	  rule {
+	    name     = "rule-name-severity"
+	    priority = 1
+	    criteria {
+	      min_severity = "High"
+	    }
+	    actions {
+	      webhooks = []
+	      mails    = ["test@email.com"]
+	      block_download {
+	        unscanned = true
+	        active    = true
+	      }
+	      block_release_bundle_distribution  = true
+	      fail_build                         = true
+	      notify_watch_recipients            = true
+	      notify_deployer                    = true
+	      create_ticket_enabled              = false
+	      build_failure_grace_period_in_days = 5
+	    }
+	  }
+	}
+
+	resource "xray_watch" "{{ .resource_name }}" {
+	  name        	= "{{ .watch_name }}"
+	  description 	= "{{ .description }}"
+	  active 		= {{ .active }}
+	  project_key   = "{{ .project_key }}"
+
+	  watch_resource {
+		type       	= "{{ .watch_type }}"
+		bin_mgr_id  = "default"
+		ant_filter {
+			exclude_patterns = ["a*", "b*"]
+			include_patterns = ["ab*"]
+		}
+		ant_filter {
+			exclude_patterns = ["c*", "d*"]
+			include_patterns = ["cd*"]
+		}
+	  }
+
+	  assigned_policy {
+	  	name 	= xray_security_policy.security.name
+	  	type 	= "security"
+	  }
+	  watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
+	}`
+	config := util.ExecuteTemplate(fqrn, template, testData)
+
+	updatedTestData := util.MergeMaps(testData)
+	updatedTestData["description"] = "New description"
+	updatedConfig := util.ExecuteTemplate(fqrn, template, updatedTestData)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			CreateProject(t, projectKey)
+		},
+		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+			DeleteProject(t, projectKey)
+			resp, err := testCheckWatch(id, request)
+			return resp, err
+		}),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					verifyXrayWatch(fqrn, testData),
+					resource.TestCheckResourceAttr(fqrn, "project_key", projectKey),
+				),
+			},
+			{
+				Config: updatedConfig,
+				Check:  verifyXrayWatch(fqrn, updatedTestData),
 			},
 		},
 	})
@@ -257,7 +614,7 @@ func TestAccWatch_multipleBuilds(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			testAccCreateBuilds(t, builds)
+			testAccCreateBuilds(t, builds, "")
 		},
 		CheckDestroy:      verifyDeleted(fqrn, testCheckWatch),
 		ProviderFactories: testAccProviders(),

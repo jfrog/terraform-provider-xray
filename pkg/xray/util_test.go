@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/jfrog/terraform-provider-shared/client"
-
 	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/jfrog/terraform-provider-shared/client"
+	"github.com/jfrog/terraform-provider-shared/test"
 )
 
 func checkPolicy(id string, request *resty.Request) (*resty.Response, error) {
@@ -50,5 +50,63 @@ func verifyDeleted(id string, check CheckFun) func(*terraform.State) error {
 			return err
 		}
 		return fmt.Errorf("error: %s still exists", rs.Primary.ID)
+	}
+}
+
+func GetTestResty(t *testing.T) *resty.Client {
+	artifactoryUrl := test.GetEnvVarWithFallback(t, "XRAY_URL", "JFROG_URL")
+	restyClient, err := client.Build(artifactoryUrl, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	accessToken := test.GetEnvVarWithFallback(t, "XRAY_ACCESS_TOKEN", "JFROG_ACCESS_TOKEN")
+	restyClient, err = client.AddAuth(restyClient, "", accessToken)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return restyClient
+}
+
+func CreateProject(t *testing.T, projectKey string) {
+	type AdminPrivileges struct {
+		ManageMembers   bool `json:"manage_members"`
+		ManageResources bool `json:"manage_resources"`
+		IndexResources  bool `json:"index_resources"`
+	}
+
+	type Project struct {
+		Key             string          `json:"project_key"`
+		DisplayName     string          `json:"display_name"`
+		Description     string          `json:"description"`
+		AdminPrivileges AdminPrivileges `json:"admin_privileges"`
+	}
+
+	restyClient := GetTestResty(t)
+
+	project := Project{
+		Key:         projectKey,
+		DisplayName: projectKey,
+		Description: fmt.Sprintf("%s description", projectKey),
+		AdminPrivileges: AdminPrivileges{
+			ManageMembers:   true,
+			ManageResources: true,
+			IndexResources:  true,
+		},
+	}
+
+	_, err := restyClient.R().
+		SetBody(project).
+		Post("/access/api/v1/projects")
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func DeleteProject(t *testing.T, projectKey string) {
+	restyClient := GetTestResty(t)
+	_, err := restyClient.R().Delete("/access/api/v1/projects/" + projectKey)
+	if err != nil {
+		t.Fatal(err)
 	}
 }

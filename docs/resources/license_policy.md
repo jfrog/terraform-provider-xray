@@ -19,6 +19,7 @@ resource "xray_license_policy" "allowed_licenses" {
   name        = "test-license-policy-allowed"
   description = "License policy, allow certain licenses"
   type        = "license"
+  project_key = "testproj"
 
   rule {
     name     = "License_rule"
@@ -54,6 +55,7 @@ resource "xray_license_policy" "banned_licenses" {
   name        = "test-license-policy-banned"
   description = "License policy, block certain licenses"
   type        = "license"
+  project_key = "testproj"
 
   rule {
     name     = "License_rule"
@@ -97,6 +99,7 @@ resource "xray_license_policy" "banned_licenses" {
 ### Optional
 
 - `description` (String) More verbose description of the policy
+- `project_key` (String) Project key for assigning this policy to. Must be 3 - 10 lowercase alphanumeric characters.
 
 ### Read-Only
 

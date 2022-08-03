@@ -1,3 +1,9 @@
+## 1.5.0 (August 3, 2022). Tested on Artifactory 7.41.7 and Xray 3.52.4
+
+NEW FEATURE:
+
+* resource/xray_watch, resource/xray_security_policy, resource/xray_license_policy, and resource/xray_operational_risk_policy: Add support for `project_key` attribute. PR: [#72](https://github.com/jfrog/terraform-provider-xray/pull/72). Issue [#69](https://github.com/jfrog/terraform-provider-xray/issues/69)
+
 ## 1.4.0 (July 22, 2022). Tested on Artifactory 7.41.6 and Xray 3.52.4
 
 NEW FEATURE:
