@@ -1,3 +1,9 @@
+## 1.5.1 (August 9, 2022)
+
+BUG FIXES:
+
+* resource/xray_watch, resource/xray_security_policy, resource/xray_license_policy, and resource/xray_operational_risk_policy: Add support for hyphen character in `project_key` attribute. PR: [#73](https://github.com/jfrog/terraform-provider-xray/pull/73).
+
 ## 1.5.0 (August 3, 2022). Tested on Artifactory 7.41.7 and Xray 3.52.4
 
 NEW FEATURE:
