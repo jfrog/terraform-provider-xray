@@ -47,7 +47,7 @@ pipelines:
             NUM_NODES: ${int_gkeEnvVars_NUM_NODES}
             ARTIFACTORY_DISTRIBUTION: artifactory
             NEW_RT_PASSWORD: ${int_gkeEnvVars_new_rt_password}
-            CLEANUP_RESOURCES: true
+            CLEANUP_RESOURCES: "true"
         execution:
           onStart:
             - echo "Preparing for work..."
