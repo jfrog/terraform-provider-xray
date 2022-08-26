@@ -142,6 +142,7 @@ pipelines:
                 versions:
                   - "1.18"
           integrations:
+            - name: gcpK8sPartnershipProject
             - name: partnersSlack
             - name: gkeEnvVars
             - name: Partnership_GitHub
