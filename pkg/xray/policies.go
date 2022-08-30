@@ -90,87 +90,84 @@ var commonActionsSchema = map[string]*schema.Schema{
 }
 
 var getPolicySchema = func(criteriaSchema map[string]*schema.Schema, actionsSchema map[string]*schema.Schema) map[string]*schema.Schema {
-	return map[string]*schema.Schema{
-		"name": {
-			Type:             schema.TypeString,
-			Required:         true,
-			ForceNew:         true,
-			Description:      "Name of the policy (must be unique)",
-			ValidateDiagFunc: validator.StringIsNotEmpty,
-		},
-		"description": {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "More verbose description of the policy",
-		},
-		"type": {
-			Type:             schema.TypeString,
-			Required:         true,
-			Description:      "Type of the policy",
-			ValidateDiagFunc: validator.StringInSlice(true, "Security", "License", "Operational_Risk"),
-		},
-		"project_key": {
-			Type:             schema.TypeString,
-			Optional:         true,
-			ValidateDiagFunc: validator.ProjectKey,
-			Description:      "Project key for assigning this policy to. Must be 3 - 10 lowercase alphanumeric and hyphen characters.",
-		},
-		"author": {
-			Type:        schema.TypeString,
-			Computed:    true,
-			Description: "User, who created the policy",
-		},
-		"created": {
-			Type:        schema.TypeString,
-			Computed:    true,
-			Description: "Creation timestamp",
-		},
-		"modified": {
-			Type:        schema.TypeString,
-			Computed:    true,
-			Description: "Modification timestamp",
-		},
-		"rule": {
-			Type:        schema.TypeList,
-			Required:    true,
-			Description: "A list of user-defined rules allowing you to trigger violations for specific vulnerability or license breaches by setting a license or security criteria, with a corresponding set of automatic actions according to your needs. Rules are processed according to the ascending order in which they are placed in the Rules list on the Policy. If a rule is met, the subsequent rules in the list will not be applied.",
-			Elem: &schema.Resource{
-				Schema: map[string]*schema.Schema{
-					"name": {
-						Type:             schema.TypeString,
-						Required:         true,
-						Description:      "Name of the rule",
-						ValidateDiagFunc: validator.StringIsNotEmpty,
-					},
-					"priority": {
-						Type:             schema.TypeInt,
-						Required:         true,
-						ValidateDiagFunc: validator.IntAtLeast(1),
-						Description:      "Integer describing the rule priority. Must be at least 1",
-					},
-					"criteria": {
-						Type:        schema.TypeSet,
-						Required:    true,
-						MinItems:    1,
-						MaxItems:    1,
-						Description: "The set of security conditions to examine when an scanned artifact is scanned.",
-						Elem: &schema.Resource{
-							Schema: criteriaSchema,
+	return util.MergeMaps(
+		getProjectKeySchema(false),
+		map[string]*schema.Schema{
+			"name": {
+				Type:             schema.TypeString,
+				Required:         true,
+				ForceNew:         true,
+				Description:      "Name of the policy (must be unique)",
+				ValidateDiagFunc: validator.StringIsNotEmpty,
+			},
+			"description": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "More verbose description of the policy",
+			},
+			"type": {
+				Type:             schema.TypeString,
+				Required:         true,
+				Description:      "Type of the policy",
+				ValidateDiagFunc: validator.StringInSlice(true, "Security", "License", "Operational_Risk"),
+			},
+			"author": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "User, who created the policy",
+			},
+			"created": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Creation timestamp",
+			},
+			"modified": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Modification timestamp",
+			},
+			"rule": {
+				Type:        schema.TypeList,
+				Required:    true,
+				Description: "A list of user-defined rules allowing you to trigger violations for specific vulnerability or license breaches by setting a license or security criteria, with a corresponding set of automatic actions according to your needs. Rules are processed according to the ascending order in which they are placed in the Rules list on the Policy. If a rule is met, the subsequent rules in the list will not be applied.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:             schema.TypeString,
+							Required:         true,
+							Description:      "Name of the rule",
+							ValidateDiagFunc: validator.StringIsNotEmpty,
 						},
-					},
-					"actions": {
-						Type:        schema.TypeSet,
-						Optional:    true,
-						MaxItems:    1,
-						Description: "Specifies the actions to take once a security policy violation has been triggered.",
-						Elem: &schema.Resource{
-							Schema: actionsSchema,
+						"priority": {
+							Type:             schema.TypeInt,
+							Required:         true,
+							ValidateDiagFunc: validator.IntAtLeast(1),
+							Description:      "Integer describing the rule priority. Must be at least 1",
+						},
+						"criteria": {
+							Type:        schema.TypeSet,
+							Required:    true,
+							MinItems:    1,
+							MaxItems:    1,
+							Description: "The set of security conditions to examine when an scanned artifact is scanned.",
+							Elem: &schema.Resource{
+								Schema: criteriaSchema,
+							},
+						},
+						"actions": {
+							Type:        schema.TypeSet,
+							Optional:    true,
+							MaxItems:    1,
+							Description: "Specifies the actions to take once a security policy violation has been triggered.",
+							Elem: &schema.Resource{
+								Schema: actionsSchema,
+							},
 						},
 					},
 				},
 			},
 		},
-	}
+	)
 }
 
 type PolicyCVSSRange struct {
