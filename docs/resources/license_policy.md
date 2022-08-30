@@ -99,7 +99,7 @@ resource "xray_license_policy" "banned_licenses" {
 ### Optional
 
 - `description` (String) More verbose description of the policy
-- `project_key` (String) Project key for assigning this policy to. Must be 3 - 10 lowercase alphanumeric characters.
+- `project_key` (String) Project key for assigning this resource to. Must be 3 - 10 lowercase alphanumeric and hyphen characters.
 
 ### Read-Only
 

@@ -21,7 +21,7 @@ func resourceXrayWatch() *schema.Resource {
 		CustomizeDiff: watchResourceDiff,
 
 		Schema: util.MergeMaps(
-			getProjectKeySchema(false),
+			getProjectKeySchema(false, "Support repository and build watch resource types. When specifying individual repository or build they must be already assigned to the project. Build must be added as indexed resources."),
 			map[string]*schema.Schema{
 				"name": {
 					Type:             schema.TypeString,

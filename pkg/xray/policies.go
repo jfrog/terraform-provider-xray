@@ -91,7 +91,7 @@ var commonActionsSchema = map[string]*schema.Schema{
 
 var getPolicySchema = func(criteriaSchema map[string]*schema.Schema, actionsSchema map[string]*schema.Schema) map[string]*schema.Schema {
 	return util.MergeMaps(
-		getProjectKeySchema(false),
+		getProjectKeySchema(false, ""),
 		map[string]*schema.Schema{
 			"name": {
 				Type:             schema.TypeString,

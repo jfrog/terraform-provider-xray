@@ -52,7 +52,7 @@ type IgnoreFilterNameVersionPath struct {
 
 func resourceXrayIgnoreRule() *schema.Resource {
 	var ignoreRuleSchema = util.MergeMaps(
-		getProjectKeySchema(true),
+		getProjectKeySchema(true, ""),
 		map[string]*schema.Schema{
 			"id": {
 				Type:        schema.TypeString,
@@ -89,7 +89,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 				Optional:      true,
 				ForceNew:      true,
 				Computed:      true,
-				Description:   "List of vulnerability to ignore",
+				Description:   "List of specific vulnerabilities to ignore. Omit to apply to all.",
 				ConflictsWith: []string{"cves", "licenses", "operational_risk"},
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -100,7 +100,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 				Optional:      true,
 				ForceNew:      true,
 				Computed:      true,
-				Description:   "List of CVE to ignore",
+				Description:   "List of specific CVEs to ignore. Omit to apply to all.",
 				ConflictsWith: []string{"vulnerabilities", "licenses", "operational_risk"},
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -111,7 +111,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 				Optional:    true,
 				ForceNew:    true,
 				Computed:    true,
-				Description: "List of license to ignore",
+				Description: "List of specific licenses to ignore. Omit to apply to all.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -121,7 +121,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 				Optional:      true,
 				ForceNew:      true,
 				Computed:      true,
-				Description:   "List of operational risk to ignore. Only accept 'any'",
+				Description:   "Operational risk to ignore. Only accept 'any'",
 				ConflictsWith: []string{"vulnerabilities", "cves", "licenses"},
 				Elem: &schema.Schema{
 					Type:             schema.TypeString,
@@ -133,7 +133,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 				Optional:      true,
 				ForceNew:      true,
 				Computed:      true,
-				Description:   "List of policy to ignore",
+				Description:   "List of specific policies to ignore. Omit to apply to all.",
 				ConflictsWith: []string{"watches"},
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -144,7 +144,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 				Optional:      true,
 				ForceNew:      true,
 				Computed:      true,
-				Description:   "List of watch to ignore",
+				Description:   "List of specific watches to ignore. Omit to apply to all.",
 				ConflictsWith: []string{"policies"},
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -155,7 +155,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 				Optional:    true,
 				ForceNew:    true,
 				Computed:    true,
-				Description: "List of Docker layer SHA256 hash to ignore",
+				Description: "List of Docker layer SHA256 hashes to ignore. Omit to apply to all.",
 				Elem: &schema.Schema{
 					Type:             schema.TypeString,
 					ValidateDiagFunc: validation.ToDiagFunc(validation.StringMatch(regexp.MustCompile(`^[0-9a-z]{64}$`), "Must be SHA256 hash")),
@@ -166,7 +166,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 				Optional:    true,
 				ForceNew:    true,
 				Computed:    true,
-				Description: "List of release bundle to ignore",
+				Description: "List of specific release bundles to ignore. Omit to apply to all.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
@@ -188,7 +188,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 				Optional:    true,
 				ForceNew:    true,
 				Computed:    true,
-				Description: "List of build to ignore",
+				Description: "List of specific builds to ignore. Omit to apply to all.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
@@ -211,7 +211,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 				ForceNew:      true,
 				Computed:      true,
 				ConflictsWith: []string{"build", "release_bundle"},
-				Description:   "List of component to ignore",
+				Description:   "List of specific components to ignore. Omit to apply to all.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
@@ -234,7 +234,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 				ForceNew:      true,
 				Computed:      true,
 				ConflictsWith: []string{"build", "release_bundle"},
-				Description:   "List of artifact to ignore",
+				Description:   "List of specific artifacts to ignore. Omit to apply to all.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
@@ -527,6 +527,6 @@ func resourceXrayIgnoreRule() *schema.Resource {
 		},
 
 		Schema:      ignoreRuleSchema,
-		Description: "Notice: at least one of the 'vulnerabilities/cves/liceneses', 'component', and 'docker_layers/artifact/build/release_bundle' should not be empty",
+		Description: "Provides an Xray ignore rule resource. See [Xray Ignore Rules](https://www.jfrog.com/confluence/display/JFROG/Ignore+Rules) for more details. Notice: at least one of the 'vulnerabilities/cves/liceneses', 'component', and 'docker_layers/artifact/build/release_bundle' should not be empty. When selecting the ignore criteria, take note of the combinations you choose. Some combinations such as omitting everything is not allowed as it will ignore all future violations (in the watch or in the system).",
 	}
 }

@@ -21,14 +21,16 @@ func getRestyRequest(client *resty.Client, projectKey string) (*resty.Request, e
 	return req, nil
 }
 
-var getProjectKeySchema = func(isForceNew bool) map[string]*schema.Schema {
+var getProjectKeySchema = func(isForceNew bool, additionalDescription string) map[string]*schema.Schema {
+	description := fmt.Sprintf("Project key for assigning this resource to. Must be 3 - 10 lowercase alphanumeric and hyphen characters. %s", additionalDescription)
+
 	return map[string]*schema.Schema{
 		"project_key": {
 			Type:             schema.TypeString,
 			Optional:         true,
 			ForceNew:         isForceNew,
 			ValidateDiagFunc: validator.ProjectKey,
-			Description:      "Project key for assigning this watch to. Must be 3 - 10 lowercase alphanumeric and hyphen characters. Support repository and build watch resource types. When specifying individual repository or build they must be already assigned to the project. Build must be added as indexed resources.",
+			Description:      description,
 		},
 	}
 }
