@@ -527,6 +527,6 @@ func resourceXrayIgnoreRule() *schema.Resource {
 		},
 
 		Schema:      ignoreRuleSchema,
-		Description: "Provides an Xray ignore rule resource. See [Xray Ignore Rules](https://www.jfrog.com/confluence/display/JFROG/Ignore+Rules) for more details. Notice: at least one of the 'vulnerabilities/cves/liceneses', 'component', and 'docker_layers/artifact/build/release_bundle' should not be empty. When selecting the ignore criteria, take note of the combinations you choose. Some combinations such as omitting everything is not allowed as it will ignore all future violations (in the watch or in the system).",
+		Description: "Provides an Xray ignore rule resource. See [Xray Ignore Rules](https://www.jfrog.com/confluence/display/JFROG/Ignore+Rules) and [REST API](https://www.jfrog.com/confluence/display/JFROG/Xray+REST+API#XrayRESTAPI-IGNORERULES) for more details. Notice: at least one of the 'vulnerabilities/cves/liceneses', 'component', and 'docker_layers/artifact/build/release_bundle' should not be empty. When selecting the ignore criteria, take note of the combinations you choose. Some combinations such as omitting everything is not allowed as it will ignore all future violations (in the watch or in the system).",
 	}
 }

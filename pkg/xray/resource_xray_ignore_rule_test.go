@@ -121,7 +121,7 @@ func TestAccIgnoreRule_invalid_operational_risk(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: config,
+				Config:      config,
 				ExpectError: regexp.MustCompile(`expected operational_risk to be one of \[any\], got invalid-risk`),
 			},
 		},

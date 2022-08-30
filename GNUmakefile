@@ -55,7 +55,6 @@ fmt:
 	@go fmt ./...
 
 doc:
-	go get github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
 	go generate
 
 .PHONY: build fmt
