@@ -15,7 +15,7 @@ import (
 )
 
 func TestAccIgnoreRule_objectives(t *testing.T) {
-	for _, objective := range []string{"vulnerabilities", "cves", "licenses", "operational_risk"} {
+	for _, objective := range []string{"vulnerabilities", "cves", "licenses"} {
 		t.Run(objective, func(t *testing.T) {
 			resource.Test(objectiveTestCase(objective, t))
 		})
@@ -30,26 +30,13 @@ func objectiveTestCase(objective string, t *testing.T) (*testing.T, resource.Tes
 		resource "xray_ignore_rule" "{{ .name }}" {
 		  notes            = "fake notes"
 		  expiration_date  = "{{ .expirationDate }}"
-		  {{ .objective }} = ["{{ if eq .objective "operational_risk" }}any{{ else }}fake-{{ .objective }}{{ end }}"]
-
-		  {{ if eq .objective "operational_risk"}}
-		  component {
-  		    name = "fake-component"
-  		  }
-		  {{ end }}
+		  {{ .objective }} = ["fake-{{ .objective }}"]
 		}
 	`, map[string]interface{}{
 		"name":           name,
 		"expirationDate": expirationDate.Format("2006-01-02"),
 		"objective":      objective,
 	})
-
-	var objectiveValue string
-	if objective == "operational_risk" {
-		objectiveValue = "any"
-	} else {
-		objectiveValue = fmt.Sprintf("fake-%s", objective)
-	}
 
 	return t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -64,11 +51,81 @@ func objectiveTestCase(objective string, t *testing.T) (*testing.T, resource.Tes
 					resource.TestCheckResourceAttr(fqrn, "expiration_date", expirationDate.Format("2006-01-02")),
 					resource.TestCheckResourceAttr(fqrn, "is_expired", "false"),
 					resource.TestCheckResourceAttr(fqrn, fmt.Sprintf("%s.#", objective), "1"),
-					resource.TestCheckTypeSetElemAttr(fqrn, fmt.Sprintf("%s.*", objective), objectiveValue),
+					resource.TestCheckTypeSetElemAttr(fqrn, fmt.Sprintf("%s.*", objective), fmt.Sprintf("fake-%s", objective)),
 				),
 			},
 		},
 	}
+}
+
+func TestAccIgnoreRule_operational_risk(t *testing.T) {
+	_, fqrn, name := test.MkNames("ignore-rule-", "xray_ignore_rule")
+	expirationDate := time.Now().Add(time.Hour * 24)
+
+	config := util.ExecuteTemplate("TestAccIgnoreRule", `
+		resource "xray_ignore_rule" "{{ .name }}" {
+		  notes            = "fake notes"
+		  expiration_date  = "{{ .expirationDate }}"
+		  operational_risk = ["any"]
+
+  		  component {
+		    name = "fake-component"
+		  }
+		}
+	`, map[string]interface{}{
+		"name":           name,
+		"expirationDate": expirationDate.Format("2006-01-02"),
+	})
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviders(),
+		CheckDestroy:      verifyDeleted(fqrn, testCheckIgnoreRule),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet(fqrn, "id"),
+					resource.TestCheckResourceAttr(fqrn, "notes", "fake notes"),
+					resource.TestCheckResourceAttr(fqrn, "expiration_date", expirationDate.Format("2006-01-02")),
+					resource.TestCheckResourceAttr(fqrn, "is_expired", "false"),
+					resource.TestCheckResourceAttr(fqrn, "operational_risk.#", "1"),
+					resource.TestCheckTypeSetElemAttr(fqrn, "operational_risk.*", "any"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccIgnoreRule_invalid_operational_risk(t *testing.T) {
+	_, _, name := test.MkNames("ignore-rule-", "xray_ignore_rule")
+	expirationDate := time.Now().Add(time.Hour * 24)
+
+	config := util.ExecuteTemplate("TestAccIgnoreRule", `
+		resource "xray_ignore_rule" "{{ .name }}" {
+		  notes            = "fake notes"
+		  expiration_date  = "{{ .expirationDate }}"
+		  operational_risk = ["invalid-risk"]
+
+  		  component {
+		    name = "fake-component"
+		  }
+		}
+	`, map[string]interface{}{
+		"name":           name,
+		"expirationDate": expirationDate.Format("2006-01-02"),
+	})
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				ExpectError: regexp.MustCompile(`expected operational_risk to be one of \[any\], got invalid-risk`),
+			},
+		},
+	})
 }
 
 func TestAccIgnoreRule_scopes(t *testing.T) {
