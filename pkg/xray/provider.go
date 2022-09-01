@@ -46,6 +46,7 @@ func Provider() *schema.Provider {
 				"xray_license_policy":          resourceXrayLicensePolicyV2(),
 				"xray_operational_risk_policy": resourceXrayOperationalRiskPolicy(),
 				"xray_watch":                   resourceXrayWatch(),
+				"xray_ignore_rule":             resourceXrayIgnoreRule(),
 				"xray_settings":                resourceXraySettings(),
 				"xray_workers_count":           resourceXrayWorkersCount(),
 			},

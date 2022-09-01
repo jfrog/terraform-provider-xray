@@ -1,3 +1,9 @@
+## 1.6.0 (August 31, 2022). Tested on Artifactory 7.41.7 and Xray 3.55.2
+
+NEW FEATURE:
+
+* **New Resource:** `xray_ignore_rule` Issue: [#67](https://github.com/jfrog/terraform-provider-xray/issues/67) PR: [#76](https://github.com/jfrog/terraform-provider-xray/pull/76).
+
 ## 1.5.1 (August 9, 2022). Tested on Artifactory 7.41.7 and Xray 3.54.5
 
 BUG FIXES:
