@@ -318,7 +318,7 @@ func TestAccSecurityPolicy_createCVSSFloat(t *testing.T) {
 	})
 }
 
-//Negative test, block unscanned cannot be set without blocking of download
+// Negative test, block unscanned cannot be set without blocking of download
 func TestAccSecurityPolicy_blockMismatchCVSS(t *testing.T) {
 	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
 	testData := util.MergeMaps(testDataSecurity)

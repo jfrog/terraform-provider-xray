@@ -37,6 +37,12 @@ func Provider() *schema.Provider {
 				ValidateDiagFunc: validator.StringIsNotEmpty,
 				Description:      "This is a bearer token that can be given to you by your admin under `Identity and Access`",
 			},
+			"check_license": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     true,
+				Description: "Toggle for pre-flight checking of Artifactory Pro and Enterprise license. Default to `true`.",
+			},
 		},
 
 		ResourcesMap: util.AddTelemetry(
@@ -84,9 +90,12 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 		return nil, diag.FromErr(err)
 	}
 
-	licenseErr := util.CheckArtifactoryLicense(restyBase, "Enterprise", "Commercial")
-	if licenseErr != nil {
-		return nil, licenseErr
+	checkLicense := d.Get("check_license").(bool)
+	if checkLicense {
+		licenseErr := util.CheckArtifactoryLicense(restyBase, "Enterprise", "Commercial")
+		if licenseErr != nil {
+			return nil, licenseErr
+		}
 	}
 
 	featureUsage := fmt.Sprintf("Terraform/%s", terraformVersion)
