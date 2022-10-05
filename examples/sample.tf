@@ -237,3 +237,40 @@ resource "xray_watch" "project" {
 resource "xray_settings" "db_sync" {
   db_sync_updates_time = "18:40"
 }
+
+resource "xray_repository_config" "xray-repo-config-pattern" {
+
+  repo_name  = "example-repo-local"
+
+  repo_paths_config {
+
+    pattern {
+      include              = "core/**"
+      exclude              = "core/internal/**"
+      index_new_artifacts  = true
+      retention_in_days    = 60
+    }
+
+    pattern {
+      include              = "core/**"
+      exclude              = "core/external/**"
+      index_new_artifacts  = true
+      retention_in_days    = 45
+    }
+
+    all_other_artifacts {
+      index_new_artifacts = true
+      retention_in_days   = 60
+    }
+  }
+}
+
+resource "xray_repository_config" "xray-repo-config" {
+
+  repo_name  = "example-repo-local"
+
+  repo_config {
+    vuln_contextual_analysis  = true
+    retention_in_days         = 90
+  }
+}
