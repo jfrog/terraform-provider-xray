@@ -2,7 +2,7 @@
 
 NEW FEATURE:
 
-* resource/xray_repository_config: add a new resource allowing to configure Xray report retention policies for the repositories. Issue [#77](https://github.com/jfrog/terraform-provider-xray/issues/77) PR []()
+* resource/xray_repository_config: add a new resource allowing to configure Xray report retention policies for the repositories. Issue [#77](https://github.com/jfrog/terraform-provider-xray/issues/77) PR [#81](https://github.com/jfrog/terraform-provider-xray/pull/81)
 * Add ability to disable license check. PR [#80](https://github.com/jfrog/terraform-provider-xray/pull/80)
 
 ## 1.6.0 (August 31, 2022). Tested on Artifactory 7.41.7 and Xray 3.55.2
