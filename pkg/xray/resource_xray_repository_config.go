@@ -20,7 +20,7 @@ type GeneralRepoConfig struct {
 }
 
 type RepoPathsConfiguration struct {
-	PatternList    []Pattern         `json:"patterns,omitempty"`
+	Patterns       []Pattern         `json:"patterns,omitempty"`
 	OtherArtifacts AllOtherArtifacts `json:"all_other_artifacts,omitempty"`
 }
 
@@ -55,6 +55,7 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 			"repo_config": {
 				Type:          schema.TypeSet,
 				Optional:      true,
+				MaxItems:      1,
 				Description:   `Single repository configuration. Only one of 'repo_config' or 'repo_paths_config' can be set.`,
 				ConflictsWith: []string{"repo_paths_config"},
 				Elem: &schema.Resource{
@@ -66,7 +67,8 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 						},
 						"retention_in_days": {
 							Type:             schema.TypeInt,
-							Required:         true,
+							Optional:         true,
+							Default:          90,
 							Description:      `The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository.`,
 							ValidateDiagFunc: validator.IntAtLeast(0),
 						},
@@ -76,13 +78,14 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 			"repo_paths_config": {
 				Type:        schema.TypeSet,
 				Optional:    true,
-				MinItems:    1,
+				MaxItems:    1,
 				Description: `Enables you to set a more granular retention period. It enables you to scan future artifacts within the specific path, and set a retention period for the historical data of artifacts after they are scanned`,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"pattern": {
 							Type:        schema.TypeList,
 							Required:    true,
+							MinItems:    1,
 							Description: `Pattern, applied to the repositories.`,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
@@ -100,12 +103,14 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 									},
 									"index_new_artifacts": {
 										Type:        schema.TypeBool,
-										Required:    true,
+										Optional:    true,
+										Default:     true,
 										Description: `If checked, Xray will scan newly added artifacts in the path. Note that existing artifacts will not be scanned. If the folder contains existing artifacts that have been scanned, and you do not want to index new artifacts in that folder, you can choose not to index that folder.`,
 									},
 									"retention_in_days": {
 										Type:             schema.TypeInt,
-										Required:         true,
+										Optional:         true,
+										Default:          90,
 										Description:      `The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository.`,
 										ValidateDiagFunc: validator.IntAtLeast(0),
 									},
@@ -117,17 +122,19 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 							Required:    true,
 							Description: `If you select by pattern, you must define a retention period for all other artifacts in the repository in the All Other Artifacts setting.`,
 							MinItems:    1,
-							MaxItems:    2,
+							MaxItems:    1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"index_new_artifacts": {
 										Type:        schema.TypeBool,
-										Required:    true,
+										Optional:    true,
+										Default:     true,
 										Description: `If checked, Xray will scan newly added artifacts in the path. Note that existing artifacts will not be scanned. If the folder contains existing artifacts that have been scanned, and you do not want to index new artifacts in that folder, you can choose not to index that folder.`,
 									},
 									"retention_in_days": {
 										Type:             schema.TypeInt,
-										Required:         true,
+										Optional:         true,
+										Default:          90,
 										Description:      `The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository.`,
 										ValidateDiagFunc: validator.IntAtLeast(0),
 									},
@@ -161,11 +168,9 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 		allOtherArtifacts := AllOtherArtifacts{}
 
 		if config != nil {
-			for _, raw := range config.List() {
-				data := raw.(map[string]interface{})
-				allOtherArtifacts.IndexNewArtifacts = data["index_new_artifacts"].(bool)
-				allOtherArtifacts.RetentionInDays = data["retention_in_days"].(int)
-			}
+			data := config.List()[0].(map[string]interface{})
+			allOtherArtifacts.IndexNewArtifacts = data["index_new_artifacts"].(bool)
+			allOtherArtifacts.RetentionInDays = data["retention_in_days"].(int)
 		}
 
 		return allOtherArtifacts
@@ -184,7 +189,7 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 		repoPathsConfiguration.OtherArtifacts = otherArtifacts
 
 		patterns := unpackPattern(m["pattern"].([]interface{}))
-		repoPathsConfiguration.PatternList = patterns
+		repoPathsConfiguration.Patterns = patterns
 
 		return repoPathsConfiguration
 	}
@@ -193,11 +198,9 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 		repoConfig := new(GeneralRepoConfig)
 
 		if config != nil {
-			for _, raw := range config.List() {
-				data := raw.(map[string]interface{})
-				repoConfig.VulnContextualAnalysis = data["vuln_contextual_analysis"].(bool)
-				repoConfig.RetentionInDays = data["retention_in_days"].(int)
-			}
+			data := config.List()[0].(map[string]interface{})
+			repoConfig.VulnContextualAnalysis = data["vuln_contextual_analysis"].(bool)
+			repoConfig.RetentionInDays = data["retention_in_days"].(int)
 		}
 
 		return repoConfig
@@ -211,13 +214,11 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 		}
 
 		if _, ok := s.GetOk("repo_config"); ok {
-			repoConfig := unpackRepoConfig(s.Get("repo_config").(*schema.Set))
-			repositoryConfig.RepoConfig = repoConfig
+			repositoryConfig.RepoConfig = unpackRepoConfig(s.Get("repo_config").(*schema.Set))
 		}
 
 		if _, ok := s.GetOk("repo_paths_config"); ok {
-			repoPathConfig := unpackRepoPathConfig(s.Get("repo_paths_config").(*schema.Set))
-			repositoryConfig.RepoPathsConfig = repoPathConfig
+			repositoryConfig.RepoPathsConfig = unpackRepoPathConfig(s.Get("repo_paths_config").(*schema.Set))
 		}
 		return repositoryConfig
 	}
@@ -227,9 +228,10 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 			return []interface{}{}
 		}
 
-		m := map[string]interface{}{}
-		m["vuln_contextual_analysis"] = repoConfig.VulnContextualAnalysis
-		m["retention_in_days"] = repoConfig.RetentionInDays
+		m := map[string]interface{}{
+			"vuln_contextual_analysis": repoConfig.VulnContextualAnalysis,
+			"retention_in_days":        repoConfig.RetentionInDays,
+		}
 
 		return []interface{}{m}
 	}
@@ -265,9 +267,10 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 			return []interface{}{}
 		}
 
-		m := map[string]interface{}{}
-		m["pattern"] = packPatterns(repoPathsConfig.PatternList)
-		m["all_other_artifacts"] = packAllOtherArtifacts(repoPathsConfig.OtherArtifacts)
+		m := map[string]interface{}{
+			"pattern":             packPatterns(repoPathsConfig.Patterns),
+			"all_other_artifacts": packAllOtherArtifacts(repoPathsConfig.OtherArtifacts),
+		}
 
 		return []interface{}{m}
 	}
@@ -289,7 +292,8 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 	var resourceXrayRepositoryConfigRead = func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 		repositoryConfig := RepositoryConfiguration{}
 
-		resp, err := m.(*resty.Client).R().SetResult(&repositoryConfig).
+		resp, err := m.(*resty.Client).R().
+			SetResult(&repositoryConfig).
 			SetPathParams(map[string]string{
 				"repo_name": d.Id(),
 			}).
@@ -297,7 +301,7 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 
 		if err != nil {
 			if resp != nil && resp.StatusCode() != http.StatusOK {
-				tflog.Error(ctx, fmt.Sprintf("Request payload is invalid as repo (%s) is either not indexed or does not exist", d.Id()))
+				tflog.Error(ctx, fmt.Sprintf("Repo (%s) is either not indexed or does not exist", d.Id()))
 				d.SetId("")
 			}
 			return diag.FromErr(err)
@@ -329,7 +333,11 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 			"removed from the Artifactory, but (%s) is removed from the Terraform state", d.Id()))
 		d.SetId("")
 
-		return nil
+		return diag.Diagnostics{{
+			Severity: diag.Warning,
+			Summary:  "No delete functionality provided by API",
+			Detail:   "Delete function will return a warning and remove the Id from the Terraform state. The actual repository configuration will remain unchanged.",
+		}}
 	}
 
 	return &schema.Resource{
