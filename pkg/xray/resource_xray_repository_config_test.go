@@ -59,7 +59,7 @@ func TestAccRepositoryConfigRepoConfigCreate(t *testing.T) {
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
 			testAccDeleteRepo(t, testData["repo_name"])
 			err := fmt.Errorf("repo was deleted")
-			errorResp := dummyError(t)
+			errorResp := dummyError()
 			return errorResp, err
 		}),
 		ProviderFactories: testAccProviders(),
@@ -102,7 +102,7 @@ func TestAccRepositoryConfigRepoPathsCreate(t *testing.T) {
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
 			testAccDeleteRepo(t, testData["repo_name"])
 			err := fmt.Errorf("repo was deleted")
-			errorResp := dummyError(t)
+			errorResp := dummyError()
 			return errorResp, err
 		}),
 		ProviderFactories: testAccProviders(),
@@ -156,7 +156,7 @@ func TestAccRepositoryConfigRepoPathsUpdate(t *testing.T) {
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
 			testAccDeleteRepo(t, testData["repo_name"])
 			err := fmt.Errorf("repo was deleted")
-			errorResp := dummyError(t)
+			errorResp := dummyError()
 			return errorResp, err
 		}),
 		ProviderFactories: testAccProviders(),

@@ -13,7 +13,7 @@ import (
 	"github.com/jfrog/terraform-provider-shared/validator"
 )
 
-type RepoConfig struct {
+type RepoConfiguration struct {
 	// Omitempty is used because 'vuln_contextual_analysis' is not supported by self-hosted Xray installation.
 	VulnContextualAnalysis bool `json:"vuln_contextual_analysis,omitempty"`
 	RetentionInDays        int  `json:"retention_in_days,omitempty"`
@@ -39,7 +39,7 @@ type AllOtherArtifacts struct {
 type RepositoryConfiguration struct {
 	RepoName string `json:"repo_name"`
 	// Pointer is used to be able to verify if the RepoConfig or PathsConfiguration struct is nil
-	RepoConfig      *RepoConfig         `json:"repo_config,omitempty"`
+	RepoConfig      *RepoConfiguration  `json:"repo_config,omitempty"`
 	RepoPathsConfig *PathsConfiguration `json:"repo_paths_config,omitempty"`
 }
 
@@ -193,8 +193,8 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 		return repoPathsConfiguration
 	}
 
-	var unpackRepoConfig = func(config *schema.Set) *RepoConfig {
-		repoConfig := new(RepoConfig)
+	var unpackRepoConfig = func(config *schema.Set) *RepoConfiguration {
+		repoConfig := new(RepoConfiguration)
 
 		if config != nil {
 			data := config.List()[0].(map[string]interface{})
@@ -222,7 +222,7 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 		return repositoryConfig
 	}
 
-	var packGeneralRepoConfig = func(repoConfig *RepoConfig) []interface{} {
+	var packGeneralRepoConfig = func(repoConfig *RepoConfiguration) []interface{} {
 		if repoConfig == nil {
 			return []interface{}{}
 		}

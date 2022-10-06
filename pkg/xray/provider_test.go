@@ -81,11 +81,15 @@ func testAccDeleteRepo(t *testing.T, repo string) {
 	}
 }
 
-func dummyError(t *testing.T) *resty.Response {
-	restyClient := GetTestResty(t)
-	resp, _ := restyClient.R().Delete("dummy_path")
+func dummyError() *resty.Response {
+	rawResponse := http.Response{
+		StatusCode: http.StatusNotFound,
+	}
+	resp := resty.Response{
+		RawResponse: &rawResponse,
+	}
 
-	return resp
+	return &resp
 }
 
 // Create a project. It will be used in the tests
