@@ -75,10 +75,21 @@ func testAccCreateRepos(t *testing.T, repo, repoType string, projectKey string) 
 func testAccDeleteRepo(t *testing.T, repo string) {
 	restyClient := GetTestResty(t)
 
-	response, errRepo := restyClient.R().Delete("artifactory/api/repositories/" + repo)
-	if errRepo != nil || response.StatusCode() != http.StatusOK {
+	resp, err := restyClient.R().Delete("artifactory/api/repositories/" + repo)
+	if err != nil || resp.StatusCode() != http.StatusOK {
 		t.Logf("The repository %s wasn't removed", repo)
 	}
+}
+
+func dummyError() *resty.Response {
+	rawResponse := http.Response{
+		StatusCode: http.StatusNotFound,
+	}
+	resp := resty.Response{
+		RawResponse: &rawResponse,
+	}
+
+	return &resp
 }
 
 // Create a project. It will be used in the tests

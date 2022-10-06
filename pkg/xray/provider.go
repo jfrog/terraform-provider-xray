@@ -55,6 +55,7 @@ func Provider() *schema.Provider {
 				"xray_ignore_rule":             resourceXrayIgnoreRule(),
 				"xray_settings":                resourceXraySettings(),
 				"xray_workers_count":           resourceXrayWorkersCount(),
+				"xray_repository_config":       resourceXrayRepositoryConfig(),
 			},
 		),
 	}

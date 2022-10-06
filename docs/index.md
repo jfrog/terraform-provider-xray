@@ -276,6 +276,43 @@ resource "xray_watch" "project" {
 resource "xray_settings" "db_sync" {
   db_sync_updates_time = "18:40"
 }
+
+resource "xray_repository_config" "xray-repo-config-pattern" {
+
+  repo_name  = "example-repo-local"
+
+  paths_config {
+
+    pattern {
+      include              = "core/**"
+      exclude              = "core/internal/**"
+      index_new_artifacts  = true
+      retention_in_days    = 60
+    }
+
+    pattern {
+      include              = "core/**"
+      exclude              = "core/external/**"
+      index_new_artifacts  = true
+      retention_in_days    = 45
+    }
+
+    all_other_artifacts {
+      index_new_artifacts = true
+      retention_in_days   = 60
+    }
+  }
+}
+
+resource "xray_repository_config" "xray-repo-config" {
+
+  repo_name  = "example-repo-local"
+
+  config {
+    vuln_contextual_analysis  = true
+    retention_in_days         = 90
+  }
+}
 ```
 
 ## Authentication
@@ -303,4 +340,5 @@ provider "xray" {
 ### Optional
 
 - `access_token` (String, Sensitive) This is a bearer token that can be given to you by your admin under `Identity and Access`
+- `check_license` (Boolean) Toggle for pre-flight checking of Artifactory Pro and Enterprise license. Default to `true`.
 - `url` (String) URL of Artifactory. This can also be sourced from the `XRAY_URL` or `JFROG_URL` environment variable. Default to 'http://localhost:8081' if not set.
