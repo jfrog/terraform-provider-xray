@@ -17,7 +17,7 @@ resource "xray_repository_config" "xray-repo-config-pattern" {
 
   repo_name  = "example-repo-local"
 
-  repo_paths_config {
+  paths_config {
 
     pattern {
       include              = "core/**"
@@ -44,7 +44,7 @@ resource "xray_repository_config" "xray-repo-config" {
 
   repo_name  = "example-repo-local"
 
-  repo_config {
+  config {
     vuln_contextual_analysis  = true
     retention_in_days         = 90
   }
@@ -60,53 +60,50 @@ resource "xray_repository_config" "xray-repo-config" {
 
 ### Optional
 
-- `repo_config` (Block Set) Single repository configuration. Only one of 'repo_config' or 'repo_paths_config' can be set. (see [below for nested schema](#nestedblock--repo_config))
-- `repo_paths_config` (Block Set) Enables you to set a more granular retention period. It enables you to scan future artifacts within the specific path, and set a retention period for the historical data of artifacts after they are scanned (see [below for nested schema](#nestedblock--repo_paths_config))
+- `config` (Block Set, Max: 1) Single repository configuration. Only one of 'config' or 'paths_config' can be set. (see [below for nested schema](#nestedblock--config))
+- `paths_config` (Block Set, Max: 1) Enables you to set a more granular retention period. It enables you to scan future artifacts within the specific path, and set a retention period for the historical data of artifacts after they are scanned (see [below for nested schema](#nestedblock--paths_config))
 
 ### Read-Only
 
 - `id` (String) The ID of this resource.
 
-<a id="nestedblock--repo_config"></a>
-### Nested Schema for `repo_config`
-
-Required:
-
-- `retention_in_days` (Number) The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository.
+<a id="nestedblock--config"></a>
+### Nested Schema for `config`
 
 Optional:
 
+- `retention_in_days` (Number) The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository.
 - `vuln_contextual_analysis` (Boolean) Only for SaaS instances, will be available after Xray 3.59. Enables vulnerability contextual analysis.
 
 
-<a id="nestedblock--repo_paths_config"></a>
-### Nested Schema for `repo_paths_config`
+<a id="nestedblock--paths_config"></a>
+### Nested Schema for `paths_config`
 
 Required:
 
-- `all_other_artifacts` (Block Set, Min: 1, Max: 2) If you select by pattern, you must define a retention period for all other artifacts in the repository in the All Other Artifacts setting. (see [below for nested schema](#nestedblock--repo_paths_config--all_other_artifacts))
-- `pattern` (Block List, Min: 1) Pattern, applied to the repositories. (see [below for nested schema](#nestedblock--repo_paths_config--pattern))
+- `all_other_artifacts` (Block Set, Min: 1, Max: 1) If you select by pattern, you must define a retention period for all other artifacts in the repository in the All Other Artifacts setting. (see [below for nested schema](#nestedblock--paths_config--all_other_artifacts))
+- `pattern` (Block List, Min: 1) Pattern, applied to the repositories. (see [below for nested schema](#nestedblock--paths_config--pattern))
 
-<a id="nestedblock--repo_paths_config--all_other_artifacts"></a>
-### Nested Schema for `repo_paths_config.all_other_artifacts`
+<a id="nestedblock--paths_config--all_other_artifacts"></a>
+### Nested Schema for `paths_config.all_other_artifacts`
 
-Required:
+Optional:
 
 - `index_new_artifacts` (Boolean) If checked, Xray will scan newly added artifacts in the path. Note that existing artifacts will not be scanned. If the folder contains existing artifacts that have been scanned, and you do not want to index new artifacts in that folder, you can choose not to index that folder.
 - `retention_in_days` (Number) The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository.
 
 
-<a id="nestedblock--repo_paths_config--pattern"></a>
-### Nested Schema for `repo_paths_config.pattern`
+<a id="nestedblock--paths_config--pattern"></a>
+### Nested Schema for `paths_config.pattern`
 
 Required:
 
 - `include` (String) Include pattern.
-- `index_new_artifacts` (Boolean) If checked, Xray will scan newly added artifacts in the path. Note that existing artifacts will not be scanned. If the folder contains existing artifacts that have been scanned, and you do not want to index new artifacts in that folder, you can choose not to index that folder.
-- `retention_in_days` (Number) The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository.
 
 Optional:
 
 - `exclude` (String) Exclude pattern.
+- `index_new_artifacts` (Boolean) If checked, Xray will scan newly added artifacts in the path. Note that existing artifacts will not be scanned. If the folder contains existing artifacts that have been scanned, and you do not want to index new artifacts in that folder, you can choose not to index that folder.
+- `retention_in_days` (Number) The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository.
 
 

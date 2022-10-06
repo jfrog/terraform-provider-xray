@@ -281,7 +281,7 @@ resource "xray_repository_config" "xray-repo-config-pattern" {
 
   repo_name  = "example-repo-local"
 
-  repo_paths_config {
+  paths_config {
 
     pattern {
       include              = "core/**"
@@ -308,7 +308,7 @@ resource "xray_repository_config" "xray-repo-config" {
 
   repo_name  = "example-repo-local"
 
-  repo_config {
+  config {
     vuln_contextual_analysis  = true
     retention_in_days         = 90
   }
@@ -340,4 +340,5 @@ provider "xray" {
 ### Optional
 
 - `access_token` (String, Sensitive) This is a bearer token that can be given to you by your admin under `Identity and Access`
+- `check_license` (Boolean) Toggle for pre-flight checking of Artifactory Pro and Enterprise license. Default to `true`.
 - `url` (String) URL of Artifactory. This can also be sourced from the `XRAY_URL` or `JFROG_URL` environment variable. Default to 'http://localhost:8081' if not set.

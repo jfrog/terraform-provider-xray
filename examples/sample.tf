@@ -242,7 +242,7 @@ resource "xray_repository_config" "xray-repo-config-pattern" {
 
   repo_name  = "example-repo-local"
 
-  repo_paths_config {
+  paths_config {
 
     pattern {
       include              = "core/**"
@@ -269,7 +269,7 @@ resource "xray_repository_config" "xray-repo-config" {
 
   repo_name  = "example-repo-local"
 
-  repo_config {
+  config {
     vuln_contextual_analysis  = true
     retention_in_days         = 90
   }
