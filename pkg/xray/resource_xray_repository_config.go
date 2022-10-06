@@ -13,13 +13,13 @@ import (
 	"github.com/jfrog/terraform-provider-shared/validator"
 )
 
-type GeneralRepoConfig struct {
+type RepoConfig struct {
 	// Omitempty is used because 'vuln_contextual_analysis' is not supported by self-hosted Xray installation.
 	VulnContextualAnalysis bool `json:"vuln_contextual_analysis,omitempty"`
 	RetentionInDays        int  `json:"retention_in_days,omitempty"`
 }
 
-type RepoPathsConfiguration struct {
+type PathsConfiguration struct {
 	Patterns       []Pattern         `json:"patterns,omitempty"`
 	OtherArtifacts AllOtherArtifacts `json:"all_other_artifacts,omitempty"`
 }
@@ -38,9 +38,9 @@ type AllOtherArtifacts struct {
 
 type RepositoryConfiguration struct {
 	RepoName string `json:"repo_name"`
-	// Pointer is used to be able to verify if the GeneralRepoConfig or RepoPathsConfiguration struct is nil
-	RepoConfig      *GeneralRepoConfig      `json:"repo_config,omitempty"`
-	RepoPathsConfig *RepoPathsConfiguration `json:"repo_paths_config,omitempty"`
+	// Pointer is used to be able to verify if the RepoConfig or PathsConfiguration struct is nil
+	RepoConfig      *RepoConfig         `json:"repo_config,omitempty"`
+	RepoPathsConfig *PathsConfiguration `json:"repo_paths_config,omitempty"`
 }
 
 func resourceXrayRepositoryConfig() *schema.Resource {
@@ -52,12 +52,12 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 				Description:      `Repository name.`,
 				ValidateDiagFunc: validator.StringIsNotEmpty,
 			},
-			"repo_config": {
+			"config": {
 				Type:          schema.TypeSet,
 				Optional:      true,
 				MaxItems:      1,
-				Description:   `Single repository configuration. Only one of 'repo_config' or 'repo_paths_config' can be set.`,
-				ConflictsWith: []string{"repo_paths_config"},
+				Description:   `Single repository configuration. Only one of 'config' or 'paths_config' can be set.`,
+				ConflictsWith: []string{"paths_config"},
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"vuln_contextual_analysis": {
@@ -75,7 +75,7 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 					},
 				},
 			},
-			"repo_paths_config": {
+			"paths_config": {
 				Type:        schema.TypeSet,
 				Optional:    true,
 				MaxItems:    1,
@@ -176,8 +176,8 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 		return allOtherArtifacts
 	}
 
-	var unpackRepoPathConfig = func(config *schema.Set) *RepoPathsConfiguration {
-		repoPathsConfiguration := new(RepoPathsConfiguration)
+	var unpackRepoPathConfig = func(config *schema.Set) *PathsConfiguration {
+		repoPathsConfiguration := new(PathsConfiguration)
 		configList := config.List()
 		if len(configList) == 0 {
 			return nil
@@ -188,14 +188,13 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 		otherArtifacts := unpackAllOtherArtifacts(m["all_other_artifacts"].(*schema.Set))
 		repoPathsConfiguration.OtherArtifacts = otherArtifacts
 
-		patterns := unpackPattern(m["pattern"].([]interface{}))
-		repoPathsConfiguration.Patterns = patterns
+		repoPathsConfiguration.Patterns = unpackPattern(m["pattern"].([]interface{}))
 
 		return repoPathsConfiguration
 	}
 
-	var unpackRepoConfig = func(config *schema.Set) *GeneralRepoConfig {
-		repoConfig := new(GeneralRepoConfig)
+	var unpackRepoConfig = func(config *schema.Set) *RepoConfig {
+		repoConfig := new(RepoConfig)
 
 		if config != nil {
 			data := config.List()[0].(map[string]interface{})
@@ -213,17 +212,17 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 			RepoName: d.GetString("repo_name", false),
 		}
 
-		if _, ok := s.GetOk("repo_config"); ok {
-			repositoryConfig.RepoConfig = unpackRepoConfig(s.Get("repo_config").(*schema.Set))
+		if _, ok := s.GetOk("config"); ok {
+			repositoryConfig.RepoConfig = unpackRepoConfig(s.Get("config").(*schema.Set))
 		}
 
-		if _, ok := s.GetOk("repo_paths_config"); ok {
-			repositoryConfig.RepoPathsConfig = unpackRepoPathConfig(s.Get("repo_paths_config").(*schema.Set))
+		if _, ok := s.GetOk("paths_config"); ok {
+			repositoryConfig.RepoPathsConfig = unpackRepoPathConfig(s.Get("paths_config").(*schema.Set))
 		}
 		return repositoryConfig
 	}
 
-	var packGeneralRepoConfig = func(repoConfig *GeneralRepoConfig) []interface{} {
+	var packGeneralRepoConfig = func(repoConfig *RepoConfig) []interface{} {
 		if repoConfig == nil {
 			return []interface{}{}
 		}
@@ -262,7 +261,7 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 		return ps
 	}
 
-	var packRepoPathsConfigList = func(repoPathsConfig *RepoPathsConfiguration) []interface{} {
+	var packRepoPathsConfigList = func(repoPathsConfig *PathsConfiguration) []interface{} {
 		if repoPathsConfig == nil {
 			return []interface{}{}
 		}
@@ -279,10 +278,10 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 		if err := d.Set("repo_name", repositoryConfig.RepoName); err != nil {
 			return diag.FromErr(err)
 		}
-		if err := d.Set("repo_config", packGeneralRepoConfig(repositoryConfig.RepoConfig)); err != nil {
+		if err := d.Set("config", packGeneralRepoConfig(repositoryConfig.RepoConfig)); err != nil {
 			return diag.FromErr(err)
 		}
-		if err := d.Set("repo_paths_config", packRepoPathsConfigList(repositoryConfig.RepoPathsConfig)); err != nil {
+		if err := d.Set("paths_config", packRepoPathsConfigList(repositoryConfig.RepoPathsConfig)); err != nil {
 			return diag.FromErr(err)
 		}
 
@@ -294,9 +293,7 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 
 		resp, err := m.(*resty.Client).R().
 			SetResult(&repositoryConfig).
-			SetPathParams(map[string]string{
-				"repo_name": d.Id(),
-			}).
+			SetPathParam("repo_name", d.Id()).
 			Get("xray/api/v1/repos_config/{repo_name}")
 
 		if err != nil {
@@ -313,11 +310,8 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 	var resourceXrayRepositoryConfigCreate = func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 		repositoryConfig := unpackRepositoryConfig(d)
 
-		resp, err := m.(*resty.Client).R().SetBody(&repositoryConfig).Put("xray/api/v1/repos_config")
+		_, err := m.(*resty.Client).R().SetBody(&repositoryConfig).Put("xray/api/v1/repos_config")
 		if err != nil {
-			if resp != nil && resp.StatusCode() != http.StatusOK {
-				tflog.Error(ctx, fmt.Sprintf("Request payload is invalid as repo (%s) is either not indexed or does not exist", d.Id()))
-			}
 			return diag.FromErr(err)
 		}
 
