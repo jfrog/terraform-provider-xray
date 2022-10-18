@@ -130,7 +130,12 @@ func unpackProjectResource(rawCfg interface{}) WatchProjectResource {
 	}
 
 	if v, ok := cfg["ant_filter"]; ok {
-		antFilters := unpackAntFilters(v.(*schema.Set))
+		antFilters := unpackAntFilters(v.(*schema.Set), "ant-patterns")
+		resource.Filters = append(resource.Filters, antFilters...)
+	}
+
+	if v, ok := cfg["path_ant_filter"]; ok {
+		antFilters := unpackAntFilters(v.(*schema.Set), "path-ant-patterns")
 		resource.Filters = append(resource.Filters, antFilters...)
 	}
 
@@ -154,7 +159,7 @@ func unpackFilters(d *schema.Set) []WatchFilter {
 	return filters
 }
 
-func unpackAntFilters(d *schema.Set) []WatchFilter {
+func unpackAntFilters(d *schema.Set, filterType string) []WatchFilter {
 	tfFilters := d.List()
 
 	var filters []WatchFilter
@@ -173,7 +178,7 @@ func unpackAntFilters(d *schema.Set) []WatchFilter {
 		)
 
 		filter := WatchFilter{
-			Type:  "ant-patterns",
+			Type:  filterType,
 			Value: json.RawMessage(filterJsonString),
 		}
 		filters = append(filters, filter)
@@ -263,11 +268,16 @@ var packFilterMap = map[string]map[string]interface{}{
 		"func":          packAntFilter,
 		"attributeName": "ant_filter",
 	},
+	"path-ant-patterns": {
+		"func":          packAntFilter,
+		"attributeName": "path_ant_filter",
+	},
 }
 
 func packFilters(filters []WatchFilter, resources map[string]interface{}) (map[string]interface{}, []error) {
 	resources["filter"] = []map[string]interface{}{}
 	resources["ant_filter"] = []map[string]interface{}{}
+	resources["path_ant_filter"] = []map[string]interface{}{}
 	var errors []error
 
 	for _, filter := range filters {
@@ -439,6 +449,11 @@ func watchResourceDiff(_ context.Context, diff *schema.ResourceDiff, v interface
 		antPatternsResourceTypes := []string{"all-builds", "all-projects"}
 		if !slices.Contains(antPatternsResourceTypes, resourceType) && len(antFilters) > 0 {
 			return fmt.Errorf("attribute 'ant_filter' is set when 'watch_resource.type' is not set to 'all-builds' or 'all-projects'")
+		}
+		pathAntFilters := r["path_ant_filter"].(*schema.Set).List()
+		pathAntPatternsResourceTypes := []string{"repository"}
+		if !slices.Contains(pathAntPatternsResourceTypes, resourceType) && len(pathAntFilters) > 0 {
+			return fmt.Errorf("attribute 'path_ant_filter' is set when 'watch_resource.type' is not set to 'repository'")
 		}
 	}
 	return nil

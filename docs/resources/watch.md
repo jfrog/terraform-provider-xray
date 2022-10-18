@@ -85,6 +85,49 @@ resource "xray_watch" "repository" {
   watch_recipients = ["test@email.com", "test1@email.com"]
 }
 
+resource "xray_watch" "repository-ant-filter" {
+  name        = "repository-watch"
+  description = "Watch a single repo or a list of repositories, using ant pattern"
+  active      = true
+  project_key = "testproj"
+
+  watch_resource {
+    type       = "repository"
+    bin_mgr_id = "default"
+    name       = "your-repository-name"
+    repo_type  = "local"
+
+    path_ant_filter {
+      exclude_patterns  = ["**/*.md"]
+      include_patterns	= ["**/*.js"]
+    }
+  }
+
+  watch_resource {
+    type       = "repository"
+    bin_mgr_id = "default"
+    name       = "your-other-repository-name"
+    repo_type  = "remote"
+
+    filter {
+      type  = "regex"
+      value = ".*"
+    }
+  }
+
+  assigned_policy {
+    name = xray_security_policy.min_severity.name
+    type = "security"
+  }
+
+  assigned_policy {
+    name = xray_license_policy.cvss_range.name
+    type = "license"
+  }
+
+  watch_recipients = ["test@email.com", "test1@email.com"]
+}
+
 resource "xray_watch" "all-builds-with-filters" {
   name        = "build-watch"
   description = "Watch all builds with Ant patterns filter"
@@ -269,6 +312,7 @@ Optional:
 - `bin_mgr_id` (String) The ID number of a binary manager resource. Default value is `default`. To check the list of available binary managers, use the API call `${JFROG_URL}/xray/api/v1/binMgr` as an admin user, use `binMgrId` value. More info [here](https://www.jfrog.com/confluence/display/JFROG/Xray+REST+API#XrayRESTAPI-GetBinaryManager)
 - `filter` (Block Set) Filter for `regex` and `package-type` type. Works only with `all-repos` watch_resource.type. (see [below for nested schema](#nestedblock--watch_resource--filter))
 - `name` (String) The name of the build, repository or project. Xray indexing must be enabled on the repository or build
+- `path_ant_filter` (Block Set) `path-ant-patterns` filter for `repository` watch_resource.type (see [below for nested schema](#nestedblock--watch_resource--path_ant_filter))
 - `repo_type` (String) Type of repository. Only applicable when `type` is `repository`. Options: `local` or `remote`.
 
 <a id="nestedblock--watch_resource--ant_filter"></a>
@@ -287,3 +331,12 @@ Required:
 
 - `type` (String) The type of filter, such as `regex` or `package-type`
 - `value` (String) The value of the filter, such as the text of the regex or name of the package type.
+
+
+<a id="nestedblock--watch_resource--path_ant_filter"></a>
+### Nested Schema for `watch_resource.path_ant_filter`
+
+Required:
+
+- `exclude_patterns` (List of String) List of Ant patterns.
+- `include_patterns` (List of String) List of Ant patterns.

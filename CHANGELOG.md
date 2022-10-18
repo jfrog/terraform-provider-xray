@@ -1,3 +1,9 @@
+## 1.8.0 (October 18, 2022).
+
+IMPROVEMENTS:
+
+* resource/xray_watch: add functionality to apply `path_ant_filter` for the watched repositories. [#PR]()
+
 ## 1.7.0 (October 6, 2022). Tested on Artifactory 7.41.13 and Xray 3.57.6
 
 NEW FEATURE:

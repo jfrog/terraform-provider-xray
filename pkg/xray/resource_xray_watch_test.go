@@ -2,14 +2,14 @@ package xray
 
 import (
 	"fmt"
-	"github.com/jfrog/terraform-provider-shared/test"
-	"github.com/jfrog/terraform-provider-shared/util"
 	"regexp"
 	"testing"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/jfrog/terraform-provider-shared/client"
+	"github.com/jfrog/terraform-provider-shared/test"
+	"github.com/jfrog/terraform-provider-shared/util"
 )
 
 var testDataWatch = map[string]string{
@@ -39,7 +39,7 @@ func TestAccWatch_allReposSinglePolicy(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
-			testCheckPolicyDeleted("xray_security_policy.security", t, request)
+			testCheckPolicyDeleted(testData["policy_name_0"], t, request)
 			resp, err := testCheckWatch(id, request)
 			return resp, err
 		}),
@@ -156,8 +156,8 @@ func TestAccWatch_allReposMultiplePolicies(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
-			testCheckPolicyDeleted("xray_security_policy.security", t, request)
-			testCheckPolicyDeleted("xray_license_policy.license", t, request)
+			testCheckPolicyDeleted(testData["policy_name_0"], t, request)
+			testCheckPolicyDeleted(testData["policy_name_1"], t, request)
 			resp, err := testCheckWatch(id, request)
 			return resp, err
 		}),
@@ -206,7 +206,7 @@ func makeSingleRepositoryTestCase(repoType string, t *testing.T) (*testing.T, re
 		},
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
 			testAccDeleteRepo(t, testData["repo0"])
-			testCheckPolicyDeleted("xray_security_policy.security", t, request)
+			testCheckPolicyDeleted(testData["policy_name_0"], t, request)
 			resp, err := testCheckWatch(id, request)
 			return resp, err
 		}),
@@ -343,7 +343,7 @@ func TestAccWatch_repositoryMissingRepoType(t *testing.T) {
 		},
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
 			testAccDeleteRepo(t, testData["repo0"])
-			testCheckPolicyDeleted("xray_security_policy.security", t, request)
+			testCheckPolicyDeleted(testData["policy_name_0"], t, request)
 			resp, err := testCheckWatch(id, request)
 			return resp, err
 		}),
@@ -379,7 +379,7 @@ func TestAccWatch_multipleRepositories(t *testing.T) {
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
 			testAccDeleteRepo(t, testData["repo0"])
 			testAccDeleteRepo(t, testData["repo1"])
-			testCheckPolicyDeleted("xray_security_policy.security", t, request)
+			testCheckPolicyDeleted(testData["policy_name_0"], t, request)
 			resp, err := testCheckWatch(id, request)
 			return resp, err
 		}),
@@ -388,6 +388,93 @@ func TestAccWatch_multipleRepositories(t *testing.T) {
 			{
 				Config: util.ExecuteTemplate(fqrn, multipleRepositoriesWatchTemplate, testData),
 				Check:  verifyXrayWatch(fqrn, testData),
+			},
+		},
+	})
+}
+
+func TestAccWatch_multipleRepositoriesPathAntPatterns(t *testing.T) {
+	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
+	testData := util.MergeMaps(testDataWatch)
+
+	testData["resource_name"] = resourceName
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["watch_type"] = "repository"
+	testData["repo_type"] = "local"
+	testData["repo0"] = fmt.Sprintf("libs-release-local-0-%d", test.RandomInt())
+	testData["repo1"] = fmt.Sprintf("libs-release-local-1-%d", test.RandomInt())
+	testData["exclude_patterns0"] = "**/*.md"
+	testData["include_patterns0"] = "**/*.js"
+	testData["exclude_patterns1"] = "**/*.txt"
+	testData["include_patterns1"] = "**/*.jar"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			testAccCreateRepos(t, testData["repo0"], "local", "")
+			testAccCreateRepos(t, testData["repo1"], "local", "")
+		},
+		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+			testAccDeleteRepo(t, testData["repo0"])
+			testAccDeleteRepo(t, testData["repo1"])
+			testCheckPolicyDeleted(testData["policy_name_0"], t, request)
+			resp, err := testCheckWatch(id, request)
+			return resp, err
+		}),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config: util.ExecuteTemplate(fqrn, pathAntPatterns, testData),
+				Check: resource.ComposeTestCheckFunc(
+					verifyXrayWatch(fqrn, testData),
+					resource.TestCheckResourceAttr(fqrn, "watch_resource.0.type", testData["watch_type"]),
+					resource.TestCheckResourceAttr(fqrn, "assigned_policy.0.name", testData["policy_name_0"]),
+					resource.TestCheckResourceAttr(fqrn, "assigned_policy.0.type", "security"),
+					resource.TestCheckResourceAttr(fqrn, "watch_resource.0.path_ant_filter.0.exclude_patterns.0", testData["exclude_patterns0"]),
+					resource.TestCheckResourceAttr(fqrn, "watch_resource.0.path_ant_filter.0.include_patterns.0", testData["include_patterns0"]),
+					resource.TestCheckResourceAttr(fqrn, "watch_resource.1.path_ant_filter.0.exclude_patterns.0", testData["exclude_patterns1"]),
+					resource.TestCheckResourceAttr(fqrn, "watch_resource.1.path_ant_filter.0.include_patterns.0", testData["include_patterns1"]),
+				),
+			},
+		},
+	})
+}
+
+func TestAccWatch_PathAntPatternsError(t *testing.T) {
+	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
+	testData := util.MergeMaps(testDataWatch)
+
+	testData["resource_name"] = resourceName
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["watch_type"] = "build"
+	testData["repo_type"] = "local"
+	testData["repo0"] = fmt.Sprintf("libs-release-local-0-%d", test.RandomInt())
+	testData["repo1"] = fmt.Sprintf("libs-release-local-1-%d", test.RandomInt())
+	testData["exclude_patterns0"] = "**/*.md"
+	testData["include_patterns0"] = "**/*.js"
+	testData["exclude_patterns1"] = "**/*.md"
+	testData["include_patterns1"] = "**/*.js"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			testAccCreateRepos(t, testData["repo0"], "local", "")
+			testAccCreateRepos(t, testData["repo1"], "local", "")
+		},
+		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+			testAccDeleteRepo(t, testData["repo0"])
+			testAccDeleteRepo(t, testData["repo1"])
+			testCheckPolicyDeleted(testData["policy_name_0"], t, request)
+			resp, err := testCheckWatch(id, request)
+			return resp, err
+		}),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config:      util.ExecuteTemplate(fqrn, pathAntPatterns, testData),
+				ExpectError: regexp.MustCompile("attribute 'path_ant_filter' is set when 'watch_resource.type' is not set to 'repository'"),
 			},
 		},
 	})
@@ -1061,6 +1148,65 @@ resource "xray_watch" "{{ .resource_name }}" {
 	filter {
 		type  	= "{{ .filter_type_0 }}"
 		value	= "{{ .filter_value_0 }}"
+	}
+}
+  assigned_policy {
+  	name 	= xray_security_policy.security.name
+  	type 	= "security"
+}
+  watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
+}`
+
+const pathAntPatterns = `resource "xray_security_policy" "security" {
+  name        = "{{ .policy_name_0 }}"
+  description = "Security policy description"
+  type        = "security"
+  rule {
+    name     = "rule-name-severity"
+    priority = 1
+    criteria {
+      min_severity = "High"
+    }
+    actions {
+      webhooks = []
+      mails    = ["test@email.com"]
+      block_download {
+        unscanned = true
+        active    = true
+      }
+      block_release_bundle_distribution  = true
+      fail_build                         = true
+      notify_watch_recipients            = true
+      notify_deployer                    = true
+      create_ticket_enabled              = false
+      build_failure_grace_period_in_days = 5
+    }
+  }
+}
+
+resource "xray_watch" "{{ .resource_name }}" {
+  name        	= "{{ .watch_name }}"
+  description 	= "{{ .description }}"
+  active 		= {{ .active }}
+
+  watch_resource {
+	type       	= "{{ .watch_type }}"
+	bin_mgr_id  = "default"
+	name		= "{{ .repo0 }}"
+	repo_type   = "{{ .repo_type }}"
+	path_ant_filter {
+		exclude_patterns  	= ["{{ .exclude_patterns0 }}"]
+		include_patterns	= ["{{ .include_patterns0 }}"]
+	}
+  }
+  watch_resource {
+	type       	= "{{ .watch_type }}"
+	bin_mgr_id  = "default"
+	name		= "{{ .repo1 }}"
+	repo_type   = "{{ .repo_type }}"
+	path_ant_filter {
+		exclude_patterns  	= ["{{ .exclude_patterns1 }}"]
+		include_patterns	= ["{{ .include_patterns1 }}"]
 	}
 }
   assigned_policy {
