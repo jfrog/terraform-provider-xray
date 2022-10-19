@@ -451,9 +451,9 @@ func watchResourceDiff(_ context.Context, diff *schema.ResourceDiff, v interface
 			return fmt.Errorf("attribute 'ant_filter' is set when 'watch_resource.type' is not set to 'all-builds' or 'all-projects'")
 		}
 		pathAntFilters := r["path_ant_filter"].(*schema.Set).List()
-		pathAntPatternsResourceTypes := []string{"repository"}
+		pathAntPatternsResourceTypes := []string{"repository", "all-repos"}
 		if !slices.Contains(pathAntPatternsResourceTypes, resourceType) && len(pathAntFilters) > 0 {
-			return fmt.Errorf("attribute 'path_ant_filter' is set when 'watch_resource.type' is not set to 'repository'")
+			return fmt.Errorf("attribute 'path_ant_filter' is set when 'watch_resource.type' is not set to 'repository' or 'all-repos'")
 		}
 	}
 	return nil

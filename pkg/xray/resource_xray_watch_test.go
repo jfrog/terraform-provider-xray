@@ -53,6 +53,33 @@ func TestAccWatch_allReposSinglePolicy(t *testing.T) {
 	})
 }
 
+func TestAccWatch_allReposPathAntFilter(t *testing.T) {
+	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
+	testData := util.MergeMaps(testDataWatch)
+
+	testData["resource_name"] = resourceName
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["exclude_patterns0"] = "**/*.md"
+	testData["include_patterns0"] = "**/*.js"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { testAccPreCheck(t) },
+		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+			testCheckPolicyDeleted(testData["policy_name_0"], t, request)
+			resp, err := testCheckWatch(id, request)
+			return resp, err
+		}),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config: util.ExecuteTemplate(fqrn, allReposPathAntFilterWatchTemplate, testData),
+				Check:  verifyXrayWatch(fqrn, testData),
+			},
+		},
+	})
+}
+
 func TestAccWatch_allReposWithProjectKey(t *testing.T) {
 	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
 	projectKey := fmt.Sprintf("testproj%d", test.RandSelect(1, 2, 3, 4, 5))
@@ -906,6 +933,53 @@ resource "xray_watch" "{{ .resource_name }}" {
 	filter {
 		type  	= "{{ .filter_type_0 }}"
 		value	= "{{ .filter_value_0 }}"
+	}
+  }
+  assigned_policy {
+  	name 	= xray_security_policy.security.name
+  	type 	= "security"
+  }
+
+  watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
+}`
+
+const allReposPathAntFilterWatchTemplate = `resource "xray_security_policy" "security" {
+  name        = "{{ .policy_name_0 }}"
+  description = "Security policy description"
+  type        = "security"
+  rule {
+    name     = "rule-name-severity"
+    priority = 1
+    criteria {
+      min_severity = "High"
+    }
+    actions {
+      webhooks = []
+      mails    = ["test@email.com"]
+      block_download {
+        unscanned = true
+        active    = true
+      }
+      block_release_bundle_distribution  = true
+      fail_build                         = true
+      notify_watch_recipients            = true
+      notify_deployer                    = true
+      create_ticket_enabled              = false
+      build_failure_grace_period_in_days = 5
+    }
+  }
+}
+
+resource "xray_watch" "{{ .resource_name }}" {
+  name        	= "{{ .watch_name }}"
+  description 	= "{{ .description }}"
+  active 		= {{ .active }}
+
+  watch_resource {
+	type       	= "{{ .watch_type }}"
+	path_ant_filter {
+		exclude_patterns  	= ["{{ .exclude_patterns0 }}"]
+		include_patterns	= ["{{ .include_patterns0 }}"]
 	}
   }
   assigned_policy {

@@ -123,7 +123,7 @@ func resourceXrayWatch() *schema.Resource {
 								Type:        schema.TypeSet,
 								Optional:    true,
 								MinItems:    1,
-								Description: "`path-ant-patterns` filter for `repository` watch_resource.type",
+								Description: "`path-ant-patterns` filter for `repository` and `all-repos` watch_resource.type",
 								Elem: &schema.Resource{
 									Schema: map[string]*schema.Schema{
 										"include_patterns": {
