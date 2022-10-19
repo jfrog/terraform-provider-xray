@@ -119,6 +119,34 @@ func resourceXrayWatch() *schema.Resource {
 									},
 								},
 							},
+							"path_ant_filter": {
+								Type:        schema.TypeSet,
+								Optional:    true,
+								MinItems:    1,
+								Description: "`path-ant-patterns` filter for `repository` and `all-repos` watch_resource.type",
+								Elem: &schema.Resource{
+									Schema: map[string]*schema.Schema{
+										"include_patterns": {
+											Type: schema.TypeList,
+											Elem: &schema.Schema{
+												Type: schema.TypeString,
+											},
+											Required:    true,
+											MinItems:    1,
+											Description: "List of Ant patterns.",
+										},
+										"exclude_patterns": {
+											Type: schema.TypeList,
+											Elem: &schema.Schema{
+												Type: schema.TypeString,
+											},
+											Required:    true,
+											MinItems:    1,
+											Description: "List of Ant patterns.",
+										},
+									},
+								},
+							},
 						},
 					},
 				},

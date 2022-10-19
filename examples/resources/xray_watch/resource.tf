@@ -69,6 +69,49 @@ resource "xray_watch" "repository" {
   watch_recipients = ["test@email.com", "test1@email.com"]
 }
 
+resource "xray_watch" "repository-ant-filter" {
+  name        = "repository-watch"
+  description = "Watch a single repo or a list of repositories, using ant pattern"
+  active      = true
+  project_key = "testproj"
+
+  watch_resource {
+    type       = "repository"
+    bin_mgr_id = "default"
+    name       = "your-repository-name"
+    repo_type  = "local"
+
+    path_ant_filter {
+      exclude_patterns  = ["**/*.md"]
+      include_patterns	= ["**/*.js"]
+    }
+  }
+
+  watch_resource {
+    type       = "repository"
+    bin_mgr_id = "default"
+    name       = "your-other-repository-name"
+    repo_type  = "remote"
+
+    filter {
+      type  = "regex"
+      value = ".*"
+    }
+  }
+
+  assigned_policy {
+    name = xray_security_policy.min_severity.name
+    type = "security"
+  }
+
+  assigned_policy {
+    name = xray_license_policy.cvss_range.name
+    type = "license"
+  }
+
+  watch_recipients = ["test@email.com", "test1@email.com"]
+}
+
 resource "xray_watch" "all-builds-with-filters" {
   name        = "build-watch"
   description = "Watch all builds with Ant patterns filter"
