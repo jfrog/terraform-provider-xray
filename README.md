@@ -409,7 +409,7 @@ can for tagging releases of the package. We've adopted the following versioning 
 * We increment the **patch version** with any backwards-compatible bug fixes.
 
 ## Contributors
-See the [contribution guide](https://github.com/jfrog/terraform-provider-xray/blob/master/CONTRIBUTIONS.md).
+See the [contribution guide](CONTRIBUTIONS.md).
 
 ## License
 Copyright (c) 2021 JFrog.
