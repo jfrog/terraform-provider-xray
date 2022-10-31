@@ -26,7 +26,7 @@ If you wish to use the locally installed provider, make sure your TF script refe
 
 Requirements:
 - [Terraform](https://www.terraform.io/downloads.html) 0.13
-- [Go](https://golang.org/doc/install) 1.15+ (to build the provider plugin)
+- [Go](https://golang.org/doc/install) 1.18+ (to build the provider plugin)
 
 ### Building on macOS
 
