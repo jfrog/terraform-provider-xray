@@ -24,7 +24,7 @@ func TestAccIgnoreRule_objectives(t *testing.T) {
 
 func objectiveTestCase(objective string, t *testing.T) (*testing.T, resource.TestCase) {
 	_, fqrn, name := test.MkNames("ignore-rule-", "xray_ignore_rule")
-	expirationDate := time.Now().Add(time.Hour * 24)
+	expirationDate := time.Now().Add(time.Hour * 48)
 
 	config := util.ExecuteTemplate("TestAccIgnoreRule", `
 		resource "xray_ignore_rule" "{{ .name }}" {
@@ -60,7 +60,7 @@ func objectiveTestCase(objective string, t *testing.T) (*testing.T, resource.Tes
 
 func TestAccIgnoreRule_operational_risk(t *testing.T) {
 	_, fqrn, name := test.MkNames("ignore-rule-", "xray_ignore_rule")
-	expirationDate := time.Now().Add(time.Hour * 24)
+	expirationDate := time.Now().Add(time.Hour * 48)
 
 	config := util.ExecuteTemplate("TestAccIgnoreRule", `
 		resource "xray_ignore_rule" "{{ .name }}" {
@@ -99,7 +99,7 @@ func TestAccIgnoreRule_operational_risk(t *testing.T) {
 
 func TestAccIgnoreRule_invalid_operational_risk(t *testing.T) {
 	_, _, name := test.MkNames("ignore-rule-", "xray_ignore_rule")
-	expirationDate := time.Now().Add(time.Hour * 24)
+	expirationDate := time.Now().Add(time.Hour * 48)
 
 	config := util.ExecuteTemplate("TestAccIgnoreRule", `
 		resource "xray_ignore_rule" "{{ .name }}" {
@@ -138,7 +138,7 @@ func TestAccIgnoreRule_scopes(t *testing.T) {
 
 func scopeTestCase(scope string, t *testing.T) (*testing.T, resource.TestCase) {
 	_, fqrn, name := test.MkNames("ignore-rule-", "xray_ignore_rule")
-	expirationDate := time.Now().Add(time.Hour * 24)
+	expirationDate := time.Now().Add(time.Hour * 48)
 
 	config := util.ExecuteTemplate("TestAccIgnoreRule", `
 		resource "xray_ignore_rule" "{{ .name }}" {
@@ -175,7 +175,7 @@ func scopeTestCase(scope string, t *testing.T) (*testing.T, resource.TestCase) {
 
 func TestAccIgnoreRule_docker_layers(t *testing.T) {
 	_, fqrn, name := test.MkNames("ignore-rule-", "xray_ignore_rule")
-	expirationDate := time.Now().Add(time.Hour * 24)
+	expirationDate := time.Now().Add(time.Hour * 48)
 
 	config := util.ExecuteTemplate("TestAccIgnoreRule", `
 		resource "xray_ignore_rule" "{{ .name }}" {
@@ -216,7 +216,7 @@ func TestAccIgnoreRule_docker_layers(t *testing.T) {
 
 func TestAccIgnoreRule_invalid_docker_layers(t *testing.T) {
 	_, _, name := test.MkNames("ignore-rule-", "xray_ignore_rule")
-	expirationDate := time.Now().Add(time.Hour * 24)
+	expirationDate := time.Now().Add(time.Hour * 48)
 
 	config := util.ExecuteTemplate("TestAccIgnoreRule", `
 		resource "xray_ignore_rule" "{{ .name }}" {
@@ -258,7 +258,7 @@ func TestAccIgnoreRule_sources(t *testing.T) {
 
 func sourceTestCase(source string, t *testing.T) (*testing.T, resource.TestCase) {
 	_, fqrn, name := test.MkNames("ignore-rule-", "xray_ignore_rule")
-	expirationDate := time.Now().Add(time.Hour * 24)
+	expirationDate := time.Now().Add(time.Hour * 48)
 
 	config := util.ExecuteTemplate("TestAccIgnoreRule", `
 		resource "xray_ignore_rule" "{{ .name }}" {
@@ -299,7 +299,7 @@ func sourceTestCase(source string, t *testing.T) (*testing.T, resource.TestCase)
 
 func TestAccIgnoreRule_artifact(t *testing.T) {
 	_, fqrn, name := test.MkNames("ignore-rule-", "xray_ignore_rule")
-	expirationDate := time.Now().Add(time.Hour * 24)
+	expirationDate := time.Now().Add(time.Hour * 48)
 
 	config := util.ExecuteTemplate("TestAccIgnoreRule", `
 		resource "xray_ignore_rule" "{{ .name }}" {
@@ -342,7 +342,7 @@ func TestAccIgnoreRule_artifact(t *testing.T) {
 
 func TestAccIgnoreRule_invalid_artifact_path(t *testing.T) {
 	_, _, name := test.MkNames("ignore-rule-", "xray_ignore_rule")
-	expirationDate := time.Now().Add(time.Hour * 24)
+	expirationDate := time.Now().Add(time.Hour * 48)
 
 	config := util.ExecuteTemplate("TestAccIgnoreRule", `
 		resource "xray_ignore_rule" "{{ .name }}" {
@@ -375,7 +375,7 @@ func TestAccIgnoreRule_invalid_artifact_path(t *testing.T) {
 
 func TestAccIgnoreRule_with_project_key(t *testing.T) {
 	_, fqrn, name := test.MkNames("ignore-rule-", "xray_ignore_rule")
-	expirationDate := time.Now().Add(time.Hour * 24)
+	expirationDate := time.Now().Add(time.Hour * 48)
 	projectKey := fmt.Sprintf("testproj%d", test.RandSelect(1, 2, 3, 4, 5))
 
 	config := util.ExecuteTemplate("TestAccIgnoreRule", `
