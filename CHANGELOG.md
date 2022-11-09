@@ -7,9 +7,9 @@ NEW FEATURE:
 * resource/xray_violations_report: add a new resource allowing to create Xray Violations report.
 * resource/xray_vulnerabilities_report: add a new resource allowing to create Xray Vulnerabilities report.
 Issue [#60](https://github.com/jfrog/terraform-provider-xray/issues/60)
-* PR [#]()
+* PR [#85](https://github.com/jfrog/terraform-provider-xray/pull/85)
 
-## 1.8.0 (October 18, 2022). Tested on Artifactory 7.46.6 and Xray 3.59.4
+## 1.8.0 (October 18, 2022). Tested on Artifactory 7.46.10 and Xray 3.59.4
 
 IMPROVEMENTS:
 
