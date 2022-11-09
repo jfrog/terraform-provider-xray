@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 ## 1.9.0 (October 18, 2022). 
 
 NEW FEATURE:
@@ -10,8 +9,6 @@ NEW FEATURE:
 Issue [#60](https://github.com/jfrog/terraform-provider-xray/issues/60)
 * PR [#85](https://github.com/jfrog/terraform-provider-xray/pull/85)
 
-=======
->>>>>>> master
 ## 1.8.0 (October 18, 2022). Tested on Artifactory 7.46.10 and Xray 3.59.4
 
 IMPROVEMENTS:
