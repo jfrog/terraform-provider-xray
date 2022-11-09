@@ -1,4 +1,4 @@
-## 1.9.0 (October 18, 2022). 
+## 1.9.0 (October 18, 2022). Tested on Artifactory 7.46.11 and Xray 3.59.7
 
 NEW FEATURE:
 
