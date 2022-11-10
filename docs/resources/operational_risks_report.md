@@ -14,27 +14,30 @@ Creates Xray Operational Risks report. The Operational Risk report provides you 
 
 ```terraform
 resource "xray_operational_risks_report" "report" {
+  name = "test-operational-risks-report"
 
-  name 							= "test-operational-risks-report"
   resources {
     repository {
-      name 					    = "reponame"
-      include_path_patterns 	= ["pattern1","pattern2"]
-      exclude_path_patterns 	= ["pattern2","pattern2"]
+      name                  = "reponame"
+      include_path_patterns = ["pattern1", "pattern2"]
+      exclude_path_patterns = ["pattern2", "pattern2"]
     }
+
     repository {
-      name 					    = "reponame1"
-      include_path_patterns 	= ["pattern1"]
-      exclude_path_patterns 	= ["pattern3","pattern4"]
+      name                  = "reponame1"
+      include_path_patterns = ["pattern1"]
+      exclude_path_patterns = ["pattern3", "pattern4"]
     }
   }
+
   filters {
-    component 			= "component-name"
-    artifact 			= "impacted-artifact"
-    risks 				= ["High","Medium"]
+    component = "component-name"
+    artifact  = "impacted-artifact"
+    risks     = ["High", "Medium"]
+
     scan_date {
-      start 			= "2020-06-29T12:22:16Z"
-      end				= "2020-07-29T12:22:16Z"
+      start = "2020-06-29T12:22:16Z"
+      end   = "2020-07-29T12:22:16Z"
     }
   }
 }
@@ -47,7 +50,7 @@ resource "xray_operational_risks_report" "report" {
 
 - `filters` (Block Set, Min: 1) Advanced filters. (see [below for nested schema](#nestedblock--filters))
 - `name` (String) Name of the report.
-- `resources` (Block Set, Min: 1) The list of resources to include into the report. (see [below for nested schema](#nestedblock--resources))
+- `resources` (Block Set, Min: 1, Max: 1) The list of resources to include into the report. (see [below for nested schema](#nestedblock--resources))
 
 ### Optional
 

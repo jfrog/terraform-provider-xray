@@ -98,8 +98,8 @@ resource "xray_watch" "repository-ant-filter" {
     repo_type  = "local"
 
     path_ant_filter {
-      exclude_patterns  = ["**/*.md"]
-      include_patterns	= ["**/*.js"]
+      exclude_patterns = ["**/*.md"]
+      include_patterns = ["**/*.js"]
     }
   }
 

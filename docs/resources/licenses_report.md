@@ -14,29 +14,32 @@ Creates Xray License Due Diligence report. The License Due Diligence report prov
 
 ```terraform
 resource "xray_licenses_report" "report" {
+  name = "test-license-report"
 
-  name 							= "test-license-report"
   resources {
     repository {
-      name 					    = "reponame"
-      include_path_patterns 	= ["pattern1","pattern2"]
-      exclude_path_patterns 	= ["pattern2","pattern2"]
+      name                  = "reponame"
+      include_path_patterns = ["pattern1", "pattern2"]
+      exclude_path_patterns = ["pattern2", "pattern2"]
     }
+
     repository {
-      name 					    = "reponame1"
-      include_path_patterns 	= ["pattern1","pattern2"]
-      exclude_path_patterns 	= ["pattern1","pattern2"]
+      name                  = "reponame1"
+      include_path_patterns = ["pattern1", "pattern2"]
+      exclude_path_patterns = ["pattern1", "pattern2"]
     }
   }
+
   filters {
-    component 			= "component-name"
-    artifact 			= "impacted-artifact"
-    unknown 			= false
-    unrecognized 		= true
-    license_names 		= ["Apache","MIT"]
+    component     = "component-name"
+    artifact      = "impacted-artifact"
+    unknown       = false
+    unrecognized  = true
+    license_names = ["Apache", "MIT"]
+
     scan_date {
-      start 			= "2020-06-29T12:22:16Z"
-      end				= "2020-07-29T12:22:16Z"
+      start = "2020-06-29T12:22:16Z"
+      end   = "2020-07-29T12:22:16Z"
     }
   }
 }
@@ -49,7 +52,7 @@ resource "xray_licenses_report" "report" {
 
 - `filters` (Block Set, Min: 1) Advanced filters. (see [below for nested schema](#nestedblock--filters))
 - `name` (String) Name of the report.
-- `resources` (Block Set, Min: 1) The list of resources to include into the report. (see [below for nested schema](#nestedblock--resources))
+- `resources` (Block Set, Min: 1, Max: 1) The list of resources to include into the report. (see [below for nested schema](#nestedblock--resources))
 
 ### Optional
 

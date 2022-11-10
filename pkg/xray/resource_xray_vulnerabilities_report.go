@@ -55,13 +55,13 @@ func resourceXrayVulnerabilitiesReport() *schema.Resource {
 					"min_score": {
 						Type:         schema.TypeFloat,
 						Optional:     true,
-						ValidateFunc: validation.FloatAtLeast(0),
+						ValidateFunc: validation.FloatBetween(0, 10),
 						Description:  "Minimum CVSS score.",
 					},
 					"max_score": {
 						Type:         schema.TypeFloat,
 						Optional:     true,
-						ValidateFunc: validation.FloatAtLeast(0),
+						ValidateFunc: validation.FloatBetween(0, 10),
 						Description:  "Maximum CVSS score.",
 					},
 				},
@@ -77,13 +77,13 @@ func resourceXrayVulnerabilitiesReport() *schema.Resource {
 					"start": {
 						Type:             schema.TypeString,
 						Optional:         true,
-						ValidateDiagFunc: validator.StringIsNotEmpty,
+						ValidateDiagFunc: validation.ToDiagFunc(validation.IsRFC3339Time),
 						Description:      "Published from date.",
 					},
 					"end": {
 						Type:             schema.TypeString,
 						Optional:         true,
-						ValidateDiagFunc: validator.StringIsNotEmpty,
+						ValidateDiagFunc: validation.ToDiagFunc(validation.IsRFC3339Time),
 						Description:      "Published to date.",
 					},
 				},
@@ -99,13 +99,13 @@ func resourceXrayVulnerabilitiesReport() *schema.Resource {
 					"start": {
 						Type:             schema.TypeString,
 						Optional:         true,
-						ValidateDiagFunc: validator.StringIsNotEmpty,
+						ValidateDiagFunc: validation.ToDiagFunc(validation.IsRFC3339Time),
 						Description:      "Scanned from date.",
 					},
 					"end": {
 						Type:             schema.TypeString,
 						Optional:         true,
-						ValidateDiagFunc: validator.StringIsNotEmpty,
+						ValidateDiagFunc: validation.ToDiagFunc(validation.IsRFC3339Time),
 						Description:      "Scanned to date.",
 					},
 				},

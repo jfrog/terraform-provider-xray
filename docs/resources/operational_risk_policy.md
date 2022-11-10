@@ -35,7 +35,7 @@ resource "xray_operational_risk_policy" "min_risk" {
       notify_watch_recipients            = true
       notify_deployer                    = true
       create_ticket_enabled              = false // set to true only if Jira integration is enabled
-      build_failure_grace_period_in_days = 5 // use only if fail_build is enabled
+      build_failure_grace_period_in_days = 5     // use only if fail_build is enabled
 
       block_download {
         unscanned = true
@@ -76,7 +76,7 @@ resource "xray_operational_risk_policy" "custom_criteria" {
       notify_watch_recipients            = true
       notify_deployer                    = true
       create_ticket_enabled              = false // set to true only if Jira integration is enabled
-      build_failure_grace_period_in_days = 5 // use only if fail_build is enabled
+      build_failure_grace_period_in_days = 5     // use only if fail_build is enabled
 
       block_download {
         unscanned = true

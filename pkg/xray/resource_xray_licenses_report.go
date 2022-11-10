@@ -2,6 +2,7 @@ package xray
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/jfrog/terraform-provider-shared/validator"
 )
 
@@ -55,13 +56,13 @@ func resourceXrayLicensesReport() *schema.Resource {
 					"start": {
 						Type:             schema.TypeString,
 						Optional:         true,
-						ValidateDiagFunc: validator.StringIsNotEmpty,
+						ValidateDiagFunc: validation.ToDiagFunc(validation.IsRFC3339Time),
 						Description:      "Scan start date.",
 					},
 					"end": {
 						Type:             schema.TypeString,
 						Optional:         true,
-						ValidateDiagFunc: validator.StringIsNotEmpty,
+						ValidateDiagFunc: validation.ToDiagFunc(validation.IsRFC3339Time),
 						Description:      "Scan end date.",
 					},
 				},

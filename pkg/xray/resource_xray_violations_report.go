@@ -64,13 +64,13 @@ func resourceXrayViolationsReport() *schema.Resource {
 					"start": {
 						Type:             schema.TypeString,
 						Optional:         true,
-						ValidateDiagFunc: validator.StringIsNotEmpty,
+						ValidateDiagFunc: validation.ToDiagFunc(validation.IsRFC3339Time),
 						Description:      "Created from date.",
 					},
 					"end": {
 						Type:             schema.TypeString,
 						Optional:         true,
-						ValidateDiagFunc: validator.StringIsNotEmpty,
+						ValidateDiagFunc: validation.ToDiagFunc(validation.IsRFC3339Time),
 						Description:      "Created to date.",
 					},
 				},
@@ -105,13 +105,13 @@ func resourceXrayViolationsReport() *schema.Resource {
 								"min_score": {
 									Type:         schema.TypeFloat,
 									Optional:     true,
-									ValidateFunc: validation.FloatAtLeast(0),
+									ValidateFunc: validation.FloatBetween(0, 10),
 									Description:  "Minimum CVSS score.",
 								},
 								"max_score": {
 									Type:         schema.TypeFloat,
 									Optional:     true,
-									ValidateFunc: validation.FloatAtLeast(0),
+									ValidateFunc: validation.FloatBetween(0, 10),
 									Description:  "Maximum CVSS score.",
 								},
 							},

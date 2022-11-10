@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/jfrog/terraform-provider-shared/util"
 	"github.com/jfrog/terraform-provider-shared/validator"
+	"golang.org/x/exp/slices"
 )
 
 var getReportSchema = func(filtersSchema map[string]*schema.Schema) map[string]*schema.Schema {
@@ -19,22 +20,22 @@ var getReportSchema = func(filtersSchema map[string]*schema.Schema) map[string]*
 		getProjectKeySchema(false, ""),
 		map[string]*schema.Schema{
 			"report_id": {
-				Type:             schema.TypeInt,
-				Optional:         true,
-				Computed:         true,
-				Description:      "Report ID",
-				ValidateDiagFunc: validator.StringIsNotEmpty,
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Computed:    true,
+				Description: "Report ID",
 			},
 			"name": {
 				Type:             schema.TypeString,
 				Required:         true,
 				ForceNew:         true,
-				Description:      "Name of the report.",
 				ValidateDiagFunc: validator.StringIsNotEmpty,
+				Description:      "Name of the report.",
 			},
 			"resources": {
 				Type:        schema.TypeSet,
 				Required:    true,
+				MaxItems:    1,
 				Description: "The list of resources to include into the report.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -46,9 +47,10 @@ var getReportSchema = func(filtersSchema map[string]*schema.Schema) map[string]*
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"name": {
-										Type:        schema.TypeString,
-										Required:    true,
-										Description: "Repository name.",
+										Type:             schema.TypeString,
+										Required:         true,
+										ValidateDiagFunc: validator.StringIsNotEmpty,
+										Description:      "Repository name.",
 									},
 									"include_path_patterns": {
 										Type:        schema.TypeSet,
@@ -327,6 +329,7 @@ func unpackResources(configured *schema.Set) *Resources {
 	if m["repository"] != nil {
 		resources.Repositories = unpackRepository(m["repository"].(*schema.Set))
 	}
+
 	if m["builds"] != nil {
 		resources.Builds = unpackBuilds(m["builds"].(*schema.Set))
 	}
@@ -344,9 +347,9 @@ func unpackResources(configured *schema.Set) *Resources {
 
 func unpackRepository(d *schema.Set) *[]Repository {
 	repos := d.List()
-	var repositories []Repository
 
 	if len(d.List()) > 0 {
+		var repositories []Repository
 		for _, raw := range repos {
 			f := raw.(map[string]interface{})
 			repository := Repository{
@@ -363,9 +366,8 @@ func unpackRepository(d *schema.Set) *[]Repository {
 }
 
 func unpackBuilds(d *schema.Set) *Builds {
-	var builds Builds
-
 	if len(d.List()) > 0 {
+		var builds Builds
 		f := d.List()[0].(map[string]interface{})
 		builds = Builds{
 			Names:                  util.CastToStringArr(f["names"].(*schema.Set).List()),
@@ -380,9 +382,8 @@ func unpackBuilds(d *schema.Set) *Builds {
 }
 
 func unpackReleaseBundles(d *schema.Set) *ReleaseBundles {
-	var releaseBundles ReleaseBundles
-
 	if len(d.List()) > 0 {
+		var releaseBundles ReleaseBundles
 		f := d.List()[0].(map[string]interface{})
 		releaseBundles = ReleaseBundles{
 			Names:                  util.CastToStringArr(f["names"].(*schema.Set).List()),
@@ -397,9 +398,8 @@ func unpackReleaseBundles(d *schema.Set) *ReleaseBundles {
 }
 
 func unpackProjects(d *schema.Set) *Projects {
-	var projects Projects
-
 	if len(d.List()) > 0 {
+		var projects Projects
 		f := d.List()[0].(map[string]interface{})
 		projects = Projects{
 			Names:                  util.CastToStringArr(f["names"].(*schema.Set).List()),
@@ -419,6 +419,7 @@ func unpackVulnerabilitiesFilters(filter *schema.Set) *Filters {
 	if m["vulnerable_component"] != nil {
 		filters.VulnerableComponent = m["vulnerable_component"].(string)
 	}
+
 	if m["impacted_artifact"] != nil {
 		filters.ImpactedArtifact = m["impacted_artifact"].(string)
 	}
@@ -457,6 +458,7 @@ func unpackLicensesFilters(filter *schema.Set) *Filters {
 	if m["component"] != nil {
 		filters.Component = m["component"].(string)
 	}
+
 	if m["artifact"] != nil {
 		filters.Artifact = m["artifact"].(string)
 	}
@@ -634,9 +636,7 @@ func resourceXrayReportRead(ctx context.Context, d *schema.ResourceData, m inter
 
 	resp, err := req.
 		SetResult(&report).
-		SetPathParams(map[string]string{
-			"reportId": d.Id(),
-		}).
+		SetPathParam("reportId", d.Id()).
 		Get("xray/api/v1/reports/{reportId}")
 	if err != nil {
 		if resp != nil && resp.StatusCode() == http.StatusNotFound {
@@ -650,9 +650,8 @@ func resourceXrayReportRead(ctx context.Context, d *schema.ResourceData, m inter
 }
 
 func resourceXrayReportDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	report := unpackReportProjectKey(d)
-
-	req, err := getRestyRequest(m.(*resty.Client), report.ProjectKey)
+	projectKey := d.Get("project_key").(string)
+	req, err := getRestyRequest(m.(*resty.Client), projectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -795,6 +794,24 @@ func reportResourceDiff(_ context.Context, diff *schema.ResourceDiff, v interfac
 
 		if licenseFilterCounter > 1 {
 			return fmt.Errorf("request payload is invalid. Only one of 'license_names' or 'license_patterns' is allowed in the license filter")
+		}
+
+		// Verify severities in Vulnerabilities and Violations filters
+		if r["severities"] != nil && r["severities"].(*schema.Set).Len() > 0 {
+			for _, severity := range r["severities"].(*schema.Set).List() {
+				if !slices.Contains([]string{"Low", "Medium", "High", "Critical"}, severity.(string)) {
+					return fmt.Errorf("'severity' attribute value must be one or several of 'Low', 'Medium', 'High', 'Critical'")
+				}
+			}
+		}
+
+		// Verify risks in Operational Risks filter
+		if r["risks"] != nil && r["risks"].(*schema.Set).Len() > 0 {
+			for _, severity := range r["risks"].(*schema.Set).List() {
+				if !slices.Contains([]string{"None", "Low", "Medium", "High"}, severity.(string)) {
+					return fmt.Errorf("'risks' attribute value must be one or several of 'None', 'Low', 'Medium', 'High'")
+				}
+			}
 		}
 
 	}
