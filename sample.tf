@@ -3,7 +3,7 @@ terraform {
   required_providers {
     xray = {
       source  = "registry.terraform.io/jfrog/xray"
-      version = "1.2.2"
+      version = "1.8.1"
     }
   }
 }
@@ -387,22 +387,22 @@ resource "xray_workers_count" "workers-count" {
 
 resource "xray_repository_config" "xray-repo-config-pattern" {
 
-  repo_name  = "example-repo-local"
+  repo_name = "example-repo-local"
 
   paths_config {
 
     pattern {
-      include              = "core/**"
-      exclude              = "core/internal/**"
-      index_new_artifacts  = true
-      retention_in_days    = 60
+      include             = "core/**"
+      exclude             = "core/internal/**"
+      index_new_artifacts = true
+      retention_in_days   = 60
     }
 
     pattern {
-      include              = "core/**"
-      exclude              = "core/external/**"
-      index_new_artifacts  = true
-      retention_in_days    = 45
+      include             = "core/**"
+      exclude             = "core/external/**"
+      index_new_artifacts = true
+      retention_in_days   = 45
     }
 
     all_other_artifacts {
@@ -414,10 +414,156 @@ resource "xray_repository_config" "xray-repo-config-pattern" {
 
 resource "xray_repository_config" "xray-repo-config" {
 
-  repo_name  = "example-repo-local"
+  repo_name = "example-repo-local"
 
   config {
-    vuln_contextual_analysis  = true
-    retention_in_days         = 90
+    vuln_contextual_analysis = true
+    retention_in_days        = 90
+  }
+}
+
+resource "xray_licenses_report" "report" {
+  name 							= "test-license-report"
+  resources {
+    repository {
+      name 					    = "reponame"
+      include_path_patterns 	= ["pattern1","pattern2"]
+      exclude_path_patterns 	= ["pattern2","pattern2"]
+    }
+
+    repository {
+      name 					    = "reponame1"
+      include_path_patterns 	= ["pattern1","pattern2"]
+      exclude_path_patterns 	= ["pattern1","pattern2"]
+    }
+  }
+
+  filters {
+    component 			= "component-name"
+    artifact 			= "impacted-artifact"
+    unknown 			= false
+    unrecognized 		= true
+    license_names 		= ["Apache","MIT"]
+
+    scan_date {
+      start 			= "2020-06-29T12:22:16Z"
+      end				= "2020-07-29T12:22:16Z"
+    }
+  }
+}
+
+resource "xray_operational_risks_report" "report" {
+  name 							= "test-operational-risks-report"
+  resources {
+    repository {
+      name 					    = "reponame"
+      include_path_patterns 	= ["pattern1","pattern2"]
+      exclude_path_patterns 	= ["pattern2","pattern2"]
+    }
+
+    repository {
+      name 					    = "reponame1"
+      include_path_patterns 	= ["pattern1"]
+      exclude_path_patterns 	= ["pattern3","pattern4"]
+    }
+  }
+
+  filters {
+    component 			= "component-name"
+    artifact 			= "impacted-artifact"
+    risks 				= ["High","Medium"]
+
+    scan_date {
+      start 			= "2020-06-29T12:22:16Z"
+      end				= "2020-07-29T12:22:16Z"
+    }
+  }
+}
+
+resource "xray_violations_report" "report" {
+  name 							= "test-violations-report"
+  resources {
+    repository {
+      name 					    = "reponame"
+      include_path_patterns 	= ["pattern1","pattern2"]
+      exclude_path_patterns 	= ["pattern2","pattern2"]
+    }
+
+    repository {
+      name 					    = "reponame1"
+      include_path_patterns 	= ["pattern1","pattern2"]
+      exclude_path_patterns 	= ["pattern1","pattern2"]
+    }
+  }
+
+  filters {
+    type 					= "security"
+    watch_names 			= ["NameOfWatch1","NameOfWatch2"]
+    watch_patterns 			= ["WildcardWatch*","WildcardWatch1*"]
+    component 				= "*vulnerable:component*"
+    artifact 				= "some://impacted*artifact"
+    policy_names 			= ["policy1","policy2"]
+    severities 				= ["High","Medium"]
+
+    updated {
+      start 				= "2020-06-29T12:22:16Z"
+      end					= "2020-07-29T12:22:16Z"
+    }
+
+    security_filters {
+      issue_id			= "XRAY-87343"
+      summary_contains 	= "kernel"
+      has_remediation 	= true
+
+      cvss_score {
+        min_score 		= 6.3
+        max_score		= 9
+      }
+    }
+
+    license_filters {
+      unknown 			= false
+      unrecognized		= true
+      license_names 	= ["Apache","MIT"]
+    }
+  }
+}
+
+resource "xray_vulnerabilities_report" "report" {
+  name 							= "test-vulnerabilities-report"
+  resources {
+    repository {
+      name 					    = "reponame"
+      include_path_patterns 	= ["pattern1","pattern2"]
+      exclude_path_patterns 	= ["pattern2","pattern2"]
+    }
+
+    repository {
+      name 					    = "reponame1"
+      include_path_patterns 	= ["pattern1","pattern2"]
+      exclude_path_patterns 	= ["pattern1","pattern2"]
+    }
+  }
+
+  filters {
+    vulnerable_component 		= "component-name"
+    impacted_artifact 			= "impacted-artifact"
+    has_remediation 			= false
+    cve 						= "CVE-1234-1234"
+
+    cvss_score {
+      min_score 				= 6.3
+      max_score				    = 9
+    }
+
+    published {
+      start 					= "2020-06-29T12:22:16Z"
+      end						= "2020-07-29T12:22:16Z"
+    }
+
+    scan_date {
+      start 					= "2020-06-29T12:22:16Z"
+      end						= "2020-07-29T12:22:16Z"
+    }
   }
 }

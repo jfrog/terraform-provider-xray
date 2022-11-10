@@ -1,3 +1,15 @@
+## 1.9.0 (October 18, 2022). Tested on Artifactory 7.46.11 and Xray 3.59.7
+
+NEW FEATURE:
+
+* resource/xray_licenses_report: add a new resource allowing to create Xray Licenses report.
+* resource/xray_operational_risks_report: add a new resource allowing to create Xray Operational Risks report.
+* resource/xray_violations_report: add a new resource allowing to create Xray Violations report.
+* resource/xray_vulnerabilities_report: add a new resource allowing to create Xray Vulnerabilities report.
+
+Issue [#60](https://github.com/jfrog/terraform-provider-xray/issues/60)
+PR [#85](https://github.com/jfrog/terraform-provider-xray/pull/85)
+
 ## 1.8.0 (October 18, 2022). Tested on Artifactory 7.46.10 and Xray 3.59.4
 
 IMPROVEMENTS:
