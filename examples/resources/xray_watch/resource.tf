@@ -90,6 +90,17 @@ resource "xray_watch" "repository-ant-filter" {
   watch_resource {
     type       = "repository"
     bin_mgr_id = "default"
+    name       = "your-repository-name1"
+    repo_type  = "local"
+
+    path_ant_filter {
+      exclude_patterns = ["**/*.md"]
+    }
+  }
+
+  watch_resource {
+    type       = "repository"
+    bin_mgr_id = "default"
     name       = "your-other-repository-name"
     repo_type  = "remote"
 

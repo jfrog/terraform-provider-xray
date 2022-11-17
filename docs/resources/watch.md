@@ -106,6 +106,17 @@ resource "xray_watch" "repository-ant-filter" {
   watch_resource {
     type       = "repository"
     bin_mgr_id = "default"
+    name       = "your-repository-name1"
+    repo_type  = "local"
+
+    path_ant_filter {
+      exclude_patterns = ["**/*.md"]
+    }
+  }
+
+  watch_resource {
+    type       = "repository"
+    bin_mgr_id = "default"
     name       = "your-other-repository-name"
     repo_type  = "remote"
 
@@ -318,10 +329,10 @@ Optional:
 <a id="nestedblock--watch_resource--ant_filter"></a>
 ### Nested Schema for `watch_resource.ant_filter`
 
-Required:
+Optional:
 
-- `exclude_patterns` (List of String) List of Ant patterns.
-- `include_patterns` (List of String) List of Ant patterns.
+- `exclude_patterns` (List of String) Use Ant-style wildcard patterns to specify build names (i.e. artifact paths) in the build info repository (without a leading slash) that will be excluded in this watch. Projects are supported too. Ant-style path expressions are supported (*, **, ?). For example, an 'apache/**' pattern will exclude the 'apache' build info in the watch.
+- `include_patterns` (List of String) Use Ant-style wildcard patterns to specify build names (i.e. artifact paths) in the build info repository (without a leading slash) that will be included in this watch. Projects are supported too. Ant-style path expressions are supported (*, **, ?). For example, an 'apache/**' pattern will include the 'apache' build info in the watch.
 
 
 <a id="nestedblock--watch_resource--filter"></a>
@@ -336,7 +347,7 @@ Required:
 <a id="nestedblock--watch_resource--path_ant_filter"></a>
 ### Nested Schema for `watch_resource.path_ant_filter`
 
-Required:
+Optional:
 
-- `exclude_patterns` (List of String) List of Ant patterns.
-- `include_patterns` (List of String) List of Ant patterns.
+- `exclude_patterns` (List of String) The pattern will apply to the selected repositories. Simple comma separated wildcard patterns for repository artifact paths (with no leading slash). Ant-style path expressions are supported (*, **, ?). For example: 'org/apache/**'
+- `include_patterns` (List of String) The pattern will apply to the selected repositories. Simple comma separated wildcard patterns for repository artifact paths (with no leading slash). Ant-style path expressions are supported (*, **, ?). For example: 'org/apache/**'
