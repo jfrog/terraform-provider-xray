@@ -2,11 +2,11 @@
 
 BUG FIX:
 
-* resource/xray_watch: removed constraints form 'ant_filter' and 'path_ant_filter' attribute include and exclude fields. 
-Setting both include and exclude filters is not required anymore. The fix allows users to set only one of include/exclude filters, if needed.
+* resource/xray_watch: removed constraints from 'ant_filter' and 'path_ant_filter' attribute include and exclude fields.
+  It's not required to set both 'include' and 'exclude' filters anymore. The fix allows users to set only one of include/exclude filters, if needed.
 
 Issue [#86](https://github.com/jfrog/terraform-provider-xray/issues/86)
-PR [#]()
+PR [#87](https://github.com/jfrog/terraform-provider-xray/pull/87)
 
 ## 1.9.0 (November 10, 2022). Tested on Artifactory 7.46.11 and Xray 3.59.7
 
