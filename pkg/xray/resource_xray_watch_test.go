@@ -431,20 +431,23 @@ func TestAccWatch_multipleRepositoriesPathAntPatterns(t *testing.T) {
 	testData["repo_type"] = "local"
 	testData["repo0"] = fmt.Sprintf("libs-release-local-0-%d", test.RandomInt())
 	testData["repo1"] = fmt.Sprintf("libs-release-local-1-%d", test.RandomInt())
-	testData["exclude_patterns0"] = "**/*.md"
+	testData["repo2"] = fmt.Sprintf("libs-release-local-1-%d", test.RandomInt())
 	testData["include_patterns0"] = "**/*.js"
 	testData["exclude_patterns1"] = "**/*.txt"
-	testData["include_patterns1"] = "**/*.jar"
+	testData["include_patterns2"] = "**/*.jar"
+	testData["exclude_patterns2"] = "**/*.md"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			testAccCreateRepos(t, testData["repo0"], "local", "")
 			testAccCreateRepos(t, testData["repo1"], "local", "")
+			testAccCreateRepos(t, testData["repo2"], "local", "")
 		},
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
 			testAccDeleteRepo(t, testData["repo0"])
 			testAccDeleteRepo(t, testData["repo1"])
+			testAccDeleteRepo(t, testData["repo2"])
 			testCheckPolicyDeleted(testData["policy_name_0"], t, request)
 			resp, err := testCheckWatch(id, request)
 			return resp, err
@@ -458,10 +461,10 @@ func TestAccWatch_multipleRepositoriesPathAntPatterns(t *testing.T) {
 					resource.TestCheckResourceAttr(fqrn, "watch_resource.0.type", testData["watch_type"]),
 					resource.TestCheckResourceAttr(fqrn, "assigned_policy.0.name", testData["policy_name_0"]),
 					resource.TestCheckResourceAttr(fqrn, "assigned_policy.0.type", "security"),
-					resource.TestCheckResourceAttr(fqrn, "watch_resource.0.path_ant_filter.0.exclude_patterns.0", testData["exclude_patterns0"]),
-					resource.TestCheckResourceAttr(fqrn, "watch_resource.0.path_ant_filter.0.include_patterns.0", testData["include_patterns0"]),
-					resource.TestCheckResourceAttr(fqrn, "watch_resource.1.path_ant_filter.0.exclude_patterns.0", testData["exclude_patterns1"]),
-					resource.TestCheckResourceAttr(fqrn, "watch_resource.1.path_ant_filter.0.include_patterns.0", testData["include_patterns1"]),
+					resource.TestCheckTypeSetElemAttr(fqrn, "watch_resource.*.path_ant_filter.*.include_patterns.*", testData["include_patterns0"]),
+					resource.TestCheckTypeSetElemAttr(fqrn, "watch_resource.*.path_ant_filter.*.exclude_patterns.*", testData["exclude_patterns1"]),
+					resource.TestCheckTypeSetElemAttr(fqrn, "watch_resource.*.path_ant_filter.*.exclude_patterns.*", testData["exclude_patterns2"]),
+					resource.TestCheckTypeSetElemAttr(fqrn, "watch_resource.*.path_ant_filter.*.include_patterns.*", testData["include_patterns2"]),
 				),
 			},
 		},
@@ -1269,7 +1272,6 @@ resource "xray_watch" "{{ .resource_name }}" {
 	name		= "{{ .repo0 }}"
 	repo_type   = "{{ .repo_type }}"
 	path_ant_filter {
-		exclude_patterns  	= ["{{ .exclude_patterns0 }}"]
 		include_patterns	= ["{{ .include_patterns0 }}"]
 	}
   }
@@ -1280,7 +1282,16 @@ resource "xray_watch" "{{ .resource_name }}" {
 	repo_type   = "{{ .repo_type }}"
 	path_ant_filter {
 		exclude_patterns  	= ["{{ .exclude_patterns1 }}"]
-		include_patterns	= ["{{ .include_patterns1 }}"]
+	}
+}
+  watch_resource {
+	type       	= "{{ .watch_type }}"
+	bin_mgr_id  = "default"
+	name		= "{{ .repo2 }}"
+	repo_type   = "{{ .repo_type }}"
+	path_ant_filter {
+		exclude_patterns  	= ["{{ .exclude_patterns2 }}"]
+		include_patterns	= ["{{ .include_patterns2 }}"]
 	}
 }
   assigned_policy {
