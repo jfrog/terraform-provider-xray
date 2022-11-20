@@ -312,6 +312,9 @@ func packAssignedPolicies(policies []WatchAssignedPolicy) []interface{} {
 }
 
 func packWatch(ctx context.Context, watch Watch, d *schema.ResourceData) diag.Diagnostics {
+	if err := d.Set("name", watch.GeneralData.Name); err != nil {
+		return diag.FromErr(err)
+	}
 	if err := d.Set("description", watch.GeneralData.Description); err != nil {
 		return diag.FromErr(err)
 	}
