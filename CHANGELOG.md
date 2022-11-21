@@ -1,3 +1,9 @@
+## 1.9.2 (November 22, 2022). Tested on Artifactory 7.46.11 and Xray 3.61.5
+
+BUG FIX:
+
+* resource/xray_watch: fix `name` attribute not being set when reading from Xray. PR [#88](https://github.com/jfrog/terraform-provider-xray/pull/88)
+
 ## 1.9.1 (November 17, 2022). Tested on Artifactory 7.46.11 and Xray 3.60.2
 
 BUG FIX:
