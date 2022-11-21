@@ -570,7 +570,15 @@ func packSecurityCriteria(criteria *PolicyRuleCriteria) []interface{} {
 	m := map[string]interface{}{}
 	// cvss_range and min_severity are conflicting, only one can be present in the JSON
 	m["cvss_range"] = packCVSSRange(criteria.CVSSRange)
-	m["min_severity"] = criteria.MinimumSeverity
+
+	minSeverity := criteria.MinimumSeverity
+	// This is only needed for versions before 3.60.2 because a Xray API bug where it returns "Unknown" for "All severities" min severity setting
+	// See release note: https://www.jfrog.com/confluence/display/JFROG/Xray+Release+Notes#XrayReleaseNotes-Xray3.60.2
+	// Issue: XRAY-9271
+	if criteria.MinimumSeverity == "Unknown" {
+		minSeverity = "All severities"
+	}
+	m["min_severity"] = minSeverity
 	m["fix_version_dependant"] = criteria.FixVersionDependant
 
 	return []interface{}{m}

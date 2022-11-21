@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/jfrog/terraform-provider-shared/test"
 	"github.com/jfrog/terraform-provider-shared/util"
@@ -31,7 +32,65 @@ var testDataSecurity = map[string]string{
 	"cvssOrSeverity":                    "cvss",
 }
 
-// Teh test will try to create a security policy with the type of "license"
+func TestAccSecurityPolicy_unknownMinSeveritySecurityPolicy_beforeVersion3602(t *testing.T) {
+	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
+
+	testData := util.MergeMaps(testDataSecurity)
+	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-%d", test.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-%d", test.RandomInt())
+	testData["min_severity"] = "All severities"
+
+	var onOrAfterVersion3602 = func() (bool, error) {
+		type Version struct {
+			Version  string `json:"xray_version"`
+			Revision string `json:"xray_revision"`
+		}
+
+		restyClient := GetTestResty(t)
+		ver := Version{}
+
+		_, err := restyClient.R().
+			SetResult(&ver).
+			Get("/xray/api/v1/system/version")
+		if err != nil {
+			return false, err
+		}
+
+		fmt.Printf("Ver: %v\n", ver)
+
+		fixedVersion, err := version.NewVersion("3.60.2")
+		if err != nil {
+			return false, err
+		}
+
+		runtimeVersion, err := version.NewVersion(ver.Version)
+		if err != nil {
+			return false, err
+		}
+
+		skipTest := runtimeVersion.GreaterThanOrEqual(fixedVersion)
+		if skipTest {
+			fmt.Printf("Test skip because: runtime version %s is same or later than %s\n", runtimeVersion.String(), fixedVersion.String())
+		}
+		return skipTest, nil
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				SkipFunc: onOrAfterVersion3602,
+				Config:   util.ExecuteTemplate(fqrn, securityPolicyMinSeverity, testData),
+				Check:    verifySecurityPolicy(fqrn, testData, "All severities"),
+			},
+		},
+	})
+}
+
+// The test will try to create a security policy with the type of "license"
 // The Policy criteria will be ignored in this case
 func TestAccSecurityPolicy_badTypeInSecurityPolicy(t *testing.T) {
 	policyName := fmt.Sprintf("terraform-security-policy-1-%d", test.RandomInt())
