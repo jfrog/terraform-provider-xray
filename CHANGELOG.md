@@ -1,3 +1,9 @@
+## 1.9.3 (November 24, 2022). Tested on Artifactory 7.46.11 and Xray 3.61.5
+
+BUG FIX:
+
+* resource/xray_security_policy: fix `min_severity` attribute state drift due to Xray API bug, which has been fixed. Issue [#84](https://github.com/jfrog/terraform-provider-xray/issues/84) PR [#90](https://github.com/jfrog/terraform-provider-xray/pull/90)
+
 ## 1.9.2 (November 22, 2022). Tested on Artifactory 7.46.11 and Xray 3.61.5
 
 BUG FIX:
