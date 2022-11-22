@@ -327,6 +327,9 @@ func packWatch(ctx context.Context, watch Watch, d *schema.ResourceData) diag.Di
 	if err := d.Set("assigned_policy", packAssignedPolicies(watch.AssignedPolicies)); err != nil {
 		return diag.FromErr(err)
 	}
+	if err := d.Set("watch_recipients", watch.WatchRecipients); err != nil {
+		return diag.FromErr(err)
+	}
 
 	return nil
 }
