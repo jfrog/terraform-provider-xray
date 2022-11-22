@@ -1,3 +1,9 @@
+## 1.9.4 (November 23, 2022)
+
+BUG FIX:
+
+* resource/xray_watch: fix `watch_recipients` attribute not being set when reading from Xray. PR [#91](https://github.com/jfrog/terraform-provider-xray/pull/91)
+
 ## 1.9.3 (November 24, 2022). Tested on Artifactory 7.46.11 and Xray 3.61.5
 
 BUG FIX:
