@@ -1,3 +1,9 @@
+## 1.9.5 (December 22, 2022)
+
+BUG FIX:
+
+* resource/xray_ignore_rule, resource/xray_license_policy, resource/xray_licenses_report, resource/xray_operational_risk_policy, resource/xray_operational_risks_report, resource/xray_security_policy, resource/xray_violations_report, resource/xray_vulnerabilities_report, resource/xray_watch: Update `project_key` attribute validation to match Artifactory Project. PR: [#93](https://github.com/jfrog/terraform-provider-project/pull/93)
+
 ## 1.9.4 (November 23, 2022). Tested on Artifactory 7.46.11 and Xray 3.61.5
 
 BUG FIX:
