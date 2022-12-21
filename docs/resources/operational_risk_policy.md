@@ -99,7 +99,7 @@ resource "xray_operational_risk_policy" "custom_criteria" {
 ### Optional
 
 - `description` (String) More verbose description of the policy
-- `project_key` (String) Project key for assigning this resource to. Must be 3 - 10 lowercase alphanumeric and hyphen characters.
+- `project_key` (String) Project key for assigning this resource to. Must be 2 - 10 lowercase alphanumeric and hyphen characters.
 
 ### Read-Only
 

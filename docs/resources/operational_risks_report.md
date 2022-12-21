@@ -54,7 +54,7 @@ resource "xray_operational_risks_report" "report" {
 
 ### Optional
 
-- `project_key` (String) Project key for assigning this resource to. Must be 3 - 10 lowercase alphanumeric and hyphen characters.
+- `project_key` (String) Project key for assigning this resource to. Must be 2 - 10 lowercase alphanumeric and hyphen characters.
 - `report_id` (Number) Report ID
 
 ### Read-Only

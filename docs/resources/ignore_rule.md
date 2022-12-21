@@ -30,7 +30,7 @@ Provides an Xray ignore rule resource. See [Xray Ignore Rules](https://www.jfrog
 - `licenses` (Set of String) List of specific licenses to ignore. Omit to apply to all.
 - `operational_risk` (List of String) Operational risk to ignore. Only accept 'any'
 - `policies` (Set of String) List of specific policies to ignore. Omit to apply to all.
-- `project_key` (String) Project key for assigning this resource to. Must be 3 - 10 lowercase alphanumeric and hyphen characters.
+- `project_key` (String) Project key for assigning this resource to. Must be 2 - 10 lowercase alphanumeric and hyphen characters.
 - `release_bundle` (Block Set) List of specific release bundles to ignore. Omit to apply to all. (see [below for nested schema](#nestedblock--release_bundle))
 - `vulnerabilities` (Set of String) List of specific vulnerabilities to ignore. Omit to apply to all.
 - `watches` (Set of String) List of specific watches to ignore. Omit to apply to all.
