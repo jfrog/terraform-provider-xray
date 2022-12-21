@@ -1,24 +1,30 @@
+## 1.9.5 (December 22, 2022). Tested on Artifactory 7.47.14 and Xray 3.62.4
+
+BUG FIXES:
+
+* resource/xray_ignore_rule, resource/xray_license_policy, resource/xray_licenses_report, resource/xray_operational_risk_policy, resource/xray_operational_risks_report, resource/xray_security_policy, resource/xray_violations_report, resource/xray_vulnerabilities_report, resource/xray_watch: Update `project_key` attribute validation to match Artifactory Project. PR: [#93](https://github.com/jfrog/terraform-provider-project/pull/93)
+
 ## 1.9.4 (November 23, 2022). Tested on Artifactory 7.46.11 and Xray 3.61.5
 
-BUG FIX:
+BUG FIXES:
 
 * resource/xray_watch: fix `watch_recipients` attribute not being set when reading from Xray. PR [#91](https://github.com/jfrog/terraform-provider-xray/pull/91)
 
 ## 1.9.3 (November 24, 2022). Tested on Artifactory 7.46.11 and Xray 3.61.5
 
-BUG FIX:
+BUG FIXES:
 
 * resource/xray_security_policy: fix `min_severity` attribute state drift due to Xray API bug, which has been fixed. Issue [#84](https://github.com/jfrog/terraform-provider-xray/issues/84) PR [#90](https://github.com/jfrog/terraform-provider-xray/pull/90)
 
 ## 1.9.2 (November 22, 2022). Tested on Artifactory 7.46.11 and Xray 3.61.5
 
-BUG FIX:
+BUG FIXES:
 
 * resource/xray_watch: fix `name` attribute not being set when reading from Xray. PR [#88](https://github.com/jfrog/terraform-provider-xray/pull/88)
 
 ## 1.9.1 (November 17, 2022). Tested on Artifactory 7.46.11 and Xray 3.60.2
 
-BUG FIX:
+BUG FIXES:
 
 * resource/xray_watch: removed constraints from 'ant_filter' and 'path_ant_filter' attribute include and exclude fields.
   It's not required to set both 'include' and 'exclude' filters anymore. The fix allows users to set only one of include/exclude filters, if needed.
@@ -28,7 +34,7 @@ PR [#87](https://github.com/jfrog/terraform-provider-xray/pull/87)
 
 ## 1.9.0 (November 10, 2022). Tested on Artifactory 7.46.11 and Xray 3.59.7
 
-NEW FEATURE:
+FEATURES:
 
 * resource/xray_licenses_report: add a new resource allowing to create Xray Licenses report.
 * resource/xray_operational_risks_report: add a new resource allowing to create Xray Operational Risks report.
@@ -47,14 +53,14 @@ IMPROVEMENTS:
 
 ## 1.7.0 (October 6, 2022). Tested on Artifactory 7.41.13 and Xray 3.57.6
 
-NEW FEATURE:
+FEATURES:
 
 * resource/xray_repository_config: add a new resource allowing to configure Xray report retention policies for the repositories. Issue [#77](https://github.com/jfrog/terraform-provider-xray/issues/77) PR [#81](https://github.com/jfrog/terraform-provider-xray/pull/81)
 * Add ability to disable license check. PR [#80](https://github.com/jfrog/terraform-provider-xray/pull/80)
 
 ## 1.6.0 (August 31, 2022). Tested on Artifactory 7.41.7 and Xray 3.55.2
 
-NEW FEATURE:
+FEATURES:
 
 * **New Resource:** `xray_ignore_rule` Issue: [#67](https://github.com/jfrog/terraform-provider-xray/issues/67) PR: [#76](https://github.com/jfrog/terraform-provider-xray/pull/76).
 
@@ -66,19 +72,19 @@ BUG FIXES:
 
 ## 1.5.0 (August 3, 2022). Tested on Artifactory 7.41.7 and Xray 3.52.4
 
-NEW FEATURE:
+FEATURES:
 
 * resource/xray_watch, resource/xray_security_policy, resource/xray_license_policy, and resource/xray_operational_risk_policy: Add support for `project_key` attribute. PR: [#72](https://github.com/jfrog/terraform-provider-xray/pull/72). Issue [#69](https://github.com/jfrog/terraform-provider-xray/issues/69)
 
 ## 1.4.0 (July 22, 2022). Tested on Artifactory 7.41.6 and Xray 3.52.4
 
-NEW FEATURE:
+FEATURES:
 
 * resource/xray_operational_risk_policy: New resource to support 'operational_risk' policy. PR: [#71](https://github.com/jfrog/terraform-provider-xray/pull/71). Issue: [#50](https://github.com/jfrog/terraform-provider-xray/issues/50)
 
 ## 1.3.0 (July 13, 2022). Tested on Artifactory 7.39.4 and Xray 3.51.3
 
-NEW FEATURE:
+FEATURES:
 
 * resource/xray_workers_count: Add support to set Xray's workers count. PR: [#68](https://github.com/jfrog/terraform-provider-xray/pull/68). Issue: [#56](https://github.com/jfrog/terraform-provider-xray/issues/56)
 
@@ -108,7 +114,7 @@ IMPROVEMENTS:
 
 ## 1.1.6 (June 3, 2022). Tested on Artifactory 7.39.4 and Xray 3.51.0
 
-BUG FIX:
+BUG FIXES:
 
 * resource/xray_watch: Fix error when creating watch with remote repository by adding new attribute `repo_type` to allow user to specify whether the repository is local or remote. [GH-55](https://github.com/jfrog/terraform-provider-xray/pull/55)
 
@@ -120,7 +126,7 @@ IMPROVEMENTS:
 
 ## 1.1.4 (May 24, 2022). Tested on Artifactory 7.38.10 and Xray 3.49.0
 
-BUG FIX:
+BUG FIXES:
 
 * add 'Commercial' licence to the list of allowed licenses.
  [GH-52](https://github.com/jfrog/terraform-provider-xray/pull/52)

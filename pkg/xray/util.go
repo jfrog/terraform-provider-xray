@@ -22,7 +22,7 @@ func getRestyRequest(client *resty.Client, projectKey string) (*resty.Request, e
 }
 
 var getProjectKeySchema = func(isForceNew bool, additionalDescription string) map[string]*schema.Schema {
-	description := fmt.Sprintf("Project key for assigning this resource to. Must be 3 - 10 lowercase alphanumeric and hyphen characters. %s", additionalDescription)
+	description := fmt.Sprintf("Project key for assigning this resource to. Must be 2 - 10 lowercase alphanumeric and hyphen characters. %s", additionalDescription)
 
 	return map[string]*schema.Schema{
 		"project_key": {
