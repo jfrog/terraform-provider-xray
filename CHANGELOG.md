@@ -1,3 +1,11 @@
+## 1.9.6 (January 12, 2023)
+
+BUG FIX:
+
+* resource/resource_xray_operational_risk_policy: documentation updated to match Xray behavior, all policy types are lowercase now.
+ Issue: [#96](https://github.com/jfrog/terraform-provider-xray/issues/96)
+ PR [#]()
+
 ## 1.9.5 (December 22, 2022). Tested on Artifactory 7.47.14 and Xray 3.62.4
 
 BUG FIXES:

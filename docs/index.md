@@ -128,7 +128,7 @@ resource "xray_license_policy" "license_policy" {
 resource "xray_operational_risk_policy" "min_risk" {
   name        = "test-operational-risk-policy-min-risk"
   description = "Operational Risk policy with a custom risk rule"
-  type        = "Operational_Risk"
+  type        = "operational_risk"
 
   rule {
     name     = "op_risk_custom_rule"
@@ -159,7 +159,7 @@ resource "xray_operational_risk_policy" "min_risk" {
 resource "xray_operational_risk_policy" "custom_criteria" {
   name        = "test-operational-risk-policy-custom-criteria"
   description = "Operational Risk policy with a custom risk rule"
-  type        = "Operational_Risk"
+  type        = "operational_risk"
 
   rule {
     name     = "op_risk_custom_rule"
