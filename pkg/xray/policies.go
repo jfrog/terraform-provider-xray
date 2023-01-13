@@ -109,7 +109,7 @@ var getPolicySchema = func(criteriaSchema map[string]*schema.Schema, actionsSche
 				Type:             schema.TypeString,
 				Required:         true,
 				Description:      "Type of the policy",
-				ValidateDiagFunc: validator.StringInSlice(true, "Security", "License", "Operational_Risk"),
+				ValidateDiagFunc: validator.StringInSlice(false, "security", "license", "operational_risk"),
 			},
 			"author": {
 				Type:        schema.TypeString,
