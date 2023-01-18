@@ -1,14 +1,14 @@
 ## 1.9.7 (January 18, 2023).
 
-BUG FIX:
+BUG FIXES:
 
-* resource/xray_ignore_rule - fixed nil pointer exception, when "expiration_date" attribute wasn't set. Fixed documentation, added HCL examples.
+* resource/xray_ignore_rule: fixed nil pointer exception, when "expiration_date" attribute wasn't set. Fixed documentation, added HCL examples.
   Issue [#94](https://github.com/jfrog/terraform-provider-xray/issues/94)
   PR [#99](https://github.com/jfrog/terraform-provider-xray/pull/99)
 
 ## 1.9.6 (January 12, 2023). Tested on Artifactory 7.49.5 and Xray 3.64.4
 
-BUG FIX:
+BUG FIXES:
 
 * resource/xray_operational_risk_policy: documentation updated to match Xray behavior, all policy types are lowercase now.
  Issue: [#96](https://github.com/jfrog/terraform-provider-xray/issues/96)
