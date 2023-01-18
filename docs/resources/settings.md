@@ -4,6 +4,8 @@ page_title: "xray_settings Resource - terraform-provider-xray"
 subcategory: "Settings"
 ---
 
+# xray_settings (Resource)
+
 Provides an Xray DB Sync Time resource.
 
 [API documentation](https://www.jfrog.com/confluence/display/JFROG/Xray+REST+API#XrayRESTAPI-UpdateDBSyncDailyUpdateTime).

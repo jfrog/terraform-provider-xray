@@ -4,6 +4,8 @@ page_title: "xray_watch Resource - terraform-provider-xray"
 subcategory: "Watch"
 ---
 
+# xray_watch (Resource)
+
 Provides an Xray Watch resource.
 
 [Official documentation](https://www.jfrog.com/confluence/display/JFROG/Configuring+Xray+Watches#ConfiguringXrayWatches-CreatingaWatch).

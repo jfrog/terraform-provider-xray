@@ -4,6 +4,8 @@ page_title: "xray_security_policy Resource - terraform-provider-xray"
 subcategory: "Policies"
 ---
 
+# xray_security_policy (Resource)
+
 Creates an Xray Policy using V2 of the underlying APIs.
 Please note: It's only compatible with Bearer token auth method (Identity and Access => Access Tokens).
 
