@@ -4,7 +4,7 @@ BUG FIX:
 
 * resource/xray_ignore_rule - fixed nil pointer exception, when "expiration_date" attribute wasn't set. Fixed documentation, added HCL examples.
   Issue [#94](https://github.com/jfrog/terraform-provider-xray/issues/94)
-  PR [#]()
+  PR [#99](https://github.com/jfrog/terraform-provider-xray/pull/99)
 
 ## 1.9.6 (January 12, 2023). Tested on Artifactory 7.49.5 and Xray 3.64.4
 
