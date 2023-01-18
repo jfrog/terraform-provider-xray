@@ -173,6 +173,48 @@ func scopeTestCase(scope string, t *testing.T) (*testing.T, resource.TestCase) {
 	}
 }
 
+func TestAccIgnoreRule_scopes_no_expiration(t *testing.T) {
+	for _, scope := range []string{"policies", "watches"} {
+		t.Run(scope, func(t *testing.T) {
+			resource.Test(scopeTestCaseNoExpiration(scope, t))
+		})
+	}
+}
+
+func scopeTestCaseNoExpiration(scope string, t *testing.T) (*testing.T, resource.TestCase) {
+	_, fqrn, name := test.MkNames("ignore-rule-", "xray_ignore_rule")
+
+	config := util.ExecuteTemplate("TestAccIgnoreRule", `
+		resource "xray_ignore_rule" "{{ .name }}" {
+		  notes            = "fake notes"
+		  cves             = ["fake-cve"]
+		  {{ .scope }}     = ["fake-{{ .scope }}"]
+		}
+	`, map[string]interface{}{
+		"name":  name,
+		"scope": scope,
+	})
+
+	return t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviders(),
+		CheckDestroy:      verifyDeleted(fqrn, testCheckIgnoreRule),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet(fqrn, "id"),
+					resource.TestCheckResourceAttr(fqrn, "notes", "fake notes"),
+					resource.TestCheckNoResourceAttr(fqrn, "expiration_date"),
+					resource.TestCheckResourceAttr(fqrn, "is_expired", "false"),
+					resource.TestCheckResourceAttr(fqrn, fmt.Sprintf("%s.#", scope), "1"),
+					resource.TestCheckTypeSetElemAttr(fqrn, fmt.Sprintf("%s.*", scope), fmt.Sprintf("fake-%s", scope)),
+				),
+			},
+		},
+	}
+}
+
 func TestAccIgnoreRule_docker_layers(t *testing.T) {
 	_, fqrn, name := test.MkNames("ignore-rule-", "xray_ignore_rule")
 	expirationDate := time.Now().Add(time.Hour * 48)

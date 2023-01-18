@@ -69,7 +69,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 				Type:             schema.TypeString,
 				Optional:         true,
 				ForceNew:         true,
-				ValidateDiagFunc: validation.ToDiagFunc(validation.StringMatch(regexp.MustCompile(`^\d{4}-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[0-1])$`), "Data must be in YYYY-MM-DD format")),
+				ValidateDiagFunc: validation.ToDiagFunc(validation.StringMatch(regexp.MustCompile(`^\d{4}-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[0-1])$`), "Date must be in YYYY-MM-DD format")),
 				Description:      "The Ignore Rule will be active until the expiration date. At that date it will automatically get deleted.",
 			},
 			"author": {
@@ -88,7 +88,6 @@ func resourceXrayIgnoreRule() *schema.Resource {
 				Type:          schema.TypeSet,
 				Optional:      true,
 				ForceNew:      true,
-				Computed:      true,
 				Description:   "List of specific vulnerabilities to ignore. Omit to apply to all.",
 				ConflictsWith: []string{"cves", "licenses", "operational_risk"},
 				Elem: &schema.Schema{
@@ -99,7 +98,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 				Type:          schema.TypeSet,
 				Optional:      true,
 				ForceNew:      true,
-				Computed:      true,
+				Computed:      true, // If "vulnerabilities" is set to "any" and "cves" omitted (user can't set a conflicting attribute), the value "any" for "cves" will be returned in the response body from the Xray anyway. To avoid state drift this attribute is "Computed".
 				Description:   "List of specific CVEs to ignore. Omit to apply to all.",
 				ConflictsWith: []string{"vulnerabilities", "licenses", "operational_risk"},
 				Elem: &schema.Schema{
@@ -110,7 +109,6 @@ func resourceXrayIgnoreRule() *schema.Resource {
 				Type:        schema.TypeSet,
 				Optional:    true,
 				ForceNew:    true,
-				Computed:    true,
 				Description: "List of specific licenses to ignore. Omit to apply to all.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -120,7 +118,6 @@ func resourceXrayIgnoreRule() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				ForceNew:      true,
-				Computed:      true,
 				Description:   "Operational risk to ignore. Only accept 'any'",
 				ConflictsWith: []string{"vulnerabilities", "cves", "licenses"},
 				Elem: &schema.Schema{
@@ -132,7 +129,6 @@ func resourceXrayIgnoreRule() *schema.Resource {
 				Type:          schema.TypeSet,
 				Optional:      true,
 				ForceNew:      true,
-				Computed:      true,
 				Description:   "List of specific policies to ignore. Omit to apply to all.",
 				ConflictsWith: []string{"watches"},
 				Elem: &schema.Schema{
@@ -143,7 +139,6 @@ func resourceXrayIgnoreRule() *schema.Resource {
 				Type:          schema.TypeSet,
 				Optional:      true,
 				ForceNew:      true,
-				Computed:      true,
 				Description:   "List of specific watches to ignore. Omit to apply to all.",
 				ConflictsWith: []string{"policies"},
 				Elem: &schema.Schema{
@@ -154,7 +149,6 @@ func resourceXrayIgnoreRule() *schema.Resource {
 				Type:        schema.TypeSet,
 				Optional:    true,
 				ForceNew:    true,
-				Computed:    true,
 				Description: "List of Docker layer SHA256 hashes to ignore. Omit to apply to all.",
 				Elem: &schema.Schema{
 					Type:             schema.TypeString,
@@ -165,7 +159,6 @@ func resourceXrayIgnoreRule() *schema.Resource {
 				Type:        schema.TypeSet,
 				Optional:    true,
 				ForceNew:    true,
-				Computed:    true,
 				Description: "List of specific release bundles to ignore. Omit to apply to all.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -187,7 +180,6 @@ func resourceXrayIgnoreRule() *schema.Resource {
 				Type:        schema.TypeSet,
 				Optional:    true,
 				ForceNew:    true,
-				Computed:    true,
 				Description: "List of specific builds to ignore. Omit to apply to all.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -209,7 +201,6 @@ func resourceXrayIgnoreRule() *schema.Resource {
 				Type:          schema.TypeSet,
 				Optional:      true,
 				ForceNew:      true,
-				Computed:      true,
 				ConflictsWith: []string{"build", "release_bundle"},
 				Description:   "List of specific components to ignore. Omit to apply to all.",
 				Elem: &schema.Resource{
@@ -232,7 +223,6 @@ func resourceXrayIgnoreRule() *schema.Resource {
 				Type:          schema.TypeSet,
 				Optional:      true,
 				ForceNew:      true,
-				Computed:      true,
 				ConflictsWith: []string{"build", "release_bundle"},
 				Description:   "List of specific artifacts to ignore. Omit to apply to all.",
 				Elem: &schema.Resource{
@@ -309,35 +299,53 @@ func resourceXrayIgnoreRule() *schema.Resource {
 		if err := d.Set("created", ignoreRule.Created.Format(time.RFC3339)); err != nil {
 			return diag.FromErr(err)
 		}
-		if err := d.Set("expiration_date", ignoreRule.ExpiresAt.Format("2006-01-02")); err != nil {
-			return diag.FromErr(err)
+		if ignoreRule.ExpiresAt != nil {
+			if err := d.Set("expiration_date", ignoreRule.ExpiresAt.Format("2006-01-02")); err != nil {
+				return diag.FromErr(err)
+			}
 		}
 		if err := d.Set("is_expired", ignoreRule.IsExpired); err != nil {
 			return diag.FromErr(err)
 		}
-		if err := d.Set("vulnerabilities", ignoreRule.IgnoreFilters.Vulnerabilities); err != nil {
-			return diag.FromErr(err)
+		if len(ignoreRule.IgnoreFilters.Vulnerabilities) > 0 {
+			if err := d.Set("vulnerabilities", ignoreRule.IgnoreFilters.Vulnerabilities); err != nil {
+				return diag.FromErr(err)
+			}
 		}
-		if err := d.Set("cves", ignoreRule.IgnoreFilters.CVEs); err != nil {
-			return diag.FromErr(err)
+		if len(ignoreRule.IgnoreFilters.CVEs) > 0 {
+			if err := d.Set("cves", ignoreRule.IgnoreFilters.CVEs); err != nil {
+				return diag.FromErr(err)
+			}
 		}
-		if err := d.Set("operational_risk", ignoreRule.IgnoreFilters.OperationalRisks); err != nil {
-			return diag.FromErr(err)
+		if len(ignoreRule.IgnoreFilters.OperationalRisks) > 0 {
+			if err := d.Set("operational_risk", ignoreRule.IgnoreFilters.OperationalRisks); err != nil {
+				return diag.FromErr(err)
+			}
 		}
-		if err := d.Set("docker_layers", ignoreRule.IgnoreFilters.DockerLayers); err != nil {
-			return diag.FromErr(err)
+		if len(ignoreRule.IgnoreFilters.DockerLayers) > 0 {
+			if err := d.Set("docker_layers", ignoreRule.IgnoreFilters.DockerLayers); err != nil {
+				return diag.FromErr(err)
+			}
 		}
-		if err := d.Set("release_bundle", packFilterNameVersion(ignoreRule.IgnoreFilters.ReleaseBundles)); err != nil {
-			return diag.FromErr(err)
+		if len(packFilterNameVersion(ignoreRule.IgnoreFilters.ReleaseBundles)) > 0 {
+			if err := d.Set("release_bundle", packFilterNameVersion(ignoreRule.IgnoreFilters.ReleaseBundles)); err != nil {
+				return diag.FromErr(err)
+			}
 		}
-		if err := d.Set("build", packFilterNameVersion(ignoreRule.IgnoreFilters.Builds)); err != nil {
-			return diag.FromErr(err)
+		if len(packFilterNameVersion(ignoreRule.IgnoreFilters.Builds)) > 0 {
+			if err := d.Set("build", packFilterNameVersion(ignoreRule.IgnoreFilters.Builds)); err != nil {
+				return diag.FromErr(err)
+			}
 		}
-		if err := d.Set("component", packFilterNameVersion(ignoreRule.IgnoreFilters.Components)); err != nil {
-			return diag.FromErr(err)
+		if len(packFilterNameVersion(ignoreRule.IgnoreFilters.Components)) > 0 {
+			if err := d.Set("component", packFilterNameVersion(ignoreRule.IgnoreFilters.Components)); err != nil {
+				return diag.FromErr(err)
+			}
 		}
-		if err := d.Set("artifact", packFilterNameVersionPath(ignoreRule.IgnoreFilters.Artifacts)); err != nil {
-			return diag.FromErr(err)
+		if len(packFilterNameVersionPath(ignoreRule.IgnoreFilters.Artifacts)) > 0 {
+			if err := d.Set("artifact", packFilterNameVersionPath(ignoreRule.IgnoreFilters.Artifacts)); err != nil {
+				return diag.FromErr(err)
+			}
 		}
 
 		return nil

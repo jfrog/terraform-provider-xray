@@ -567,3 +567,14 @@ resource "xray_vulnerabilities_report" "report" {
     }
   }
 }
+
+resource "xray_ignore_rule" "ignore-rule-2590577" {
+  notes           = "notes"
+  expiration_date = "2023-01-19"
+  vulnerabilities = ["any"]
+
+  component {
+    name    = "name"
+    version = "version"
+  }
+}

@@ -4,6 +4,8 @@ page_title: "xray_workers_count Resource - terraform-provider-xray"
 subcategory: "Workers Count"
 ---
 
+# xray_workers_count (Resource)
+
 Provides an Xray Workers Count resource.
 
 [Official documentation](https://www.jfrog.com/confluence/display/JFROG/Configuring+Xray#ConfiguringXray-AdvancedSettings).
