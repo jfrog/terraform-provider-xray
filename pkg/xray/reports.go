@@ -525,15 +525,15 @@ func unpackViolationsFilters(filter *schema.Set) *Filters {
 		filters.PolicyNames = util.CastToStringArr(m["policy_names"].(*schema.Set).List())
 		filters.Severities = util.CastToStringArr(m["severities"].(*schema.Set).List())
 
-		if m["updated"] != nil {
+		if m["updated"].(*schema.Set).Len() > 0 {
 			filters.Updated = unpackStartAndEndDate(m["updated"].(*schema.Set))
 		}
 
-		if m["security_filters"] != nil {
+		if m["security_filters"].(*schema.Set).Len() > 0 {
 			filters.SecurityFilters = unpackViolationsSecurityFilters(m["security_filters"].(*schema.Set))
 		}
 
-		if m["license_filters"] != nil {
+		if m["license_filters"].(*schema.Set).Len() > 0 {
 			filters.LicenseFilters = unpackViolationsLicensesFilters(m["license_filters"].(*schema.Set))
 		}
 

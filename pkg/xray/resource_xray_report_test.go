@@ -41,33 +41,110 @@ var opRisksFilterFields = map[string]interface{}{
 	},
 }
 
-var violationsFilterFields = map[string]interface{}{
-	"filters": map[string]interface{}{
-		"type":         "security",
-		"watch_names":  []interface{}{"NameOfWatch1", "NameOfWatch2"}, // Conflicts with 'watch_patterns'
-		"component":    "*vulnerable:component*",
-		"artifact":     "some://impacted*artifact",
-		"policy_names": []interface{}{"policy1", "policy2"},
-		"severities":   []interface{}{"High", "Medium"},
-		"updated": map[string]interface{}{
-			"start": "2020-06-29T12:22:16Z",
-			"end":   "2020-07-29T12:22:16Z",
-		},
-		"security_filters": map[string]interface{}{
-			//"cve":      "CVE-2020-10693",
-			"issue_id": "XRAY-87343",
-			"cvss_score": map[string]interface{}{ // Conflicts with 'cve'
-				"min_score": 6.3,
-				"max_score": 9,
+var violationsFilterFields = []map[string]interface{}{
+	{
+		"filters": map[string]interface{}{
+			"type":         "security",
+			"watch_names":  []interface{}{"NameOfWatch1", "NameOfWatch2"}, // Conflicts with 'watch_patterns'
+			"component":    "*vulnerable:component*",
+			"artifact":     "some://impacted*artifact",
+			"policy_names": []interface{}{"policy1", "policy2"},
+			"severities":   []interface{}{"High", "Medium"},
+			"updated": map[string]interface{}{
+				"start": "2020-06-29T12:22:16Z",
+				"end":   "2020-07-29T12:22:16Z",
 			},
-			"summary_contains": "kernel",
-			"has_remediation":  true,
+			"security_filters": map[string]interface{}{
+				//"cve":      "CVE-2020-10693",
+				"issue_id": "XRAY-87343",
+				"cvss_score": map[string]interface{}{ // Conflicts with 'cve'
+					"min_score": 6.3,
+					"max_score": 9,
+				},
+				"summary_contains": "kernel",
+				"has_remediation":  true,
+			},
+			"license_filters": map[string]interface{}{
+				"unknown":       false,
+				"unrecognized":  true,
+				"license_names": []interface{}{"Apache", "MIT"}, // conflicts with license_patterns
+				//"license_patterns": []interface{}{"*Apache*", "The Apache*"},
+			},
 		},
-		"license_filters": map[string]interface{}{
-			"unknown":       false,
-			"unrecognized":  true,
-			"license_names": []interface{}{"Apache", "MIT"}, // conflicts with license_patterns
-			//"license_patterns": []interface{}{"*Apache*", "The Apache*"},
+	},
+	{
+		"filters": map[string]interface{}{
+			"type":         "security",
+			"watch_names":  []interface{}{"NameOfWatch1", "NameOfWatch2"}, // Conflicts with 'watch_patterns'
+			"component":    "*vulnerable:component*",
+			"artifact":     "some://impacted*artifact",
+			"policy_names": []interface{}{"policy1", "policy2"},
+			"severities":   []interface{}{"High", "Medium"},
+			"security_filters": map[string]interface{}{
+				"cve":              "CVE-2020-10693",
+				"issue_id":         "XRAY-87343",
+				"summary_contains": "kernel",
+				"has_remediation":  true,
+			},
+			"license_filters": map[string]interface{}{
+				"unknown":          false,
+				"unrecognized":     true,
+				"license_patterns": []interface{}{"*Apache*", "The Apache*"},
+			},
+		},
+	},
+	{
+		"filters": map[string]interface{}{
+			"type":         "security",
+			"watch_names":  []interface{}{"NameOfWatch1", "NameOfWatch2"}, // Conflicts with 'watch_patterns'
+			"component":    "*vulnerable:component*",
+			"artifact":     "some://impacted*artifact",
+			"policy_names": []interface{}{"policy1", "policy2"},
+			"severities":   []interface{}{"High", "Medium"},
+			"updated": map[string]interface{}{
+				"start": "2020-06-29T12:22:16Z",
+				"end":   "2020-07-29T12:22:16Z",
+			},
+			"license_filters": map[string]interface{}{
+				"unknown":       false,
+				"unrecognized":  true,
+				"license_names": []interface{}{"Apache", "MIT"}, // conflicts with license_patterns
+				//"license_patterns": []interface{}{"*Apache*", "The Apache*"},
+			},
+		},
+	},
+	{
+		"filters": map[string]interface{}{
+			"type":         "security",
+			"watch_names":  []interface{}{"NameOfWatch1", "NameOfWatch2"}, // Conflicts with 'watch_patterns'
+			"component":    "*vulnerable:component*",
+			"artifact":     "some://impacted*artifact",
+			"policy_names": []interface{}{"policy1", "policy2"},
+			"severities":   []interface{}{"High", "Medium"},
+			"updated": map[string]interface{}{
+				"start": "2020-06-29T12:22:16Z",
+				"end":   "2020-07-29T12:22:16Z",
+			},
+			"security_filters": map[string]interface{}{
+				//"cve":      "CVE-2020-10693",
+				"issue_id": "XRAY-87343",
+				"cvss_score": map[string]interface{}{ // Conflicts with 'cve'
+					"min_score": 6.3,
+					"max_score": 9,
+				},
+				"summary_contains": "kernel",
+				"has_remediation":  true,
+			},
+		},
+	},
+	{
+		"filters": map[string]interface{}{
+			"type":         "security",
+			"watch_names":  []interface{}{"NameOfWatch1", "NameOfWatch2"}, // Conflicts with 'watch_patterns'
+			"component":    "*vulnerable:component*",
+			"artifact":     "some://impacted*artifact",
+			"policy_names": []interface{}{"policy1", "policy2"},
+			"severities":   []interface{}{"High", "Medium"},
 		},
 	},
 }
@@ -233,7 +310,20 @@ func TestAccViolationsReport(t *testing.T) {
 		resourceNameInReport := reportResource["name"].(string)
 		title := cases.Title(language.AmericanEnglish).String(strings.ToLower(resourceNameInReport))
 		t.Run(title, func(t *testing.T) {
-			resource.Test(mkFilterTestCase(t, reportResource, violationsFilterFields, terraformReportName,
+			resource.Test(mkFilterTestCase(t, reportResource, violationsFilterFields[0], terraformReportName,
+				terraformResourceName))
+		})
+	}
+}
+
+func TestAccViolationsReportFilters(t *testing.T) {
+	terraformReportName := "terraform-violations-report"
+	terraformResourceName := "xray_violations_report"
+
+	for _, violationsFilter := range violationsFilterFields {
+		title := cases.Title(language.AmericanEnglish).String(strings.ToLower("various_violations_filters"))
+		t.Run(title, func(t *testing.T) {
+			resource.Test(mkFilterTestCase(t, resourcesList[0], violationsFilter, terraformReportName,
 				terraformResourceName))
 		})
 	}
