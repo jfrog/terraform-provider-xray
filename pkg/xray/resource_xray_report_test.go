@@ -55,7 +55,6 @@ var violationsFilterFields = []map[string]interface{}{
 				"end":   "2020-07-29T12:22:16Z",
 			},
 			"security_filters": map[string]interface{}{
-				//"cve":      "CVE-2020-10693",
 				"issue_id": "XRAY-87343",
 				"cvss_score": map[string]interface{}{ // Conflicts with 'cve'
 					"min_score": 6.3,
@@ -68,7 +67,6 @@ var violationsFilterFields = []map[string]interface{}{
 				"unknown":       false,
 				"unrecognized":  true,
 				"license_names": []interface{}{"Apache", "MIT"}, // conflicts with license_patterns
-				//"license_patterns": []interface{}{"*Apache*", "The Apache*"},
 			},
 		},
 	},
@@ -109,7 +107,6 @@ var violationsFilterFields = []map[string]interface{}{
 				"unknown":       false,
 				"unrecognized":  true,
 				"license_names": []interface{}{"Apache", "MIT"}, // conflicts with license_patterns
-				//"license_patterns": []interface{}{"*Apache*", "The Apache*"},
 			},
 		},
 	},
@@ -126,7 +123,6 @@ var violationsFilterFields = []map[string]interface{}{
 				"end":   "2020-07-29T12:22:16Z",
 			},
 			"security_filters": map[string]interface{}{
-				//"cve":      "CVE-2020-10693",
 				"issue_id": "XRAY-87343",
 				"cvss_score": map[string]interface{}{ // Conflicts with 'cve'
 					"min_score": 6.3,
