@@ -1,3 +1,11 @@
+## 1.9.8 (January 19, 2023). Tested on Artifactory 7.49.5 and Xray 3.65.2
+
+BUG FIXES:
+
+* resource/xray_violations_report: fixed an issue, when the provider crashed if the `security_filters` attribute wasn't set.
+  Issue [#95](https://github.com/jfrog/terraform-provider-xray/issues/95)
+  PR [#100](https://github.com/jfrog/terraform-provider-xray/pull/100)
+
 ## 1.9.7 (January 18, 2023). Tested on Artifactory 7.49.5 and Xray 3.65.2
 
 BUG FIXES:
