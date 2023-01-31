@@ -353,3 +353,10 @@ Optional:
 
 - `exclude_patterns` (List of String) The pattern will apply to the selected repositories. Simple comma separated wildcard patterns for repository artifact paths (with no leading slash). Ant-style path expressions are supported (*, **, ?). For example: 'org/apache/**'
 - `include_patterns` (List of String) The pattern will apply to the selected repositories. Simple comma separated wildcard patterns for repository artifact paths (with no leading slash). Ant-style path expressions are supported (*, **, ?). For example: 'org/apache/**'
+
+## Import
+
+Xray Watches can be imported using their names, e.g.
+```
+$ terraform import xray_watch.all-repos all-repos-watch
+```

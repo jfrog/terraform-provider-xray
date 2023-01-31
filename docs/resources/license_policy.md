@@ -160,3 +160,10 @@ Required:
 
 - `active` (Boolean) Whether or not to block download of artifacts that meet the artifact and severity `filters` for the associated `xray_watch` resource.
 - `unscanned` (Boolean) Whether or not to block download of artifacts that meet the artifact `filters` for the associated `xray_watch` resource but have not been scanned yet.
+
+## Import
+
+License policies can be imported using their names, e.g.
+```
+$ terraform import xray_license_policy.allowed_licenses test-license-policy-allowed
+```

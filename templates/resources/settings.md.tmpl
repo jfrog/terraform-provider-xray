@@ -16,3 +16,10 @@ Provides an Xray DB Sync Time resource.
 {{tffile "examples/resources/xray_settings/resource.tf"}}
 
 {{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Settings (currently only DB sync time) can be imported using their names, e.g.
+```
+$ terraform import xray_settings.db_sync db-time
+```

@@ -18,3 +18,10 @@ Provides an Xray Watch resource.
 {{tffile "examples/resources/xray_watch/resource.tf"}}
 
 {{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Xray Watches can be imported using their names, e.g.
+```
+$ terraform import xray_watch.all-repos all-repos-watch
+```

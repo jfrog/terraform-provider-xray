@@ -16,12 +16,12 @@ Provides an Xray ignore rule resource. See [Xray Ignore Rules](https://www.jfrog
 resource "xray_ignore_rule" "ignore-rule-5649816" {
   notes           = "notes"
   cves            = ["fake-cves", "cves-1"]
-  expiration_date = "2023-01-25"
+  expiration_date = "2023-10-25"
 }
 
 resource "xray_ignore_rule" "ignore-rule-2195938" {
   notes           = "notes"
-  expiration_date = "2023-01-19"
+  expiration_date = "2023-10-19"
   vulnerabilities = ["any"]
 
   build {
@@ -32,12 +32,24 @@ resource "xray_ignore_rule" "ignore-rule-2195938" {
 
 resource "xray_ignore_rule" "ignore-rule-2590577" {
   notes           = "notes"
-  expiration_date = "2023-01-19"
+  expiration_date = "2023-10-19"
   vulnerabilities = ["any"]
 
   component {
     name    = "name"
     version = "version"
+  }
+}
+
+resource "xray_ignore_rule" "ignore-111" {
+  notes            = "fake notes"
+  expiration_date  = "2024-01-02"
+  vulnerabilities  = ["any"]
+
+  artifact {
+    name    = "fake-name"
+    version = "fake-version"
+    path    = "invalid-path/"
   }
 }
 ```
@@ -56,7 +68,7 @@ resource "xray_ignore_rule" "ignore-rule-2590577" {
 - `component` (Block Set) List of specific components to ignore. Omit to apply to all. (see [below for nested schema](#nestedblock--component))
 - `cves` (Set of String) List of specific CVEs to ignore. Omit to apply to all.
 - `docker_layers` (Set of String) List of Docker layer SHA256 hashes to ignore. Omit to apply to all.
-- `expiration_date` (String) The Ignore Rule will be active until the expiration date. At that date it will automatically get deleted.
+- `expiration_date` (String) The Ignore Rule will be active until the expiration date. At that date it will automatically get deleted. The rule with the expiration date less than current day, will error out.
 - `licenses` (Set of String) List of specific licenses to ignore. Omit to apply to all.
 - `operational_risk` (List of String) Operational risk to ignore. Only accept 'any'
 - `policies` (Set of String) List of specific policies to ignore. Omit to apply to all.
@@ -119,3 +131,10 @@ Required:
 Optional:
 
 - `version` (String) Version of the release bundle
+
+## Import
+
+Ignore rules can be imported using their IDs, e.g.
+```
+$ terraform import xray_ignore_rule.ignore-rule-2590577 44b273ac-dca3-42dc-6819-f70648c0b48e
+```
