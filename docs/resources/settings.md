@@ -29,3 +29,10 @@ resource "xray_settings" "db_sync" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+
+## Import
+
+Settings (currently only DB sync time) can be imported using their names, e.g.
+```
+$ terraform import xray_settings.db_sync db-time
+```

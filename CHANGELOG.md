@@ -1,3 +1,11 @@
+## 1.9.9 (January 31, 2023). Tested on Artifactory 7.49.6 and Xray 3.65.3
+
+IMPROVEMENTS:
+
+* added import instructions to all the provider resources.
+ Issue [#101](https://github.com/jfrog/terraform-provider-xray/issues/101)
+ PR [#102](https://github.com/jfrog/terraform-provider-xray/pull/102) 
+
 ## 1.9.8 (January 19, 2023). Tested on Artifactory 7.49.5 and Xray 3.65.2
 
 BUG FIXES:

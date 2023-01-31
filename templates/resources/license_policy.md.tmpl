@@ -19,3 +19,10 @@ Please note: It's only compatible with Bearer token auth method (Identity and Ac
 {{tffile "examples/resources/xray_license_policy/resource.tf"}}
 
 {{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+License policies can be imported using their names, e.g.
+```
+$ terraform import xray_license_policy.allowed_licenses test-license-policy-allowed
+```

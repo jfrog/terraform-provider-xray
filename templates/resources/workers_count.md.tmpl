@@ -8,6 +8,8 @@ subcategory: "Workers Count"
 
 Provides an Xray Workers Count resource.
 
+~> Self-Hosted only.
+
 [Official documentation](https://www.jfrog.com/confluence/display/JFROG/Configuring+Xray#ConfiguringXray-AdvancedSettings).
 
 [API documentation](https://www.jfrog.com/confluence/display/JFROG/Xray+REST+API#XrayRESTAPI-ConfiguringtheWorkersCount).
@@ -17,3 +19,10 @@ Provides an Xray Workers Count resource.
 {{tffile "examples/resources/xray_workers_count/resource.tf"}}
 
 {{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Workers count resource can be imported using their names, e.g.
+```
+$ terraform import xray_workers_count.workers-count workers-count
+```

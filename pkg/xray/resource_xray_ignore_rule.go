@@ -70,7 +70,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 				Optional:         true,
 				ForceNew:         true,
 				ValidateDiagFunc: validation.ToDiagFunc(validation.StringMatch(regexp.MustCompile(`^\d{4}-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[0-1])$`), "Date must be in YYYY-MM-DD format")),
-				Description:      "The Ignore Rule will be active until the expiration date. At that date it will automatically get deleted.",
+				Description:      "The Ignore Rule will be active until the expiration date. At that date it will automatically get deleted. The rule with the expiration date less than current day, will error out.",
 			},
 			"author": {
 				Type:     schema.TypeString,
