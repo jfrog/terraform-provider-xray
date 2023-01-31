@@ -1,4 +1,4 @@
-## 1.9.9 (January 31, 2023). 
+## 1.9.9 (January 31, 2023). Tested on Artifactory 7.49.6 and Xray 3.65.3
 
 IMPROVEMENTS:
 
