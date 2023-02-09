@@ -1,3 +1,11 @@
+## 1.9.10 (February 10, 2023)
+
+BUG FIXES:
+
+* resource/xray_watch: added missing support for `operational_risk` policy types.
+  Issue [#103](https://github.com/jfrog/terraform-provider-xray/issues/103)
+  PR []()
+
 ## 1.9.9 (January 31, 2023). Tested on Artifactory 7.49.6 and Xray 3.65.3
 
 IMPROVEMENTS:

@@ -179,12 +179,14 @@ func TestAccWatch_allReposMultiplePolicies(t *testing.T) {
 	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
 	testData["policy_name_0"] = fmt.Sprintf("xray-policy-1%d", test.RandomInt())
 	testData["policy_name_1"] = fmt.Sprintf("xray-policy-2%d", test.RandomInt())
+	testData["policy_name_2"] = fmt.Sprintf("xray-policy-3%d", test.RandomInt())
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
 			testCheckPolicyDeleted(testData["policy_name_0"], t, request)
 			testCheckPolicyDeleted(testData["policy_name_1"], t, request)
+			testCheckPolicyDeleted(testData["policy_name_2"], t, request)
 			resp, err := testCheckWatch(id, request)
 			return resp, err
 		}),
@@ -209,6 +211,8 @@ func TestAccWatch_allReposMultiplePolicies(t *testing.T) {
 					resource.TestCheckResourceAttr(fqrn, "assigned_policy.0.type", "security"),
 					resource.TestCheckResourceAttr(fqrn, "assigned_policy.1.name", testData["policy_name_1"]),
 					resource.TestCheckResourceAttr(fqrn, "assigned_policy.1.type", "license"),
+					resource.TestCheckResourceAttr(fqrn, "assigned_policy.2.name", testData["policy_name_2"]),
+					resource.TestCheckResourceAttr(fqrn, "assigned_policy.2.type", "operational_risk"),
 				),
 			},
 		},
@@ -1050,6 +1054,31 @@ resource "xray_license_policy" "license" {
   }
 }
 
+resource "xray_operational_risk_policy" "op-risk-policy" {
+		name = "{{ .policy_name_2 }}"
+		description = "Operational risk policy description"
+		type = "operational_risk"
+		rule {
+			name = "Op_risk_rule"
+			priority = 1
+			criteria {
+				op_risk_min_risk = "Low"
+			}
+			actions {
+				block_release_bundle_distribution 	= false
+				fail_build 							= true
+				notify_watch_recipients 			= false
+				notify_deployer 					= false
+				create_ticket_enabled 				= false
+				build_failure_grace_period_in_days 	= 5
+				block_download {
+					unscanned 	= false
+					active 		= true
+				}
+			}
+		}
+	}
+
 resource "xray_watch" "{{ .resource_name }}" {
   name        	= "{{ .watch_name }}"
   description 	= "{{ .description }}"
@@ -1073,6 +1102,11 @@ resource "xray_watch" "{{ .resource_name }}" {
   assigned_policy {
   	name 	= xray_license_policy.license.name
   	type 	= "license"
+  }
+
+  assigned_policy {
+  	name 	= xray_operational_risk_policy.op-risk-policy.name
+  	type 	= "operational_risk"
   }
 
   watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
