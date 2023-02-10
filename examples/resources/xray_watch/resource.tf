@@ -23,6 +23,11 @@ resource "xray_watch" "all-repos" {
     type = "license"
   }
 
+  assigned_policy {
+    name = xray_operational_risk_policy.op_risk.name
+    type = "operational_risk"
+  }
+
   watch_recipients = ["test@email.com", "test1@email.com"]
 }
 
@@ -64,6 +69,11 @@ resource "xray_watch" "repository" {
   assigned_policy {
     name = xray_license_policy.cvss_range.name
     type = "license"
+  }
+
+  assigned_policy {
+    name = xray_operational_risk_policy.op_risk.name
+    type = "operational_risk"
   }
 
   watch_recipients = ["test@email.com", "test1@email.com"]
@@ -120,6 +130,11 @@ resource "xray_watch" "repository-ant-filter" {
     type = "license"
   }
 
+  assigned_policy {
+    name = xray_operational_risk_policy.op_risk.name
+    type = "operational_risk"
+  }
+
   watch_recipients = ["test@email.com", "test1@email.com"]
 }
 
@@ -147,6 +162,11 @@ resource "xray_watch" "all-builds-with-filters" {
   assigned_policy {
     name = xray_license_policy.cvss_range.name
     type = "license"
+  }
+
+  assigned_policy {
+    name = xray_operational_risk_policy.op_risk.name
+    type = "operational_risk"
   }
 
   watch_recipients = ["test@email.com", "test1@email.com"]
@@ -180,6 +200,11 @@ resource "xray_watch" "build" {
     type = "license"
   }
 
+  assigned_policy {
+    name = xray_operational_risk_policy.op_risk.name
+    type = "operational_risk"
+  }
+
   watch_recipients = ["test@email.com", "test1@email.com"]
 }
 
@@ -202,6 +227,11 @@ resource "xray_watch" "all-projects" {
   assigned_policy {
     name = xray_license_policy.cvss_range.name
     type = "license"
+  }
+
+  assigned_policy {
+    name = xray_operational_risk_policy.op_risk.name
+    type = "operational_risk"
   }
 
   watch_recipients = ["test@email.com", "test1@email.com"]
@@ -233,6 +263,11 @@ resource "xray_watch" "all-projects-with-filters" {
     type = "license"
   }
 
+  assigned_policy {
+    name = xray_operational_risk_policy.op_risk.name
+    type = "operational_risk"
+  }
+
   watch_recipients = ["test@email.com", "test1@email.com"]
 }
 
@@ -259,6 +294,11 @@ resource "xray_watch" "project" {
   assigned_policy {
     name = xray_license_policy.cvss_range.name
     type = "license"
+  }
+
+  assigned_policy {
+    name = xray_operational_risk_policy.op_risk.name
+    type = "operational_risk"
   }
 
   watch_recipients = ["test@email.com", "test1@email.com"]
