@@ -154,6 +154,12 @@ func TestAccLicensePolicy_withProjectKey(t *testing.T) {
 				Config: updatedConfig,
 				Check:  verifyLicensePolicy(fqrn, updatedTestData, updatedTestData["allowedOrBanned"]),
 			},
+			{
+				ResourceName:            fqrn,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_key"},
+			},
 		},
 	})
 }
@@ -177,6 +183,12 @@ func TestAccLicensePolicy_createAllowedLic(t *testing.T) {
 				Config: util.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),
 				Check:  verifyLicensePolicy(fqrn, testData, testData["allowedOrBanned"]),
 			},
+			{
+				ResourceName:            fqrn,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_key"},
+			},
 		},
 	})
 }
@@ -199,6 +211,12 @@ func TestAccLicensePolicy_createBannedLic(t *testing.T) {
 				Config: util.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),
 				Check:  verifyLicensePolicy(fqrn, testData, testData["allowedOrBanned"]),
 			},
+			{
+				ResourceName:            fqrn,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_key"},
+			},
 		},
 	})
 }
@@ -220,6 +238,12 @@ func TestAccLicensePolicy_createMultiLicensePermissiveFalse(t *testing.T) {
 			{
 				Config: util.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),
 				Check:  verifyLicensePolicy(fqrn, testData, testData["allowedOrBanned"]),
+			},
+			{
+				ResourceName:            fqrn,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_key"},
 			},
 		},
 	})
@@ -244,6 +268,12 @@ func TestAccLicensePolicy_createBlockFalse(t *testing.T) {
 			{
 				Config: util.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),
 				Check:  verifyLicensePolicy(fqrn, testData, testData["allowedOrBanned"]),
+			},
+			{
+				ResourceName:            fqrn,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_key"},
 			},
 		},
 	})
