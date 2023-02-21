@@ -21,6 +21,11 @@ func TestDbSyncTime(t *testing.T) {
 				Config: dbSyncTime(resourceName, time),
 				Check:  resource.TestCheckResourceAttr(fqrn, "db_sync_updates_time", time),
 			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 		},
 	})
 }
