@@ -28,7 +28,7 @@ type IgnoreRule struct {
 
 type IgnoreFilters struct {
 	Vulnerabilities  []string                      `json:"vulnerabilities,omitempty"`
-	Licenese         []string                      `json:"licenses,omitempty"`
+	Liceneses        []string                      `json:"licenses,omitempty"`
 	CVEs             []string                      `json:"cves,omitempty"`
 	Policies         []string                      `json:"policies,omitempty"`
 	Watches          []string                      `json:"watches,omitempty"`
@@ -309,6 +309,10 @@ func resourceXrayIgnoreRule() *schema.Resource {
 		}
 		if len(ignoreRule.IgnoreFilters.Vulnerabilities) > 0 {
 			if err := d.Set("vulnerabilities", ignoreRule.IgnoreFilters.Vulnerabilities); err != nil {
+			return diag.FromErr(err)
+		}
+		if len(ignoreRule.IgnoreFilters.Liceneses) > 0 {
+			if err := d.Set("licenses", ignoreRule.IgnoreFilters.Liceneses); err != nil {
 				return diag.FromErr(err)
 			}
 		}
@@ -410,14 +414,27 @@ func resourceXrayIgnoreRule() *schema.Resource {
 		if len(vulnerabilities) > 0 {
 			ignoreFilters.Vulnerabilities = vulnerabilities
 		}
+
 		cves := data.GetSet("cves")
 		if len(cves) > 0 {
 			ignoreFilters.CVEs = cves
 		}
+
 		licenses := data.GetSet("licenses")
 		if len(licenses) > 0 {
-			ignoreFilters.Licenese = licenses
+			ignoreFilters.Liceneses = licenses
 		}
+
+		watches := data.GetSet("watches")
+		if len(watches) > 0 {
+			ignoreFilters.Watches = watches
+		}
+
+		policies := data.GetSet("policies")
+		if len(policies) > 0 {
+			ignoreFilters.Policies = policies
+		}
+
 		operationalRisks := data.GetList("operational_risk")
 		if len(operationalRisks) > 0 {
 			ignoreFilters.OperationalRisks = operationalRisks

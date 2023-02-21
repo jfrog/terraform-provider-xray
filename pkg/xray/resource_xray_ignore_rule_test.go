@@ -54,6 +54,11 @@ func objectiveTestCase(objective string, t *testing.T) (*testing.T, resource.Tes
 					resource.TestCheckTypeSetElemAttr(fqrn, fmt.Sprintf("%s.*", objective), fmt.Sprintf("fake-%s", objective)),
 				),
 			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 		},
 	}
 }
@@ -93,6 +98,11 @@ func TestAccIgnoreRule_operational_risk(t *testing.T) {
 					resource.TestCheckTypeSetElemAttr(fqrn, "operational_risk.*", "any"),
 				),
 			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 		},
 	})
 }
@@ -128,32 +138,50 @@ func TestAccIgnoreRule_invalid_operational_risk(t *testing.T) {
 	})
 }
 
-func TestAccIgnoreRule_scopes(t *testing.T) {
-	for _, scope := range []string{"policies", "watches"} {
-		t.Run(scope, func(t *testing.T) {
-			resource.Test(scopeTestCase(scope, t))
-		})
-	}
-}
-
-func scopeTestCase(scope string, t *testing.T) (*testing.T, resource.TestCase) {
+func TestAccIgnoreRule_scopes_policies(t *testing.T) {
 	_, fqrn, name := test.MkNames("ignore-rule-", "xray_ignore_rule")
 	expirationDate := time.Now().Add(time.Hour * 48)
 
 	config := util.ExecuteTemplate("TestAccIgnoreRule", `
+		resource "xray_security_policy" "fake_policy" {
+			name        = "fake-policy"
+			description = "Security policy description"
+			type        = "security"
+			rule {
+				name     = "rule-name-severity"
+				priority = 1
+				criteria {
+				min_severity = "High"
+			}
+			actions {
+				webhooks = []
+				mails    = ["test@email.com"]
+				block_download {
+					unscanned = true
+					active    = true
+				}
+				block_release_bundle_distribution  = true
+				fail_build                         = true
+				notify_watch_recipients            = true
+				notify_deployer                    = true
+				create_ticket_enabled              = false
+				build_failure_grace_period_in_days = 5
+				}
+			}
+		}
+
 		resource "xray_ignore_rule" "{{ .name }}" {
-		  notes            = "fake notes"
-		  expiration_date  = "{{ .expirationDate }}"
-		  cves             = ["fake-cve"]
-		  {{ .scope }}     = ["fake-{{ .scope }}"]
+			notes            = "fake notes"
+			expiration_date  = "{{ .expirationDate }}"
+			cves             = ["fake-cve"]
+		 	policies         = [xray_security_policy.fake_policy.name]
 		}
 	`, map[string]interface{}{
 		"name":           name,
 		"expirationDate": expirationDate.Format("2006-01-02"),
-		"scope":          scope,
 	})
 
-	return t, resource.TestCase{
+	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviders(),
 		CheckDestroy:      verifyDeleted(fqrn, testCheckIgnoreRule),
@@ -165,12 +193,101 @@ func scopeTestCase(scope string, t *testing.T) (*testing.T, resource.TestCase) {
 					resource.TestCheckResourceAttr(fqrn, "notes", "fake notes"),
 					resource.TestCheckResourceAttr(fqrn, "expiration_date", expirationDate.Format("2006-01-02")),
 					resource.TestCheckResourceAttr(fqrn, "is_expired", "false"),
-					resource.TestCheckResourceAttr(fqrn, fmt.Sprintf("%s.#", scope), "1"),
-					resource.TestCheckTypeSetElemAttr(fqrn, fmt.Sprintf("%s.*", scope), fmt.Sprintf("fake-%s", scope)),
+					resource.TestCheckResourceAttr(fqrn, "policies.#", "1"),
+					resource.TestCheckTypeSetElemAttr(fqrn, "policies.*", "fake-policy"),
 				),
 			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 		},
-	}
+	})
+}
+
+func TestAccIgnoreRule_scopes_watches(t *testing.T) {
+	_, fqrn, name := test.MkNames("ignore-rule-", "xray_ignore_rule")
+	expirationDate := time.Now().Add(time.Hour * 48)
+
+	config := util.ExecuteTemplate("TestAccIgnoreRule", `
+		resource "xray_security_policy" "security" {
+			name        = "fake-policy"
+			description = "Security policy description"
+			type        = "security"
+			rule {
+				name     = "rule-name-severity"
+				priority = 1
+				criteria {
+				min_severity = "High"
+			}
+			actions {
+				webhooks = []
+				mails    = ["test@email.com"]
+				block_download {
+					unscanned = true
+					active    = true
+				}
+				block_release_bundle_distribution  = true
+				fail_build                         = true
+				notify_watch_recipients            = true
+				notify_deployer                    = true
+				create_ticket_enabled              = false
+				build_failure_grace_period_in_days = 5
+				}
+			}
+		}
+		resource "xray_watch" "fake_watch" {
+			name          = "fake-watch"
+			active 		  = true
+
+			watch_resource {
+				type       	= "all-repos"
+				filter {
+					type  	= "regex"
+					value	= ".*"
+				}
+			}
+			assigned_policy {
+				name = xray_security_policy.security.name
+				type = "security"
+			}
+		}
+
+		resource "xray_ignore_rule" "{{ .name }}" {
+			notes            = "fake notes"
+			expiration_date  = "{{ .expirationDate }}"
+			cves             = ["fake-cve"]
+		 	watches          = [xray_watch.fake_watch.name]
+		}
+	`, map[string]interface{}{
+		"name":           name,
+		"expirationDate": expirationDate.Format("2006-01-02"),
+	})
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviders(),
+		CheckDestroy:      verifyDeleted(fqrn, testCheckIgnoreRule),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet(fqrn, "id"),
+					resource.TestCheckResourceAttr(fqrn, "notes", "fake notes"),
+					resource.TestCheckResourceAttr(fqrn, "expiration_date", expirationDate.Format("2006-01-02")),
+					resource.TestCheckResourceAttr(fqrn, "is_expired", "false"),
+					resource.TestCheckResourceAttr(fqrn, "watches.#", "1"),
+					resource.TestCheckTypeSetElemAttr(fqrn, "watches.*", "fake-watch"),
+				),
+			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
 }
 
 func TestAccIgnoreRule_scopes_no_expiration(t *testing.T) {
@@ -251,6 +368,11 @@ func TestAccIgnoreRule_docker_layers(t *testing.T) {
 					resource.TestCheckTypeSetElemAttr(fqrn, "docker_layers.*", "2ae0e4835a9a6e22e35dd0fcce7d7354999476b7dad8698d2d7a77c80bfc647b"),
 					resource.TestCheckTypeSetElemAttr(fqrn, "docker_layers.*", "a8db0e25d5916e70023114bb2d2497cd85327486bd6e0dc2092b349a1ab3a0a0"),
 				),
+			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
@@ -335,6 +457,11 @@ func sourceTestCase(source string, t *testing.T) (*testing.T, resource.TestCase)
 					resource.TestCheckResourceAttr(fqrn, fmt.Sprintf("%s.0.version", source), "fake-version"),
 				),
 			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 		},
 	}
 }
@@ -377,6 +504,11 @@ func TestAccIgnoreRule_artifact(t *testing.T) {
 					resource.TestCheckResourceAttr(fqrn, "artifact.0.version", "fake-version"),
 					resource.TestCheckResourceAttr(fqrn, "artifact.0.path", "fake-path/"),
 				),
+			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
