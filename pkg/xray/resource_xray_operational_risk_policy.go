@@ -115,10 +115,6 @@ func resourceXrayOperationalRiskPolicy() *schema.Resource {
 		Description: "Creates an Xray policy using V2 of the underlying APIs. Please note: " +
 			"It's only compatible with Bearer token auth method (Identity and Access => Access Tokens)",
 
-		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
-		},
-
 		CustomizeDiff: criteriaDiff,
 
 		Schema: getPolicySchema(criteriaSchema, commonActionsSchema),

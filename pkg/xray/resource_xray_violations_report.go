@@ -180,9 +180,6 @@ func resourceXrayViolationsReport() *schema.Resource {
 			"information such as type of violation, impacted artifacts, and severity.",
 
 		CustomizeDiff: reportResourceDiff,
-		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
-		},
 
 		Schema: getReportSchema(violationsFilterSchema),
 	}

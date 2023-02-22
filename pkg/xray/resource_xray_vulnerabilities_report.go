@@ -126,9 +126,6 @@ func resourceXrayVulnerabilitiesReport() *schema.Resource {
 			" CVE, cvss score, and severity are available in the report.",
 
 		CustomizeDiff: reportResourceDiff,
-		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
-		},
 
 		Schema: getReportSchema(vulnerabilitiesFilterSchema),
 	}
