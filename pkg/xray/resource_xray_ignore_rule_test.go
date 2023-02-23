@@ -290,29 +290,47 @@ func TestAccIgnoreRule_scopes_watches(t *testing.T) {
 	})
 }
 
-func TestAccIgnoreRule_scopes_no_expiration(t *testing.T) {
-	for _, scope := range []string{"policies", "watches"} {
-		t.Run(scope, func(t *testing.T) {
-			resource.Test(scopeTestCaseNoExpiration(scope, t))
-		})
-	}
-}
-
-func scopeTestCaseNoExpiration(scope string, t *testing.T) (*testing.T, resource.TestCase) {
+func TestAccIgnoreRule_scopes_no_expiration_policies(t *testing.T) {
 	_, fqrn, name := test.MkNames("ignore-rule-", "xray_ignore_rule")
 
 	config := util.ExecuteTemplate("TestAccIgnoreRule", `
+		resource "xray_security_policy" "security" {
+			name        = "fake-policy"
+			description = "Security policy description"
+			type        = "security"
+			rule {
+				name     = "rule-name-severity"
+				priority = 1
+				criteria {
+					min_severity = "High"
+				}
+				actions {
+					webhooks = []
+					mails    = ["test@email.com"]
+					block_download {
+						unscanned = true
+						active    = true
+					}
+					block_release_bundle_distribution  = true
+					fail_build                         = true
+					notify_watch_recipients            = true
+					notify_deployer                    = true
+					create_ticket_enabled              = false
+					build_failure_grace_period_in_days = 5
+				}
+			}
+		}
+
 		resource "xray_ignore_rule" "{{ .name }}" {
-		  notes            = "fake notes"
-		  cves             = ["fake-cve"]
-		  {{ .scope }}     = ["fake-{{ .scope }}"]
+		  notes    = "fake notes"
+		  cves     = ["fake-cve"]
+		  policies = [xray_security_policy.security.name]
 		}
 	`, map[string]interface{}{
-		"name":  name,
-		"scope": scope,
+		"name": name,
 	})
 
-	return t, resource.TestCase{
+	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviders(),
 		CheckDestroy:      verifyDeleted(fqrn, testCheckIgnoreRule),
@@ -324,12 +342,89 @@ func scopeTestCaseNoExpiration(scope string, t *testing.T) (*testing.T, resource
 					resource.TestCheckResourceAttr(fqrn, "notes", "fake notes"),
 					resource.TestCheckNoResourceAttr(fqrn, "expiration_date"),
 					resource.TestCheckResourceAttr(fqrn, "is_expired", "false"),
-					resource.TestCheckResourceAttr(fqrn, fmt.Sprintf("%s.#", scope), "1"),
-					resource.TestCheckTypeSetElemAttr(fqrn, fmt.Sprintf("%s.*", scope), fmt.Sprintf("fake-%s", scope)),
+					resource.TestCheckResourceAttr(fqrn, "policies.#", "1"),
+					resource.TestCheckTypeSetElemAttr(fqrn, "policies.*", "fake-policy"),
 				),
 			},
 		},
-	}
+	})
+}
+
+func TestAccIgnoreRule_scopes_no_expiration_watches(t *testing.T) {
+	_, fqrn, name := test.MkNames("ignore-rule-", "xray_ignore_rule")
+
+	config := util.ExecuteTemplate("TestAccIgnoreRule", `
+		resource "xray_security_policy" "security" {
+			name        = "fake-policy"
+			description = "Security policy description"
+			type        = "security"
+			rule {
+				name     = "rule-name-severity"
+				priority = 1
+				criteria {
+					min_severity = "High"
+				}
+				actions {
+					webhooks = []
+					mails    = ["test@email.com"]
+					block_download {
+						unscanned = true
+						active    = true
+					}
+					block_release_bundle_distribution  = true
+					fail_build                         = true
+					notify_watch_recipients            = true
+					notify_deployer                    = true
+					create_ticket_enabled              = false
+					build_failure_grace_period_in_days = 5
+				}
+			}
+		}
+
+		resource "xray_watch" "fake_watch" {
+			name   = "fake-watch"
+			active = true
+
+			watch_resource {
+				type      = "all-repos"
+				filter {
+					type  = "regex"
+					value = ".*"
+				}
+			}
+			assigned_policy {
+				name = xray_security_policy.security.name
+				type = "security"
+			}
+		}
+
+		resource "xray_ignore_rule" "{{ .name }}" {
+		  notes   = "fake notes"
+		  cves    = ["fake-cve"]
+		  watches = [xray_watch.fake_watch.name]
+		}
+	`, map[string]interface{}{
+		"name": name,
+	})
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviders(),
+		CheckDestroy:      verifyDeleted(fqrn, testCheckIgnoreRule),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet(fqrn, "id"),
+					resource.TestCheckResourceAttr(fqrn, "notes", "fake notes"),
+					resource.TestCheckNoResourceAttr(fqrn, "expiration_date"),
+					resource.TestCheckResourceAttr(fqrn, "is_expired", "false"),
+					resource.TestCheckResourceAttr(fqrn, "watches.#", "1"),
+					resource.TestCheckTypeSetElemAttr(fqrn, "watches.*", "fake-watch"),
+				),
+			},
+		},
+	})
 }
 
 func TestAccIgnoreRule_docker_layers(t *testing.T) {

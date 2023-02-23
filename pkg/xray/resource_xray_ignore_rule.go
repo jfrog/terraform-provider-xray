@@ -327,6 +327,16 @@ func resourceXrayIgnoreRule() *schema.Resource {
 				return diag.FromErr(err)
 			}
 		}
+		if len(ignoreRule.IgnoreFilters.Watches) > 0 {
+			if err := d.Set("watches", ignoreRule.IgnoreFilters.Watches); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+		if len(ignoreRule.IgnoreFilters.Policies) > 0 {
+			if err := d.Set("policies", ignoreRule.IgnoreFilters.Policies); err != nil {
+				return diag.FromErr(err)
+			}
+		}
 		if len(ignoreRule.IgnoreFilters.DockerLayers) > 0 {
 			if err := d.Set("docker_layers", ignoreRule.IgnoreFilters.DockerLayers); err != nil {
 				return diag.FromErr(err)
