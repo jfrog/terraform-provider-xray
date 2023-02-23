@@ -309,7 +309,8 @@ func resourceXrayIgnoreRule() *schema.Resource {
 		}
 		if len(ignoreRule.IgnoreFilters.Vulnerabilities) > 0 {
 			if err := d.Set("vulnerabilities", ignoreRule.IgnoreFilters.Vulnerabilities); err != nil {
-			return diag.FromErr(err)
+				return diag.FromErr(err)
+			}
 		}
 		if len(ignoreRule.IgnoreFilters.Liceneses) > 0 {
 			if err := d.Set("licenses", ignoreRule.IgnoreFilters.Liceneses); err != nil {
