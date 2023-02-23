@@ -28,7 +28,7 @@ type IgnoreRule struct {
 
 type IgnoreFilters struct {
 	Vulnerabilities  []string                      `json:"vulnerabilities,omitempty"`
-	Liceneses        []string                      `json:"licenses,omitempty"`
+	Licenses         []string                      `json:"licenses,omitempty"`
 	CVEs             []string                      `json:"cves,omitempty"`
 	Policies         []string                      `json:"policies,omitempty"`
 	Watches          []string                      `json:"watches,omitempty"`
@@ -312,8 +312,8 @@ func resourceXrayIgnoreRule() *schema.Resource {
 				return diag.FromErr(err)
 			}
 		}
-		if len(ignoreRule.IgnoreFilters.Liceneses) > 0 {
-			if err := d.Set("licenses", ignoreRule.IgnoreFilters.Liceneses); err != nil {
+		if len(ignoreRule.IgnoreFilters.Licenses) > 0 {
+			if err := d.Set("licenses", ignoreRule.IgnoreFilters.Licenses); err != nil {
 				return diag.FromErr(err)
 			}
 		}
@@ -433,7 +433,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 
 		licenses := data.GetSet("licenses")
 		if len(licenses) > 0 {
-			ignoreFilters.Liceneses = licenses
+			ignoreFilters.Licenses = licenses
 		}
 
 		watches := data.GetSet("watches")
