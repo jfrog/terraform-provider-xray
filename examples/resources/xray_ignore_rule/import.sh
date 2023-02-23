@@ -1,0 +1,1 @@
+terraform import xray_ignore_rule.my-rule rule-name

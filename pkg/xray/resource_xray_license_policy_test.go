@@ -155,10 +155,10 @@ func TestAccLicensePolicy_withProjectKey(t *testing.T) {
 				Check:  verifyLicensePolicy(fqrn, updatedTestData, updatedTestData["allowedOrBanned"]),
 			},
 			{
-				ResourceName:            fqrn,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"project_key"},
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateId:     fmt.Sprintf("%s:%s", testData["policy_name"], projectKey),
+				ImportStateVerify: true,
 			},
 		},
 	})
@@ -184,10 +184,9 @@ func TestAccLicensePolicy_createAllowedLic(t *testing.T) {
 				Check:  verifyLicensePolicy(fqrn, testData, testData["allowedOrBanned"]),
 			},
 			{
-				ResourceName:            fqrn,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"project_key"},
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
@@ -270,10 +269,9 @@ func TestAccLicensePolicy_createBlockFalse(t *testing.T) {
 				Check:  verifyLicensePolicy(fqrn, testData, testData["allowedOrBanned"]),
 			},
 			{
-				ResourceName:            fqrn,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"project_key"},
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})

@@ -229,10 +229,10 @@ func TestAccSecurityPolicy_withProjectKey(t *testing.T) {
 				Check:  verifyOpertionalRiskPolicy(fqrn, updatedTestData),
 			},
 			{
-				ResourceName:            fqrn,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"project_key"},
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateId:     fmt.Sprintf("%s:%s", testData["policy_name"], projectKey),
+				ImportStateVerify: true,
 			},
 		},
 	})
@@ -258,10 +258,9 @@ func TestAccSecurityPolicy_createBlockDownloadTrueCVSS(t *testing.T) {
 				Check:  verifySecurityPolicy(fqrn, testData, testData["cvssOrSeverity"]),
 			},
 			{
-				ResourceName:            fqrn,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"project_key"},
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
@@ -289,10 +288,9 @@ func TestAccSecurityPolicy_createBlockDownloadFalseCVSS(t *testing.T) {
 				Check:  verifySecurityPolicy(fqrn, testData, testData["cvssOrSeverity"]),
 			},
 			{
-				ResourceName:            fqrn,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"project_key"},
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
@@ -318,10 +316,9 @@ func TestAccSecurityPolicy_createBlockDownloadTrueMinSeverity(t *testing.T) {
 				Check:  verifySecurityPolicy(fqrn, testData, testData["cvssOrSeverity"]),
 			},
 			{
-				ResourceName:            fqrn,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"project_key"},
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
@@ -379,10 +376,9 @@ func TestAccSecurityPolicy_createBlockDownloadFalseMinSeverity(t *testing.T) {
 				Check:  verifySecurityPolicy(fqrn, testData, testData["cvssOrSeverity"]),
 			},
 			{
-				ResourceName:            fqrn,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"project_key"},
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
@@ -410,10 +406,9 @@ func TestAccSecurityPolicy_createCVSSFloat(t *testing.T) {
 				Check:  verifySecurityPolicy(fqrn, testData, testData["cvssOrSeverity"]),
 			},
 			{
-				ResourceName:            fqrn,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"project_key"},
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})

@@ -134,7 +134,10 @@ Optional:
 
 ## Import
 
-Ignore rules can be imported using their IDs, e.g.
+Import is supported using the following syntax:
+
+```shell
+terraform import xray_ignore_rule.my-rule rule-name
 ```
 $ terraform import xray_ignore_rule.ignore-rule-2590577 44b273ac-dca3-42dc-6819-f70648c0b48e
 ```

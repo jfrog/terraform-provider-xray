@@ -31,10 +31,10 @@ space of an entirely different process; and that lasts no more than a few second
 2. You are going to have to place a little bit of shim code close to the spot in the code where you want to begin
    debugging. We need to stop this provider process from exiting before we can connect. So, put this bit of code in place:
 ```go
-	connected := false
-	for !connected {
-        time.Sleep(time.Second) // set breakpoint here
-    }
+connected := false
+for !connected {
+   time.Sleep(time.Second) // set breakpoint here
+}
 ```
 This code effectively creates an infinite sleep loop; but that's actually essential to solving the problem.
 

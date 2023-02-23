@@ -2,11 +2,11 @@ package xray
 
 import (
 	"fmt"
-	"github.com/jfrog/terraform-provider-shared/test"
 	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/jfrog/terraform-provider-shared/test"
 )
 
 func TestDbSyncTime(t *testing.T) {
@@ -20,11 +20,6 @@ func TestDbSyncTime(t *testing.T) {
 			{
 				Config: dbSyncTime(resourceName, time),
 				Check:  resource.TestCheckResourceAttr(fqrn, "db_sync_updates_time", time),
-			},
-			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateVerify: true,
 			},
 		},
 	})

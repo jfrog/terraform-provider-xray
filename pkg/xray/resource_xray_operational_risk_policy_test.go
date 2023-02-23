@@ -92,10 +92,10 @@ func TestAccOperationalRiskPolicy_withProjectKey(t *testing.T) {
 				Check:  verifyOpertionalRiskPolicy(fqrn, updatedTestData),
 			},
 			{
-				ResourceName:            fqrn,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"project_key"},
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateId:     fmt.Sprintf("%s:%s", testData["policy_name"], projectKey),
+				ImportStateVerify: true,
 			},
 		},
 	})
@@ -146,10 +146,9 @@ func TestAccOperationalRiskPolicy_minRiskCriteria(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:            fqrn,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"project_key"},
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
@@ -223,10 +222,9 @@ func TestAccOperationalRiskPolicy_customCriteria(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:            fqrn,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"project_key"},
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
