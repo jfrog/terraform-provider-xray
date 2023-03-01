@@ -179,5 +179,3 @@ Import is supported using the following syntax:
 ```shell
 terraform import xray_operational_risk_policy.my-policy policy-name
 ```
-$ terraform import xray_operational_risk_policy.min_risk test-operational-risk-policy-min-risk
-```

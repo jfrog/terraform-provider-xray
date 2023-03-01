@@ -108,5 +108,3 @@ Import is supported using the following syntax:
 ```shell
 terraform import xray_repository_config.my-config config-repo-name
 ```
-$ terraform import xray_repository_config.xray-repo-config-pattern example-repo-local
-```

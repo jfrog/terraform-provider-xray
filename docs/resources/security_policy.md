@@ -173,5 +173,3 @@ Import is supported using the following syntax:
 ```sh
 terraform import xray_security_policy.my-policy policy-name
 ```
-$ terraform import xray_security_policy.min_severity test-security-policy-severity
-```
