@@ -137,5 +137,5 @@ Optional:
 Import is supported using the following syntax:
 
 ```shell
-terraform import xray_ignore_rule.my-rule rule-name
+terraform import xray_ignore_rule.my-rule 44b273ac-dca3-42dc-6819-f70648c0b48e
 ```
