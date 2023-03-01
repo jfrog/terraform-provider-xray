@@ -1,4 +1,4 @@
-## 1.9.11 (February 27, 2023). Tested on Artifactory 7.49.8 and Xray 3.67.9
+## 1.9.11 (February 27, 2023). Tested on Artifactory 7.55.2 and Xray 3.67.9
 
 IMPROVEMENTS:
 * resource/xray_ignore_rule, resource/xray_*_policy, resource/xray_watch, resource/xray_repository_config, resource/xray_settings: updated documentation to include importing resource which has been supported previously.
