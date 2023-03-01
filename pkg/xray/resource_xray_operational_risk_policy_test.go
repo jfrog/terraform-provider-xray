@@ -91,6 +91,12 @@ func TestAccOperationalRiskPolicy_withProjectKey(t *testing.T) {
 				Config: updatedConfig,
 				Check:  verifyOpertionalRiskPolicy(fqrn, updatedTestData),
 			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateId:     fmt.Sprintf("%s:%s", testData["policy_name"], projectKey),
+				ImportStateVerify: true,
+			},
 		},
 	})
 }
@@ -138,6 +144,11 @@ func TestAccOperationalRiskPolicy_minRiskCriteria(t *testing.T) {
 					verifyOpertionalRiskPolicy(fqrn, testData),
 					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_min_risk", testData["op_risk_min_risk"]),
 				),
+			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
@@ -209,6 +220,11 @@ func TestAccOperationalRiskPolicy_customCriteria(t *testing.T) {
 					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.committers_less_than", testData["op_risk_custom_committers_less_than"]),
 					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.risk", testData["op_risk_custom_risk"]),
 				),
+			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})

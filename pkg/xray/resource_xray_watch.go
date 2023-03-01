@@ -15,7 +15,7 @@ func resourceXrayWatch() *schema.Resource {
 		Description:   "Provides an Xray watch resource.",
 
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: resourceImporterForProjectKey,
 		},
 
 		CustomizeDiff: watchResourceDiff,

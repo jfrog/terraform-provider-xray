@@ -44,100 +44,98 @@ type RepositoryConfiguration struct {
 }
 
 func resourceXrayRepositoryConfig() *schema.Resource {
-	var repositoryConfigSchema = util.MergeMaps(
-		map[string]*schema.Schema{
-			"repo_name": {
-				Type:             schema.TypeString,
-				Required:         true,
-				Description:      `Repository name.`,
-				ValidateDiagFunc: validator.StringIsNotEmpty,
-			},
-			"config": {
-				Type:          schema.TypeSet,
-				Optional:      true,
-				MaxItems:      1,
-				Description:   `Single repository configuration. Only one of 'config' or 'paths_config' can be set.`,
-				ConflictsWith: []string{"paths_config"},
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"vuln_contextual_analysis": {
-							Type:        schema.TypeBool,
-							Optional:    true,
-							Description: `Only for SaaS instances, will be available after Xray 3.59. Enables vulnerability contextual analysis.`,
-						},
-						"retention_in_days": {
-							Type:             schema.TypeInt,
-							Optional:         true,
-							Default:          90,
-							Description:      `The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository.`,
-							ValidateDiagFunc: validator.IntAtLeast(0),
-						},
+	var repositoryConfigSchema = map[string]*schema.Schema{
+		"repo_name": {
+			Type:             schema.TypeString,
+			Required:         true,
+			Description:      `Repository name.`,
+			ValidateDiagFunc: validator.StringIsNotEmpty,
+		},
+		"config": {
+			Type:          schema.TypeSet,
+			Optional:      true,
+			MaxItems:      1,
+			Description:   `Single repository configuration. Only one of 'config' or 'paths_config' can be set.`,
+			ConflictsWith: []string{"paths_config"},
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"vuln_contextual_analysis": {
+						Type:        schema.TypeBool,
+						Optional:    true,
+						Description: `Only for SaaS instances, will be available after Xray 3.59. Enables vulnerability contextual analysis.`,
+					},
+					"retention_in_days": {
+						Type:             schema.TypeInt,
+						Optional:         true,
+						Default:          90,
+						Description:      `The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository.`,
+						ValidateDiagFunc: validator.IntAtLeast(0),
 					},
 				},
 			},
-			"paths_config": {
-				Type:        schema.TypeSet,
-				Optional:    true,
-				MaxItems:    1,
-				Description: `Enables you to set a more granular retention period. It enables you to scan future artifacts within the specific path, and set a retention period for the historical data of artifacts after they are scanned`,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"pattern": {
-							Type:        schema.TypeList,
-							Required:    true,
-							MinItems:    1,
-							Description: `Pattern, applied to the repositories.`,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"include": {
-										Type:             schema.TypeString,
-										Required:         true,
-										Description:      `Include pattern.`,
-										ValidateDiagFunc: validator.StringIsNotEmpty,
-									},
-									"exclude": {
-										Type:             schema.TypeString,
-										Optional:         true,
-										Description:      `Exclude pattern.`,
-										ValidateDiagFunc: validator.StringIsNotEmpty,
-									},
-									"index_new_artifacts": {
-										Type:        schema.TypeBool,
-										Optional:    true,
-										Default:     true,
-										Description: `If checked, Xray will scan newly added artifacts in the path. Note that existing artifacts will not be scanned. If the folder contains existing artifacts that have been scanned, and you do not want to index new artifacts in that folder, you can choose not to index that folder.`,
-									},
-									"retention_in_days": {
-										Type:             schema.TypeInt,
-										Optional:         true,
-										Default:          90,
-										Description:      `The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository.`,
-										ValidateDiagFunc: validator.IntAtLeast(0),
-									},
+		},
+		"paths_config": {
+			Type:        schema.TypeSet,
+			Optional:    true,
+			MaxItems:    1,
+			Description: `Enables you to set a more granular retention period. It enables you to scan future artifacts within the specific path, and set a retention period for the historical data of artifacts after they are scanned`,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"pattern": {
+						Type:        schema.TypeList,
+						Required:    true,
+						MinItems:    1,
+						Description: `Pattern, applied to the repositories.`,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"include": {
+									Type:             schema.TypeString,
+									Required:         true,
+									Description:      `Include pattern.`,
+									ValidateDiagFunc: validator.StringIsNotEmpty,
+								},
+								"exclude": {
+									Type:             schema.TypeString,
+									Optional:         true,
+									Description:      `Exclude pattern.`,
+									ValidateDiagFunc: validator.StringIsNotEmpty,
+								},
+								"index_new_artifacts": {
+									Type:        schema.TypeBool,
+									Optional:    true,
+									Default:     true,
+									Description: `If checked, Xray will scan newly added artifacts in the path. Note that existing artifacts will not be scanned. If the folder contains existing artifacts that have been scanned, and you do not want to index new artifacts in that folder, you can choose not to index that folder.`,
+								},
+								"retention_in_days": {
+									Type:             schema.TypeInt,
+									Optional:         true,
+									Default:          90,
+									Description:      `The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository.`,
+									ValidateDiagFunc: validator.IntAtLeast(0),
 								},
 							},
 						},
-						"all_other_artifacts": {
-							Type:        schema.TypeSet,
-							Required:    true,
-							Description: `If you select by pattern, you must define a retention period for all other artifacts in the repository in the All Other Artifacts setting.`,
-							MinItems:    1,
-							MaxItems:    1,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"index_new_artifacts": {
-										Type:        schema.TypeBool,
-										Optional:    true,
-										Default:     true,
-										Description: `If checked, Xray will scan newly added artifacts in the path. Note that existing artifacts will not be scanned. If the folder contains existing artifacts that have been scanned, and you do not want to index new artifacts in that folder, you can choose not to index that folder.`,
-									},
-									"retention_in_days": {
-										Type:             schema.TypeInt,
-										Optional:         true,
-										Default:          90,
-										Description:      `The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository.`,
-										ValidateDiagFunc: validator.IntAtLeast(0),
-									},
+					},
+					"all_other_artifacts": {
+						Type:        schema.TypeSet,
+						Required:    true,
+						Description: `If you select by pattern, you must define a retention period for all other artifacts in the repository in the All Other Artifacts setting.`,
+						MinItems:    1,
+						MaxItems:    1,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"index_new_artifacts": {
+									Type:        schema.TypeBool,
+									Optional:    true,
+									Default:     true,
+									Description: `If checked, Xray will scan newly added artifacts in the path. Note that existing artifacts will not be scanned. If the folder contains existing artifacts that have been scanned, and you do not want to index new artifacts in that folder, you can choose not to index that folder.`,
+								},
+								"retention_in_days": {
+									Type:             schema.TypeInt,
+									Optional:         true,
+									Default:          90,
+									Description:      `The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository.`,
+									ValidateDiagFunc: validator.IntAtLeast(0),
 								},
 							},
 						},
@@ -145,7 +143,7 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 				},
 			},
 		},
-	)
+	}
 
 	var unpackPattern = func(s []interface{}) []Pattern {
 		var patterns []Pattern

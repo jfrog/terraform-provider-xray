@@ -63,7 +63,7 @@ func resourceXrayLicensePolicyV2() *schema.Resource {
 			"It's only compatible with Bearer token auth method (Identity and Access => Access Tokens)",
 
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: resourceImporterForProjectKey,
 		},
 
 		Schema: getPolicySchema(criteriaSchema, actionsSchema),

@@ -174,7 +174,8 @@ Required:
 
 ## Import
 
-Operational risk policies can be imported using their names, e.g.
-```
-$ terraform import xray_operational_risk_policy.min_risk test-operational-risk-policy-min-risk
+Import is supported using the following syntax:
+
+```shell
+terraform import xray_operational_risk_policy.my-policy policy-name
 ```

@@ -1,7 +1,9 @@
 package xray
 
 import (
+	"context"
 	"fmt"
+	"strings"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -33,4 +35,15 @@ var getProjectKeySchema = func(isForceNew bool, additionalDescription string) ma
 			Description:      description,
 		},
 	}
+}
+
+var resourceImporterForProjectKey = func(_ context.Context, d *schema.ResourceData, meta any) ([]*schema.ResourceData, error) {
+	parts := strings.SplitN(d.Id(), ":", 2)
+
+	if len(parts) == 2 && parts[0] != "" && parts[1] != "" {
+		d.SetId(parts[0])
+		d.Set("project_key", parts[1])
+	}
+
+	return []*schema.ResourceData{d}, nil
 }

@@ -21,7 +21,22 @@ Provides an Xray Watch resource.
 
 ## Import
 
-Xray Watches can be imported using their names, e.g.
+Import is supported using the following syntax:
+
+```sh
+terraform import xray_watch.my-watch watch-name
 ```
-$ terraform import xray_watch.all-repos all-repos-watch
+
+### Import with `project_key`
+
+To import watch that is in the scope of a project, you'll need to include the project key as part of the resource ID, separated by a colon (`:`).
+
+For instance, using the following config during import:
+```terraform
+resource "xray_watch" "my-watch" {
+  name        = "watch-name"
+  project_key = "my-project"
+}
 ```
+
+Then use `terraform xray_watch.my-watch watch-name:my-project` to import the watch `watch-name` in the scope of project `my-project`.

@@ -270,7 +270,7 @@ var resourcesListNegative = []map[string]interface{}{
 	},
 }
 
-func TestAccLicensesReport(t *testing.T) {
+func TestAccReport_Licenses(t *testing.T) {
 	terraformReportName := "terraform-licenses-report"
 	terraformResourceName := "xray_licenses_report"
 
@@ -284,7 +284,7 @@ func TestAccLicensesReport(t *testing.T) {
 	}
 }
 
-func TestAccOperationalRisksReport(t *testing.T) {
+func TestAccReport_OperationalRisks(t *testing.T) {
 	terraformReportName := "terraform-operational-risks-report"
 	terraformResourceName := "xray_operational_risks_report"
 
@@ -298,7 +298,7 @@ func TestAccOperationalRisksReport(t *testing.T) {
 	}
 }
 
-func TestAccViolationsReport(t *testing.T) {
+func TestAccReport_Violations(t *testing.T) {
 	terraformReportName := "terraform-violations-report"
 	terraformResourceName := "xray_violations_report"
 
@@ -325,7 +325,7 @@ func TestAccViolationsReportFilters(t *testing.T) {
 	}
 }
 
-func TestAccVulnerabilitiesReport(t *testing.T) {
+func TestAccReport_Vulnerabilities(t *testing.T) {
 	terraformReportName := "terraform-vulnerabilities-report"
 	terraformResourceName := "xray_vulnerabilities_report"
 
@@ -339,7 +339,7 @@ func TestAccVulnerabilitiesReport(t *testing.T) {
 	}
 }
 
-func TestAccBadResource(t *testing.T) {
+func TestAccReport_BadResource(t *testing.T) {
 	terraformReportName := "terraform-licenses-report"
 	terraformResourceName := "xray_licenses_report"
 	expectedErrorMessage := "Request payload is invalid as cannot"
@@ -354,7 +354,7 @@ func TestAccBadResource(t *testing.T) {
 	}
 }
 
-func TestAccBadLicenseFilter(t *testing.T) {
+func TestAccReport_BadLicenseFilter(t *testing.T) {
 	terraformReportName := "terraform-licenses-report"
 	terraformResourceName := "xray_licenses_report"
 	expectedErrorMessage := "Only one of"
@@ -383,7 +383,7 @@ func TestAccBadLicenseFilter(t *testing.T) {
 
 }
 
-func TestAccBadViolationsFilter(t *testing.T) {
+func TestAccReport_BadViolationsFilter(t *testing.T) {
 	terraformReportName := "terraform-violations-report"
 	terraformResourceName := "xray_violations_report"
 	expectedErrorMessage := "Only one of"
@@ -428,7 +428,7 @@ func TestAccBadViolationsFilter(t *testing.T) {
 	})
 }
 
-func TestAccBadVulnerabilitiesFilter(t *testing.T) {
+func TestAccReport_BadVulnerabilitiesFilter(t *testing.T) {
 	terraformReportName := "terraform-vulnerabilities-report"
 	terraformResourceName := "xray_vulnerabilities_report"
 	expectedErrorMessage := "Only one of"

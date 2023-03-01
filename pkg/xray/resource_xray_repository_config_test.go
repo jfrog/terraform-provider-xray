@@ -72,6 +72,11 @@ func TestAccRepositoryConfigRepoConfigCreate(t *testing.T) {
 					resource.TestCheckResourceAttr(fqrn, "config.0.retention_in_days", testData["retention_in_days"]),
 				),
 			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 		},
 	})
 }
@@ -111,6 +116,11 @@ func TestAccRepositoryConfigRepoPathsCreate(t *testing.T) {
 			{
 				Config: util.ExecuteTemplate(fqrn, TestDataRepoPathsConfigTemplate, testData),
 				Check:  resource.ComposeTestCheckFunc(verifyRepositoryConfig(fqrn, testData)),
+			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})

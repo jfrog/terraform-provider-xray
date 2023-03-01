@@ -163,7 +163,8 @@ Required:
 
 ## Import
 
-License policies can be imported using their names, e.g.
-```
-$ terraform import xray_license_policy.allowed_licenses test-license-policy-allowed
+Import is supported using the following syntax:
+
+```sh
+terraform import xray_license_policy.my-policy policy-name
 ```

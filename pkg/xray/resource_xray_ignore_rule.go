@@ -28,7 +28,7 @@ type IgnoreRule struct {
 
 type IgnoreFilters struct {
 	Vulnerabilities  []string                      `json:"vulnerabilities,omitempty"`
-	Licenese         []string                      `json:"licenses,omitempty"`
+	Licenses         []string                      `json:"licenses,omitempty"`
 	CVEs             []string                      `json:"cves,omitempty"`
 	Policies         []string                      `json:"policies,omitempty"`
 	Watches          []string                      `json:"watches,omitempty"`
@@ -312,6 +312,11 @@ func resourceXrayIgnoreRule() *schema.Resource {
 				return diag.FromErr(err)
 			}
 		}
+		if len(ignoreRule.IgnoreFilters.Licenses) > 0 {
+			if err := d.Set("licenses", ignoreRule.IgnoreFilters.Licenses); err != nil {
+				return diag.FromErr(err)
+			}
+		}
 		if len(ignoreRule.IgnoreFilters.CVEs) > 0 {
 			if err := d.Set("cves", ignoreRule.IgnoreFilters.CVEs); err != nil {
 				return diag.FromErr(err)
@@ -319,6 +324,16 @@ func resourceXrayIgnoreRule() *schema.Resource {
 		}
 		if len(ignoreRule.IgnoreFilters.OperationalRisks) > 0 {
 			if err := d.Set("operational_risk", ignoreRule.IgnoreFilters.OperationalRisks); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+		if len(ignoreRule.IgnoreFilters.Watches) > 0 {
+			if err := d.Set("watches", ignoreRule.IgnoreFilters.Watches); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+		if len(ignoreRule.IgnoreFilters.Policies) > 0 {
+			if err := d.Set("policies", ignoreRule.IgnoreFilters.Policies); err != nil {
 				return diag.FromErr(err)
 			}
 		}
@@ -410,14 +425,27 @@ func resourceXrayIgnoreRule() *schema.Resource {
 		if len(vulnerabilities) > 0 {
 			ignoreFilters.Vulnerabilities = vulnerabilities
 		}
+
 		cves := data.GetSet("cves")
 		if len(cves) > 0 {
 			ignoreFilters.CVEs = cves
 		}
+
 		licenses := data.GetSet("licenses")
 		if len(licenses) > 0 {
-			ignoreFilters.Licenese = licenses
+			ignoreFilters.Licenses = licenses
 		}
+
+		watches := data.GetSet("watches")
+		if len(watches) > 0 {
+			ignoreFilters.Watches = watches
+		}
+
+		policies := data.GetSet("policies")
+		if len(policies) > 0 {
+			ignoreFilters.Policies = policies
+		}
+
 		operationalRisks := data.GetList("operational_risk")
 		if len(operationalRisks) > 0 {
 			ignoreFilters.OperationalRisks = operationalRisks

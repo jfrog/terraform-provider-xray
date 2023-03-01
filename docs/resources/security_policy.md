@@ -168,7 +168,8 @@ Required:
 
 ## Import
 
-Security policies can be imported using their names, e.g.
-```
-$ terraform import xray_security_policy.min_severity test-security-policy-severity
+Import is supported using the following syntax:
+
+```sh
+terraform import xray_security_policy.my-policy policy-name
 ```

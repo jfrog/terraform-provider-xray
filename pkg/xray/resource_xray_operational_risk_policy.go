@@ -116,7 +116,7 @@ func resourceXrayOperationalRiskPolicy() *schema.Resource {
 			"It's only compatible with Bearer token auth method (Identity and Access => Access Tokens)",
 
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: resourceImporterForProjectKey,
 		},
 
 		CustomizeDiff: criteriaDiff,

@@ -83,9 +83,6 @@ func resourceXrayLicensesReport() *schema.Resource {
 			"includes information such as unknown licenses and unrecognized licenses found in your components.",
 
 		CustomizeDiff: reportResourceDiff,
-		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
-		},
 
 		Schema: getReportSchema(licensesFilterSchema),
 	}

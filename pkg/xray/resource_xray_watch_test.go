@@ -49,6 +49,11 @@ func TestAccWatch_allReposSinglePolicy(t *testing.T) {
 				Config: util.ExecuteTemplate(fqrn, allReposSinglePolicyWatchTemplate, testData),
 				Check:  verifyXrayWatch(fqrn, testData),
 			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 		},
 	})
 }
@@ -75,6 +80,11 @@ func TestAccWatch_allReposPathAntFilter(t *testing.T) {
 			{
 				Config: util.ExecuteTemplate(fqrn, allReposPathAntFilterWatchTemplate, testData),
 				Check:  verifyXrayWatch(fqrn, testData),
+			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
@@ -167,6 +177,12 @@ func TestAccWatch_allReposWithProjectKey(t *testing.T) {
 				Config: updatedConfig,
 				Check:  verifyXrayWatch(fqrn, updatedTestData),
 			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateId:     fmt.Sprintf("%s:%s", testData["watch_name"], projectKey),
+				ImportStateVerify: true,
+			},
 		},
 	})
 }
@@ -215,6 +231,11 @@ func TestAccWatch_allReposMultiplePolicies(t *testing.T) {
 					resource.TestCheckResourceAttr(fqrn, "assigned_policy.2.type", "operational_risk"),
 				),
 			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 		},
 	})
 }
@@ -253,6 +274,11 @@ func makeSingleRepositoryTestCase(repoType string, t *testing.T) (*testing.T, re
 						"value": ".*",
 					}),
 				),
+			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	}
@@ -353,6 +379,12 @@ func TestAccWatch_singleRepositoryWithProjectKey(t *testing.T) {
 					resource.TestCheckResourceAttr(fqrn, "project_key", projectKey),
 				),
 			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateId:     fmt.Sprintf("%s:%s", testData["watch_name"], projectKey),
+				ImportStateVerify: true,
+			},
 		},
 	})
 }
@@ -420,6 +452,11 @@ func TestAccWatch_multipleRepositories(t *testing.T) {
 				Config: util.ExecuteTemplate(fqrn, multipleRepositoriesWatchTemplate, testData),
 				Check:  verifyXrayWatch(fqrn, testData),
 			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 		},
 	})
 }
@@ -470,6 +507,11 @@ func TestAccWatch_multipleRepositoriesPathAntPatterns(t *testing.T) {
 					resource.TestCheckTypeSetElemAttr(fqrn, "watch_resource.*.path_ant_filter.*.exclude_patterns.*", testData["exclude_patterns2"]),
 					resource.TestCheckTypeSetElemAttr(fqrn, "watch_resource.*.path_ant_filter.*.include_patterns.*", testData["include_patterns2"]),
 				),
+			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
@@ -537,6 +579,11 @@ func TestAccWatch_build(t *testing.T) {
 			{
 				Config: util.ExecuteTemplate(fqrn, buildWatchTemplate, testData),
 				Check:  verifyXrayWatch(fqrn, testData),
+			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
@@ -619,6 +666,12 @@ func TestAccWatch_buildWithProjectKey(t *testing.T) {
 					verifyXrayWatch(fqrn, testData),
 					resource.TestCheckResourceAttr(fqrn, "project_key", projectKey),
 				),
+			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateId:     fmt.Sprintf("%s:%s", testData["watch_name"], projectKey),
+				ImportStateVerify: true,
 			},
 		},
 	})
@@ -716,6 +769,12 @@ func TestAccWatch_allBuildsWithProjectKey(t *testing.T) {
 				Config: updatedConfig,
 				Check:  verifyXrayWatch(fqrn, updatedTestData),
 			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateId:     fmt.Sprintf("%s:%s", testData["watch_name"], projectKey),
+				ImportStateVerify: true,
+			},
 		},
 	})
 }
@@ -743,6 +802,11 @@ func TestAccWatch_multipleBuilds(t *testing.T) {
 			{
 				Config: util.ExecuteTemplate(fqrn, multipleBuildsWatchTemplate, testData),
 				Check:  verifyXrayWatch(fqrn, testData),
+			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
@@ -775,6 +839,11 @@ func TestAccWatch_allBuilds(t *testing.T) {
 					resource.TestCheckTypeSetElemAttr(fqrn, "watch_resource.*.ant_filter.*.exclude_patterns.*", "d*"),
 					resource.TestCheckTypeSetElemAttr(fqrn, "watch_resource.*.ant_filter.*.include_patterns.*", "cd*"),
 				),
+			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
@@ -828,6 +897,11 @@ func TestAccWatch_allProjects(t *testing.T) {
 					resource.TestCheckTypeSetElemAttr(fqrn, "watch_resource.*.ant_filter.*.include_patterns.*", "ab*"),
 				),
 			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 		},
 	})
 }
@@ -873,6 +947,11 @@ func TestAccWatch_singleProject(t *testing.T) {
 			{
 				Config: util.ExecuteTemplate(fqrn, singleProjectWatchTemplate, testData),
 				Check:  verifyXrayWatch(fqrn, testData),
+			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})

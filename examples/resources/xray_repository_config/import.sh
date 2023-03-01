@@ -1,0 +1,1 @@
+terraform import xray_repository_config.my-config config-repo-name

@@ -1,0 +1,1 @@
+terraform import xray_operational_risk_policy.my-policy policy-name
