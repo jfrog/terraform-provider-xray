@@ -73,19 +73,19 @@ func resourceXrayWatch() *schema.Resource {
 								Type:        schema.TypeSet,
 								Optional:    true,
 								MinItems:    1,
-								Description: "Filter for `regex` and `package-type` type. Works only with `all-repos` watch_resource.type.",
+								Description: "Filter for `regex`, `package-type` and `mime-type` type. Works for `repository` and `all-repos` watch_resource.type",
 								Elem: &schema.Resource{
 									Schema: map[string]*schema.Schema{
 										"type": {
 											Type:             schema.TypeString,
 											Required:         true,
-											Description:      "The type of filter, such as `regex` or `package-type`",
-											ValidateDiagFunc: validator.StringInSlice(true, "regex", "package-type"),
+											Description:      "The type of filter, such as `regex`, `package-type`, or `mime-type`",
+											ValidateDiagFunc: validator.StringInSlice(true, "regex", "package-type", "mime-type"),
 										},
 										"value": {
 											Type:             schema.TypeString,
 											Required:         true,
-											Description:      "The value of the filter, such as the text of the regex or name of the package type.",
+											Description:      "The value of the filter, such as the text of the regex, name of the package type, or mime type.",
 											ValidateDiagFunc: validator.StringIsNotEmpty,
 										},
 									},
@@ -139,6 +139,34 @@ func resourceXrayWatch() *schema.Resource {
 											},
 											Optional:    true,
 											Description: "The pattern will apply to the selected repositories. Simple comma separated wildcard patterns for repository artifact paths (with no leading slash). Ant-style path expressions are supported (*, **, ?). For example: 'org/apache/**'",
+										},
+									},
+								},
+							},
+							"kv_filter": {
+								Type:        schema.TypeSet,
+								Optional:    true,
+								MinItems:    1,
+								Description: "Filter for `property` type. Works for `repository` and `all-repos` watch_resource.type.",
+								Elem: &schema.Resource{
+									Schema: map[string]*schema.Schema{
+										"type": {
+											Type:             schema.TypeString,
+											Required:         true,
+											Description:      "The type of filter. Currently only support `property`",
+											ValidateDiagFunc: validator.StringInSlice(true, "property"),
+										},
+										"key": {
+											Type:             schema.TypeString,
+											Required:         true,
+											Description:      "The value of the filter, such as the property name of the artifact.",
+											ValidateDiagFunc: validator.StringIsNotEmpty,
+										},
+										"value": {
+											Type:             schema.TypeString,
+											Required:         true,
+											Description:      "The value of the filter, such as the property value of the artifact.",
+											ValidateDiagFunc: validator.StringIsNotEmpty,
 										},
 									},
 								},

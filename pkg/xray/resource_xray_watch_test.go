@@ -389,6 +389,98 @@ func TestAccWatch_singleRepositoryWithProjectKey(t *testing.T) {
 	})
 }
 
+func TestAccWatch_singleRepoMimeTypeFilter(t *testing.T) {
+	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
+	testData := util.MergeMaps(testDataWatch)
+
+	repoType := "local"
+
+	testData["resource_name"] = resourceName
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["watch_type"] = "repository"
+	testData["repo0"] = fmt.Sprintf("libs-release-%s-0-%d", repoType, test.RandomInt())
+	testData["repo_type"] = repoType
+	testData["filter_type_0"] = "mime-type"
+	testData["filter_value_0"] = "application/json"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			testAccCreateRepos(t, testData["repo0"], repoType, "")
+		},
+		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+			testAccDeleteRepo(t, testData["repo0"])
+			testCheckPolicyDeleted(testData["policy_name_0"], t, request)
+			resp, err := testCheckWatch(id, request)
+			return resp, err
+		}),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config: util.ExecuteTemplate(fqrn, singleRepositoryWatchTemplate, testData),
+				Check: resource.ComposeTestCheckFunc(
+					verifyXrayWatch(fqrn, testData),
+					resource.TestCheckTypeSetElemNestedAttrs(fqrn, "watch_resource.*.filter.*", map[string]string{
+						"type":  "mime-type",
+						"value": "application/json",
+					}),
+				),
+			},
+		},
+	})
+}
+
+func TestAccWatch_singleRepoKvFilter(t *testing.T) {
+	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
+	testData := util.MergeMaps(testDataWatch)
+
+	repoType := "local"
+
+	testData["resource_name"] = resourceName
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["watch_type"] = "repository"
+	testData["repo0"] = fmt.Sprintf("libs-release-%s-0-%d", repoType, test.RandomInt())
+	testData["repo_type"] = repoType
+	testData["kv_filter_type"] = "property"
+	testData["kv_filter_key_0"] = "test-key-1"
+	testData["kv_filter_value_0"] = "test-value-1"
+	testData["kv_filter_key_1"] = "test-key-2"
+	testData["kv_filter_value_1"] = "test-value-2"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			testAccCreateRepos(t, testData["repo0"], repoType, "")
+		},
+		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+			testAccDeleteRepo(t, testData["repo0"])
+			testCheckPolicyDeleted(testData["policy_name_0"], t, request)
+			return testCheckWatch(id, request)
+		}),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config: util.ExecuteTemplate(fqrn, kvFilters, testData),
+				Check: resource.ComposeTestCheckFunc(
+					verifyXrayWatch(fqrn, testData),
+					resource.TestCheckTypeSetElemNestedAttrs(fqrn, "watch_resource.*.kv_filter.*", map[string]string{
+						"type":  "property",
+						"key":   "test-key-1",
+						"value": "test-value-1",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(fqrn, "watch_resource.*.kv_filter.*", map[string]string{
+						"type":  "property",
+						"key":   "test-key-2",
+						"value": "test-value-2",
+					}),
+				),
+			},
+		},
+	})
+}
+
 func TestAccWatch_repositoryMissingRepoType(t *testing.T) {
 	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
 	testData := util.MergeMaps(testDataWatch)
@@ -550,7 +642,102 @@ func TestAccWatch_PathAntPatternsError(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      util.ExecuteTemplate(fqrn, pathAntPatterns, testData),
-				ExpectError: regexp.MustCompile("attribute 'path_ant_filter' is set when 'watch_resource.type' is not set to 'repository'"),
+				ExpectError: regexp.MustCompile("attribute 'path_ant_filter' is set when 'watch_resource.type' is not set to 'repository' or 'all-repos'"),
+			},
+		},
+	})
+}
+
+func TestAccWatch_multipleRepositoriesKvFilter(t *testing.T) {
+	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
+	testData := util.MergeMaps(testDataWatch)
+
+	testData["resource_name"] = resourceName
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["watch_type"] = "repository"
+	testData["repo_type"] = "local"
+	testData["repo0"] = fmt.Sprintf("libs-release-local-0-%d", test.RandomInt())
+	testData["repo1"] = fmt.Sprintf("libs-release-local-1-%d", test.RandomInt())
+	testData["kv_filter_type"] = "property"
+	testData["kv_filter_key_0"] = "test-key-1"
+	testData["kv_filter_value_0"] = "test-value-1"
+	testData["kv_filter_key_1"] = "test-key-2"
+	testData["kv_filter_value_1"] = "test-value-2"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			testAccCreateRepos(t, testData["repo0"], "local", "")
+			testAccCreateRepos(t, testData["repo1"], "local", "")
+		},
+		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+			testAccDeleteRepo(t, testData["repo0"])
+			testAccDeleteRepo(t, testData["repo1"])
+			testCheckPolicyDeleted(testData["policy_name_0"], t, request)
+			resp, err := testCheckWatch(id, request)
+			return resp, err
+		}),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config: util.ExecuteTemplate(fqrn, multipleRepositoriesKvFilter, testData),
+				Check: resource.ComposeTestCheckFunc(
+					verifyXrayWatch(fqrn, testData),
+					resource.TestCheckResourceAttr(fqrn, "watch_resource.0.type", testData["watch_type"]),
+					resource.TestCheckResourceAttr(fqrn, "assigned_policy.0.name", testData["policy_name_0"]),
+					resource.TestCheckResourceAttr(fqrn, "assigned_policy.0.type", "security"),
+					resource.TestCheckTypeSetElemNestedAttrs(fqrn, "watch_resource.*.kv_filter.*", map[string]string{
+						"type":  "property",
+						"key":   testData["kv_filter_key_0"],
+						"value": testData["kv_filter_value_0"],
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(fqrn, "watch_resource.*.kv_filter.*", map[string]string{
+						"type":  "property",
+						"key":   testData["kv_filter_key_1"],
+						"value": testData["kv_filter_value_1"],
+					}),
+				),
+			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func TestAccWatch_KvFilterError(t *testing.T) {
+	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
+	testData := util.MergeMaps(testDataWatch)
+
+	testData["resource_name"] = resourceName
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["watch_type"] = "build"
+	testData["repo_type"] = "local"
+	testData["repo0"] = fmt.Sprintf("libs-release-local-0-%d", test.RandomInt())
+	testData["kv_filter_type"] = "property"
+	testData["kv_filter_key_0"] = "test-key-1"
+	testData["kv_filter_value_0"] = "test-value-1"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			testAccCreateRepos(t, testData["repo0"], "local", "")
+		},
+		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+			testAccDeleteRepo(t, testData["repo0"])
+			testCheckPolicyDeleted(testData["policy_name_0"], t, request)
+			resp, err := testCheckWatch(id, request)
+			return resp, err
+		}),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config:      util.ExecuteTemplate(fqrn, kvFilters, testData),
+				ExpectError: regexp.MustCompile("attribute 'kv_filter' is set when 'watch_resource.type' is not set to 'repository' or 'all-repos'"),
 			},
 		},
 	})
@@ -1411,6 +1598,131 @@ resource "xray_watch" "{{ .resource_name }}" {
   	name 	= xray_security_policy.security.name
   	type 	= "security"
 }
+  watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
+}`
+
+const kvFilters = `resource "xray_security_policy" "security" {
+  name        = "{{ .policy_name_0 }}"
+  description = "Security policy description"
+  type        = "security"
+  rule {
+    name     = "rule-name-severity"
+    priority = 1
+    criteria {
+      min_severity = "High"
+    }
+    actions {
+      webhooks = []
+      mails    = ["test@email.com"]
+      block_download {
+        unscanned = true
+        active    = true
+      }
+      block_release_bundle_distribution  = true
+      fail_build                         = true
+      notify_watch_recipients            = true
+      notify_deployer                    = true
+      create_ticket_enabled              = false
+      build_failure_grace_period_in_days = 5
+    }
+  }
+}
+
+resource "xray_watch" "{{ .resource_name }}" {
+  name        = "{{ .watch_name }}"
+  description = "{{ .description }}"
+  active      = {{ .active }}
+
+  watch_resource {
+	type       	= "{{ .watch_type }}"
+	bin_mgr_id  = "default"
+	name		= "{{ .repo0 }}"
+	repo_type   = "{{ .repo_type }}"
+    
+    kv_filter {
+      type  = "{{ .kv_filter_type }}"
+      key   = "{{ .kv_filter_key_0 }}"
+      value = "{{ .kv_filter_value_0 }}"
+    }
+	
+    kv_filter {
+      type  = "{{ .kv_filter_type }}"
+      key   = "{{ .kv_filter_key_1 }}"
+      value = "{{ .kv_filter_value_1 }}"
+    }
+  }
+
+  assigned_policy {
+    name = xray_security_policy.security.name
+  	type = "security"
+  }
+
+  watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
+}`
+
+const multipleRepositoriesKvFilter = `resource "xray_security_policy" "security" {
+  name        = "{{ .policy_name_0 }}"
+  description = "Security policy description"
+  type        = "security"
+  rule {
+    name     = "rule-name-severity"
+    priority = 1
+    criteria {
+      min_severity = "High"
+    }
+    actions {
+      webhooks = []
+      mails    = ["test@email.com"]
+      block_download {
+        unscanned = true
+        active    = true
+      }
+      block_release_bundle_distribution  = true
+      fail_build                         = true
+      notify_watch_recipients            = true
+      notify_deployer                    = true
+      create_ticket_enabled              = false
+      build_failure_grace_period_in_days = 5
+    }
+  }
+}
+
+resource "xray_watch" "{{ .resource_name }}" {
+  name        = "{{ .watch_name }}"
+  description = "{{ .description }}"
+  active      = {{ .active }}
+
+  watch_resource {
+    type       = "{{ .watch_type }}"
+    bin_mgr_id = "default"
+    name       = "{{ .repo0 }}"
+    repo_type  = "{{ .repo_type }}"
+
+    kv_filter {
+      type  = "{{ .kv_filter_type }}"
+      key   = "{{ .kv_filter_key_0 }}"
+      value = "{{ .kv_filter_value_0 }}"
+    }
+  }
+
+  watch_resource {
+    type       = "{{ .watch_type }}"
+    bin_mgr_id = "default"
+    name       = "{{ .repo1 }}"
+    repo_type  = "{{ .repo_type }}"
+
+    kv_filter {
+      type  = "{{ .kv_filter_type }}"
+      key   = "{{ .kv_filter_key_1 }}"
+      value = "{{ .kv_filter_value_1 }}"
+    }
+  }
+
+  assigned_policy {
+    name = xray_security_policy.security.name
+  	type = "security"
+  }
+
   watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
 }`
 
