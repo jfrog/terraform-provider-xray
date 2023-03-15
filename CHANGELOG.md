@@ -1,4 +1,4 @@
-## 1.10.0 (March 16, 2023)
+## 1.10.0 (March 16, 2023). Tested on Artifactory 7.55.7 and Xray 3.67.9
 
 IMPROVEMENTS:
 * resource/xray_watch: Added support for `mime-type` to text filter. Added new filter type `kv_filter` to support "property" filter with key/value.
