@@ -77,6 +77,11 @@ resource "xray_watch" "repository" {
       type  = "regex"
       value = ".*"
     }
+
+    filter {
+      type  = "mine-type"
+      value = "application/json"
+    }
   }
 
   assigned_policy {
@@ -126,15 +131,40 @@ resource "xray_watch" "repository-ant-filter" {
     }
   }
 
+  assigned_policy {
+    name = xray_security_policy.min_severity.name
+    type = "security"
+  }
+
+  assigned_policy {
+    name = xray_license_policy.cvss_range.name
+    type = "license"
+  }
+
+  assigned_policy {
+    name = xray_operational_risk_policy.op_risk.name
+    type = "operational_risk"
+  }
+
+  watch_recipients = ["test@email.com", "test1@email.com"]
+}
+
+resource "xray_watch" "repository-kv-filter" {
+  name        = "repository-watch"
+  description = "Watch a single repo or a list of repositories, using property filter"
+  active      = true
+  project_key = "testproj"
+
   watch_resource {
     type       = "repository"
     bin_mgr_id = "default"
-    name       = "your-other-repository-name"
-    repo_type  = "remote"
+    name       = "your-repository-name1"
+    repo_type  = "local"
 
-    filter {
-      type  = "regex"
-      value = ".*"
+    kv_filter {
+      type  = "property"
+      key   = "artifact-property-name"
+      value = "artifact-property-value"
     }
   }
 

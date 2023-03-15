@@ -90,6 +90,38 @@ func TestAccWatch_allReposPathAntFilter(t *testing.T) {
 	})
 }
 
+func TestAccWatch_allReposKvFilter(t *testing.T) {
+	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
+	testData := util.MergeMaps(testDataWatch)
+
+	testData["resource_name"] = resourceName
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["kv_filter_key0"] = "test-property-name"
+	testData["kv_filter_value0"] = "test-property-value"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { testAccPreCheck(t) },
+		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+			testCheckPolicyDeleted(testData["policy_name_0"], t, request)
+			resp, err := testCheckWatch(id, request)
+			return resp, err
+		}),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config: util.ExecuteTemplate(fqrn, allReposKvFilterWatchTemplate, testData),
+				Check:  verifyXrayWatch(fqrn, testData),
+			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
 func TestAccWatch_allReposWithProjectKey(t *testing.T) {
 	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
 	projectKey := fmt.Sprintf("testproj%d", test.RandSelect(1, 2, 3, 4, 5))
@@ -1263,6 +1295,56 @@ resource "xray_watch" "{{ .resource_name }}" {
   watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
 }`
 
+const allReposKvFilterWatchTemplate = `resource "xray_security_policy" "security" {
+  name        = "{{ .policy_name_0 }}"
+  description = "Security policy description"
+  type        = "security"
+  rule {
+    name     = "rule-name-severity"
+    priority = 1
+    criteria {
+      min_severity = "High"
+    }
+    actions {
+      webhooks = []
+      mails    = ["test@email.com"]
+      block_download {
+        unscanned = true
+        active    = true
+      }
+      block_release_bundle_distribution  = true
+      fail_build                         = true
+      notify_watch_recipients            = true
+      notify_deployer                    = true
+      create_ticket_enabled              = false
+      build_failure_grace_period_in_days = 5
+    }
+  }
+}
+
+resource "xray_watch" "{{ .resource_name }}" {
+  name        = "{{ .watch_name }}"
+  description = "{{ .description }}"
+  active      = {{ .active }}
+
+  watch_resource {
+    type = "{{ .watch_type }}"
+
+    kv_filter {
+      type  = "property"
+      key   = "{{ .kv_filter_key0 }}"
+      value = "{{ .kv_filter_value0 }}"
+    }
+  }
+
+  assigned_policy {
+    name = xray_security_policy.security.name
+    type = "security"
+  }
+
+  watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
+}`
+
 const allReposMultiplePoliciesWatchTemplate = `resource "xray_security_policy" "security" {
   name        = "{{ .policy_name_0 }}"
   description = "Security policy description"
@@ -1321,58 +1403,62 @@ resource "xray_license_policy" "license" {
 }
 
 resource "xray_operational_risk_policy" "op-risk-policy" {
-		name = "{{ .policy_name_2 }}"
-		description = "Operational risk policy description"
-		type = "operational_risk"
-		rule {
-			name = "Op_risk_rule"
-			priority = 1
-			criteria {
-				op_risk_min_risk = "Low"
-			}
-			actions {
-				block_release_bundle_distribution 	= false
-				fail_build 							= true
-				notify_watch_recipients 			= false
-				notify_deployer 					= false
-				create_ticket_enabled 				= false
-				build_failure_grace_period_in_days 	= 5
-				block_download {
-					unscanned 	= false
-					active 		= true
-				}
-			}
-		}
-	}
+  name        = "{{ .policy_name_2 }}"
+  description = "Operational risk policy description"
+  type        = "operational_risk"
+  rule {
+    name     = "Op_risk_rule"
+    priority = 1
+    criteria {
+      op_risk_min_risk = "Low"
+    }
+    actions {
+      block_release_bundle_distribution   = false
+      fail_build                         = true
+      notify_watch_recipients            = false
+      notify_deployer                    = false
+      create_ticket_enabled              = false
+      build_failure_grace_period_in_days = 5
+      block_download {
+        unscanned = false
+        active    = true
+      }
+    }
+  }
+}
 
 resource "xray_watch" "{{ .resource_name }}" {
-  name        	= "{{ .watch_name }}"
-  description 	= "{{ .description }}"
-  active 		= {{ .active }}
+  name        = "{{ .watch_name }}"
+  description = "{{ .description }}"
+  active      = {{ .active }}
 
   watch_resource {
-	type       	= "{{ .watch_type }}"
-	filter {
-		type  	= "{{ .filter_type_0 }}"
-		value	= "{{ .filter_value_0 }}"
-	}
-	filter {
-		type  	= "{{ .filter_type_1 }}"
-		value	= "{{ .filter_value_1 }}"
-	}
+    type = "{{ .watch_type }}"
+
+  filter {
+    type  = "{{ .filter_type_0 }}"
+    value = "{{ .filter_value_0 }}"
   }
-  assigned_policy {
-  	name 	= xray_security_policy.security.name
-  	type 	= "security"
+
+  filter {
+    type  = "{{ .filter_type_1 }}"
+    value = "{{ .filter_value_1 }}"
   }
-  assigned_policy {
-  	name 	= xray_license_policy.license.name
-  	type 	= "license"
   }
 
   assigned_policy {
-  	name 	= xray_operational_risk_policy.op-risk-policy.name
-  	type 	= "operational_risk"
+    name = xray_security_policy.security.name
+    type = "security"
+  }
+
+  assigned_policy {
+    name = xray_license_policy.license.name
+    type = "license"
+  }
+
+  assigned_policy {
+    name = xray_operational_risk_policy.op-risk-policy.name
+    type = "operational_risk"
   }
 
   watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
