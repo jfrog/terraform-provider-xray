@@ -79,7 +79,7 @@ resource "xray_watch" "repository" {
     }
 
     filter {
-      type  = "mine-type"
+      type  = "mime-type"
       value = "application/json"
     }
   }
