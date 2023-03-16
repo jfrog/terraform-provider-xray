@@ -77,6 +77,11 @@ resource "xray_watch" "repository" {
       type  = "regex"
       value = ".*"
     }
+
+    filter {
+      type  = "mime-type"
+      value = "application/json"
+    }
   }
 
   assigned_policy {
@@ -126,15 +131,40 @@ resource "xray_watch" "repository-ant-filter" {
     }
   }
 
+  assigned_policy {
+    name = xray_security_policy.min_severity.name
+    type = "security"
+  }
+
+  assigned_policy {
+    name = xray_license_policy.cvss_range.name
+    type = "license"
+  }
+
+  assigned_policy {
+    name = xray_operational_risk_policy.op_risk.name
+    type = "operational_risk"
+  }
+
+  watch_recipients = ["test@email.com", "test1@email.com"]
+}
+
+resource "xray_watch" "repository-kv-filter" {
+  name        = "repository-watch"
+  description = "Watch a single repo or a list of repositories, using property filter"
+  active      = true
+  project_key = "testproj"
+
   watch_resource {
     type       = "repository"
     bin_mgr_id = "default"
-    name       = "your-other-repository-name"
-    repo_type  = "remote"
+    name       = "your-repository-name1"
+    repo_type  = "local"
 
-    filter {
-      type  = "regex"
-      value = ".*"
+    kv_filter {
+      type  = "property"
+      key   = "artifact-property-name"
+      value = "artifact-property-value"
     }
   }
 
@@ -363,7 +393,8 @@ Optional:
 
 - `ant_filter` (Block Set) `ant-patterns` filter for `all-builds` and `all-projects` watch_resource.type (see [below for nested schema](#nestedblock--watch_resource--ant_filter))
 - `bin_mgr_id` (String) The ID number of a binary manager resource. Default value is `default`. To check the list of available binary managers, use the API call `${JFROG_URL}/xray/api/v1/binMgr` as an admin user, use `binMgrId` value. More info [here](https://www.jfrog.com/confluence/display/JFROG/Xray+REST+API#XrayRESTAPI-GetBinaryManager)
-- `filter` (Block Set) Filter for `regex` and `package-type` type. Works only with `all-repos` watch_resource.type. (see [below for nested schema](#nestedblock--watch_resource--filter))
+- `filter` (Block Set) Filter for `regex`, `package-type` and `mime-type` type. Works for `repository` and `all-repos` watch_resource.type (see [below for nested schema](#nestedblock--watch_resource--filter))
+- `kv_filter` (Block Set) Filter for `property` type. Works for `repository` and `all-repos` watch_resource.type. (see [below for nested schema](#nestedblock--watch_resource--kv_filter))
 - `name` (String) The name of the build, repository or project. Xray indexing must be enabled on the repository or build
 - `path_ant_filter` (Block Set) `path-ant-patterns` filter for `repository` and `all-repos` watch_resource.type (see [below for nested schema](#nestedblock--watch_resource--path_ant_filter))
 - `repo_type` (String) Type of repository. Only applicable when `type` is `repository`. Options: `local` or `remote`.
@@ -382,8 +413,18 @@ Optional:
 
 Required:
 
-- `type` (String) The type of filter, such as `regex` or `package-type`
-- `value` (String) The value of the filter, such as the text of the regex or name of the package type.
+- `type` (String) The type of filter, such as `regex`, `package-type`, or `mime-type`
+- `value` (String) The value of the filter, such as the text of the regex, name of the package type, or mime type.
+
+
+<a id="nestedblock--watch_resource--kv_filter"></a>
+### Nested Schema for `watch_resource.kv_filter`
+
+Required:
+
+- `key` (String) The value of the filter, such as the property name of the artifact.
+- `type` (String) The type of filter. Currently only support `property`
+- `value` (String) The value of the filter, such as the property value of the artifact.
 
 
 <a id="nestedblock--watch_resource--path_ant_filter"></a>

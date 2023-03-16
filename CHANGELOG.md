@@ -1,3 +1,10 @@
+## 1.10.0 (March 16, 2023). Tested on Artifactory 7.55.7 and Xray 3.67.9
+
+IMPROVEMENTS:
+* resource/xray_watch: Added support for `mime-type` to text filter. Added new filter type `kv_filter` to support "property" filter with key/value.
+  Issue: [#107](https://github.com/jfrog/terraform-provider-xray/issues/107)
+  PR: [#108](https://github.com/jfrog/terraform-provider-xray/pull/108)
+
 ## 1.9.11 (February 27, 2023). Tested on Artifactory 7.55.2 and Xray 3.67.9
 
 IMPROVEMENTS:

@@ -31,6 +31,11 @@ type WatchFilterAntValue struct {
 	IncludePatterns []string `json:"IncludePatterns"`
 }
 
+type WatchFilterKvValue struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
 type WatchProjectResource struct {
 	Type            string        `json:"type"`
 	BinaryManagerId string        `json:"bin_mgr_id"`
@@ -139,6 +144,11 @@ func unpackProjectResource(rawCfg interface{}) WatchProjectResource {
 		resource.Filters = append(resource.Filters, antFilters...)
 	}
 
+	if v, ok := cfg["kv_filter"]; ok {
+		kvFilters := unpackKvFilters(v.(*schema.Set))
+		resource.Filters = append(resource.Filters, kvFilters...)
+	}
+
 	return resource
 }
 
@@ -179,6 +189,30 @@ func unpackAntFilters(d *schema.Set, filterType string) []WatchFilter {
 
 		filter := WatchFilter{
 			Type:  filterType,
+			Value: json.RawMessage(filterJsonString),
+		}
+		filters = append(filters, filter)
+	}
+
+	return filters
+}
+
+func unpackKvFilters(d *schema.Set) []WatchFilter {
+	tfFilters := d.List()
+
+	var filters []WatchFilter
+
+	for _, raw := range tfFilters {
+		kv := raw.(map[string]interface{})
+
+		filterJsonString := fmt.Sprintf(
+			`{"key": "%s", "value": "%s"}`,
+			kv["key"].(string),
+			kv["value"].(string),
+		)
+
+		filter := WatchFilter{
+			Type:  kv["type"].(string),
 			Value: json.RawMessage(filterJsonString),
 		}
 		filters = append(filters, filter)
@@ -255,12 +289,30 @@ func packAntFilter(filter WatchFilter) (map[string]interface{}, error) {
 	return m, err
 }
 
+func packKvFilter(filter WatchFilter) (map[string]interface{}, error) {
+	var kvValue WatchFilterKvValue
+	err := json.Unmarshal(filter.Value, &kvValue)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]interface{}{
+		"type":  filter.Type,
+		"key":   kvValue.Key,
+		"value": kvValue.Value,
+	}, nil
+}
+
 var packFilterMap = map[string]map[string]interface{}{
 	"regex": {
 		"func":          packStringFilter,
 		"attributeName": "filter",
 	},
 	"package-type": {
+		"func":          packStringFilter,
+		"attributeName": "filter",
+	},
+	"mime-type": {
 		"func":          packStringFilter,
 		"attributeName": "filter",
 	},
@@ -272,12 +324,17 @@ var packFilterMap = map[string]map[string]interface{}{
 		"func":          packAntFilter,
 		"attributeName": "path_ant_filter",
 	},
+	"property": {
+		"func":          packKvFilter,
+		"attributeName": "kv_filter",
+	},
 }
 
 func packFilters(filters []WatchFilter, resources map[string]interface{}) (map[string]interface{}, []error) {
 	resources["filter"] = []map[string]interface{}{}
 	resources["ant_filter"] = []map[string]interface{}{}
 	resources["path_ant_filter"] = []map[string]interface{}{}
+	resources["kv_filter"] = []map[string]interface{}{}
 	var errors []error
 
 	for _, filter := range filters {
@@ -456,10 +513,17 @@ func watchResourceDiff(_ context.Context, diff *schema.ResourceDiff, v interface
 		if !slices.Contains(antPatternsResourceTypes, resourceType) && len(antFilters) > 0 {
 			return fmt.Errorf("attribute 'ant_filter' is set when 'watch_resource.type' is not set to 'all-builds' or 'all-projects'")
 		}
+
+		repositoryResourceTypes := []string{"repository", "all-repos"}
+
 		pathAntFilters := r["path_ant_filter"].(*schema.Set).List()
-		pathAntPatternsResourceTypes := []string{"repository", "all-repos"}
-		if !slices.Contains(pathAntPatternsResourceTypes, resourceType) && len(pathAntFilters) > 0 {
+		if !slices.Contains(repositoryResourceTypes, resourceType) && len(pathAntFilters) > 0 {
 			return fmt.Errorf("attribute 'path_ant_filter' is set when 'watch_resource.type' is not set to 'repository' or 'all-repos'")
+		}
+
+		kvFilters := r["kv_filter"].(*schema.Set).List()
+		if !slices.Contains(repositoryResourceTypes, resourceType) && len(kvFilters) > 0 {
+			return fmt.Errorf("attribute 'kv_filter' is set when 'watch_resource.type' is not set to 'repository' or 'all-repos'")
 		}
 	}
 	return nil
