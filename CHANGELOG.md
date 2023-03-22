@@ -1,4 +1,4 @@
-## 1.11.0 (March 22, 2023).
+## 1.11.0 (March 22, 2023). Tested on Artifactory 7.55.8 and Xray 3.69.3
 
 IMPROVEMENTS:
 * resource/xray_security_policy: added new attribute `malicious_package`. It allows to create a violation on any malicious package detected.
