@@ -1,3 +1,10 @@
+## 1.11.0 (March 22, 2023).
+
+IMPROVEMENTS:
+* resource/xray_security_policy: added new attribute `malicious_package`. It allows to create a violation on any malicious package detected.
+ Issue: [#109](https://github.com/jfrog/terraform-provider-xray/issues/109)
+ PR: [#]()
+
 ## 1.10.0 (March 16, 2023). Tested on Artifactory 7.55.7 and Xray 3.67.9
 
 IMPROVEMENTS:
