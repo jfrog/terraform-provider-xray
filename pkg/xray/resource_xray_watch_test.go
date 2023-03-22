@@ -124,7 +124,7 @@ func TestAccWatch_allReposKvFilter(t *testing.T) {
 
 func TestAccWatch_allReposWithProjectKey(t *testing.T) {
 	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
-	projectKey := fmt.Sprintf("testproj%d", test.RandSelect(1, 2, 3, 4, 5))
+	projectKey := fmt.Sprintf("testproj%d", test.RandomInt())
 
 	testData := util.MergeMaps(testDataWatch)
 
@@ -330,7 +330,7 @@ func TestAccWatch_singleRepository(t *testing.T) {
 func TestAccWatch_singleRepositoryWithProjectKey(t *testing.T) {
 	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
 	repoKey := fmt.Sprintf("local-%d", test.RandomInt())
-	projectKey := fmt.Sprintf("testproj%d", test.RandSelect(1, 2, 3, 4, 5))
+	projectKey := fmt.Sprintf("testproj%d", test.RandomInt())
 
 	testData := util.MergeMaps(testDataWatch)
 	testData["resource_name"] = resourceName
@@ -810,7 +810,7 @@ func TestAccWatch_build(t *testing.T) {
 
 func TestAccWatch_buildWithProjectKey(t *testing.T) {
 	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
-	projectKey := fmt.Sprintf("testproj%d", test.RandSelect(1, 2, 3, 4, 5))
+	projectKey := fmt.Sprintf("testproj%d", test.RandomInt())
 
 	testData := util.MergeMaps(testDataWatch)
 	testData["resource_name"] = resourceName
@@ -898,7 +898,7 @@ func TestAccWatch_buildWithProjectKey(t *testing.T) {
 
 func TestAccWatch_allBuildsWithProjectKey(t *testing.T) {
 	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
-	projectKey := fmt.Sprintf("testproj%d", test.RandSelect(1, 2, 3, 4, 5))
+	projectKey := fmt.Sprintf("testproj%d", test.RandomInt())
 
 	testData := util.MergeMaps(testDataWatch)
 	testData["resource_name"] = resourceName
