@@ -13,6 +13,10 @@ import (
 	"github.com/jfrog/terraform-provider-shared/util"
 )
 
+const criteriaTypeCvss = "cvss"
+const criteriaTypeSeverity = "severity"
+const criteriaTypeMaliciousPkg = "malicious_package"
+
 var testDataSecurity = map[string]string{
 	"resource_name":                     "",
 	"policy_name":                       "terraform-security-policy",
@@ -29,7 +33,7 @@ var testDataSecurity = map[string]string{
 	"grace_period_days":                 "5",
 	"block_unscanned":                   "true",
 	"block_active":                      "true",
-	"cvssOrSeverity":                    "cvss",
+	"criteriaType":                      "cvss",
 }
 
 func TestAccSecurityPolicy_unknownMinSeveritySecurityPolicy_beforeVersion3602(t *testing.T) {
@@ -84,7 +88,7 @@ func TestAccSecurityPolicy_unknownMinSeveritySecurityPolicy_beforeVersion3602(t 
 			{
 				SkipFunc: onOrAfterVersion3602,
 				Config:   util.ExecuteTemplate(fqrn, securityPolicyMinSeverity, testData),
-				Check:    verifySecurityPolicy(fqrn, testData, "All severities"),
+				Check:    verifySecurityPolicy(fqrn, testData, criteriaTypeSeverity),
 			},
 		},
 	})
@@ -168,7 +172,6 @@ func TestAccSecurityPolicy_withProjectKey(t *testing.T) {
 	testData["project_key"] = projectKey
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-4-%d", test.RandomInt())
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-4-%d", test.RandomInt())
-	testData["cvssOrSeverity"] = "cvss"
 
 	template := `resource "xray_security_policy" "{{ .resource_name }}" {
 		name        = "{{ .policy_name }}"
@@ -220,7 +223,7 @@ func TestAccSecurityPolicy_withProjectKey(t *testing.T) {
 			{
 				Config: config,
 				Check: resource.ComposeTestCheckFunc(
-					verifySecurityPolicy(fqrn, testData, testData["cvssOrSeverity"]),
+					verifySecurityPolicy(fqrn, testData, criteriaTypeCvss),
 					resource.TestCheckResourceAttr(fqrn, "project_key", projectKey),
 				),
 			},
@@ -246,7 +249,6 @@ func TestAccSecurityPolicy_createBlockDownloadTrueCVSS(t *testing.T) {
 	testData["resource_name"] = resourceName
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-4-%d", test.RandomInt())
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-4-%d", test.RandomInt())
-	testData["cvssOrSeverity"] = "cvss"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -255,7 +257,7 @@ func TestAccSecurityPolicy_createBlockDownloadTrueCVSS(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, securityPolicyCVSS, testData),
-				Check:  verifySecurityPolicy(fqrn, testData, testData["cvssOrSeverity"]),
+				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeCvss),
 			},
 			{
 				ResourceName:      fqrn,
@@ -276,7 +278,6 @@ func TestAccSecurityPolicy_createBlockDownloadFalseCVSS(t *testing.T) {
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-5-%d", test.RandomInt())
 	testData["block_unscanned"] = "false"
 	testData["block_active"] = "false"
-	testData["cvssOrSeverity"] = "cvss"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -285,7 +286,7 @@ func TestAccSecurityPolicy_createBlockDownloadFalseCVSS(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, securityPolicyCVSS, testData),
-				Check:  verifySecurityPolicy(fqrn, testData, testData["cvssOrSeverity"]),
+				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeCvss),
 			},
 			{
 				ResourceName:      fqrn,
@@ -304,7 +305,6 @@ func TestAccSecurityPolicy_createBlockDownloadTrueMinSeverity(t *testing.T) {
 	testData["resource_name"] = resourceName
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-6-%d", test.RandomInt())
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-6-%d", test.RandomInt())
-	testData["cvssOrSeverity"] = "severity"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -313,7 +313,7 @@ func TestAccSecurityPolicy_createBlockDownloadTrueMinSeverity(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, securityPolicyMinSeverity, testData),
-				Check:  verifySecurityPolicy(fqrn, testData, testData["cvssOrSeverity"]),
+				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeSeverity),
 			},
 			{
 				ResourceName:      fqrn,
@@ -332,7 +332,7 @@ func TestAccSecurityPolicy_createFixVersionDepMinSeverity(t *testing.T) {
 	testData["resource_name"] = resourceName
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-6-%d", test.RandomInt())
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-6-%d", test.RandomInt())
-	testData["cvssOrSeverity"] = "severity"
+	testData["min_severity"] = "High"
 	testData["fix_version_dependant"] = "true"
 
 	resource.Test(t, resource.TestCase{
@@ -341,14 +341,113 @@ func TestAccSecurityPolicy_createFixVersionDepMinSeverity(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, securityPolicyMinSeverityFixVersionDep, testData),
-				Check:  verifySecurityPolicy(fqrn, testData, testData["cvssOrSeverity"]),
+				Config: util.ExecuteTemplate(fqrn, securityPolicyFixVersionDep, testData),
+				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeSeverity),
 			},
 			{
 				ResourceName:            fqrn,
 				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"project_key"},
+			},
+		},
+	})
+}
+
+// Malicious package criteria, block downloading of unscanned and active, fix_version_dependant = false
+func TestAccSecurityPolicy_createMaliciousPackage(t *testing.T) {
+	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
+	testData := util.MergeMaps(testDataSecurity)
+
+	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-6-%d", test.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-6-%d", test.RandomInt())
+	testData["malicious_package"] = "true"
+	testData["fix_version_dependant"] = "false"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config: util.ExecuteTemplate(fqrn, securityPolicyMaliciousPkgFixVersionDep, testData),
+				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeMaliciousPkg),
+			},
+			{
+				ResourceName:            fqrn,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_key"},
+			},
+		},
+	})
+}
+
+func TestAccSecurityPolicy_createMaliciousPackageFail(t *testing.T) {
+	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
+	testData := util.MergeMaps(testDataSecurity)
+
+	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-6-%d", test.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-6-%d", test.RandomInt())
+	testData["malicious_package"] = "true"
+	testData["fix_version_dependant"] = "true"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config:      util.ExecuteTemplate(fqrn, securityPolicyMaliciousPkgFixVersionDep, testData),
+				ExpectError: regexp.MustCompile("fix_version_dependant must be set to false if malicious_package is true"),
+			},
+		},
+	})
+}
+
+func TestAccSecurityPolicy_createMaliciousPackageCvssMinSeverityFail(t *testing.T) {
+	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
+	testData := util.MergeMaps(testDataSecurity)
+
+	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-6-%d", test.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-6-%d", test.RandomInt())
+	testData["malicious_package"] = "true"
+	testData["min_severity"] = "High"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config:      util.ExecuteTemplate(fqrn, securityPolicyCVSSMinSeverityMaliciousPkg, testData),
+				ExpectError: regexp.MustCompile("malicious_package can't be set to true together with min_severity and/or cvss_range"),
+			},
+		},
+	})
+}
+
+func TestAccSecurityPolicy_createCvssMinSeverityFail(t *testing.T) {
+	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
+	testData := util.MergeMaps(testDataSecurity)
+
+	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-6-%d", test.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-6-%d", test.RandomInt())
+	testData["malicious_package"] = "false"
+	testData["min_severity"] = "High"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config:      util.ExecuteTemplate(fqrn, securityPolicyCVSSMinSeverityMaliciousPkg, testData),
+				ExpectError: regexp.MustCompile("min_severity can't be set together with cvss_range"),
 			},
 		},
 	})
@@ -364,7 +463,6 @@ func TestAccSecurityPolicy_createBlockDownloadFalseMinSeverity(t *testing.T) {
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-7-%d", test.RandomInt())
 	testData["block_unscanned"] = "false"
 	testData["block_active"] = "false"
-	testData["cvssOrSeverity"] = "severity"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -373,7 +471,7 @@ func TestAccSecurityPolicy_createBlockDownloadFalseMinSeverity(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, securityPolicyMinSeverity, testData),
-				Check:  verifySecurityPolicy(fqrn, testData, testData["cvssOrSeverity"]),
+				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeSeverity),
 			},
 			{
 				ResourceName:      fqrn,
@@ -394,7 +492,6 @@ func TestAccSecurityPolicy_createCVSSFloat(t *testing.T) {
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-8-%d", test.RandomInt())
 	testData["cvss_from"] = "1.5"
 	testData["cvss_to"] = "5.3"
-	testData["cvssOrSeverity"] = "cvss"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -403,7 +500,7 @@ func TestAccSecurityPolicy_createCVSSFloat(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, securityPolicyCVSS, testData),
-				Check:  verifySecurityPolicy(fqrn, testData, testData["cvssOrSeverity"]),
+				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeCvss),
 			},
 			{
 				ResourceName:      fqrn,
@@ -488,7 +585,7 @@ resource "xray_security_policy" "test" {
 `, name, description, ruleName, allowedLicense)
 }
 
-func verifySecurityPolicy(fqrn string, testData map[string]string, cvssOrSeverity string) resource.TestCheckFunc {
+func verifySecurityPolicy(fqrn string, testData map[string]string, criteriaType string) resource.TestCheckFunc {
 	var commonCheckList = resource.ComposeTestCheckFunc(
 		resource.TestCheckResourceAttr(fqrn, "name", testData["policy_name"]),
 		resource.TestCheckResourceAttr(fqrn, "description", testData["policy_description"]),
@@ -502,17 +599,23 @@ func verifySecurityPolicy(fqrn string, testData map[string]string, cvssOrSeverit
 		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.block_download.0.active", testData["block_active"]),
 		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.block_download.0.unscanned", testData["block_unscanned"]),
 	)
-	if cvssOrSeverity == "cvss" {
+	if criteriaType == criteriaTypeCvss {
 		return resource.ComposeTestCheckFunc(
 			commonCheckList,
 			resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.cvss_range.0.from", testData["cvss_from"]),
 			resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.cvss_range.0.to", testData["cvss_to"]),
 		)
 	}
-	if cvssOrSeverity == "severity" {
+	if criteriaType == criteriaTypeSeverity {
 		return resource.ComposeTestCheckFunc(
 			commonCheckList,
 			resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.min_severity", testData["min_severity"]),
+		)
+	}
+	if criteriaType == criteriaTypeMaliciousPkg {
+		return resource.ComposeTestCheckFunc(
+			commonCheckList,
+			resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.malicious_package", testData["malicious_package"]),
 		)
 	}
 	return nil
@@ -529,6 +632,36 @@ const securityPolicyCVSS = `resource "xray_security_policy" "{{ .resource_name }
 			cvss_range {
 				from = {{ .cvss_from }}
 				to = {{ .cvss_to }}
+			}
+		}
+		actions {
+			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			fail_build = {{ .fail_build }}
+			notify_watch_recipients = {{ .notify_watch_recipients }}
+			notify_deployer = {{ .notify_deployer }}
+			create_ticket_enabled = {{ .create_ticket_enabled }}
+			build_failure_grace_period_in_days = {{ .grace_period_days }}
+			block_download {
+				unscanned = {{ .block_unscanned }}
+				active = {{ .block_active }}
+			}
+		}
+	}
+}`
+
+const securityPolicyCVSSMinSeverityMaliciousPkg = `resource "xray_security_policy" "{{ .resource_name }}" {
+	name = "{{ .policy_name }}"
+	description = "{{ .policy_description }}"
+	type = "security"
+	rule {
+		name 		= "{{ .rule_name }}"
+		priority 	= 1
+		criteria {
+			min_severity 	  = "{{ .min_severity }}"
+			malicious_package = {{ .malicious_package }}
+			cvss_range {
+				from = {{ .cvss_from }}
+				to 	 = {{ .cvss_to }}
 			}
 		}
 		actions {
@@ -571,7 +704,7 @@ const securityPolicyMinSeverity = `resource "xray_security_policy" "{{ .resource
 	}
 }`
 
-const securityPolicyMinSeverityFixVersionDep = `resource "xray_security_policy" "{{ .resource_name }}" {
+const securityPolicyFixVersionDep = `resource "xray_security_policy" "{{ .resource_name }}" {
 	name = "{{ .policy_name }}"
 	description = "{{ .policy_description }}"
 	type = "security"
@@ -579,8 +712,34 @@ const securityPolicyMinSeverityFixVersionDep = `resource "xray_security_policy" 
 		name = "{{ .rule_name }}"
 		priority = 1
 		criteria {
-            min_severity 		  = "{{ .min_severity }}"
-			fix_version_dependant = "{{ .fix_version_dependant }}"
+            min_severity		  = "{{ .min_severity }}"
+			fix_version_dependant = {{ .fix_version_dependant }}
+		}
+		actions {
+			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			fail_build = {{ .fail_build }}
+			notify_watch_recipients = {{ .notify_watch_recipients }}
+			notify_deployer = {{ .notify_deployer }}
+			create_ticket_enabled = {{ .create_ticket_enabled }}
+			build_failure_grace_period_in_days = {{ .grace_period_days }}
+			block_download {
+				unscanned = {{ .block_unscanned }}
+				active = {{ .block_active }}
+			}
+		}
+	}
+}`
+
+const securityPolicyMaliciousPkgFixVersionDep = `resource "xray_security_policy" "{{ .resource_name }}" {
+	name = "{{ .policy_name }}"
+	description = "{{ .policy_description }}"
+	type = "security"
+	rule {
+		name = "{{ .rule_name }}"
+		priority = 1
+		criteria {
+            malicious_package	  = "{{ .malicious_package }}"
+			fix_version_dependant = {{ .fix_version_dependant }}
 		}
 		actions {
 			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}

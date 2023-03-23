@@ -1,6 +1,9 @@
 package xray
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/jfrog/terraform-provider-shared/validator"
@@ -18,7 +21,13 @@ func resourceXraySecurityPolicyV2() *schema.Resource {
 			Type:        schema.TypeBool,
 			Optional:    true,
 			Default:     false,
-			Description: "Default value is `false`. Issues that do not have a fixed version are not generated until a fixed version is available.",
+			Description: "Default value is `false`. Issues that do not have a fixed version are not generated until a fixed version is available. Must be `false` with `malicious_package` enabled.",
+		},
+		"malicious_package": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     false,
+			Description: "Default value is `false`. Generating a violation on a malicious package.",
 		},
 		"cvss_range": {
 			Type:        schema.TypeList,
@@ -56,7 +65,37 @@ func resourceXraySecurityPolicyV2() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceImporterForProjectKey,
 		},
-
-		Schema: getPolicySchema(criteriaSchema, commonActionsSchema),
+		CustomizeDiff: criteriaMaliciousPkgDiff,
+		Schema:        getPolicySchema(criteriaSchema, commonActionsSchema),
 	}
+}
+
+var criteriaMaliciousPkgDiff = func(ctx context.Context, diff *schema.ResourceDiff, v interface{}) error {
+	rules := diff.Get("rule").([]interface{})
+	if len(rules) == 0 {
+		return nil
+	}
+	criteria := rules[0].(map[string]interface{})["criteria"].(*schema.Set).List()
+	if len(criteria) == 0 {
+		return nil
+	}
+
+	criterion := criteria[0].(map[string]interface{})
+	maliciousPackage := criterion["malicious_package"].(bool)
+	fixVersionDependant := criterion["fix_version_dependant"].(bool)
+	minSeverity := criterion["min_severity"].(string)
+	cvssRange := criterion["cvss_range"].([]interface{})
+	// If `malicious_package` is enabled in the UI, `fix_version_dependant` is set to `false` in the UI call.
+	// UI itself doesn't have this checkbox at all. We are adding this check to avoid unexpected behavior.
+	if maliciousPackage && fixVersionDependant {
+		return fmt.Errorf("fix_version_dependant must be set to false if malicious_package is true")
+	}
+	if (maliciousPackage && len(minSeverity) > 0) && (maliciousPackage && len(cvssRange) > 0) {
+		return fmt.Errorf("malicious_package can't be set to true together with min_severity and/or cvss_range")
+	}
+	if len(minSeverity) > 0 && len(cvssRange) > 0 {
+		return fmt.Errorf("min_severity can't be set together with cvss_range")
+	}
+
+	return nil
 }

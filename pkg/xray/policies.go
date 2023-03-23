@@ -192,6 +192,7 @@ type PolicyRuleCriteria struct {
 	CVSSRange       *PolicyCVSSRange `json:"cvss_range,omitempty"`
 	// Omitempty is used in FixVersionDependant because an empty field throws an error in Xray below 3.44.3
 	FixVersionDependant bool `json:"fix_version_dependant,omitempty"`
+	MaliciousPackage    bool `json:"malicious_package,omitempty"`
 	// We use pointer for CVSSRange to address nil-verification for non-primitive types.
 	// Unlike primitive types, when the non-primitive type in the struct is set
 	// to nil, the empty key will be created in the JSON body anyway.
@@ -298,7 +299,9 @@ func unpackSecurityCriteria(tfCriteria map[string]interface{}) *PolicyRuleCriter
 	if v, ok := tfCriteria["fix_version_dependant"]; ok {
 		criteria.FixVersionDependant = v.(bool)
 	}
-
+	if v, ok := tfCriteria["malicious_package"]; ok {
+		criteria.MaliciousPackage = v.(bool)
+	}
 	// This is also picky about not allowing empty values to be set
 	cvss := unpackCVSSRange(tfCriteria["cvss_range"].([]interface{}))
 	if cvss == nil {
@@ -580,6 +583,7 @@ func packSecurityCriteria(criteria *PolicyRuleCriteria) []interface{} {
 	}
 	m["min_severity"] = minSeverity
 	m["fix_version_dependant"] = criteria.FixVersionDependant
+	m["malicious_package"] = criteria.MaliciousPackage
 
 	return []interface{}{m}
 }

@@ -2,8 +2,10 @@ package xray
 
 import (
 	"fmt"
+	"math/rand"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -124,7 +126,7 @@ func TestAccWatch_allReposKvFilter(t *testing.T) {
 
 func TestAccWatch_allReposWithProjectKey(t *testing.T) {
 	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
-	projectKey := fmt.Sprintf("testproj%d", test.RandSelect(1, 2, 3, 4, 5))
+	projectKey := RandomProjectName()
 
 	testData := util.MergeMaps(testDataWatch)
 
@@ -330,7 +332,7 @@ func TestAccWatch_singleRepository(t *testing.T) {
 func TestAccWatch_singleRepositoryWithProjectKey(t *testing.T) {
 	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
 	repoKey := fmt.Sprintf("local-%d", test.RandomInt())
-	projectKey := fmt.Sprintf("testproj%d", test.RandSelect(1, 2, 3, 4, 5))
+	projectKey := RandomProjectName()
 
 	testData := util.MergeMaps(testDataWatch)
 	testData["resource_name"] = resourceName
@@ -810,7 +812,7 @@ func TestAccWatch_build(t *testing.T) {
 
 func TestAccWatch_buildWithProjectKey(t *testing.T) {
 	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
-	projectKey := fmt.Sprintf("testproj%d", test.RandSelect(1, 2, 3, 4, 5))
+	projectKey := RandomProjectName()
 
 	testData := util.MergeMaps(testDataWatch)
 	testData["resource_name"] = resourceName
@@ -898,7 +900,7 @@ func TestAccWatch_buildWithProjectKey(t *testing.T) {
 
 func TestAccWatch_allBuildsWithProjectKey(t *testing.T) {
 	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
-	projectKey := fmt.Sprintf("testproj%d", test.RandSelect(1, 2, 3, 4, 5))
+	projectKey := RandomProjectName()
 
 	testData := util.MergeMaps(testDataWatch)
 	testData["resource_name"] = resourceName
@@ -2163,4 +2165,9 @@ func checkWatch(id string, request *resty.Request) (*resty.Response, error) {
 
 func testCheckWatch(id string, request *resty.Request) (*resty.Response, error) {
 	return checkWatch(id, request.AddRetryCondition(client.NeverRetry))
+}
+
+func RandomProjectName() string {
+	rand.Seed(time.Now().UnixNano())
+	return fmt.Sprintf("testproj%d", rand.Intn(100))
 }
