@@ -739,7 +739,7 @@ const securityPolicyMaliciousPkgFixVersionDep = `resource "xray_security_policy"
 		priority = 1
 		criteria {
             malicious_package	  = "{{ .malicious_package }}"
-			fix_version_dependant = "{{ .fix_version_dependant }}"
+			fix_version_dependant = {{ .fix_version_dependant }}
 		}
 		actions {
 			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
