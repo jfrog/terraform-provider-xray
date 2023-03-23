@@ -658,7 +658,7 @@ const securityPolicyCVSSMinSeverityMaliciousPkg = `resource "xray_security_polic
 		priority 	= 1
 		criteria {
 			min_severity 	  = "{{ .min_severity }}"
-			malicious_package = "{{ .malicious_package }}"
+			malicious_package = {{ .malicious_package }}
 			cvss_range {
 				from = {{ .cvss_from }}
 				to 	 = {{ .cvss_to }}
@@ -713,7 +713,7 @@ const securityPolicyFixVersionDep = `resource "xray_security_policy" "{{ .resour
 		priority = 1
 		criteria {
             min_severity		  = "{{ .min_severity }}"
-			fix_version_dependant = "{{ .fix_version_dependant }}"
+			fix_version_dependant = {{ .fix_version_dependant }}
 		}
 		actions {
 			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
