@@ -13,119 +13,105 @@ resources:
         pullRequestUpdate: false
 pipelines:
   - name: tf_provider_xray_gke
+    configuration:
+      environmentVariables:
+        readOnly:
+          GKE_ZONE: ${int_gkeEnvVars_gke_zone}
+          GKE_PROJECT: ${int_gkeEnvVars_gke_project}
+          MACHINE_TYPE: "e2-standard-4"
+          NUM_NODES: ${int_gkeEnvVars_NUM_NODES} # default is 3
+          ZSCALER_CIDR1: ${int_zscalerIPs_CIDR1}
+          ZSCALER_CIDR2: ${int_zscalerIPs_CIDR2}
+          NEW_RT_PASSWORD: ${int_gkeEnvVars_new_rt_password}
+          CLEANUP_RESOURCES: "true"
     steps:
-      - name: fozzie_gke_jfrog_rt_xray_create
+      - name: gke_jfrog_rt_xray_create
         type: Bash
         configuration:
           priority: 0
           runtime:
             type: image
             image:
-              custom:
-                name: partnership-fozzie-images.jfrog.io/gke
-                tag: latest
-                registry: PartnershipArtifactory
-                sourceRepository: fozzie-images
+              auto:
+                language: java
+                versions:
+                  - "11"
           integrations:
             - name: gkeEnvVars
+            - name: zscalerIPs
             - name: partnersSlack
+            - name: partnership_jfrog_io
+            - name: gcpK8sPartnershipProject
+            - name: Partnership_GitHub
           inputResources:
             - name: GitHubTFProviderXrayRepoJFrog
           environmentVariables:
-            FOZZIE_HOME: "/home/fozzie"
-            PROVISIONER: "native-steps"
-            GIT_ACCESS_USER: ${int_gkeEnvVars_git_user}
-            GIT_ACCESS_TOKEN: ${int_gkeEnvVars_git_token}
-            PARTNERSHIP_USER: ${int_gkeEnvVars_partnership_user}
-            PARTNERSHIP_API_KEY: ${int_gkeEnvVars_partnership_api_key}
-            SERVICE_ACCOUNT_JSON: /home/fozzie/native-steps/credentials/serviceaccount.json
             GKE_CLUSTER: ${int_gkeEnvVars_gke_cluster}
-            GKE_ZONE: ${int_gkeEnvVars_gke_zone}
-            GKE_PROJECT: ${int_gkeEnvVars_gke_project}
-            CLOUDFLARE_ZONE_ID: ${int_gkeEnvVars_cloudflare_zone_id}
-            CLOUDFLARE_TOKEN: ${int_gkeEnvVars_cloudflare_token}
-            NUM_NODES: ${int_gkeEnvVars_NUM_NODES}
-            ARTIFACTORY_DISTRIBUTION: artifactory
-            NEW_RT_PASSWORD: ${int_gkeEnvVars_new_rt_password}
-            CLEANUP_RESOURCES: "true"
         execution:
           onStart:
-            - echo "Preparing for work..."
-            - echo "Create GKE cluster and deploy Artifactory and Xray, latest versions form Helm repo"
-          onExecute:
+            - echo "Preparing for work. Install Helm"
+            - curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 && chmod 700 get_helm.sh
+            - echo "Run Helm installation script" && ./get_helm.sh && rm get_helm.sh
+            - jfrog config show && jfrog --version
+            - helm version
+            - kubectl version --client
+            - echo "Install gcloud cli"
+            - sudo apt-get install apt-transport-https ca-certificates gnupg
+            - echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+            - curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
+            - sudo apt-get update && sudo apt-get install -y google-cloud-cli google-cloud-sdk-gke-gcloud-auth-plugin
+            - gke-gcloud-auth-plugin --version
+            - echo "Renaming GKE_CLUSTER variable, so k8s cluster name will be unique."
             - add_run_variables GKE_CLUSTER=tf-provider-xray-$(date +%s)
-            - add_run_variables CLEANUP_RESOURCES=${CLEANUP_RESOURCES}
-            - fozzie checkout native-steps
             - echo "Whitelist Pipelines Node CIDR to be able to run Artifactory and Xray tests. Same variable is used in gke/create_cluster step to restrict access to the control plane."
             - export WHITELIST_CIDR=$(curl ifconfig.me)/32 && echo ${WHITELIST_CIDR}
-            - fozzie gke/create_cluster
-            - echo "Creating Artifactory Secret"
-            - kubectl create secret generic artifactory-license --from-file=$FOZZIE_HOME/native-steps/license/artifactory.cluster.license
-            - echo "Creating TLS Secret"
-            - kubectl create secret tls tls-ingress --cert=$FOZZIE_HOME/native-steps/dns/tls.crt --key=$FOZZIE_HOME/native-steps/dns/tls.key
+          onExecute:
+            - echo "Create GKE k8s cluster"
+            - git clone https://${int_Partnership_GitHub_token}@github.com/jfrog/terraform-provider-shared.git
+            - ./terraform-provider-shared/scripts/create_gke_cluster.sh
+            - echo "Creating Artifactory License Secret"
+            - jfrog rt dl pipelines-resources/licenses/artifactory.cluster.license
+            - kubectl create secret generic artifactory-license --from-file=licenses/artifactory.cluster.license
             - helm repo add jfrog https://charts.jfrog.io/
             - helm repo update
-            - add_run_variables rt_helm_chart_version=$(helm search repo | grep "${ARTIFACTORY_DISTRIBUTION} " | awk '{$1=$1};1' |  cut -f2 -d " ")
-            - echo "Helm chart version "${rt_helm_chart_version}
-            - add_run_variables ARTIFACTORY_VERSION=$(helm search repo | grep "${ARTIFACTORY_DISTRIBUTION} " | awk '{$1=$1};1' |  cut -f3 -d " ")
+            - add_run_variables RT_HELM_CHART_VERSION=$(helm search repo | grep "artifactory " | awk '{$1=$1};1' |  cut -f2 -d " ")
+            - echo "Helm chart version "${RT_HELM_CHART_VERSION}
+            - add_run_variables ARTIFACTORY_VERSION=$(helm search repo | grep "artifactory " | awk '{$1=$1};1' |  cut -f3 -d " ")
             - echo "Artifactory version "${ARTIFACTORY_VERSION}
             - add_run_variables xray_helm_chart_version=$(helm search repo | grep "/xray" | awk '{$1=$1};1' |  cut -f2 -d " ")
             - echo "Xray Helm chart version "${xray_helm_chart_version}
             - add_run_variables XRAY_VERSION=$(helm search repo | grep "/xray" | awk '{$1=$1};1' |  cut -f3 -d " ")
             - echo "Xray version "${XRAY_VERSION}
-            - echo "Installing ${ARTIFACTORY_DISTRIBUTION}"
-            - MASTER_KEY=$(openssl rand -hex 32)
-            - JOIN_KEY=$(openssl rand -hex 32)
-            - >-
-              if [[ ${ARTIFACTORY_DISTRIBUTION} == "artifactory-ha" ]]; then
-                 helm upgrade --install artifactory-ha  jfrog/artifactory-ha --set nginx.service.ssloffload=true --set nginx.tlsSecretName=tls-ingress --set artifactory.masterKey=$MASTER_KEY --set artifactory.joinKey=$JOIN_KEY --set artifactory.license.secret=artifactory-license --set artifactory.license.dataKey=artifactory.cluster.license --set artifactory.node.replicaCount=1 --set postgresql.persistence.size=50Gi --set artifactory.persistence.size=50Gi --set nginx.service.loadBalancerSourceRanges="{152.215.237.185/32,52.9.243.19/32,${WHITELIST_CIDR}}"
-                 echo "Waiting for Artifactory HA roll out"
-                 kubectl rollout status deployment/artifactory-ha-nginx
-                 kubectl rollout status statefulset/artifactory-ha-artifactory-ha-primary
-                 kubectl rollout status statefulset/artifactory-ha-artifactory-ha-member
-                 echo "Mapping Artifactory DNS record"
-                 export IP_ADDR=$(kubectl get svc artifactory-ha-nginx -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-                 export URL="${GKE_CLUSTER}-rt.jfrog.tech"
-                 fozzie dns/add
-                 echo "Installing JFrog Xray"
-                 helm upgrade --install xray jfrog/xray --set postgresql.persistence.size=200Gi --set xray.jfrogUrl=http://artifactory-ha-nginx --set xray.masterKey=$MASTER_KEY --set xray.joinKey=$JOIN_KEY
-              else
-                 helm upgrade --install artifactory  jfrog/artifactory --set nginx.service.ssloffload=true --set nginx.tlsSecretName=tls-ingress --set artifactory.masterKey=$MASTER_KEY --set artifactory.joinKey=$JOIN_KEY --set artifactory.license.secret=artifactory-license --set artifactory.license.dataKey=artifactory.cluster.license --set postgresql.persistence.size=50Gi --set artifactory.persistence.size=50Gi --set nginx.service.loadBalancerSourceRanges="{152.215.237.185/32,52.9.243.19/32,${WHITELIST_CIDR}}"
-                 echo "Waiting for Artifactory roll out"
-                 kubectl rollout status deployment/artifactory-artifactory-nginx
-                 kubectl rollout status statefulset/artifactory
-                 echo "Mapping Artifactory DNS record"
-                 export IP_ADDR=$(kubectl get svc artifactory-artifactory-nginx -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-                 export URL="${GKE_CLUSTER}-rt.jfrog.tech"
-                 fozzie dns/add
-                 echo "Installing JFrog Xray"
-                 helm upgrade --install xray jfrog/xray --set postgresql.persistence.size=200Gi --set xray.jfrogUrl=http://artifactory-artifactory-nginx --set xray.masterKey=$MASTER_KEY --set xray.joinKey=$JOIN_KEY
-              fi
+            - echo "Installing Artifactory"
+            - export MASTER_KEY=$(openssl rand -hex 32)
+            - export JOIN_KEY=$(openssl rand -hex 32)
+            - helm upgrade --install artifactory  jfrog/artifactory --set nginx.service.ssloffload=true --set artifactory.masterKey=$MASTER_KEY --set artifactory.joinKey=$JOIN_KEY --set artifactory.license.secret=artifactory-license --set artifactory.license.dataKey=artifactory.cluster.license --set postgresql.persistence.size=50Gi --set artifactory.persistence.size=50Gi --set nginx.service.loadBalancerSourceRanges="{${ZSCALER_CIDR1},${ZSCALER_CIDR2},${WHITELIST_CIDR}}"
+            - echo "Waiting for Artifactory roll out"
+            - kubectl rollout status deployment/artifactory-artifactory-nginx
+            - kubectl rollout status statefulset/artifactory
+            - echo "Installing JFrog Xray"
+            - helm upgrade --install xray jfrog/xray --set postgresql.persistence.size=200Gi --set xray.jfrogUrl=http://artifactory-artifactory-nginx --set xray.masterKey=$MASTER_KEY --set xray.joinKey=$JOIN_KEY
             - kubectl rollout status statefulset/xray-postgresql
             - kubectl rollout status statefulset/xray-rabbitmq
             - kubectl rollout status statefulset/xray
-            - add_run_variables jdp_url=http://${GKE_CLUSTER}-rt.jfrog.tech
-            - add_run_variables NEW_RT_PASSWORD=$NEW_RT_PASSWORD
-            - export RT_URL=$(echo ${jdp_url} | sed -e 's/.*http:\/\///g') && echo ${RT_URL}
+            - export RT_URL=$(kubectl get svc artifactory-artifactory-nginx -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+            - add_run_variables JFROG_URL="http://${RT_URL}"
             - git clone https://${int_Partnership_GitHub_token}@github.com/jfrog/partner-integration-tests.git
-            - cd partner-integration-tests
-            - echo "Common test will check services health and change the default admin user password, if NEW_RT_PASSWORD is set"
-            - ./gradlew artifactory_common
+            - echo "Common test will check services health and change the default admin user password, if NEW_RT_PASSWORD is set. Test uses RT_URL var."
+            - ./partner-integration-tests/gradlew -p partner-integration-tests artifactory_common
           onSuccess:
             - echo "GKE cluster created successfully with JFrog Artifactory and Xray"
-            - echo "Visit Artifactory at https://${GKE_CLUSTER}-rt.jfrog.tech"
+            - echo "Visit Artifactory at http://${RT_URL}"
             - echo "Artifactory username admin"
             - echo "Artifactory password ${NEW_RT_PASSWORD}"
           onFailure:
             - echo "JFrog Artifactory and Xray creation failed."
             - send_notification partnersSlack --text "<${res_GitHubTFProviderXrayRepoJFrog_gitRepoRepositoryHttpsUrl}|Terraform Provider Xray>. Pipeline failed on <${step_url}|${step_name}> step"
-            - fozzie checkout native-steps
-            - echo "Removing GKE cluster"
-            - fozzie gke/authorize
-            - fozzie gke/delete_cluster
-            - echo "Removing DNS entry"
-            - export URL="${GKE_CLUSTER}-rt.jfrog.tech"
-            - fozzie dns/delete
+            - >-
+              if [[ -n "${GKE_CLUSTER}" ]]; then
+                echo "Removing GKE cluster ${GKE_CLUSTER}"
+                ./terraform-provider-shared/scripts/delete_cluster.sh
+              fi
           onComplete:
             - echo "JFrog Artifactory and Xray Job Complete"
 
@@ -133,7 +119,7 @@ pipelines:
         type: Bash
         configuration:
           priority: 1
-          timeoutSeconds: 1800 # 30 minutes
+          timeoutSeconds: 2400 # 40 minutes
           runtime:
             type: image
             image:
@@ -147,13 +133,9 @@ pipelines:
             - name: gkeEnvVars
             - name: Partnership_GitHub
           inputSteps:
-            - name: fozzie_gke_jfrog_rt_xray_create
+            - name: gke_jfrog_rt_xray_create
           inputResources:
             - name: GitHubTFProviderXrayRepoJFrog
-          environmentVariables:
-            GKE_ZONE: ${int_gkeEnvVars_gke_zone}
-            GKE_PROJECT: ${int_gkeEnvVars_gke_project}
-            NEW_RT_PASSWORD: ${int_gkeEnvVars_new_rt_password}
         execution:
           onStart:
             - echo "Preparing for work..."
@@ -175,8 +157,9 @@ pipelines:
             - cd ${res_GitHubTFProviderXrayRepoJFrog_resourcePath}
             - echo "Verify the code contents merged feature branch with development branch"
             - git branch && ls -al
+            - add_run_variables PROVIDER_VERSION=$(git describe --tags --abbrev=0 | sed  -n 's/v\([0-9]*\).\([0-9]*\).\([0-9]*\)/\1.\2.\3/p')
             - echo "Add variables needed to run Terraform Provider Xray"
-            - export JFROG_URL=${jdp_url} && echo ${JFROG_URL}
+            - echo "JFROG_URL - ${JFROG_URL}"
             - export ARTIFACTORY_USERNAME=admin
             - export ARTIFACTORY_PASSWORD=${NEW_RT_PASSWORD} && echo ${ARTIFACTORY_PASSWORD}
             - echo "Get cookie to generate Access token. There is no public API to generate Access token using username and password"
@@ -200,17 +183,18 @@ pipelines:
             - make acceptance
             - make install -e TARGET_ARCH=linux_amd64
           onSuccess:
-            - >- 
+            - >-
               if [[ "${CLEANUP_RESOURCES}" == true ]]; then
                 echo "Delete GKE cluster."
-                gcloud container clusters delete ${GKE_CLUSTER} --zone ${GKE_ZONE} --project ${GKE_PROJECT} --quiet
-                send_notification partnersSlack --text "Terraform Provider Xray run is completed. Version ${NEXT_PROVIDER_VERSION}. GKE cluster was deleted."
+                git clone https://${int_Partnership_GitHub_token}@github.com/jfrog/terraform-provider-shared.git
+                ./terraform-provider-shared/scripts/delete_cluster.sh
+                send_notification partnersSlack --text "Terraform Provider Xray run is completed. Version ${PROVIDER_VERSION:-" wasn't set"}. GKE cluster *${GKE_CLUSTER}* was deleted."
               else
-                send_notification partnersSlack --text "Terraform Provider Xray run is completed. Version ${NEXT_PROVIDER_VERSION}. GKE cluster wasn't deleted."
+                send_notification partnersSlack --text "Terraform Provider Xray run is completed. Version ${PROVIDER_VERSION:-" wasn't set"}. GKE cluster *${GKE_CLUSTER}* wasn't deleted."
               fi
           onFailure:
             - echo "Failure"
-            - send_notification partnersSlack --text "<${res_GitHubTFProviderXrayRepoJFrog_gitRepoRepositoryHttpsUrl}|Terraform Provider Xray>. Pipeline failed on <${step_url}|${step_name}> step"
+            - send_notification partnersSlack --text "<${res_GitHubTFProviderXrayRepoJFrog_gitRepoRepositoryHttpsUrl}|Terraform Provider Xray>. Pipeline failed on <${step_url}|${step_name}> step. GKE cluster ${GKE_CLUSTER} wasn't deleted."
           onComplete:
             - echo "Complete"
 
@@ -234,16 +218,21 @@ pipelines:
             - export PR_URL=${res_GitHubTFProviderXrayRepoJFrog_commitUrl}
             - export PR_COMMITTER=${res_GitHubTFProviderXrayRepoJFrog_committerLogin}
             - export PR_BRANCH=${res_GitHubTFProviderXrayRepoJFrog_headCommitRef}
+            - >-
+              if [[ -z "${PR_BRANCH}" ]]; then
+                echo "No headCommitRef (PR branch), exit without adding changes to CHANGELOG.md"
+                exit 0
+              fi
             ## PR_TITLE var is used in the Slack message. We need to escape &, > and < per Slack documentation.
             ## They will be replaced with &amp;, &gt; and &lt; respectively.
             - export PR_TITLE=$(echo ${res_GitHubTFProviderXrayRepoJFrog_commitMessage:0:100}... | sed -e 's/\&/\&amp;/g' -e 's/>/\&gt;/g' -e 's/</\&lt;/g')
             - >-
-              if [[ "${PR_URL}" == null ]]; then
+              if [[ -z "${PR_URL}" ]]; then
                 echo "PR was not created (already exists from this head branch?). PR link is empty!"
                 exit 1
               fi
             - cd ${res_GitHubTFProviderXrayRepoJFrog_resourcePath}
-            - git checkout -b ${res_GitHubTFProviderXrayRepoJFrog_headCommitRef}
+            - git checkout -b ${PR_BRANCH}
             - sed -i -E "0,/(##\s.+\..+\..+\s\(.+\)).*/ s/(##\s.+\..+\..+\s\(.+\)).*/\1. Tested on Artifactory ${ARTIFACTORY_VERSION} and Xray ${XRAY_VERSION}/" CHANGELOG.md
             - head -10 CHANGELOG.md
             - git add CHANGELOG.md
@@ -252,6 +241,10 @@ pipelines:
             - >-
               if [[ ${GIT_STATUS} =~ ${REGEX} ]]; then
                 echo "Adding Artifactory and Xray versions to CHANGELOG.md"
+                git config --global user.name 'JFrog CI'
+                git config --global user.email 'jfrog-solutions-ci+1@jfrog.com'
+                git config --get user.name
+                git config --get user.email
                 git commit --author="JFrog CI <jfrog-solutions-ci+1@jfrog.com>" -m "JFrog Pipelines - Add Artifactory and Xray versions to CHANGELOG.md"
                 git push https://${res_GitHubTFProviderXrayRepoJFrog_gitProvider_token}${TFProviderRepo}
               else
@@ -259,13 +252,16 @@ pipelines:
               fi
           onSuccess:
             - echo "Success"
-            - echo ${res_GitHubTFProviderXrayRepoJFrog_gitRepoRepositoryHttpsUrl}
-            - echo ${PR_URL}
-            - echo ${PR_TITLE}
-            - send_notification partnersSlack --text "<${res_GitHubTFProviderXrayRepoJFrog_gitRepoRepositoryHttpsUrl}|Terraform Provider Xray>. A new PR was submitted by *${PR_COMMITTER}* - <${PR_URL}|${PR_TITLE}> branch *${PR_BRANCH}*. Changes tested successfully. <@U01H1SLSPA8> or <@UNDRUL1EU> please, review and merge."
+            - >-
+              if [[ ! -z ${PR_BRANCH} ]]; then
+                echo ${res_GitHubTFProviderXrayRepoJFrog_gitRepoRepositoryHttpsUrl}
+                echo ${PR_URL}
+                echo ${PR_TITLE}
+                send_notification partnersSlack --text "<${res_GitHubTFProviderXrayRepoJFrog_gitRepoRepositoryHttpsUrl}|Terraform Provider Xray>. A new PR was submitted by *${PR_COMMITTER}* - <${PR_URL}|${PR_TITLE}> branch *${PR_BRANCH}*. Changes tested successfully. <@U01H1SLSPA8> or <@UNDRUL1EU> please, review and merge."
+              fi
           onFailure:
             - >-
-              if [[ "${PR_URL}" == null ]]; then
+              if [[ -z "${PR_URL}" ]]; then
                 send_notification partnersSlack --text "<${res_GitHubTFProviderXrayRepoJFrog_gitRepoRepositoryHttpsUrl}|Terraform Provider Xray>. Pipeline failed on <${step_url}|${step_name}> step. PR was not created (already exists from this head branch?)"
               else
                 send_notification partnersSlack --text "<${res_GitHubTFProviderXrayRepoJFrog_gitRepoRepositoryHttpsUrl}|Terraform Provider Xray>. Pipeline failed on <${step_url}|${step_name}> step"
