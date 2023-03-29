@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/jfrog/terraform-provider-shared/client"
 	"github.com/jfrog/terraform-provider-shared/test"
+	"github.com/jfrog/terraform-provider-shared/util"
 )
 
 func checkPolicy(id string, request *resty.Request) (*resty.Response, error) {
@@ -38,7 +39,7 @@ func verifyDeleted(id string, check CheckFun) func(*terraform.State) error {
 		}
 		provider, _ := testAccProviders()["xray"]()
 		provider.Configure(context.Background(), terraform.NewResourceConfigRaw(nil))
-		c := provider.Meta().(*resty.Client)
+		c := provider.Meta().(util.ProvderMetadata).Client
 		resp, err := check(rs.Primary.ID, c.R())
 		if err != nil {
 			if resp != nil {

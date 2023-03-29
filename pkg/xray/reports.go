@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -629,7 +628,7 @@ func resourceXrayReportRead(ctx context.Context, d *schema.ResourceData, m inter
 	report := Report{}
 
 	projectKey := d.Get("project_key").(string)
-	req, err := getRestyRequest(m.(*resty.Client), projectKey)
+	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, projectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -651,7 +650,7 @@ func resourceXrayReportRead(ctx context.Context, d *schema.ResourceData, m inter
 
 func resourceXrayReportDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	projectKey := d.Get("project_key").(string)
-	req, err := getRestyRequest(m.(*resty.Client), projectKey)
+	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, projectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -670,7 +669,7 @@ func resourceXrayReportDelete(_ context.Context, d *schema.ResourceData, m inter
 
 func createReport(reportType string, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	report := unpackReport(d, reportType)
-	req, err := getRestyRequest(m.(*resty.Client), report.ProjectKey)
+	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, report.ProjectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}

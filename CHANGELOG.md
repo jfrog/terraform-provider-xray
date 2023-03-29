@@ -1,3 +1,9 @@
+## 1.11.1 (March 28, 2023).
+
+IMPROVEMENTS:
+* `project_key` attribute validation for all the resources has been changed to match Artifactory requirements since 7.56.2 - the length should be between 2-32 characters.
+  PR: [#113](https://github.com/jfrog/terraform-provider-xray/pull/113)
+
 ## 1.11.0 (March 22, 2023). Tested on Artifactory 7.55.8 and Xray 3.69.3
 
 IMPROVEMENTS:
