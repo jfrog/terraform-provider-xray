@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -663,7 +662,7 @@ func resourceXrayPolicyCreate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	req, err := getRestyRequest(m.(*resty.Client), policy.ProjectKey)
+	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, policy.ProjectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -681,7 +680,7 @@ func resourceXrayPolicyRead(ctx context.Context, d *schema.ResourceData, m inter
 	policy := Policy{}
 
 	projectKey := d.Get("project_key").(string)
-	req, err := getRestyRequest(m.(*resty.Client), projectKey)
+	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, projectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -708,7 +707,7 @@ func resourceXrayPolicyUpdate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	req, err := getRestyRequest(m.(*resty.Client), policy.ProjectKey)
+	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, policy.ProjectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -733,7 +732,7 @@ func resourceXrayPolicyDelete(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	req, err := getRestyRequest(m.(*resty.Client), policy.ProjectKey)
+	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, policy.ProjectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}

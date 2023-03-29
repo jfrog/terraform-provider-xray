@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/jfrog/terraform-provider-shared/util"
@@ -55,7 +54,7 @@ func packDBSyncTime(dbSyncTime DbSyncDailyUpdatesTime, d *schema.ResourceData) d
 
 func resourceXrayDbSyncTimeRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	dbSyncTime := DbSyncDailyUpdatesTime{}
-	resp, err := m.(*resty.Client).R().SetResult(&dbSyncTime).Get("xray/api/v1/configuration/dbsync/time")
+	resp, err := m.(util.ProvderMetadata).Client.R().SetResult(&dbSyncTime).Get("xray/api/v1/configuration/dbsync/time")
 	if err != nil {
 		if resp != nil && resp.StatusCode() != http.StatusOK {
 			log.Printf("Critical error. DB sync settings (%s) not found.", d.Id())
@@ -68,7 +67,7 @@ func resourceXrayDbSyncTimeRead(_ context.Context, d *schema.ResourceData, m int
 
 func resourceXrayDbSyncTimeUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	dbSyncTime := unpackDBSyncTime(d)
-	_, err := m.(*resty.Client).R().SetBody(dbSyncTime).Put("xray/api/v1/configuration/dbsync/time")
+	_, err := m.(util.ProvderMetadata).Client.R().SetBody(dbSyncTime).Put("xray/api/v1/configuration/dbsync/time")
 	if err != nil {
 		return diag.FromErr(err)
 	}

@@ -7,7 +7,6 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -469,7 +468,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 		ignoreRule := IgnoreRule{}
 
 		projectKey := d.Get("project_key").(string)
-		req, err := getRestyRequest(m.(*resty.Client), projectKey)
+		req, err := getRestyRequest(m.(util.ProvderMetadata).Client, projectKey)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -497,7 +496,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 			return diag.FromErr(err)
 		}
 
-		req, err := getRestyRequest(m.(*resty.Client), ignoreRule.ProjectKey)
+		req, err := getRestyRequest(m.(util.ProvderMetadata).Client, ignoreRule.ProjectKey)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -536,7 +535,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 			return diag.FromErr(err)
 		}
 
-		req, err := getRestyRequest(m.(*resty.Client), ignoreRule.ProjectKey)
+		req, err := getRestyRequest(m.(util.ProvderMetadata).Client, ignoreRule.ProjectKey)
 		if err != nil {
 			return diag.FromErr(err)
 		}

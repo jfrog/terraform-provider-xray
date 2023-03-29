@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -289,7 +288,7 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 	var resourceXrayRepositoryConfigRead = func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 		repositoryConfig := RepositoryConfiguration{}
 
-		resp, err := m.(*resty.Client).R().
+		resp, err := m.(util.ProvderMetadata).Client.R().
 			SetResult(&repositoryConfig).
 			SetPathParam("repo_name", d.Id()).
 			Get("xray/api/v1/repos_config/{repo_name}")
@@ -308,7 +307,7 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 	var resourceXrayRepositoryConfigCreate = func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 		repositoryConfig := unpackRepositoryConfig(d)
 
-		_, err := m.(*resty.Client).R().SetBody(&repositoryConfig).Put("xray/api/v1/repos_config")
+		_, err := m.(util.ProvderMetadata).Client.R().SetBody(&repositoryConfig).Put("xray/api/v1/repos_config")
 		if err != nil {
 			return diag.FromErr(err)
 		}

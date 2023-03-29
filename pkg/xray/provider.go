@@ -103,9 +103,17 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 		}
 	}
 
+	version, err := util.GetArtifactoryVersion(restyBase)
+	if err != nil {
+		return nil, diag.FromErr(err)
+	}
+
 	featureUsage := fmt.Sprintf("Terraform/%s", terraformVersion)
 	util.SendUsage(ctx, restyBase, productId, featureUsage)
 
-	return restyBase, nil
+	return util.ProvderMetadata{
+		Client:             restyBase,
+		ArtifactoryVersion: version,
+	}, nil
 
 }
