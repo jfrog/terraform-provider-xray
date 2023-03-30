@@ -2,7 +2,7 @@ resources:
   - name: GitHubTFProviderXrayRepoJFrog
     type: GitRepo
     configuration:
-      gitProvider: partnership_github
+      gitProvider: Partnership_GitHub
       path: jfrog/terraform-provider-xray # if path is modified, change the name as well, per Pipelines doc
       branches:
         include: master
@@ -42,18 +42,13 @@ pipelines:
             - name: partnersSlack
             - name: partnership_jfrog_io
             - name: gcpK8sPartnershipProject
-            - name: partnership_github
+            - name: Partnership_GitHub
           inputResources:
             - name: GitHubTFProviderXrayRepoJFrog
           environmentVariables:
             GKE_CLUSTER: ${int_gkeEnvVars_gke_cluster}
         execution:
           onStart:
-            - echo "Sending status to GitHub."
-            - export STATE="pending"
-            - export DESCRIPTION="Pipeline run is in progress."
-            - ls -al && git clone https://${int_partnership_github_token}@github.com/jfrog/terraform-provider-shared.git
-            - ./terraform-provider-shared/scripts/github-status.sh ${res_GitHubTFProviderXrayRepoJFrog_gitProvider_token} ${res_GitHubTFProviderXrayRepoJFrog_gitRepoFullName} ${res_GitHubTFProviderXrayRepoJFrog_commitSha}
             - echo "Preparing for work. Install Helm"
             - curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 && chmod 700 get_helm.sh
             - echo "Run Helm installation script" && ./get_helm.sh && rm get_helm.sh
@@ -72,7 +67,7 @@ pipelines:
             - export WHITELIST_CIDR=$(curl ifconfig.me)/32 && echo ${WHITELIST_CIDR}
           onExecute:
             - echo "Create GKE k8s cluster"
-            - git clone https://${int_partnership_github_token}@github.com/jfrog/terraform-provider-shared.git
+            - git clone https://${int_Partnership_GitHub_token}@github.com/jfrog/terraform-provider-shared.git
             - ./terraform-provider-shared/scripts/create_gke_cluster.sh
             - echo "Creating Artifactory License Secret"
             - jfrog rt dl pipelines-resources/licenses/artifactory.cluster.license
@@ -101,7 +96,7 @@ pipelines:
             - kubectl rollout status statefulset/xray
             - export RT_URL=$(kubectl get svc artifactory-artifactory-nginx -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
             - add_run_variables JFROG_URL="http://${RT_URL}"
-            - git clone https://${int_partnership_github_token}@github.com/jfrog/partner-integration-tests.git
+            - git clone https://${int_Partnership_GitHub_token}@github.com/jfrog/partner-integration-tests.git
             - echo "Common test will check services health and change the default admin user password, if NEW_RT_PASSWORD is set. Test uses RT_URL var."
             - ./partner-integration-tests/gradlew -p partner-integration-tests artifactory_common
           onSuccess:
@@ -110,11 +105,7 @@ pipelines:
             - echo "Artifactory username admin"
             - echo "Artifactory password ${NEW_RT_PASSWORD}"
           onFailure:
-            - echo "JFrog Artifactory and Xray creation failed, sending status to GitHub and Slack."
-            - export STATE="failure"
-            - export DESCRIPTION="Pipeline has failed."
-            - git clone https://${int_partnership_github_token}@github.com/jfrog/terraform-provider-shared.git
-            - ./terraform-provider-shared/scripts/github-status.sh ${res_GitHubTFProviderXrayRepoJFrog_gitProvider_token} ${res_GitHubTFProviderXrayRepoJFrog_gitRepoFullName} ${res_GitHubTFProviderXrayRepoJFrog_commitSha}
+            - echo "JFrog Artifactory and Xray creation failed."
             - send_notification partnersSlack --text "<${res_GitHubTFProviderXrayRepoJFrog_gitRepoRepositoryHttpsUrl}|Terraform Provider Xray>. Pipeline failed on <${step_url}|${step_name}> step"
             - >-
               if [[ -n "${GKE_CLUSTER}" ]]; then
@@ -140,7 +131,7 @@ pipelines:
             - name: gcpK8sPartnershipProject
             - name: partnersSlack
             - name: gkeEnvVars
-            - name: partnership_github
+            - name: Partnership_GitHub
           inputSteps:
             - name: gke_jfrog_rt_xray_create
           inputResources:
@@ -195,18 +186,14 @@ pipelines:
             - >-
               if [[ "${CLEANUP_RESOURCES}" == true ]]; then
                 echo "Delete GKE cluster."
-                git clone https://${int_partnership_github_token}@github.com/jfrog/terraform-provider-shared.git
+                git clone https://${int_Partnership_GitHub_token}@github.com/jfrog/terraform-provider-shared.git
                 ./terraform-provider-shared/scripts/delete_cluster.sh
                 send_notification partnersSlack --text "Terraform Provider Xray run is completed. Version ${PROVIDER_VERSION:-" wasn't set"}. GKE cluster *${GKE_CLUSTER}* was deleted."
               else
                 send_notification partnersSlack --text "Terraform Provider Xray run is completed. Version ${PROVIDER_VERSION:-" wasn't set"}. GKE cluster *${GKE_CLUSTER}* wasn't deleted."
               fi
           onFailure:
-            - echo "Failure, sending status to GitHub and Slack."
-            - export STATE="failure"
-            - export DESCRIPTION="Pipeline has failed."
-            - git clone https://${int_partnership_github_token}@github.com/jfrog/terraform-provider-shared.git
-            - ./terraform-provider-shared/scripts/github-status.sh ${res_GitHubTFProviderXrayRepoJFrog_gitProvider_token} ${res_GitHubTFProviderXrayRepoJFrog_gitRepoFullName} ${res_GitHubTFProviderXrayRepoJFrog_commitSha}
+            - echo "Failure"
             - send_notification partnersSlack --text "<${res_GitHubTFProviderXrayRepoJFrog_gitRepoRepositoryHttpsUrl}|Terraform Provider Xray>. Pipeline failed on <${step_url}|${step_name}> step. GKE cluster ${GKE_CLUSTER} wasn't deleted."
           onComplete:
             - echo "Complete"
@@ -217,7 +204,7 @@ pipelines:
           integrations:
             - name: partnersSlack
             - name: partnership_jfrog_io
-            - name: partnership_github
+            - name: Partnership_GitHub
           inputSteps:
             - name: build_and_run_tf_provider
           inputResources:
@@ -265,11 +252,6 @@ pipelines:
               fi
           onSuccess:
             - echo "Success"
-            - echo "All tests passed successfully."
-            - export STATE="success"
-            - export DESCRIPTION="Pipeline has failed."
-            - git clone https://${int_partnership_github_token}@github.com/jfrog/terraform-provider-shared.git
-            - ./terraform-provider-shared/scripts/github-status.sh ${res_GitHubTFProviderXrayRepoJFrog_gitProvider_token} ${res_GitHubTFProviderXrayRepoJFrog_gitRepoFullName} ${res_GitHubTFProviderXrayRepoJFrog_commitSha}
             - >-
               if [[ ! -z ${PR_BRANCH} ]]; then
                 echo ${res_GitHubTFProviderXrayRepoJFrog_gitRepoRepositoryHttpsUrl}
@@ -278,11 +260,6 @@ pipelines:
                 send_notification partnersSlack --text "<${res_GitHubTFProviderXrayRepoJFrog_gitRepoRepositoryHttpsUrl}|Terraform Provider Xray>. A new PR was submitted by *${PR_COMMITTER}* - <${PR_URL}|${PR_TITLE}> branch *${PR_BRANCH}*. Changes tested successfully. <@U01H1SLSPA8> or <@UNDRUL1EU> please, review and merge."
               fi
           onFailure:
-            - echo "Failure, sending status to GitHub and Slack."
-            - export STATE="failure"
-            - export DESCRIPTION="Pipeline has failed."
-            - git clone https://${int_partnership_github_token}@github.com/jfrog/terraform-provider-shared.git
-            - ./terraform-provider-shared/scripts/github-status.sh ${res_GitHubTFProviderXrayRepoJFrog_gitProvider_token} ${res_GitHubTFProviderXrayRepoJFrog_gitRepoFullName} ${res_GitHubTFProviderXrayRepoJFrog_commitSha}
             - >-
               if [[ -z "${PR_URL}" ]]; then
                 send_notification partnersSlack --text "<${res_GitHubTFProviderXrayRepoJFrog_gitRepoRepositoryHttpsUrl}|Terraform Provider Xray>. Pipeline failed on <${step_url}|${step_name}> step. PR was not created (already exists from this head branch?)"
