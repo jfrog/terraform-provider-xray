@@ -65,7 +65,7 @@ pipelines:
             - ls -al ${res_GitHubTFProviderSharedRepoTESTJFrog_resourcePath}/scripts
             - cat ${res_GitHubTFProviderSharedRepoTESTJFrog_resourcePath}/scripts/github-status.sh
             - echo ".${res_GitHubTFProviderSharedRepoTESTJFrog_resourcePath}/scripts/github-status.sh ${res_GitHubTFProviderXrayRepoTESTJFrog_gitProvider_token} ${res_GitHubTFProviderXrayRepoTESTJFrog_gitRepoFullName} ${res_GitHubTFProviderXrayRepoTESTJFrog_commitSha}"
-            - ."${res_GitHubTFProviderSharedRepoTESTJFrog_resourcePath}"/scripts/github-status.sh ${res_GitHubTFProviderXrayRepoTESTJFrog_gitProvider_token} ${res_GitHubTFProviderXrayRepoTESTJFrog_gitRepoFullName} ${res_GitHubTFProviderXrayRepoTESTJFrog_commitSha}
+            - source ${res_GitHubTFProviderSharedRepoTESTJFrog_resourcePath}/scripts/github-status.sh ${res_GitHubTFProviderXrayRepoTESTJFrog_gitProvider_token} ${res_GitHubTFProviderXrayRepoTESTJFrog_gitRepoFullName} ${res_GitHubTFProviderXrayRepoTESTJFrog_commitSha}
             - echo "Preparing for work. Install Helm"
             - curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 && chmod 700 get_helm.sh
             - echo "Run Helm installation script" && ./get_helm.sh && rm get_helm.sh
