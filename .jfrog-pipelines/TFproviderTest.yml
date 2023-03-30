@@ -3,7 +3,7 @@ resources:
     type: GitRepo
     configuration:
       gitProvider: partnership_github
-      path: jfrog/terraform_provider_xray # if path is modified, change the name as well, per Pipelines doc
+      path: jfrog/terraform-provider-xray # if path is modified, change the name as well, per Pipelines doc
       branches:
         include: master
       buildOn:
@@ -15,7 +15,7 @@ resources:
     type: GitRepo
     configuration:
       gitProvider: partnership_github
-      path: jfrog/terraform_provider_shared # if path is modified, change the name as well, per Pipelines doc
+      path: jfrog/terraform-provider-shared # if path is modified, change the name as well, per Pipelines doc
       branches:
         include: master
 pipelines:
