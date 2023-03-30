@@ -62,7 +62,7 @@ pipelines:
             - export STATE="pending"
             - export DESCRIPTION="Pipeline run is in progress."
             - ls -al #&& git clone https://${int_partnership_github_token}@github.com/jfrog/terraform-provider-shared.git
-            - echo ${res_GitHubTFProviderXrayRepoTESTJFrog_resourcePath}
+            - ls -al ${res_GitHubTFProviderXrayRepoTESTJFrog_resourcePath}
             - ./${res_GitHubTFProviderXrayRepoTESTJFrog_resourcePath}/scripts/github-status.sh ${res_GitHubTFProviderXrayRepoTESTJFrog_gitProvider_token} ${res_GitHubTFProviderXrayRepoTESTJFrog_gitRepoFullName} ${res_GitHubTFProviderXrayRepoTESTJFrog_commitSha}
             - echo "Preparing for work. Install Helm"
             - curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 && chmod 700 get_helm.sh
