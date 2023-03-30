@@ -63,6 +63,7 @@ pipelines:
             - export DESCRIPTION="Pipeline run is in progress."
             - ls -al #&& git clone https://${int_partnership_github_token}@github.com/jfrog/terraform-provider-shared.git
             - ls -al ${res_GitHubTFProviderSharedRepoTESTJFrog_resourcePath}/scripts
+            - cat ${res_GitHubTFProviderSharedRepoTESTJFrog_resourcePath}/scripts/github-status.sh
             - echo ".${res_GitHubTFProviderSharedRepoTESTJFrog_resourcePath}/scripts/github-status.sh ${res_GitHubTFProviderXrayRepoTESTJFrog_gitProvider_token} ${res_GitHubTFProviderXrayRepoTESTJFrog_gitRepoFullName} ${res_GitHubTFProviderXrayRepoTESTJFrog_commitSha}"
             - .${res_GitHubTFProviderSharedRepoTESTJFrog_resourcePath}/scripts/github-status.sh ${res_GitHubTFProviderXrayRepoTESTJFrog_gitProvider_token} ${res_GitHubTFProviderXrayRepoTESTJFrog_gitRepoFullName} ${res_GitHubTFProviderXrayRepoTESTJFrog_commitSha}
             - echo "Preparing for work. Install Helm"
