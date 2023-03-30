@@ -48,7 +48,8 @@ pipelines:
             - name: zscalerIPs
             - name: partnersSlack
             - name: partnership_jfrog_io
-            - name: gcpK8sPartnershipProject
+            - name: k8sIntegration
+            #- name: gcpK8sPartnershipProject
             - name: partnership_github
           inputResources:
             - name: terraform_provider_xray
@@ -74,6 +75,8 @@ pipelines:
             - curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
             - sudo apt-get update && sudo apt-get install -y google-cloud-cli google-cloud-sdk-gke-gcloud-auth-plugin
             - gke-gcloud-auth-plugin --version
+            # test k8s auth
+            - gcloud container clusters get-credentials tf-provider-xray-1680211693
             - echo "Renaming GKE_CLUSTER variable, so k8s cluster name will be unique."
             - add_run_variables GKE_CLUSTER=tf-provider-xray-$(date +%s)
             - echo "Whitelist Pipelines Node CIDR to be able to run Artifactory and Xray tests. Same variable is used in gke/create_cluster step to restrict access to the control plane."
@@ -143,7 +146,8 @@ pipelines:
                 versions:
                   - "1.18"
           integrations:
-            - name: gcpK8sPartnershipProject
+            - name: k8sIntegration
+            #- name: gcpK8sPartnershipProject
             - name: partnersSlack
             - name: gkeEnvVars
             - name: partnership_github
