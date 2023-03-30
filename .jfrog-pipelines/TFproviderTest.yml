@@ -124,7 +124,7 @@ pipelines:
             - export STATE="failure"
             - export DESCRIPTION="Pipeline has failed."
             - source ${res_terraform_provider_shared_resourcePath}/scripts/github-status.sh ${res_terraform_provider_xray_gitProvider_token} ${res_terraform_provider_xray_gitRepoFullName} ${res_terraform_provider_xray_commitSha}
-            - send_notification partnersSlack --text "<${res_terraform_provider_xray_gitRepoRepositoryHttpsUrl}|Terraform Provider Xray>. Pipeline failed on <${step_url}|${step_name}> step"
+            #- send_notification partnersSlack --text "<${res_terraform_provider_xray_gitRepoRepositoryHttpsUrl}|Terraform Provider Xray>. Pipeline failed on <${step_url}|${step_name}> step"
             - >-
               if [[ -n "${GKE_CLUSTER}" ]]; then
                 echo "Removing GKE cluster ${GKE_CLUSTER}"
