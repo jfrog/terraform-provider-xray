@@ -52,6 +52,7 @@ pipelines:
             - name: partnership_github
           inputResources:
             - name: GitHubTFProviderXrayRepoTESTJFrog
+            - name: GitHubTFProviderSharedRepoTESTJFrog
           environmentVariables:
             GKE_CLUSTER: ${int_gkeEnvVars_gke_cluster}
         execution:
