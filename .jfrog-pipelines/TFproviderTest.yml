@@ -80,7 +80,9 @@ pipelines:
             - export WHITELIST_CIDR=$(curl ifconfig.me)/32 && echo ${WHITELIST_CIDR}
           onExecute:
             - echo "Create GKE k8s cluster"
-            - source ${res_terraform_provider_shared_resourcePath}/scripts/create_gke_cluster.sh
+            - cd ${res_terraform_provider_shared_resourcePath}
+            - ./scripts/create_gke_cluster.sh && cd ${PWD}
+            #- source ${res_terraform_provider_shared_resourcePath}/scripts/create_gke_cluster.sh
             - echo "Creating Artifactory License Secret"
             - jfrog rt dl pipelines-resources/licenses/artifactory.cluster.license
             - kubectl create secret generic artifactory-license --from-file=licenses/artifactory.cluster.license
