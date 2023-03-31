@@ -1,8 +1,8 @@
 resources:
-  - name: GitHubTFProviderXrayRepoJFrog
+  - name: terraform_provider_xray
     type: GitRepo
     configuration:
-      gitProvider: Partnership_GitHub
+      gitProvider: partnership_github
       path: jfrog/terraform-provider-xray # if path is modified, change the name as well, per Pipelines doc
       branches:
         include: master
@@ -11,6 +11,13 @@ resources:
         pullRequestCreate: true
       cancelPendingRunsOn:
         pullRequestUpdate: false
+  - name: terraform_provider_shared
+    type: GitRepo
+    configuration:
+      gitProvider: partnership_github
+      path: jfrog/terraform-provider-shared # if path is modified, change the name as well, per Pipelines doc
+      branches:
+        include: master
 pipelines:
   - name: tf_provider_xray_gke
     configuration:
@@ -42,13 +49,20 @@ pipelines:
             - name: partnersSlack
             - name: partnership_jfrog_io
             - name: gcpK8sPartnershipProject
-            - name: Partnership_GitHub
+            - name: partnership_github
           inputResources:
-            - name: GitHubTFProviderXrayRepoJFrog
+            - name: terraform_provider_xray
+            - name: terraform_provider_shared
           environmentVariables:
             GKE_CLUSTER: ${int_gkeEnvVars_gke_cluster}
         execution:
           onStart:
+            - echo "Sending status to GitHub."
+            - printenv
+            - export STATE="pending"
+            - export DESCRIPTION="Pipeline run is in progress."
+            - cd ${res_terraform_provider_shared_resourcePath}
+            - ./scripts/github-status.sh ${res_terraform_provider_xray_gitProvider_token} ${res_terraform_provider_xray_gitRepoFullName} ${res_terraform_provider_xray_commitSha} && cd ${PWD}
             - echo "Preparing for work. Install Helm"
             - curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 && chmod 700 get_helm.sh
             - echo "Run Helm installation script" && ./get_helm.sh && rm get_helm.sh
@@ -67,8 +81,8 @@ pipelines:
             - export WHITELIST_CIDR=$(curl ifconfig.me)/32 && echo ${WHITELIST_CIDR}
           onExecute:
             - echo "Create GKE k8s cluster"
-            - git clone https://${int_Partnership_GitHub_token}@github.com/jfrog/terraform-provider-shared.git
-            - ./terraform-provider-shared/scripts/create_gke_cluster.sh
+            - cd ${res_terraform_provider_shared_resourcePath}
+            - ./scripts/create_gke_cluster.sh && cd ${PWD}
             - echo "Creating Artifactory License Secret"
             - jfrog rt dl pipelines-resources/licenses/artifactory.cluster.license
             - kubectl create secret generic artifactory-license --from-file=licenses/artifactory.cluster.license
@@ -96,7 +110,7 @@ pipelines:
             - kubectl rollout status statefulset/xray
             - export RT_URL=$(kubectl get svc artifactory-artifactory-nginx -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
             - add_run_variables JFROG_URL="http://${RT_URL}"
-            - git clone https://${int_Partnership_GitHub_token}@github.com/jfrog/partner-integration-tests.git
+            - git clone https://${int_partnership_github_token}@github.com/jfrog/partner-integration-tests.git
             - echo "Common test will check services health and change the default admin user password, if NEW_RT_PASSWORD is set. Test uses RT_URL var."
             - ./partner-integration-tests/gradlew -p partner-integration-tests artifactory_common
           onSuccess:
@@ -105,12 +119,16 @@ pipelines:
             - echo "Artifactory username admin"
             - echo "Artifactory password ${NEW_RT_PASSWORD}"
           onFailure:
-            - echo "JFrog Artifactory and Xray creation failed."
-            - send_notification partnersSlack --text "<${res_GitHubTFProviderXrayRepoJFrog_gitRepoRepositoryHttpsUrl}|Terraform Provider Xray>. Pipeline failed on <${step_url}|${step_name}> step"
+            - echo "JFrog Artifactory and Xray creation failed, sending status to GitHub and Slack."
+            - export STATE="failure"
+            - export DESCRIPTION="Pipeline has failed."
+            - cd ${res_terraform_provider_shared_resourcePath}
+            - ./scripts/github-status.sh ${res_terraform_provider_xray_gitProvider_token} ${res_terraform_provider_xray_gitRepoFullName} ${res_terraform_provider_xray_commitSha} && cd ${PWD}            #- send_notification partnersSlack --text "<${res_terraform_provider_xray_gitRepoRepositoryHttpsUrl}|Terraform Provider Xray>. Pipeline failed on <${step_url}|${step_name}> step"
             - >-
               if [[ -n "${GKE_CLUSTER}" ]]; then
                 echo "Removing GKE cluster ${GKE_CLUSTER}"
-                ./terraform-provider-shared/scripts/delete_cluster.sh
+                cd ${res_terraform_provider_shared_resourcePath}
+                ./scripts/delete_cluster.sh && cd ${PWD}
               fi
           onComplete:
             - echo "JFrog Artifactory and Xray Job Complete"
@@ -131,11 +149,11 @@ pipelines:
             - name: gcpK8sPartnershipProject
             - name: partnersSlack
             - name: gkeEnvVars
-            - name: Partnership_GitHub
+            - name: partnership_github
           inputSteps:
             - name: gke_jfrog_rt_xray_create
           inputResources:
-            - name: GitHubTFProviderXrayRepoJFrog
+            - name: terraform_provider_xray
         execution:
           onStart:
             - echo "Preparing for work..."
@@ -151,10 +169,10 @@ pipelines:
             - sudo apt update
             - sudo apt install goreleaser
           onExecute:
-            - add_run_variables gitHubRepoUrl=${res_GitHubTFProviderXrayRepoJFrog_gitRepoRepositorySshUrl}
+            - add_run_variables gitHubRepoUrl=${res_terraform_provider_xray_gitRepoRepositorySshUrl}
             - add_run_variables TFProviderRepo=$(echo ${gitHubRepoUrl} | sed -e 's/git@/@/g' -e 's/:/\//g')
-            - add_run_variables repoFolder=$(echo "${res_GitHubTFProviderXrayRepoJFrog_gitRepoFullName}" | sed -e 's/.*\///g')
-            - cd ${res_GitHubTFProviderXrayRepoJFrog_resourcePath}
+            - add_run_variables repoFolder=$(echo "${res_terraform_provider_xray_gitRepoFullName}" | sed -e 's/.*\///g')
+            - cd ${res_terraform_provider_xray_resourcePath}
             - echo "Verify the code contents merged feature branch with development branch"
             - git branch && ls -al
             - add_run_variables PROVIDER_VERSION=$(git describe --tags --abbrev=0 | sed  -n 's/v\([0-9]*\).\([0-9]*\).\([0-9]*\)/\1.\2.\3/p')
@@ -186,15 +204,19 @@ pipelines:
             - >-
               if [[ "${CLEANUP_RESOURCES}" == true ]]; then
                 echo "Delete GKE cluster."
-                git clone https://${int_Partnership_GitHub_token}@github.com/jfrog/terraform-provider-shared.git
-                ./terraform-provider-shared/scripts/delete_cluster.sh
+                cd ${res_terraform_provider_shared_resourcePath}
+                ./scripts/delete_cluster.sh && cd ${PWD}
                 send_notification partnersSlack --text "Terraform Provider Xray run is completed. Version ${PROVIDER_VERSION:-" wasn't set"}. GKE cluster *${GKE_CLUSTER}* was deleted."
               else
                 send_notification partnersSlack --text "Terraform Provider Xray run is completed. Version ${PROVIDER_VERSION:-" wasn't set"}. GKE cluster *${GKE_CLUSTER}* wasn't deleted."
               fi
           onFailure:
-            - echo "Failure"
-            - send_notification partnersSlack --text "<${res_GitHubTFProviderXrayRepoJFrog_gitRepoRepositoryHttpsUrl}|Terraform Provider Xray>. Pipeline failed on <${step_url}|${step_name}> step. GKE cluster ${GKE_CLUSTER} wasn't deleted."
+            - echo "Failure, sending status to GitHub and Slack."
+            - export STATE="failure"
+            - export DESCRIPTION="Pipeline has failed."
+            - cd ${res_terraform_provider_shared_resourcePath}
+            - ./scripts/github-status.sh ${res_terraform_provider_xray_gitProvider_token} ${res_terraform_provider_xray_gitRepoFullName} ${res_terraform_provider_xray_commitSha} && cd ${PWD}
+            - send_notification partnersSlack --text "<${res_terraform_provider_xray_gitRepoRepositoryHttpsUrl}|Terraform Provider Xray>. Pipeline failed on <${step_url}|${step_name}> step. GKE cluster ${GKE_CLUSTER} wasn't deleted."
           onComplete:
             - echo "Complete"
 
@@ -204,20 +226,20 @@ pipelines:
           integrations:
             - name: partnersSlack
             - name: partnership_jfrog_io
-            - name: Partnership_GitHub
+            - name: partnership_github
           inputSteps:
             - name: build_and_run_tf_provider
           inputResources:
-            - name: GitHubTFProviderXrayRepoJFrog
+            - name: terraform_provider_xray
         execution:
           onStart:
             - echo "Preparing for work..."
             - echo "Collect information about the PR and send a Slack notification"
           onExecute:
             - printenv
-            - export PR_URL=${res_GitHubTFProviderXrayRepoJFrog_commitUrl}
-            - export PR_COMMITTER=${res_GitHubTFProviderXrayRepoJFrog_committerLogin}
-            - export PR_BRANCH=${res_GitHubTFProviderXrayRepoJFrog_headCommitRef}
+            - export PR_URL=${res_terraform_provider_xray_commitUrl}
+            - export PR_COMMITTER=${res_terraform_provider_xray_committerLogin}
+            - export PR_BRANCH=${res_terraform_provider_xray_headCommitRef}
             - >-
               if [[ -z "${PR_BRANCH}" ]]; then
                 echo "No headCommitRef (PR branch), exit without adding changes to CHANGELOG.md"
@@ -225,13 +247,13 @@ pipelines:
               fi
             ## PR_TITLE var is used in the Slack message. We need to escape &, > and < per Slack documentation.
             ## They will be replaced with &amp;, &gt; and &lt; respectively.
-            - export PR_TITLE=$(echo ${res_GitHubTFProviderXrayRepoJFrog_commitMessage:0:100}... | sed -e 's/\&/\&amp;/g' -e 's/>/\&gt;/g' -e 's/</\&lt;/g')
+            - export PR_TITLE=$(echo ${res_terraform_provider_xray_commitMessage:0:100}... | sed -e 's/\&/\&amp;/g' -e 's/>/\&gt;/g' -e 's/</\&lt;/g')
             - >-
               if [[ -z "${PR_URL}" ]]; then
                 echo "PR was not created (already exists from this head branch?). PR link is empty!"
                 exit 1
               fi
-            - cd ${res_GitHubTFProviderXrayRepoJFrog_resourcePath}
+            - cd ${res_terraform_provider_xray_resourcePath}
             - git checkout -b ${PR_BRANCH}
             - sed -i -E "0,/(##\s.+\..+\..+\s\(.+\)).*/ s/(##\s.+\..+\..+\s\(.+\)).*/\1. Tested on Artifactory ${ARTIFACTORY_VERSION} and Xray ${XRAY_VERSION}/" CHANGELOG.md
             - head -10 CHANGELOG.md
@@ -246,25 +268,35 @@ pipelines:
                 git config --get user.name
                 git config --get user.email
                 git commit --author="JFrog CI <jfrog-solutions-ci+1@jfrog.com>" -m "JFrog Pipelines - Add Artifactory and Xray versions to CHANGELOG.md"
-                git push https://${res_GitHubTFProviderXrayRepoJFrog_gitProvider_token}${TFProviderRepo}
+                git push https://${res_terraform_provider_xray_gitProvider_token}${TFProviderRepo}
               else
                 echo "There is nothing to commit, Artifactory version didn't change since last commit"
               fi
           onSuccess:
             - echo "Success"
+            - echo "All tests passed successfully."
+            - export STATE="success"
+            - export DESCRIPTION="Pipeline has failed."
+            - cd ${res_terraform_provider_shared_resourcePath}
+            - ./scripts/github-status.sh ${res_terraform_provider_xray_gitProvider_token} ${res_terraform_provider_xray_gitRepoFullName} ${res_terraform_provider_xray_commitSha} && cd ${PWD}
             - >-
               if [[ ! -z ${PR_BRANCH} ]]; then
-                echo ${res_GitHubTFProviderXrayRepoJFrog_gitRepoRepositoryHttpsUrl}
+                echo ${res_terraform_provider_xray_gitRepoRepositoryHttpsUrl}
                 echo ${PR_URL}
                 echo ${PR_TITLE}
-                send_notification partnersSlack --text "<${res_GitHubTFProviderXrayRepoJFrog_gitRepoRepositoryHttpsUrl}|Terraform Provider Xray>. A new PR was submitted by *${PR_COMMITTER}* - <${PR_URL}|${PR_TITLE}> branch *${PR_BRANCH}*. Changes tested successfully. <@U01H1SLSPA8> or <@UNDRUL1EU> please, review and merge."
+                send_notification partnersSlack --text "<${res_terraform_provider_xray_gitRepoRepositoryHttpsUrl}|Terraform Provider Xray>. A new PR was submitted by *${PR_COMMITTER}* - <${PR_URL}|${PR_TITLE}> branch *${PR_BRANCH}*. Changes tested successfully. <@U01H1SLSPA8> or <@UNDRUL1EU> please, review and merge."
               fi
           onFailure:
+            - echo "Failure, sending status to GitHub and Slack."
+            - export STATE="failure"
+            - export DESCRIPTION="Pipeline has failed."
+            - cd ${res_terraform_provider_shared_resourcePath}
+            - ./scripts/github-status.sh ${res_terraform_provider_xray_gitProvider_token} ${res_terraform_provider_xray_gitRepoFullName} ${res_terraform_provider_xray_commitSha} && cd ${PWD
             - >-
               if [[ -z "${PR_URL}" ]]; then
-                send_notification partnersSlack --text "<${res_GitHubTFProviderXrayRepoJFrog_gitRepoRepositoryHttpsUrl}|Terraform Provider Xray>. Pipeline failed on <${step_url}|${step_name}> step. PR was not created (already exists from this head branch?)"
+                send_notification partnersSlack --text "<${res_terraform_provider_xray_gitRepoRepositoryHttpsUrl}|Terraform Provider Xray>. Pipeline failed on <${step_url}|${step_name}> step. PR was not created (already exists from this head branch?)"
               else
-                send_notification partnersSlack --text "<${res_GitHubTFProviderXrayRepoJFrog_gitRepoRepositoryHttpsUrl}|Terraform Provider Xray>. Pipeline failed on <${step_url}|${step_name}> step"
+                send_notification partnersSlack --text "<${res_terraform_provider_xray_gitRepoRepositoryHttpsUrl}|Terraform Provider Xray>. Pipeline failed on <${step_url}|${step_name}> step"
               fi
           onComplete:
             - echo "Cleaning up"
