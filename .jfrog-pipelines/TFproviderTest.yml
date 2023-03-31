@@ -130,7 +130,7 @@ pipelines:
               if [[ -n "${GKE_CLUSTER}" ]]; then
                 echo "Removing GKE cluster ${GKE_CLUSTER}"
                 cd ${res_terraform_provider_shared_resourcePath}
-                ./scripts/scripts/delete_cluster.sh && cd ${PWD}
+                ./scripts/delete_cluster.sh && cd ${PWD}
               fi
           onComplete:
             - echo "JFrog Artifactory and Xray Job Complete"
@@ -293,7 +293,8 @@ pipelines:
             - export STATE="failure"
             - export DESCRIPTION="Pipeline has failed."f
             - cd ${res_terraform_provider_shared_resourcePath}
-            - ./scripts/github-status.sh ${res_terraform_provider_xray_gitProvider_token} ${res_terraform_provider_xray_gitRepoFullName} ${res_terraform_provider_xray_commitSha} && cd ${PWD            - >-
+            - ./scripts/github-status.sh ${res_terraform_provider_xray_gitProvider_token} ${res_terraform_provider_xray_gitRepoFullName} ${res_terraform_provider_xray_commitSha} && cd ${PWD
+            - >-
               if [[ -z "${PR_URL}" ]]; then
                 send_notification partnersSlack --text "<${res_terraform_provider_xray_gitRepoRepositoryHttpsUrl}|Terraform Provider Xray>. Pipeline failed on <${step_url}|${step_name}> step. PR was not created (already exists from this head branch?)"
               else
