@@ -1,3 +1,11 @@
+## 1.12.0 (April, 11, 2023). Tested on Artifactory 7.55.10 and Xray 3.69.3
+
+IMPROVEMENTS:
+
+* resource/xray_security_policy: added new security policy rule criteria `vulnerability_ids`, which allows to create a policy with criteria type Vulnerabilities and include a list of a specific CVEs.
+ Issue: [#112](https://github.com/jfrog/terraform-provider-xray/issues/112)
+ PR: [#116](https://github.com/jfrog/terraform-provider-xray/pull/116)
+
 ## 1.11.1 (March 28, 2023). Tested on Artifactory 7.55.9 and Xray 3.69.3
 
 IMPROVEMENTS:

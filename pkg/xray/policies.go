@@ -190,8 +190,9 @@ type PolicyRuleCriteria struct {
 	MinimumSeverity string           `json:"min_severity,omitempty"` // Omitempty is used because the empty field is conflicting with CVSSRange
 	CVSSRange       *PolicyCVSSRange `json:"cvss_range,omitempty"`
 	// Omitempty is used in FixVersionDependant because an empty field throws an error in Xray below 3.44.3
-	FixVersionDependant bool `json:"fix_version_dependant,omitempty"`
-	MaliciousPackage    bool `json:"malicious_package,omitempty"`
+	FixVersionDependant bool     `json:"fix_version_dependant,omitempty"`
+	MaliciousPackage    bool     `json:"malicious_package,omitempty"`
+	VulnerabilityIds    []string `json:"vulnerability_ids,omitempty"`
 	// We use pointer for CVSSRange to address nil-verification for non-primitive types.
 	// Unlike primitive types, when the non-primitive type in the struct is set
 	// to nil, the empty key will be created in the JSON body anyway.
@@ -300,6 +301,9 @@ func unpackSecurityCriteria(tfCriteria map[string]interface{}) *PolicyRuleCriter
 	}
 	if v, ok := tfCriteria["malicious_package"]; ok {
 		criteria.MaliciousPackage = v.(bool)
+	}
+	if v, ok := tfCriteria["vulnerability_ids"]; ok {
+		criteria.VulnerabilityIds = util.CastToStringArr(v.(*schema.Set).List())
 	}
 	// This is also picky about not allowing empty values to be set
 	cvss := unpackCVSSRange(tfCriteria["cvss_range"].([]interface{}))
@@ -572,7 +576,7 @@ func packSecurityCriteria(criteria *PolicyRuleCriteria) []interface{} {
 	m := map[string]interface{}{}
 	// cvss_range and min_severity are conflicting, only one can be present in the JSON
 	m["cvss_range"] = packCVSSRange(criteria.CVSSRange)
-
+	m["vulnerability_ids"] = criteria.VulnerabilityIds
 	minSeverity := criteria.MinimumSeverity
 	// This is only needed for versions before 3.60.2 because a Xray API bug where it returns "Unknown" for "All severities" min severity setting
 	// See release note: https://www.jfrog.com/confluence/display/JFROG/Xray+Release+Notes#XrayReleaseNotes-Xray3.60.2

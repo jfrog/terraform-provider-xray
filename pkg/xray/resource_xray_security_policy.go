@@ -3,6 +3,7 @@ package xray
 import (
 	"context"
 	"fmt"
+	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -51,6 +52,19 @@ func resourceXraySecurityPolicyV2() *schema.Resource {
 				},
 			},
 		},
+		"vulnerability_ids": {
+			Type:        schema.TypeSet,
+			Optional:    true,
+			MaxItems:    100,
+			MinItems:    1,
+			Description: "Creates policy rules for specific vulnerability IDs that you input. You can add multiple vulnerabilities IDs up to 100. CVEs and Xray IDs are supported. Example - CVE-2015-20107, XRAY-2344",
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+				ValidateDiagFunc: validation.ToDiagFunc(
+					validation.StringMatch(regexp.MustCompile(`(CVE\W*\d{4}\W+\d{4,}|XRAY-\d{4,})`), "invalid Vulnerability, must be a valid CVE or Xray ID, example CVE-2021-12345, XRAY-1234"),
+				),
+			},
+		},
 	}
 
 	return &schema.Resource{
@@ -85,6 +99,7 @@ var criteriaMaliciousPkgDiff = func(ctx context.Context, diff *schema.ResourceDi
 	fixVersionDependant := criterion["fix_version_dependant"].(bool)
 	minSeverity := criterion["min_severity"].(string)
 	cvssRange := criterion["cvss_range"].([]interface{})
+	vulnerabilityIDs := criterion["vulnerability_ids"].(*schema.Set).List()
 	// If `malicious_package` is enabled in the UI, `fix_version_dependant` is set to `false` in the UI call.
 	// UI itself doesn't have this checkbox at all. We are adding this check to avoid unexpected behavior.
 	if maliciousPackage && fixVersionDependant {
@@ -95,6 +110,10 @@ var criteriaMaliciousPkgDiff = func(ctx context.Context, diff *schema.ResourceDi
 	}
 	if len(minSeverity) > 0 && len(cvssRange) > 0 {
 		return fmt.Errorf("min_severity can't be set together with cvss_range")
+	}
+	if (len(vulnerabilityIDs) > 0 && maliciousPackage) || (len(vulnerabilityIDs) > 0 && len(minSeverity) > 0) ||
+		(len(vulnerabilityIDs) > 0 && len(cvssRange) > 0) {
+		return fmt.Errorf("vulnerability_ids can't be set together with with malicious_package, min_severity and/or cvss_range")
 	}
 
 	return nil
