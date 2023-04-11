@@ -155,6 +155,7 @@ pipelines:
             - name: gke_jfrog_rt_xray_create
           inputResources:
             - name: terraform_provider_xray
+            - name: terraform_provider_shared
         execution:
           onStart:
             - echo "Preparing for work..."
@@ -232,6 +233,7 @@ pipelines:
             - name: build_and_run_tf_provider
           inputResources:
             - name: terraform_provider_xray
+            - name: terraform_provider_shared
         execution:
           onStart:
             - echo "Preparing for work..."

@@ -162,7 +162,7 @@ Optional:
 - `fix_version_dependant` (Boolean) Default value is `false`. Issues that do not have a fixed version are not generated until a fixed version is available. Must be `false` with `malicious_package` enabled.
 - `malicious_package` (Boolean) Default value is `false`. Generating a violation on a malicious package.
 - `min_severity` (String) The minimum security vulnerability severity that will be impacted by the policy.
-- `vulnerability_ids` (Set of String) Creates policy rules for specific vulnerability IDs that you input. You can add multiple vulnerabilities IDs up to 100, separated by ",". CVEs and Xray IDs are supported. Example - CVE-2015-20107, XRAY-2344
+- `vulnerability_ids` (Set of String) Creates policy rules for specific vulnerability IDs that you input. You can add multiple vulnerabilities IDs up to 100. CVEs and Xray IDs are supported. Example - CVE-2015-20107, XRAY-2344
 
 <a id="nestedblock--rule--criteria--cvss_range"></a>
 ### Nested Schema for `rule.criteria.cvss_range`
