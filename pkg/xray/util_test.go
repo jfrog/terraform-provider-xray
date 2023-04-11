@@ -111,3 +111,13 @@ func DeleteProject(t *testing.T, projectKey string) {
 		t.Fatal(err)
 	}
 }
+
+func generateListOfNames(prefix string, number int) string {
+	var CVEs []string
+	n := 1
+	for n < number {
+		CVEs = append(CVEs, fmt.Sprintf("\"%s%d\",", prefix, test.RandomInt()))
+		n++
+	}
+	return fmt.Sprintf("%s", CVEs)
+}

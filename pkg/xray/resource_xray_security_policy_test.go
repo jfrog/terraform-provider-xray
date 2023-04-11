@@ -16,6 +16,7 @@ import (
 const criteriaTypeCvss = "cvss"
 const criteriaTypeSeverity = "severity"
 const criteriaTypeMaliciousPkg = "malicious_package"
+const criteriaTypeVulnerabilityIds = "vulnerability_ids"
 
 var testDataSecurity = map[string]string{
 	"resource_name":                     "",
@@ -535,6 +536,119 @@ func TestAccSecurityPolicy_blockMismatchCVSS(t *testing.T) {
 	})
 }
 
+func TestAccSecurityPolicy_vulnerabilityIds(t *testing.T) {
+	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
+	testData := util.MergeMaps(testDataSecurity)
+
+	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-9-%d", test.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-9-%d", test.RandomInt())
+	testData["block_unscanned"] = "false"
+	testData["block_active"] = "false"
+	testData["CVE_1"] = "CVE-2022-12345"
+	testData["CVE_2"] = "CVE-2014-111111111111111111111111"
+	testData["CVE_3"] = "XRAY-1234"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config: util.ExecuteTemplate(fqrn, securityPolicyVulnIds, testData),
+				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeVulnerabilityIds),
+			},
+		},
+	})
+}
+
+func TestAccSecurityPolicy_vulnerabilityIdsIncorrectCVEFails(t *testing.T) {
+	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
+	testData := util.MergeMaps(testDataSecurity)
+
+	for _, invalidCVE := range []string{"CVE-20211-67890", "Xray-12345", "cve-2021-67890", "CVE-11-67890"} {
+		testData["resource_name"] = resourceName
+		testData["policy_name"] = fmt.Sprintf("terraform-security-policy-9-%d", test.RandomInt())
+		testData["rule_name"] = fmt.Sprintf("test-security-rule-9-%d", test.RandomInt())
+		testData["block_unscanned"] = "false"
+		testData["block_active"] = "false"
+		testData["CVE_1"] = invalidCVE
+		testData["CVE_2"] = "CVE-2021-67890"
+		testData["CVE_3"] = "XRAY-1234"
+
+		resource.Test(t, resource.TestCase{
+			PreCheck:          func() { testAccPreCheck(t) },
+			CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
+			ProviderFactories: testAccProviders(),
+			Steps: []resource.TestStep{
+				{
+					Config:      util.ExecuteTemplate(fqrn, securityPolicyVulnIds, testData),
+					ExpectError: regexp.MustCompile("invalid value for vulnerability_ids"),
+				},
+			},
+		})
+	}
+}
+
+func TestAccSecurityPolicy_vulnerabilityIdsConflictingAttributesFail(t *testing.T) {
+	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
+	testData := util.MergeMaps(testDataSecurity)
+
+	conflictingAttributes := []string{
+		"cvss_range {\nfrom = 1 \nto = 3\n}",
+		"malicious_package = true",
+		"min_severity = \"High\"",
+	}
+
+	for _, conflictingAttribute := range conflictingAttributes {
+		testData["resource_name"] = resourceName
+		testData["policy_name"] = fmt.Sprintf("terraform-security-policy-9-%d", test.RandomInt())
+		testData["rule_name"] = fmt.Sprintf("test-security-rule-9-%d", test.RandomInt())
+		testData["block_unscanned"] = "false"
+		testData["block_active"] = "false"
+		testData["malicious_package"] = "true"
+		testData["conflicting_attribute"] = conflictingAttribute
+		testData["CVE_1"] = "CVE-2022-12345"
+		testData["CVE_2"] = "CVE-2021-67890"
+		testData["CVE_3"] = "XRAY-1234"
+
+		resource.Test(t, resource.TestCase{
+			PreCheck:          func() { testAccPreCheck(t) },
+			CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
+			ProviderFactories: testAccProviders(),
+			Steps: []resource.TestStep{
+				{
+					Config:      util.ExecuteTemplate(fqrn, securityPolicyVulnIdsConflict, testData),
+					ExpectError: regexp.MustCompile("vulnerability_ids can't be set together with with malicious_package"),
+				},
+			},
+		})
+	}
+}
+func TestAccSecurityPolicy_vulnerabilityIdsLimitFail(t *testing.T) {
+	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
+	testData := util.MergeMaps(testDataSecurity)
+	CVEString := generateListOfNames("CVE-2022-", 101)
+	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-9-%d", test.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-9-%d", test.RandomInt())
+	testData["block_unscanned"] = "false"
+	testData["block_active"] = "false"
+	testData["CVEs"] = CVEString
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config:      util.ExecuteTemplate(fqrn, securityPolicyVulnIdsLimit, testData),
+				ExpectError: regexp.MustCompile("vulnerability_ids can contains at least 1 and no more than 100 vulnerabilities Ids"),
+			},
+		},
+	})
+}
+
 func testAccXraySecurityPolicy_badSecurityType(name, description, ruleName string, rangeTo int) string {
 	return fmt.Sprintf(`
 resource "xray_security_policy" "test" {
@@ -618,8 +732,90 @@ func verifySecurityPolicy(fqrn string, testData map[string]string, criteriaType 
 			resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.malicious_package", testData["malicious_package"]),
 		)
 	}
+	if criteriaType == criteriaTypeVulnerabilityIds {
+		return resource.ComposeTestCheckFunc(
+			commonCheckList,
+			resource.TestCheckTypeSetElemAttr(fqrn, "rule.0.criteria.0.vulnerability_ids.*", testData["CVE_1"]),
+		)
+	}
 	return nil
 }
+
+const securityPolicyVulnIds = `resource "xray_security_policy" "{{ .resource_name }}" {
+	name = "{{ .policy_name }}"
+	description = "{{ .policy_description }}"
+	type = "security"
+	rule {
+		name = "{{ .rule_name }}"
+		priority = 1
+		criteria {
+			vulnerability_ids = ["{{ .CVE_1 }}", "{{ .CVE_2 }}", "{{ .CVE_3 }}"]
+		}
+		actions {
+			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			fail_build = {{ .fail_build }}
+			notify_watch_recipients = {{ .notify_watch_recipients }}
+			notify_deployer = {{ .notify_deployer }}
+			create_ticket_enabled = {{ .create_ticket_enabled }}
+			build_failure_grace_period_in_days = {{ .grace_period_days }}
+			block_download {
+				unscanned = {{ .block_unscanned }}
+				active = {{ .block_active }}
+			}
+		}
+	}
+}`
+
+const securityPolicyVulnIdsLimit = `resource "xray_security_policy" "{{ .resource_name }}" {
+	name = "{{ .policy_name }}"
+	description = "{{ .policy_description }}"
+	type = "security"
+	rule {
+		name = "{{ .rule_name }}"
+		priority = 1
+		criteria {
+			vulnerability_ids = {{ .CVEs }}
+		}
+		actions {
+			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			fail_build = {{ .fail_build }}
+			notify_watch_recipients = {{ .notify_watch_recipients }}
+			notify_deployer = {{ .notify_deployer }}
+			create_ticket_enabled = {{ .create_ticket_enabled }}
+			build_failure_grace_period_in_days = {{ .grace_period_days }}
+			block_download {
+				unscanned = {{ .block_unscanned }}
+				active = {{ .block_active }}
+			}
+		}
+	}
+}`
+
+const securityPolicyVulnIdsConflict = `resource "xray_security_policy" "{{ .resource_name }}" {
+	name = "{{ .policy_name }}"
+	description = "{{ .policy_description }}"
+	type = "security"
+	rule {
+		name = "{{ .rule_name }}"
+		priority = 1
+		criteria {
+			vulnerability_ids = ["{{ .CVE_1 }}", "{{ .CVE_2 }}", "{{ .CVE_3 }}"]
+			{{ .conflicting_attribute }}
+		}
+		actions {
+			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			fail_build = {{ .fail_build }}
+			notify_watch_recipients = {{ .notify_watch_recipients }}
+			notify_deployer = {{ .notify_deployer }}
+			create_ticket_enabled = {{ .create_ticket_enabled }}
+			build_failure_grace_period_in_days = {{ .grace_period_days }}
+			block_download {
+				unscanned = {{ .block_unscanned }}
+				active = {{ .block_active }}
+			}
+		}
+	}
+}`
 
 const securityPolicyCVSS = `resource "xray_security_policy" "{{ .resource_name }}" {
 	name = "{{ .policy_name }}"
