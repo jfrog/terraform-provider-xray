@@ -628,7 +628,7 @@ func TestAccSecurityPolicy_vulnerabilityIdsConflictingAttributesFail(t *testing.
 func TestAccSecurityPolicy_vulnerabilityIdsLimitFail(t *testing.T) {
 	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
 	testData := util.MergeMaps(testDataSecurity)
-	CVEString := generateListOfNames("CVE-2022-", 102)
+	CVEString := generateListOfNames("CVE-2022-", 101)
 	testData["resource_name"] = resourceName
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-9-%d", test.RandomInt())
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-9-%d", test.RandomInt())
