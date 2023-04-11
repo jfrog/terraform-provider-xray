@@ -566,7 +566,7 @@ func TestAccSecurityPolicy_vulnerabilityIdsIncorrectCVEFails(t *testing.T) {
 	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
 	testData := util.MergeMaps(testDataSecurity)
 
-	for _, invalidCVE := range []string{"CVE-20211-67890", "Xray-12345", "cve-2021-67890", "CVE-11-67890"} {
+	for _, invalidCVE := range []string{"CVE-20211-67890", "CVE-2021-678", "Xray-12345", "cve-2021-67890", "CVE-11-67890", "XRAY-1"} {
 		testData["resource_name"] = resourceName
 		testData["policy_name"] = fmt.Sprintf("terraform-security-policy-9-%d", test.RandomInt())
 		testData["rule_name"] = fmt.Sprintf("test-security-rule-9-%d", test.RandomInt())
@@ -628,7 +628,7 @@ func TestAccSecurityPolicy_vulnerabilityIdsConflictingAttributesFail(t *testing.
 func TestAccSecurityPolicy_vulnerabilityIdsLimitFail(t *testing.T) {
 	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
 	testData := util.MergeMaps(testDataSecurity)
-	CVEString := generateListOfNames("CVE-2022-", 101)
+	CVEString := generateListOfNames("CVE-2022-", 102)
 	testData["resource_name"] = resourceName
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-9-%d", test.RandomInt())
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-9-%d", test.RandomInt())
@@ -643,7 +643,7 @@ func TestAccSecurityPolicy_vulnerabilityIdsLimitFail(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      util.ExecuteTemplate(fqrn, securityPolicyVulnIdsLimit, testData),
-				ExpectError: regexp.MustCompile("vulnerability_ids can contains at least 1 and no more than 100 vulnerabilities Ids"),
+				ExpectError: regexp.MustCompile("Too many list items"),
 			},
 		},
 	})
