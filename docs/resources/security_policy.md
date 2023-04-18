@@ -159,6 +159,7 @@ Optional:
 Optional:
 
 - `cvss_range` (Block List, Max: 1) The CVSS score range to apply to the rule. This is used for a fine-grained control, rather than using the predefined severities. The score range is based on CVSS v3 scoring, and CVSS v2 score is CVSS v3 score is not available. (see [below for nested schema](#nestedblock--rule--criteria--cvss_range))
+- `exposures` (Block List, Max: 1) Works only with [JFrog Advanced Security](https://jfrog.com/advanced-security/) license. Creates policy rules for specific exposures. (see [below for nested schema](#nestedblock--rule--criteria--exposures))
 - `fix_version_dependant` (Boolean) Default value is `false`. Issues that do not have a fixed version are not generated until a fixed version is available. Must be `false` with `malicious_package` enabled.
 - `malicious_package` (Boolean) Default value is `false`. Generating a violation on a malicious package.
 - `min_severity` (String) The minimum security vulnerability severity that will be impacted by the policy.
@@ -171,6 +172,18 @@ Required:
 
 - `from` (Number) The beginning of the range of CVS scores (from 1-10, float) to flag.
 - `to` (Number) The end of the range of CVS scores (from 1-10, float) to flag.
+
+
+<a id="nestedblock--rule--criteria--exposures"></a>
+### Nested Schema for `rule.criteria.exposures`
+
+Optional:
+
+- `applications` (Boolean) Applications exposures.
+- `iac` (Boolean) Iac exposures.
+- `min_severity` (String) The minimum security vulnerability severity that will be impacted by the policy.
+- `secrets` (Boolean) Secrets exposures.
+- `services` (Boolean) Services exposures.
 
 
 

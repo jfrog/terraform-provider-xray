@@ -17,6 +17,7 @@ const criteriaTypeCvss = "cvss"
 const criteriaTypeSeverity = "severity"
 const criteriaTypeMaliciousPkg = "malicious_package"
 const criteriaTypeVulnerabilityIds = "vulnerability_ids"
+const criteriaTypeExposures = "exposures"
 
 var testDataSecurity = map[string]string{
 	"resource_name":                     "",
@@ -425,7 +426,7 @@ func TestAccSecurityPolicy_createMaliciousPackageCvssMinSeverityFail(t *testing.
 		Steps: []resource.TestStep{
 			{
 				Config:      util.ExecuteTemplate(fqrn, securityPolicyCVSSMinSeverityMaliciousPkg, testData),
-				ExpectError: regexp.MustCompile("malicious_package can't be set to true together with min_severity and/or cvss_range"),
+				ExpectError: regexp.MustCompile("malicious_package can't be set together with min_severity and/or cvss_range"),
 			},
 		},
 	})
@@ -590,39 +591,44 @@ func TestAccSecurityPolicy_vulnerabilityIdsIncorrectCVEFails(t *testing.T) {
 	}
 }
 
-func TestAccSecurityPolicy_vulnerabilityIdsConflictingAttributesFail(t *testing.T) {
+func TestAccSecurityPolicy_conflictingAttributesFail(t *testing.T) {
 	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
 	testData := util.MergeMaps(testDataSecurity)
 
-	conflictingAttributes := []string{
+	testAttributes := []string{
+		"vulnerability_ids = [\"CVE-2022-12345\", \"CVE-2021-67890\", \"XRAY-1234\"]",
 		"cvss_range {\nfrom = 1 \nto = 3\n}",
 		"malicious_package = true",
 		"min_severity = \"High\"",
+		"exposures {\nmin_severity = \"High\" \nsecrets = true \n applications = true \n services = true \n iac = true\n}",
 	}
 
-	for _, conflictingAttribute := range conflictingAttributes {
-		testData["resource_name"] = resourceName
-		testData["policy_name"] = fmt.Sprintf("terraform-security-policy-9-%d", test.RandomInt())
-		testData["rule_name"] = fmt.Sprintf("test-security-rule-9-%d", test.RandomInt())
-		testData["block_unscanned"] = "false"
-		testData["block_active"] = "false"
-		testData["malicious_package"] = "true"
-		testData["conflicting_attribute"] = conflictingAttribute
-		testData["CVE_1"] = "CVE-2022-12345"
-		testData["CVE_2"] = "CVE-2021-67890"
-		testData["CVE_3"] = "XRAY-1234"
+	for _, testAttribute := range testAttributes {
+		for _, conflictingAttribute := range testAttributes {
+			if testAttribute == conflictingAttribute {
+				continue
+			}
+			testData["resource_name"] = resourceName
+			testData["policy_name"] = fmt.Sprintf("terraform-security-policy-9-%d", test.RandomInt())
+			testData["rule_name"] = fmt.Sprintf("test-security-rule-9-%d", test.RandomInt())
+			testData["block_unscanned"] = "false"
+			testData["block_active"] = "false"
+			testData["test_attribute"] = testAttribute
+			testData["malicious_package"] = "true"
+			testData["conflicting_attribute"] = conflictingAttribute
 
-		resource.Test(t, resource.TestCase{
-			PreCheck:          func() { testAccPreCheck(t) },
-			CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
-			ProviderFactories: testAccProviders(),
-			Steps: []resource.TestStep{
-				{
-					Config:      util.ExecuteTemplate(fqrn, securityPolicyVulnIdsConflict, testData),
-					ExpectError: regexp.MustCompile("vulnerability_ids can't be set together with with malicious_package"),
+			resource.Test(t, resource.TestCase{
+				PreCheck:          func() { testAccPreCheck(t) },
+				CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
+				ProviderFactories: testAccProviders(),
+				Steps: []resource.TestStep{
+					{
+						Config:      util.ExecuteTemplate(fqrn, securityPolicyVulnIdsConflict, testData),
+						ExpectError: regexp.MustCompile("can't be set together"),
+					},
 				},
-			},
-		})
+			})
+		}
 	}
 }
 func TestAccSecurityPolicy_vulnerabilityIdsLimitFail(t *testing.T) {
@@ -644,6 +650,37 @@ func TestAccSecurityPolicy_vulnerabilityIdsLimitFail(t *testing.T) {
 			{
 				Config:      util.ExecuteTemplate(fqrn, securityPolicyVulnIdsLimit, testData),
 				ExpectError: regexp.MustCompile("Too many list items"),
+			},
+		},
+	})
+}
+
+func TestAccSecurityPolicy_exposures(t *testing.T) {
+	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
+	testData := util.MergeMaps(testDataSecurity)
+
+	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-6-%d", test.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-6-%d", test.RandomInt())
+	testData["exposures_min_severity"] = "High"
+	testData["exposures_secrets"] = "true"
+	testData["exposures_applications"] = "true"
+	testData["exposures_services"] = "true"
+	testData["exposures_iac"] = "true"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config: util.ExecuteTemplate(fqrn, securityPolicyExposures, testData),
+				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeExposures),
+			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
@@ -738,6 +775,16 @@ func verifySecurityPolicy(fqrn string, testData map[string]string, criteriaType 
 			resource.TestCheckTypeSetElemAttr(fqrn, "rule.0.criteria.0.vulnerability_ids.*", testData["CVE_1"]),
 		)
 	}
+	if criteriaType == criteriaTypeExposures {
+		return resource.ComposeTestCheckFunc(
+			commonCheckList,
+			resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.exposures.0.min_severity", testData["exposures_min_severity"]),
+			resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.exposures.0.secrets", testData["exposures_secrets"]),
+			resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.exposures.0.applications", testData["exposures_applications"]),
+			resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.exposures.0.services", testData["exposures_services"]),
+			resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.exposures.0.iac", testData["exposures_iac"]),
+		)
+	}
 	return nil
 }
 
@@ -799,7 +846,8 @@ const securityPolicyVulnIdsConflict = `resource "xray_security_policy" "{{ .reso
 		name = "{{ .rule_name }}"
 		priority = 1
 		criteria {
-			vulnerability_ids = ["{{ .CVE_1 }}", "{{ .CVE_2 }}", "{{ .CVE_3 }}"]
+			{{ .test_attribute }}			
+//vulnerability_ids = ["{{ .CVE_1 }}", "{{ .CVE_2 }}", "{{ .CVE_3 }}"]
 			{{ .conflicting_attribute }}
 		}
 		actions {
@@ -884,6 +932,37 @@ const securityPolicyMinSeverity = `resource "xray_security_policy" "{{ .resource
 		priority = 1
 		criteria {
             min_severity = "{{ .min_severity }}"
+		}
+		actions {
+			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			fail_build = {{ .fail_build }}
+			notify_watch_recipients = {{ .notify_watch_recipients }}
+			notify_deployer = {{ .notify_deployer }}
+			create_ticket_enabled = {{ .create_ticket_enabled }}
+			build_failure_grace_period_in_days = {{ .grace_period_days }}
+			block_download {
+				unscanned = {{ .block_unscanned }}
+				active = {{ .block_active }}
+			}
+		}
+	}
+}`
+
+const securityPolicyExposures = `resource "xray_security_policy" "{{ .resource_name }}" {
+	name = "{{ .policy_name }}"
+	description = "{{ .policy_description }}"
+	type = "security"
+	rule {
+		name = "{{ .rule_name }}"
+		priority = 1
+		criteria {
+            exposures {
+				min_severity 	= "{{ .exposures_min_severity }}"
+				secrets 		= {{ .exposures_secrets }}
+				applications 	= {{ .exposures_applications }}
+				services 		= {{ .exposures_services }}
+				iac 			= {{ .exposures_iac }}
+			}
 		}
 		actions {
 			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}

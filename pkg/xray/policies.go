@@ -174,6 +174,14 @@ type PolicyCVSSRange struct {
 	From *float64 `json:"from,omitempty"`
 }
 
+type PolicyExposures struct {
+	MinSeverity  *string `json:"min_severity,omitempty"`
+	Secrets      *bool   `json:"secrets,omitempty"`
+	Applications *bool   `json:"applications,omitempty"`
+	Services     *bool   `json:"services,omitempty"`
+	Iac          *bool   `json:"iac,omitempty"`
+}
+
 type OperationalRiskCriteria struct {
 	UseAndCondition               bool   `json:"use_and_condition"`
 	IsEOL                         bool   `json:"is_eol"`
@@ -190,9 +198,10 @@ type PolicyRuleCriteria struct {
 	MinimumSeverity string           `json:"min_severity,omitempty"` // Omitempty is used because the empty field is conflicting with CVSSRange
 	CVSSRange       *PolicyCVSSRange `json:"cvss_range,omitempty"`
 	// Omitempty is used in FixVersionDependant because an empty field throws an error in Xray below 3.44.3
-	FixVersionDependant bool     `json:"fix_version_dependant,omitempty"`
-	MaliciousPackage    bool     `json:"malicious_package,omitempty"`
-	VulnerabilityIds    []string `json:"vulnerability_ids,omitempty"`
+	FixVersionDependant bool             `json:"fix_version_dependant,omitempty"`
+	MaliciousPackage    bool             `json:"malicious_package,omitempty"`
+	VulnerabilityIds    []string         `json:"vulnerability_ids,omitempty"`
+	Exposures           *PolicyExposures `json:"exposures,omitempty"`
 	// We use pointer for CVSSRange to address nil-verification for non-primitive types.
 	// Unlike primitive types, when the non-primitive type in the struct is set
 	// to nil, the empty key will be created in the JSON body anyway.
@@ -305,6 +314,9 @@ func unpackSecurityCriteria(tfCriteria map[string]interface{}) *PolicyRuleCriter
 	if v, ok := tfCriteria["vulnerability_ids"]; ok {
 		criteria.VulnerabilityIds = util.CastToStringArr(v.(*schema.Set).List())
 	}
+	if _, ok := tfCriteria["exposures"]; ok {
+		criteria.Exposures = unpackExposures(tfCriteria["exposures"].([]interface{}))
+	}
 	// This is also picky about not allowing empty values to be set
 	cvss := unpackCVSSRange(tfCriteria["cvss_range"].([]interface{}))
 	if cvss == nil {
@@ -403,6 +415,8 @@ func unpackCriteria(d *schema.Set, policyType string) (*PolicyRuleCriteria, erro
 
 func Float64Ptr(v float64) *float64 { return &v }
 
+func StringPtr(v string) *string { return &v }
+
 func unpackCVSSRange(l []interface{}) *PolicyCVSSRange {
 	if len(l) == 0 {
 		return nil
@@ -414,6 +428,22 @@ func unpackCVSSRange(l []interface{}) *PolicyCVSSRange {
 		To:   Float64Ptr(m["to"].(float64)),
 	}
 	return cvssrange
+}
+
+func unpackExposures(l []interface{}) *PolicyExposures {
+	if len(l) == 0 {
+		return nil
+	}
+
+	m := l[0].(map[string]interface{})
+	exposures := &PolicyExposures{
+		MinSeverity:  StringPtr(m["min_severity"].(string)),
+		Secrets:      util.BoolPtr(m["secrets"].(bool)),
+		Applications: util.BoolPtr(m["applications"].(bool)),
+		Services:     util.BoolPtr(m["services"].(bool)),
+		Iac:          util.BoolPtr(m["iac"].(bool)),
+	}
+	return exposures
 }
 
 func unpackLicenses(d *schema.Set) []string {
@@ -587,6 +617,7 @@ func packSecurityCriteria(criteria *PolicyRuleCriteria) []interface{} {
 	m["min_severity"] = minSeverity
 	m["fix_version_dependant"] = criteria.FixVersionDependant
 	m["malicious_package"] = criteria.MaliciousPackage
+	m["exposures"] = packExposures(criteria.Exposures)
 
 	return []interface{}{m}
 }
@@ -598,6 +629,20 @@ func packCVSSRange(cvss *PolicyCVSSRange) []interface{} {
 	m := map[string]interface{}{
 		"from": *cvss.From,
 		"to":   *cvss.To,
+	}
+	return []interface{}{m}
+}
+
+func packExposures(exposures *PolicyExposures) []interface{} {
+	if exposures == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"min_severity": *exposures.MinSeverity,
+		"secrets":      *exposures.Secrets,
+		"applications": *exposures.Secrets,
+		"services":     *exposures.Secrets,
+		"iac":          *exposures.Secrets,
 	}
 	return []interface{}{m}
 }
