@@ -279,7 +279,7 @@ pipelines:
             - echo "Success"
             - echo "All tests passed successfully."
             - export STATE="success"
-            - export DESCRIPTION="Pipeline has failed."
+            - export DESCRIPTION="All tests passed successfully."
             - cd ${res_terraform_provider_shared_resourcePath}
             - ./scripts/github-status.sh ${res_terraform_provider_xray_gitProvider_token} ${res_terraform_provider_xray_gitRepoFullName} ${res_terraform_provider_xray_commitSha} && cd ${PWD}
             - >-

@@ -1,4 +1,11 @@
-## 1.12.0 (April, 11, 2023). Tested on Artifactory 7.55.10 and Xray 3.69.3
+## 1.13.0 (April 19, 2023). Tested on Artifactory 7.55.10 and Xray 3.71.6
+
+IMPROVEMENTS:
+
+* resource/xray_security_policy: added new security policy rule criteria `exposures`, which allows to create a policy with criteria type Exposures and include specific exposures. Works only with [JFrog Advanced Security](https://jfrog.com/advanced-security/) license, otherwise the block will be ignored by API.
+ PR: [#118](https://github.com/jfrog/terraform-provider-xray/pull/118)
+
+## 1.12.0 (April 11, 2023). Tested on Artifactory 7.55.10 and Xray 3.69.3
 
 IMPROVEMENTS:
 
