@@ -846,8 +846,7 @@ const securityPolicyVulnIdsConflict = `resource "xray_security_policy" "{{ .reso
 		name = "{{ .rule_name }}"
 		priority = 1
 		criteria {
-			{{ .test_attribute }}			
-//vulnerability_ids = ["{{ .CVE_1 }}", "{{ .CVE_2 }}", "{{ .CVE_3 }}"]
+			{{ .test_attribute }}
 			{{ .conflicting_attribute }}
 		}
 		actions {

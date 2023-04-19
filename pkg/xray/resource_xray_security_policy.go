@@ -15,7 +15,7 @@ func resourceXraySecurityPolicyV2() *schema.Resource {
 		"min_severity": {
 			Type:             schema.TypeString,
 			Optional:         true,
-			Description:      "The minimum security vulnerability severity that will be impacted by the policy.",
+			Description:      "The minimum security vulnerability severity that will be impacted by the policy. Valid values: `All Severities`, `Critical`, `High`, `Medium`, `Low`",
 			ValidateDiagFunc: validator.StringInSlice(true, "All Severities", "Critical", "High", "Medium", "Low"),
 		},
 		"fix_version_dependant": {
@@ -76,7 +76,7 @@ func resourceXraySecurityPolicyV2() *schema.Resource {
 						Type:             schema.TypeString,
 						Optional:         true,
 						Default:          "All Severities",
-						Description:      "The minimum security vulnerability severity that will be impacted by the policy.",
+						Description:      "The minimum security vulnerability severity that will be impacted by the policy. Valid values: `All Severities`, `Critical`, `High`, `Medium`, `Low`",
 						ValidateDiagFunc: validator.StringInSlice(true, "All Severities", "Critical", "High", "Medium", "Low"),
 					},
 					"secrets": {
