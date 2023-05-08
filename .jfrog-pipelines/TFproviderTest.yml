@@ -8,7 +8,7 @@ resources:
         include: master
       buildOn:
         commit: false
-        pullRequestCreate: true
+        pullRequestCreate: false
       cancelPendingRunsOn:
         pullRequestUpdate: false
   - name: terraform_provider_shared
