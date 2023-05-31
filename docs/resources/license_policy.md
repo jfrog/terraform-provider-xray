@@ -115,24 +115,10 @@ resource "xray_license_policy" "banned_licenses" {
 
 Required:
 
+- `actions` (Block Set, Min: 1, Max: 1) Specifies the actions to take once a security policy violation has been triggered. (see [below for nested schema](#nestedblock--rule--actions))
 - `criteria` (Block Set, Min: 1, Max: 1) The set of security conditions to examine when an scanned artifact is scanned. (see [below for nested schema](#nestedblock--rule--criteria))
 - `name` (String) Name of the rule
 - `priority` (Number) Integer describing the rule priority. Must be at least 1
-
-Optional:
-
-- `actions` (Block Set, Max: 1) Specifies the actions to take once a security policy violation has been triggered. (see [below for nested schema](#nestedblock--rule--actions))
-
-<a id="nestedblock--rule--criteria"></a>
-### Nested Schema for `rule.criteria`
-
-Optional:
-
-- `allow_unknown` (Boolean) A violation will be generated for artifacts with unknown licenses (`true` or `false`).
-- `allowed_licenses` (Set of String) A list of OSS license names that may be attached to a component.
-- `banned_licenses` (Set of String) A list of OSS license names that may not be attached to a component.
-- `multi_license_permissive` (Boolean) Do not generate a violation if at least one license is valid in cases whereby multiple licenses were detected on the component
-
 
 <a id="nestedblock--rule--actions"></a>
 ### Nested Schema for `rule.actions`
@@ -143,23 +129,35 @@ Required:
 
 Optional:
 
-- `block_release_bundle_distribution` (Boolean) Blocks Release Bundle distribution to Edge nodes if a violation is found.
+- `block_release_bundle_distribution` (Boolean) Blocks Release Bundle distribution to Edge nodes if a violation is found. Default value is `false`.
 - `build_failure_grace_period_in_days` (Number) Allow grace period for certain number of days. All violations will be ignored during this time. To be used only if `fail_build` is enabled.
-- `create_ticket_enabled` (Boolean) Create Jira Ticket for this Policy Violation. Requires configured Jira integration.
+- `create_ticket_enabled` (Boolean) Create Jira Ticket for this Policy Violation. Requires configured Jira integration. Default value is `false`.
 - `custom_severity` (String) The severity of violation to be triggered if the `criteria` are met.
-- `fail_build` (Boolean) Whether or not the related CI build should be marked as failed if a violation is triggered. This option is only available when the policy is applied to an `xray_watch` resource with a `type` of `builds`.
+- `fail_build` (Boolean) Whether or not the related CI build should be marked as failed if a violation is triggered. This option is only available when the policy is applied to an `xray_watch` resource with a `type` of `builds`. Default value is `false`.
 - `mails` (Set of String) A list of email addressed that will get emailed when a violation is triggered.
-- `notify_deployer` (Boolean) Sends an email message to component deployer with details about the generated Violations.
-- `notify_watch_recipients` (Boolean) Sends an email message to all configured recipients inside a specific watch with details about the generated Violations.
+- `notify_deployer` (Boolean) Sends an email message to component deployer with details about the generated Violations. Default value is `false`.
+- `notify_watch_recipients` (Boolean) Sends an email message to all configured recipients inside a specific watch with details about the generated Violations. Default value is `false`.
 - `webhooks` (Set of String) A list of Xray-configured webhook URLs to be invoked if a violation is triggered.
 
 <a id="nestedblock--rule--actions--block_download"></a>
 ### Nested Schema for `rule.actions.block_download`
 
-Required:
+Optional:
 
-- `active` (Boolean) Whether or not to block download of artifacts that meet the artifact and severity `filters` for the associated `xray_watch` resource.
-- `unscanned` (Boolean) Whether or not to block download of artifacts that meet the artifact `filters` for the associated `xray_watch` resource but have not been scanned yet.
+- `active` (Boolean) Whether or not to block download of artifacts that meet the artifact and severity `filters` for the associated `xray_watch` resource. Default value is `false`.
+- `unscanned` (Boolean) Whether or not to block download of artifacts that meet the artifact `filters` for the associated `xray_watch` resource but have not been scanned yet. Can not be set to `true` if attribute `active` is `false`. Default value is `false`.
+
+
+
+<a id="nestedblock--rule--criteria"></a>
+### Nested Schema for `rule.criteria`
+
+Optional:
+
+- `allow_unknown` (Boolean) A violation will be generated for artifacts with unknown licenses (`true` or `false`).
+- `allowed_licenses` (Set of String) A list of OSS license names that may be attached to a component. Supports custom licenses added by the user, but there is no verification if the license exists on the Xray side. If the added license doesn't exist, the policy won't trigger the violation.
+- `banned_licenses` (Set of String) A list of OSS license names that may not be attached to a component. Supports custom licenses added by the user, but there is no verification if the license exists on the Xray side. If the added license doesn't exist, the policy won't trigger the violation.
+- `multi_license_permissive` (Boolean) Do not generate a violation if at least one license is valid in cases whereby multiple licenses were detected on the component
 
 ## Import
 

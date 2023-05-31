@@ -192,6 +192,35 @@ func TestAccLicensePolicy_createAllowedLic(t *testing.T) {
 	})
 }
 
+func TestAccLicensePolicy_createAllowedLicCustom(t *testing.T) {
+	_, fqrn, resourceName := test.MkNames("policy-", "xray_license_policy")
+	testData := util.MergeMaps(testDataLicense)
+
+	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-license-policy-3-%d", test.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-license-rule-3-%d", test.RandomInt())
+	testData["multi_license_permissive"] = "true"
+	testData["allowedOrBanned"] = "allowed_licenses"
+	testData["license_1"] = "Custom-License"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config: util.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),
+				Check:  verifyLicensePolicy(fqrn, testData, testData["allowedOrBanned"]),
+			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
 func TestAccLicensePolicy_createBannedLic(t *testing.T) {
 	_, fqrn, resourceName := test.MkNames("policy-", "xray_license_policy")
 	testData := util.MergeMaps(testDataLicense)
@@ -200,6 +229,35 @@ func TestAccLicensePolicy_createBannedLic(t *testing.T) {
 	testData["policy_name"] = fmt.Sprintf("terraform-license-policy-4-%d", test.RandomInt())
 	testData["rule_name"] = fmt.Sprintf("test-license-rule-4-%d", test.RandomInt())
 	testData["allowedOrBanned"] = "banned_licenses"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config: util.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),
+				Check:  verifyLicensePolicy(fqrn, testData, testData["allowedOrBanned"]),
+			},
+			{
+				ResourceName:            fqrn,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_key"},
+			},
+		},
+	})
+}
+
+func TestAccLicensePolicy_createBannedLicCustom(t *testing.T) {
+	_, fqrn, resourceName := test.MkNames("policy-", "xray_license_policy")
+	testData := util.MergeMaps(testDataLicense)
+
+	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-license-policy-4-%d", test.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-license-rule-4-%d", test.RandomInt())
+	testData["allowedOrBanned"] = "banned_licenses"
+	testData["license_1"] = "Custom-License"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },

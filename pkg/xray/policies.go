@@ -39,13 +39,15 @@ var commonActionsSchema = map[string]*schema.Schema{
 			Schema: map[string]*schema.Schema{
 				"unscanned": {
 					Type:        schema.TypeBool,
-					Required:    true,
-					Description: "Whether or not to block download of artifacts that meet the artifact `filters` for the associated `xray_watch` resource but have not been scanned yet.",
+					Optional:    true,
+					Default:     false,
+					Description: "Whether or not to block download of artifacts that meet the artifact `filters` for the associated `xray_watch` resource but have not been scanned yet. Can not be set to `true` if attribute `active` is `false`. Default value is `false`.",
 				},
 				"active": {
 					Type:        schema.TypeBool,
-					Required:    true,
-					Description: "Whether or not to block download of artifacts that meet the artifact and severity `filters` for the associated `xray_watch` resource.",
+					Optional:    true,
+					Default:     false,
+					Description: "Whether or not to block download of artifacts that meet the artifact and severity `filters` for the associated `xray_watch` resource. Default value is `false`.",
 				},
 			},
 		},
@@ -53,32 +55,32 @@ var commonActionsSchema = map[string]*schema.Schema{
 	"block_release_bundle_distribution": {
 		Type:        schema.TypeBool,
 		Optional:    true,
-		Default:     true,
-		Description: "Blocks Release Bundle distribution to Edge nodes if a violation is found.",
+		Default:     false,
+		Description: "Blocks Release Bundle distribution to Edge nodes if a violation is found. Default value is `false`.",
 	},
 	"fail_build": {
 		Type:        schema.TypeBool,
 		Optional:    true,
-		Default:     true,
-		Description: "Whether or not the related CI build should be marked as failed if a violation is triggered. This option is only available when the policy is applied to an `xray_watch` resource with a `type` of `builds`.",
+		Default:     false,
+		Description: "Whether or not the related CI build should be marked as failed if a violation is triggered. This option is only available when the policy is applied to an `xray_watch` resource with a `type` of `builds`. Default value is `false`.",
 	},
 	"notify_deployer": {
 		Type:        schema.TypeBool,
 		Optional:    true,
 		Default:     false,
-		Description: "Sends an email message to component deployer with details about the generated Violations.",
+		Description: "Sends an email message to component deployer with details about the generated Violations. Default value is `false`.",
 	},
 	"notify_watch_recipients": {
 		Type:        schema.TypeBool,
 		Optional:    true,
 		Default:     false,
-		Description: "Sends an email message to all configured recipients inside a specific watch with details about the generated Violations.",
+		Description: "Sends an email message to all configured recipients inside a specific watch with details about the generated Violations. Default value is `false`.",
 	},
 	"create_ticket_enabled": {
 		Type:        schema.TypeBool,
 		Optional:    true,
 		Default:     false,
-		Description: "Create Jira Ticket for this Policy Violation. Requires configured Jira integration.",
+		Description: "Create Jira Ticket for this Policy Violation. Requires configured Jira integration. Default value is `false`.",
 	},
 	"build_failure_grace_period_in_days": {
 		Type:             schema.TypeInt,
@@ -155,8 +157,8 @@ var getPolicySchema = func(criteriaSchema map[string]*schema.Schema, actionsSche
 						},
 						"actions": {
 							Type:        schema.TypeSet,
-							Optional:    true,
 							MaxItems:    1,
+							Required:    true,
 							Description: "Specifies the actions to take once a security policy violation has been triggered.",
 							Elem: &schema.Resource{
 								Schema: actionsSchema,
@@ -228,17 +230,17 @@ type BlockDownloadSettings struct {
 }
 
 type PolicyRuleActions struct {
-	Webhooks                []string              `json:"webhooks"`
-	Mails                   []string              `json:"mails"`
+	Webhooks                []string              `json:"webhooks,omitempty"`
+	Mails                   []string              `json:"mails,omitempty"`
 	FailBuild               bool                  `json:"fail_build"`
 	BlockDownload           BlockDownloadSettings `json:"block_download"`
 	BlockReleaseBundle      bool                  `json:"block_release_bundle_distribution"`
 	NotifyWatchRecipients   bool                  `json:"notify_watch_recipients"`
 	NotifyDeployer          bool                  `json:"notify_deployer"`
 	CreateJiraTicketEnabled bool                  `json:"create_ticket_enabled"`
-	FailureGracePeriodDays  int                   `json:"build_failure_grace_period_in_days"`
+	FailureGracePeriodDays  int                   `json:"build_failure_grace_period_in_days,omitempty"`
 	// License Actions
-	CustomSeverity string `json:"custom_severity"`
+	CustomSeverity string `json:"custom_severity,omitempty"`
 }
 
 type PolicyRule struct {
@@ -457,72 +459,75 @@ func unpackLicenses(d *schema.Set) []string {
 func unpackActions(l *schema.Set) PolicyRuleActions {
 	actions := PolicyRuleActions{}
 	policyActions := l.List()
-	m := policyActions[0].(map[string]interface{}) // We made this a list of one to make schema validation easier
 
-	if v, ok := m["webhooks"]; ok {
-		m := v.(*schema.Set).List()
-		var webhooks []string
-		for _, hook := range m {
-			webhooks = append(webhooks, hook.(string))
-		}
-		actions.Webhooks = webhooks
-	}
-	if v, ok := m["mails"]; ok {
-		m := v.(*schema.Set).List()
-		var mails []string
-		for _, mail := range m {
-			mails = append(mails, mail.(string))
-		}
-		actions.Mails = mails
-	}
-	if v, ok := m["fail_build"]; ok {
-		actions.FailBuild = v.(bool)
-	}
-
-	if v, ok := m["block_download"]; ok {
-		if len(v.(*schema.Set).List()) > 0 {
-			vList := v.(*schema.Set).List()
-			vMap := vList[0].(map[string]interface{})
-
-			actions.BlockDownload = BlockDownloadSettings{
-				Unscanned: vMap["unscanned"].(bool),
-				Active:    vMap["active"].(bool),
+	if len(policyActions) > 0 {
+		m := policyActions[0].(map[string]interface{}) // We made this a list of one to make schema validation easier
+		if v, ok := m["webhooks"]; ok {
+			m := v.(*schema.Set).List()
+			var webhooks []string
+			for _, hook := range m {
+				webhooks = append(webhooks, hook.(string))
 			}
-		} else {
-			actions.BlockDownload = BlockDownloadSettings{
-				Unscanned: false,
-				Active:    false,
-			}
-			// Setting this false/false block feels like it _should_ work, since putting a false/false block in the terraform resource works fine
-			// However, it doesn't, and we end up getting this diff when running acceptance tests when this is optional in the schema
-			// rule.0.actions.0.block_download.#:           "1" => "0"
-			// rule.0.actions.0.block_download.0.active:    "false" => ""
-			// rule.0.actions.0.block_download.0.unscanned: "false" => ""
+			actions.Webhooks = webhooks
 		}
-	}
-	if v, ok := m["block_release_bundle_distribution"]; ok {
-		actions.BlockReleaseBundle = v.(bool)
-	}
+		if v, ok := m["mails"]; ok {
+			m := v.(*schema.Set).List()
+			var mails []string
+			for _, mail := range m {
+				mails = append(mails, mail.(string))
+			}
+			actions.Mails = mails
+		}
+		if v, ok := m["fail_build"]; ok {
+			actions.FailBuild = v.(bool)
+		}
 
-	if v, ok := m["notify_watch_recipients"]; ok {
-		actions.NotifyWatchRecipients = v.(bool)
-	}
-	if v, ok := m["block_release_bundle_distribution"]; ok {
-		actions.BlockReleaseBundle = v.(bool)
-	}
-	if v, ok := m["notify_deployer"]; ok {
-		actions.NotifyDeployer = v.(bool)
-	}
-	if v, ok := m["create_ticket_enabled"]; ok {
-		actions.CreateJiraTicketEnabled = v.(bool)
-	}
-	if v, ok := m["build_failure_grace_period_in_days"]; ok {
-		actions.FailureGracePeriodDays = v.(int)
-	}
-	if v, ok := m["custom_severity"]; ok {
-		actions.CustomSeverity = v.(string)
-	}
+		if v, ok := m["block_download"]; ok {
+			if len(v.(*schema.Set).List()) > 0 {
+				vList := v.(*schema.Set).List()
+				vMap := vList[0].(map[string]interface{})
 
+				actions.BlockDownload = BlockDownloadSettings{
+					Unscanned: vMap["unscanned"].(bool),
+					Active:    vMap["active"].(bool),
+				}
+			} else {
+				actions.BlockDownload = BlockDownloadSettings{
+					Unscanned: false,
+					Active:    false,
+				}
+				// Setting this false/false block feels like it _should_ work, since putting a false/false block in the terraform resource works fine
+				// However, it doesn't, and we end up getting this diff when running acceptance tests when this is optional in the schema
+				// rule.0.actions.0.block_download.#:           "1" => "0"
+				// rule.0.actions.0.block_download.0.active:    "false" => ""
+				// rule.0.actions.0.block_download.0.unscanned: "false" => ""
+			}
+		}
+		if v, ok := m["block_release_bundle_distribution"]; ok {
+			actions.BlockReleaseBundle = v.(bool)
+		}
+
+		if v, ok := m["notify_watch_recipients"]; ok {
+			actions.NotifyWatchRecipients = v.(bool)
+		}
+		if v, ok := m["block_release_bundle_distribution"]; ok {
+			actions.BlockReleaseBundle = v.(bool)
+		}
+		if v, ok := m["notify_deployer"]; ok {
+			actions.NotifyDeployer = v.(bool)
+		}
+		if v, ok := m["create_ticket_enabled"]; ok {
+			actions.CreateJiraTicketEnabled = v.(bool)
+		}
+		if v, ok := m["build_failure_grace_period_in_days"]; ok {
+			actions.FailureGracePeriodDays = v.(int)
+		}
+		if v, ok := m["custom_severity"]; ok {
+			actions.CustomSeverity = v.(string)
+		}
+
+		return actions
+	}
 	return actions
 }
 

@@ -11,19 +11,17 @@ func resourceXrayLicensePolicyV2() *schema.Resource {
 		"banned_licenses": {
 			Type:        schema.TypeSet,
 			Optional:    true,
-			Description: "A list of OSS license names that may not be attached to a component.",
+			Description: "A list of OSS license names that may not be attached to a component. Supports custom licenses added by the user, but there is no verification if the license exists on the Xray side. If the added license doesn't exist, the policy won't trigger the violation.",
 			Elem: &schema.Schema{
-				Type:             schema.TypeString,
-				ValidateDiagFunc: validator.LicenseType,
+				Type: schema.TypeString,
 			},
 		},
 		"allowed_licenses": {
 			Type:        schema.TypeSet,
 			Optional:    true,
-			Description: "A list of OSS license names that may be attached to a component.",
+			Description: "A list of OSS license names that may be attached to a component. Supports custom licenses added by the user, but there is no verification if the license exists on the Xray side. If the added license doesn't exist, the policy won't trigger the violation.",
 			Elem: &schema.Schema{
-				Type:             schema.TypeString,
-				ValidateDiagFunc: validator.LicenseType,
+				Type: schema.TypeString,
 			},
 		},
 		"allow_unknown": {
