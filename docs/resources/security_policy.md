@@ -145,13 +145,38 @@ resource "xray_security_policy" "malicious_package" {
 
 Required:
 
+- `actions` (Block Set, Min: 1, Max: 1) Specifies the actions to take once a security policy violation has been triggered. (see [below for nested schema](#nestedblock--rule--actions))
 - `criteria` (Block Set, Min: 1, Max: 1) The set of security conditions to examine when an scanned artifact is scanned. (see [below for nested schema](#nestedblock--rule--criteria))
 - `name` (String) Name of the rule
 - `priority` (Number) Integer describing the rule priority. Must be at least 1
 
+<a id="nestedblock--rule--actions"></a>
+### Nested Schema for `rule.actions`
+
+Required:
+
+- `block_download` (Block Set, Min: 1, Max: 1) Block download of artifacts that meet the Artifact Filter and Severity Filter specifications for this watch (see [below for nested schema](#nestedblock--rule--actions--block_download))
+
 Optional:
 
-- `actions` (Block Set, Max: 1) Specifies the actions to take once a security policy violation has been triggered. (see [below for nested schema](#nestedblock--rule--actions))
+- `block_release_bundle_distribution` (Boolean) Blocks Release Bundle distribution to Edge nodes if a violation is found. Default value is `false`.
+- `build_failure_grace_period_in_days` (Number) Allow grace period for certain number of days. All violations will be ignored during this time. To be used only if `fail_build` is enabled.
+- `create_ticket_enabled` (Boolean) Create Jira Ticket for this Policy Violation. Requires configured Jira integration. Default value is `false`.
+- `fail_build` (Boolean) Whether or not the related CI build should be marked as failed if a violation is triggered. This option is only available when the policy is applied to an `xray_watch` resource with a `type` of `builds`. Default value is `false`.
+- `mails` (Set of String) A list of email addressed that will get emailed when a violation is triggered.
+- `notify_deployer` (Boolean) Sends an email message to component deployer with details about the generated Violations. Default value is `false`.
+- `notify_watch_recipients` (Boolean) Sends an email message to all configured recipients inside a specific watch with details about the generated Violations. Default value is `false`.
+- `webhooks` (Set of String) A list of Xray-configured webhook URLs to be invoked if a violation is triggered.
+
+<a id="nestedblock--rule--actions--block_download"></a>
+### Nested Schema for `rule.actions.block_download`
+
+Optional:
+
+- `active` (Boolean) Whether or not to block download of artifacts that meet the artifact and severity `filters` for the associated `xray_watch` resource. Default value is `false`.
+- `unscanned` (Boolean) Whether or not to block download of artifacts that meet the artifact `filters` for the associated `xray_watch` resource but have not been scanned yet. Can not be set to `true` if attribute `active` is `false`. Default value is `false`.
+
+
 
 <a id="nestedblock--rule--criteria"></a>
 ### Nested Schema for `rule.criteria`
@@ -159,10 +184,10 @@ Optional:
 Optional:
 
 - `cvss_range` (Block List, Max: 1) The CVSS score range to apply to the rule. This is used for a fine-grained control, rather than using the predefined severities. The score range is based on CVSS v3 scoring, and CVSS v2 score is CVSS v3 score is not available. (see [below for nested schema](#nestedblock--rule--criteria--cvss_range))
-- `exposures` (Block List, Max: 1) Works only with [JFrog Advanced Security](https://jfrog.com/advanced-security/) license. Creates policy rules for specific exposures. (see [below for nested schema](#nestedblock--rule--criteria--exposures))
+- `exposures` (Block List, Max: 1) Works only with JFrog Advanced Security license. Creates policy rules for specific exposures. (see [below for nested schema](#nestedblock--rule--criteria--exposures))
 - `fix_version_dependant` (Boolean) Default value is `false`. Issues that do not have a fixed version are not generated until a fixed version is available. Must be `false` with `malicious_package` enabled.
 - `malicious_package` (Boolean) Default value is `false`. Generating a violation on a malicious package.
-- `min_severity` (String) The minimum security vulnerability severity that will be impacted by the policy.
+- `min_severity` (String) The minimum security vulnerability severity that will be impacted by the policy. Valid values: `All Severities`, `Critical`, `High`, `Medium`, `Low`
 - `vulnerability_ids` (Set of String) Creates policy rules for specific vulnerability IDs that you input. You can add multiple vulnerabilities IDs up to 100. CVEs and Xray IDs are supported. Example - CVE-2015-20107, XRAY-2344
 
 <a id="nestedblock--rule--criteria--cvss_range"></a>
@@ -181,37 +206,9 @@ Optional:
 
 - `applications` (Boolean) Applications exposures.
 - `iac` (Boolean) Iac exposures.
-- `min_severity` (String) The minimum security vulnerability severity that will be impacted by the policy.
+- `min_severity` (String) The minimum security vulnerability severity that will be impacted by the policy. Valid values: `All Severities`, `Critical`, `High`, `Medium`, `Low`
 - `secrets` (Boolean) Secrets exposures.
 - `services` (Boolean) Services exposures.
-
-
-
-<a id="nestedblock--rule--actions"></a>
-### Nested Schema for `rule.actions`
-
-Required:
-
-- `block_download` (Block Set, Min: 1, Max: 1) Block download of artifacts that meet the Artifact Filter and Severity Filter specifications for this watch (see [below for nested schema](#nestedblock--rule--actions--block_download))
-
-Optional:
-
-- `block_release_bundle_distribution` (Boolean) Blocks Release Bundle distribution to Edge nodes if a violation is found.
-- `build_failure_grace_period_in_days` (Number) Allow grace period for certain number of days. All violations will be ignored during this time. To be used only if `fail_build` is enabled.
-- `create_ticket_enabled` (Boolean) Create Jira Ticket for this Policy Violation. Requires configured Jira integration.
-- `fail_build` (Boolean) Whether or not the related CI build should be marked as failed if a violation is triggered. This option is only available when the policy is applied to an `xray_watch` resource with a `type` of `builds`.
-- `mails` (Set of String) A list of email addressed that will get emailed when a violation is triggered.
-- `notify_deployer` (Boolean) Sends an email message to component deployer with details about the generated Violations.
-- `notify_watch_recipients` (Boolean) Sends an email message to all configured recipients inside a specific watch with details about the generated Violations.
-- `webhooks` (Set of String) A list of Xray-configured webhook URLs to be invoked if a violation is triggered.
-
-<a id="nestedblock--rule--actions--block_download"></a>
-### Nested Schema for `rule.actions.block_download`
-
-Required:
-
-- `active` (Boolean) Whether or not to block download of artifacts that meet the artifact and severity `filters` for the associated `xray_watch` resource.
-- `unscanned` (Boolean) Whether or not to block download of artifacts that meet the artifact `filters` for the associated `xray_watch` resource but have not been scanned yet.
 
 ## Import
 

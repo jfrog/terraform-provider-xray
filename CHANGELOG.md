@@ -1,3 +1,14 @@
+## 1.14.0 (June 1, 2023). 
+
+IMPROVEMENTS:
+
+* resource/xray_*_policy: `actions` is a required block now. Also, changed default behavior for `actions` nested boolean attributes to match the Xray UI behavior. 
+* resource/xray_license_policy: removed license name verification from `banned_licenses` and `allowed_licenses` lists to allow users enter custom licenses, created in their Xray instance. Please note, Xray API doesn't have verification if the license (custom or not) exists, so if the user enters a non-existing license name, this policy will be created but won't trigger a violation. 
+
+PR: [#]()
+Issues: [#120](https://github.com/jfrog/terraform-provider-xray/issues/120), [#121](https://github.com/jfrog/terraform-provider-xray/issues/121)
+
+
 ## 1.13.0 (April 19, 2023). Tested on Artifactory 7.55.10 and Xray 3.71.6
 
 IMPROVEMENTS:

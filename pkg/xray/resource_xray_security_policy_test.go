@@ -537,6 +537,32 @@ func TestAccSecurityPolicy_blockMismatchCVSS(t *testing.T) {
 	})
 }
 
+func TestAccSecurityPolicy_noActions(t *testing.T) {
+	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
+	testData := util.MergeMaps(testDataSecurity)
+
+	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-9-%d", test.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-9-%d", test.RandomInt())
+	testData["block_unscanned"] = "false"
+	testData["block_active"] = "false"
+	testData["CVE_1"] = "CVE-2022-12345"
+	testData["CVE_2"] = "CVE-2014-111111111111111111111111"
+	testData["CVE_3"] = "XRAY-1234"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config:      util.ExecuteTemplate(fqrn, securityPolicyNoActions, testData),
+				ExpectError: regexp.MustCompile("Insufficient actions blocks"),
+			},
+		},
+	})
+}
+
 func TestAccSecurityPolicy_vulnerabilityIds(t *testing.T) {
 	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
 	testData := util.MergeMaps(testDataSecurity)
@@ -558,6 +584,11 @@ func TestAccSecurityPolicy_vulnerabilityIds(t *testing.T) {
 			{
 				Config: util.ExecuteTemplate(fqrn, securityPolicyVulnIds, testData),
 				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeVulnerabilityIds),
+			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
@@ -787,6 +818,19 @@ func verifySecurityPolicy(fqrn string, testData map[string]string, criteriaType 
 	}
 	return nil
 }
+
+const securityPolicyNoActions = `resource "xray_security_policy" "{{ .resource_name }}" {
+	name = "{{ .policy_name }}"
+	description = "{{ .policy_description }}"
+	type = "security"
+	rule {
+		name = "{{ .rule_name }}"
+		priority = 1
+		criteria {
+			vulnerability_ids = ["{{ .CVE_1 }}", "{{ .CVE_2 }}", "{{ .CVE_3 }}"]
+		}
+	}
+}`
 
 const securityPolicyVulnIds = `resource "xray_security_policy" "{{ .resource_name }}" {
 	name = "{{ .policy_name }}"
