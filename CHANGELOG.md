@@ -3,7 +3,7 @@
 IMPROVEMENTS:
 
 * resource/xray_*_policy: `actions` is a required block now. Also, changed default behavior for `actions` nested boolean attributes to match the Xray UI behavior. 
-* resource/xray_license_policy: removed license name verification from `banned_licenses` and `allowed_licenses` lists to allow users enter custom licenses, created in their Xray instance. Please note, Xray API doesn't have verification if the license (custom or not) exists, so if the user enters a non-existing license name, this policy will be created but won't trigger a violation. 
+* resource/xray_license_policy: removed license name verification from `banned_licenses` and `allowed_licenses` lists to allow users enter custom licenses, created in their Xray instance. Please note, Xray API doesn't verify if the license (custom or not) exists, so if the user enters a non-existing license name, this policy will be created but won't trigger a violation. 
 
 PR: [#122](https://github.com/jfrog/terraform-provider-xray/pull/122)
 Issues: [#120](https://github.com/jfrog/terraform-provider-xray/issues/120), [#121](https://github.com/jfrog/terraform-provider-xray/issues/121)
