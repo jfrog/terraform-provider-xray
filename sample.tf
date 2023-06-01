@@ -244,12 +244,12 @@ resource "xray_watch" "all-builds-with-filters" {
   }
 
   assigned_policy {
-    name = xray_security_policy.min_severity.name
+    name = xray_security_policy.security1.name
     type = "security"
   }
 
   assigned_policy {
-    name = xray_license_policy.cvss_range.name
+    name = xray_license_policy.license1.name
     type = "license"
   }
 
