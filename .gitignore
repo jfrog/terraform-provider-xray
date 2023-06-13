@@ -11,3 +11,4 @@ lib/
 *.lic
 /resources/
 coverage.txt
+.scannerwork
