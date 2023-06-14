@@ -58,7 +58,7 @@ coverage:
 
 # SONAR_TOKEN (project token) must be set to run `make scan`. Check file sonar-project.properties for the configuration.
 scan:
-	${SONAR_SCANNER_HOME}/bin/sonar-scanner -Dsonar.projectVersion=${PROVIDER_VERSION} -Dsonar.go.coverage.reportPaths=coverage.txt
+	${SONAR_SCANNER_HOME}/bin/sonar-scanner -Dsonar.projectVersion=${VERSION} -Dsonar.go.coverage.reportPaths=coverage.txt
 
 fmt:
 	@echo "==> Fixing source code with gofmt..."
