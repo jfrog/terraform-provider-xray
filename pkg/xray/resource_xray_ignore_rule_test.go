@@ -206,7 +206,7 @@ func TestAccIgnoreRule_scopes_policies(t *testing.T) {
 	})
 }
 
-func TestAccIgnoreRule_scopes_watches(t *testing.T) {
+func TestAccIgnoreRule_scopes_watches_policies(t *testing.T) {
 	_, fqrn, name := test.MkNames("ignore-rule-", "xray_ignore_rule")
 	expirationDate := time.Now().Add(time.Hour * 48)
 
@@ -259,6 +259,7 @@ func TestAccIgnoreRule_scopes_watches(t *testing.T) {
 			expiration_date  = "{{ .expirationDate }}"
 			cves             = ["fake-cve"]
 		 	watches          = [xray_watch.fake_watch.name]
+			policies         = [xray_security_policy.security.name]
 		}
 	`, map[string]interface{}{
 		"name":           name,
@@ -279,6 +280,8 @@ func TestAccIgnoreRule_scopes_watches(t *testing.T) {
 					resource.TestCheckResourceAttr(fqrn, "is_expired", "false"),
 					resource.TestCheckResourceAttr(fqrn, "watches.#", "1"),
 					resource.TestCheckTypeSetElemAttr(fqrn, "watches.*", "fake-watch"),
+					resource.TestCheckResourceAttr(fqrn, "policies.#", "1"),
+					resource.TestCheckTypeSetElemAttr(fqrn, "policies.*", "fake-policy"),
 				),
 			},
 			{

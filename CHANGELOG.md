@@ -1,3 +1,12 @@
+## 1.14.1 (July 18, 2023)
+
+BUG FIXES:
+
+* resource/xray_ignore_rule: removed restriction, so the ignore rule can be created for both a policy and a watch.
+
+PR: [#]()
+Issue: [#130](https://github.com/jfrog/terraform-provider-xray/issues/130)
+
 ## 1.14.0 (June 1, 2023). Tested on Artifactory 7.59.9 and Xray 3.74.8
 
 IMPROVEMENTS:
