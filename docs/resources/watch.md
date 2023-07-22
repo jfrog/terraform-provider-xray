@@ -413,7 +413,7 @@ Optional:
 
 Required:
 
-- `type` (String) The type of filter, such as `regex`, `package-type`, or `mime-type`
+- `type` (String) The type of filter, such as `regex`, , `path-regex`, `package-type`, or `mime-type`
 - `value` (String) The value of the filter, such as the text of the regex, name of the package type, or mime type.
 
 

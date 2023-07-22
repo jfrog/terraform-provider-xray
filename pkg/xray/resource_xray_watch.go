@@ -79,8 +79,8 @@ func resourceXrayWatch() *schema.Resource {
 										"type": {
 											Type:             schema.TypeString,
 											Required:         true,
-											Description:      "The type of filter, such as `regex`, `package-type`, or `mime-type`",
-											ValidateDiagFunc: validator.StringInSlice(true, "regex", "package-type", "mime-type"),
+											Description:      "The type of filter, such as `regex`, `path-regex`, `package-type`, or `mime-type`",
+											ValidateDiagFunc: validator.StringInSlice(true, "regex", "path-regex", "package-type", "mime-type"),
 										},
 										"value": {
 											Type:             schema.TypeString,
