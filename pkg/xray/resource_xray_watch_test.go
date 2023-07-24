@@ -20,10 +20,12 @@ var testDataWatch = map[string]string{
 	"description":       "This is a new watch created by TF Provider",
 	"active":            "true",
 	"watch_type":        "all-repos",
-	"filter_type_0":     "regex",
+	"filter_type_0":     "path-regex",
 	"filter_value_0":    ".*",
-	"filter_type_1":     "package-type",
-	"filter_value_1":    "Docker",
+	"filter_type_1":     "regex",
+	"filter_value_1":    ".*",
+	"filter_type_2":     "package-type",
+	"filter_value_2":    "Docker",
 	"policy_name_0":     "xray-policy-0",
 	"policy_name_1":     "xray-policy-1",
 	"watch_recipient_0": "test@email.com",
@@ -250,6 +252,10 @@ func TestAccWatch_allReposMultiplePolicies(t *testing.T) {
 					resource.TestCheckResourceAttr(fqrn, "description", testData["description"]),
 					resource.TestCheckResourceAttr(fqrn, "watch_resource.0.type", testData["watch_type"]),
 					resource.TestCheckTypeSetElemNestedAttrs(fqrn, "watch_resource.0.filter.*", map[string]string{
+						"type":  "path-regex",
+						"value": ".*",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(fqrn, "watch_resource.0.filter.*", map[string]string{
 						"type":  "regex",
 						"value": ".*",
 					}),
@@ -304,7 +310,7 @@ func makeSingleRepositoryTestCase(repoType string, t *testing.T) (*testing.T, re
 				Check: resource.ComposeTestCheckFunc(
 					verifyXrayWatch(fqrn, testData),
 					resource.TestCheckTypeSetElemNestedAttrs(fqrn, "watch_resource.*.filter.*", map[string]string{
-						"type":  "regex",
+						"type":  "path-regex",
 						"value": ".*",
 					}),
 				),
@@ -1437,15 +1443,21 @@ resource "xray_watch" "{{ .resource_name }}" {
   watch_resource {
     type = "{{ .watch_type }}"
 
-  filter {
-    type  = "{{ .filter_type_0 }}"
-    value = "{{ .filter_value_0 }}"
-  }
+	  filter {
+		type  = "{{ .filter_type_0 }}"
+		value = "{{ .filter_value_0 }}"
+	  }
+	
+	  filter {
+		type  = "{{ .filter_type_1 }}"
+		value = "{{ .filter_value_1 }}"
+	  }
+	
+	  filter {
+		type  = "{{ .filter_type_2 }}"
+		value = "{{ .filter_value_2 }}"
+	  }
 
-  filter {
-    type  = "{{ .filter_type_1 }}"
-    value = "{{ .filter_value_1 }}"
-  }
   }
 
   assigned_policy {

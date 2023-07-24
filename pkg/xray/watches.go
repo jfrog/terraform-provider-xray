@@ -307,6 +307,10 @@ var packFilterMap = map[string]map[string]interface{}{
 		"func":          packStringFilter,
 		"attributeName": "filter",
 	},
+	"path-regex": {
+		"func":          packStringFilter,
+		"attributeName": "filter",
+	},
 	"package-type": {
 		"func":          packStringFilter,
 		"attributeName": "filter",

@@ -1,3 +1,12 @@
+## 1.14.2 (July 24, 2023). Tested on Artifactory 7.63.5 and Xray 3.78.10
+
+BUG FIXES:
+
+* resource/xray_watch: added `path-regex` filter type for Xray watch. 
+
+PR: [#132](https://github.com/jfrog/terraform-provider-xray/pull/132)
+Issue: [#127](https://github.com/jfrog/terraform-provider-xray/issues/127)
+
 ## 1.14.1 (July 18, 2023). Tested on Artifactory 7.63.5 and Xray 3.78.10
 
 BUG FIXES:
