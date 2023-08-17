@@ -36,18 +36,25 @@ func testAccPreCheck(t *testing.T) {
 }
 
 // Create a repository with Xray indexing enabled. It will be used in the tests
-func testAccCreateRepos(t *testing.T, repo, repoType string, projectKey string) {
+func testAccCreateRepos(t *testing.T, repo, repoType, projectKey, packageType string) {
 	restyClient := GetTestResty(t)
 
 	type Repository struct {
-		Rclass    string `json:"rclass"`
-		XrayIndex bool   `json:"xrayIndex"`
-		Url       string `json:"url,omitempty"`
+		Rclass      string `json:"rclass"`
+		PackageType string `json:"packageType"`
+		XrayIndex   bool   `json:"xrayIndex"`
+		Url         string `json:"url,omitempty"`
 	}
 
 	repository := Repository{
 		Rclass:    repoType,
 		XrayIndex: true,
+	}
+
+	if packageType == "" {
+		repository.PackageType = "generic"
+	} else {
+		repository.PackageType = packageType
 	}
 
 	if repoType == "remote" {
@@ -65,7 +72,7 @@ func testAccCreateRepos(t *testing.T, repo, repoType string, projectKey string) 
 
 	if len(projectKey) > 0 {
 		path := fmt.Sprintf("access/api/v1/projects/_/attach/repositories/%s/%s", repo, projectKey)
-		res, err = req.Put(path)
+		_, err = req.Put(path)
 		if err != nil {
 			t.Error(err)
 		}

@@ -54,7 +54,7 @@ func TestAccRepositoryConfigRepoConfigCreate(t *testing.T) {
 		PreCheck: func() {
 			testAccPreCheck(t)
 			testAccDeleteRepo(t, testData["repo_name"])
-			testAccCreateRepos(t, testData["repo_name"], "local", "")
+			testAccCreateRepos(t, testData["repo_name"], "local", "", "docker")
 		},
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
 			testAccDeleteRepo(t, testData["repo_name"])
@@ -70,12 +70,47 @@ func TestAccRepositoryConfigRepoConfigCreate(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(fqrn, "repo_name", testData["repo_name"]),
 					resource.TestCheckResourceAttr(fqrn, "config.0.retention_in_days", testData["retention_in_days"]),
+					resource.TestCheckResourceAttr(fqrn, "config.0.vuln_contextual_analysis", "true"),
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.services", "true"),
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.secrets", "true"),
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.applications", "true"),
 				),
 			},
 			{
 				ResourceName:      fqrn,
 				ImportState:       true,
 				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func TestAccRepositoryConfigRepoConfigCreate_InvalidExposures(t *testing.T) {
+	_, fqrn, resourceName := test.MkNames("xray-repo-config-", "xray_repository_config")
+	var testData = map[string]string{
+		"resource_name":     resourceName,
+		"repo_name":         "repo-config-test-repo",
+		"retention_in_days": "90",
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			testAccDeleteRepo(t, testData["repo_name"])
+			testAccCreateRepos(t, testData["repo_name"], "local", "", "docker")
+		},
+		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+			testAccDeleteRepo(t, testData["repo_name"])
+			err := fmt.Errorf("repo was deleted")
+			errorResp := dummyError()
+			return errorResp, err
+		}),
+		ProviderFactories: testAccProviders(),
+
+		Steps: []resource.TestStep{
+			{
+				Config:      util.ExecuteTemplate(fqrn, TestDataRepoConfigInvalidExposuresTemplate, testData),
+				ExpectError: regexp.MustCompile(`.*Value for 'repo_config.exposure' parameter is invalid.*`),
 			},
 		},
 	})
@@ -102,7 +137,7 @@ func TestAccRepositoryConfigRepoPathsCreate(t *testing.T) {
 		PreCheck: func() {
 			testAccPreCheck(t)
 			testAccDeleteRepo(t, testData["repo_name"])
-			testAccCreateRepos(t, testData["repo_name"], "local", "")
+			testAccCreateRepos(t, testData["repo_name"], "local", "", "")
 		},
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
 			testAccDeleteRepo(t, testData["repo_name"])
@@ -161,7 +196,7 @@ func TestAccRepositoryConfigRepoPathsUpdate(t *testing.T) {
 		PreCheck: func() {
 			testAccPreCheck(t)
 			testAccDeleteRepo(t, testData["repo_name"])
-			testAccCreateRepos(t, testData["repo_name"], "local", "")
+			testAccCreateRepos(t, testData["repo_name"], "local", "", "")
 		},
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
 			testAccDeleteRepo(t, testData["repo_name"])
@@ -202,30 +237,28 @@ func verifyRepositoryConfig(fqrn string, testData map[string]string) resource.Te
 
 const TestDataRepoConfigErrorTemplate = `
 resource "xray_repository_config" "{{ .resource_name }}" {
-  
-  repo_name  = "{{ .repo_name }}"
-  
+  repo_name = "{{ .repo_name }}"
+
   config {
-    retention_in_days       = {{ .retention_in_days }} 
+    retention_in_days = {{ .retention_in_days }} 
   }
-  
+
   paths_config {
-    
     pattern {
-      include              = "{{ .pattern0_include }}"
-      exclude              = "{{ .pattern0_exclude }}"
-      index_new_artifacts  = {{ .pattern0_index_new_artifacts }}
-      retention_in_days    = {{ .pattern0_retention_in_days }}
+      include             = "{{ .pattern0_include }}"
+      exclude             = "{{ .pattern0_exclude }}"
+      index_new_artifacts = {{ .pattern0_index_new_artifacts }}
+      retention_in_days   = {{ .pattern0_retention_in_days }}
     }
 
-   pattern {
-      include              = "{{ .pattern1_include }}"
-      exclude              = "{{ .pattern1_exclude }}"
-      index_new_artifacts  = {{ .pattern1_index_new_artifacts }}
-      retention_in_days    = {{ .pattern1_retention_in_days }}
+    pattern {
+      include             = "{{ .pattern1_include }}"
+      exclude             = "{{ .pattern1_exclude }}"
+      index_new_artifacts = {{ .pattern1_index_new_artifacts }}
+      retention_in_days   = {{ .pattern1_retention_in_days }}
     }
-  
-   all_other_artifacts {
+
+    all_other_artifacts {
       index_new_artifacts = {{ .other_index_new_artifacts }}
       retention_in_days   = {{ .other_retention_in_days }}
     }
@@ -234,38 +267,56 @@ resource "xray_repository_config" "{{ .resource_name }}" {
 
 const TestDataRepoConfigTemplate = `
 resource "xray_repository_config" "{{ .resource_name }}" {
-  
-  repo_name  = "{{ .repo_name }}"
-  
-  config {
-    #vuln_contextual_analysis  = true
-    retention_in_days          = {{ .retention_in_days }} 
-  }
+  repo_name = "{{ .repo_name }}"
 
+  config {
+    vuln_contextual_analysis = true
+    retention_in_days        = {{ .retention_in_days }}
+    exposures {
+      scanners_category {
+        services       = true
+        secrets        = true
+        applications   = true
+      }
+    }
+  }
+}`
+
+const TestDataRepoConfigInvalidExposuresTemplate = `
+resource "xray_repository_config" "{{ .resource_name }}" {
+  repo_name = "{{ .repo_name }}"
+
+  config {
+    vuln_contextual_analysis = true
+    retention_in_days = {{ .retention_in_days }}
+    exposures {
+      scanners_category {
+        iac = true
+      }
+    }
+  }
 }`
 
 const TestDataRepoPathsConfigTemplate = `
 resource "xray_repository_config" "{{ .resource_name }}" {
-  
-  repo_name  = "{{ .repo_name }}"
+  repo_name = "{{ .repo_name }}"
 
   paths_config {
-    
     pattern {
-      include              = "{{ .pattern0_include }}"
-      exclude              = "{{ .pattern0_exclude }}"
-      index_new_artifacts  = {{ .pattern0_index_new_artifacts }}
-      retention_in_days    = {{ .pattern0_retention_in_days }}
+      include             = "{{ .pattern0_include }}"
+      exclude             = "{{ .pattern0_exclude }}"
+      index_new_artifacts = {{ .pattern0_index_new_artifacts }}
+      retention_in_days   = {{ .pattern0_retention_in_days }}
     }
 
-   pattern {
-      include              = "{{ .pattern1_include }}"
-      exclude              = "{{ .pattern1_exclude }}"
-      index_new_artifacts  = {{ .pattern1_index_new_artifacts }}
-      retention_in_days    = {{ .pattern1_retention_in_days }}
+    pattern {
+      include             = "{{ .pattern1_include }}"
+      exclude             = "{{ .pattern1_exclude }}"
+      index_new_artifacts = {{ .pattern1_index_new_artifacts }}
+      retention_in_days   = {{ .pattern1_retention_in_days }}
     }
-  
-   all_other_artifacts {
+
+    all_other_artifacts {
       index_new_artifacts = {{ .other_index_new_artifacts }}
       retention_in_days   = {{ .other_retention_in_days }}
     }

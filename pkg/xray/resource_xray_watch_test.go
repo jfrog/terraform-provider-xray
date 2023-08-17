@@ -294,7 +294,7 @@ func makeSingleRepositoryTestCase(repoType string, t *testing.T) (*testing.T, re
 	return t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			testAccCreateRepos(t, testData["repo0"], repoType, "")
+			testAccCreateRepos(t, testData["repo0"], repoType, "", "")
 		},
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
 			testAccDeleteRepo(t, testData["repo0"])
@@ -401,7 +401,7 @@ func TestAccWatch_singleRepositoryWithProjectKey(t *testing.T) {
 		PreCheck: func() {
 			testAccPreCheck(t)
 			CreateProject(t, projectKey)
-			testAccCreateRepos(t, repoKey, "local", projectKey)
+			testAccCreateRepos(t, repoKey, "local", projectKey, "")
 		},
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
 			testAccDeleteRepo(t, repoKey)
@@ -447,7 +447,7 @@ func TestAccWatch_singleRepoMimeTypeFilter(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			testAccCreateRepos(t, testData["repo0"], repoType, "")
+			testAccCreateRepos(t, testData["repo0"], repoType, "", "")
 		},
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
 			testAccDeleteRepo(t, testData["repo0"])
@@ -492,7 +492,7 @@ func TestAccWatch_singleRepoKvFilter(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			testAccCreateRepos(t, testData["repo0"], repoType, "")
+			testAccCreateRepos(t, testData["repo0"], repoType, "", "")
 		},
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
 			testAccDeleteRepo(t, testData["repo0"])
@@ -534,7 +534,7 @@ func TestAccWatch_repositoryMissingRepoType(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			testAccCreateRepos(t, testData["repo0"], "local", "")
+			testAccCreateRepos(t, testData["repo0"], "local", "", "")
 		},
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
 			testAccDeleteRepo(t, testData["repo0"])
@@ -568,8 +568,8 @@ func TestAccWatch_multipleRepositories(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			testAccCreateRepos(t, testData["repo0"], "local", "")
-			testAccCreateRepos(t, testData["repo1"], "local", "")
+			testAccCreateRepos(t, testData["repo0"], "local", "", "")
+			testAccCreateRepos(t, testData["repo1"], "local", "", "")
 		},
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
 			testAccDeleteRepo(t, testData["repo0"])
@@ -613,9 +613,9 @@ func TestAccWatch_multipleRepositoriesPathAntPatterns(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			testAccCreateRepos(t, testData["repo0"], "local", "")
-			testAccCreateRepos(t, testData["repo1"], "local", "")
-			testAccCreateRepos(t, testData["repo2"], "local", "")
+			testAccCreateRepos(t, testData["repo0"], "local", "", "")
+			testAccCreateRepos(t, testData["repo1"], "local", "", "")
+			testAccCreateRepos(t, testData["repo2"], "local", "", "")
 		},
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
 			testAccDeleteRepo(t, testData["repo0"])
@@ -668,8 +668,8 @@ func TestAccWatch_PathAntPatternsError(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			testAccCreateRepos(t, testData["repo0"], "local", "")
-			testAccCreateRepos(t, testData["repo1"], "local", "")
+			testAccCreateRepos(t, testData["repo0"], "local", "", "")
+			testAccCreateRepos(t, testData["repo1"], "local", "", "")
 		},
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
 			testAccDeleteRepo(t, testData["repo0"])
@@ -708,8 +708,8 @@ func TestAccWatch_multipleRepositoriesKvFilter(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			testAccCreateRepos(t, testData["repo0"], "local", "")
-			testAccCreateRepos(t, testData["repo1"], "local", "")
+			testAccCreateRepos(t, testData["repo0"], "local", "", "")
+			testAccCreateRepos(t, testData["repo1"], "local", "", "")
 		},
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
 			testAccDeleteRepo(t, testData["repo0"])
@@ -765,7 +765,7 @@ func TestAccWatch_KvFilterError(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			testAccCreateRepos(t, testData["repo0"], "local", "")
+			testAccCreateRepos(t, testData["repo0"], "local", "", "")
 		},
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
 			testAccDeleteRepo(t, testData["repo0"])

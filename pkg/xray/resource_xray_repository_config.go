@@ -14,8 +14,21 @@ import (
 
 type RepoConfiguration struct {
 	// Omitempty is used because 'vuln_contextual_analysis' is not supported by self-hosted Xray installation.
-	VulnContextualAnalysis bool `json:"vuln_contextual_analysis,omitempty"`
-	RetentionInDays        int  `json:"retention_in_days,omitempty"`
+	VulnContextualAnalysis bool      `json:"vuln_contextual_analysis,omitempty"`
+	RetentionInDays        int       `json:"retention_in_days,omitempty"`
+	Exposures              Exposures `json:"exposures"`
+}
+
+type Exposures struct {
+	ScannersCategory ScannersCategory `json:"scanners_category"`
+}
+
+type ScannersCategory struct {
+	MaliciousCode bool `json:"malicious_code_scan,omitempty"`
+	Services      bool `json:"services_scan,omitempty"`
+	Secrets       bool `json:"secrets_scan,omitempty"`
+	IAC           bool `json:"iac_scan,omitempty"`
+	Applications  bool `json:"applications_scan,omitempty"`
 }
 
 type PathsConfiguration struct {
@@ -47,28 +60,74 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 		"repo_name": {
 			Type:             schema.TypeString,
 			Required:         true,
-			Description:      `Repository name.`,
+			Description:      "Repository name.",
 			ValidateDiagFunc: validator.StringIsNotEmpty,
 		},
 		"config": {
 			Type:          schema.TypeSet,
 			Optional:      true,
 			MaxItems:      1,
-			Description:   `Single repository configuration. Only one of 'config' or 'paths_config' can be set.`,
+			Description:   "Single repository configuration. Only one of 'config' or 'paths_config' can be set.",
 			ConflictsWith: []string{"paths_config"},
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					"vuln_contextual_analysis": {
 						Type:        schema.TypeBool,
 						Optional:    true,
-						Description: `Only for SaaS instances, will be available after Xray 3.59. Enables vulnerability contextual analysis.`,
+						Description: "Only for SaaS instances, will be available after Xray 3.59. Enables vulnerability contextual analysis.",
 					},
 					"retention_in_days": {
 						Type:             schema.TypeInt,
 						Optional:         true,
 						Default:          90,
-						Description:      `The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository.`,
+						Description:      "The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository.",
 						ValidateDiagFunc: validator.IntAtLeast(0),
+					},
+					"exposures": {
+						Type:        schema.TypeSet,
+						Optional:    true,
+						MinItems:    1,
+						MaxItems:    1,
+						Description: "Enables Xray to perform scans for multiple categories that cover security issues in your configurations and the usage of open source libraries in your code. Available only to CLOUD (SaaS)/SELF HOSTED for ENTERPRISE X and ENTERPRISE+ with Advanced DevSecOps",
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"scanners_category": {
+									Type:     schema.TypeSet,
+									Optional: true,
+									MinItems: 1,
+									MaxItems: 1,
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											"malicious_code": {
+												Type:        schema.TypeBool,
+												Optional:    true,
+												Description: "",
+											},
+											"services": {
+												Type:        schema.TypeBool,
+												Optional:    true,
+												Description: "Detect whether common OSS libraries and services are configured securely, so application can be easily hardened by default.",
+											},
+											"secrets": {
+												Type:        schema.TypeBool,
+												Optional:    true,
+												Description: "Detect any secret left exposed in any containers stored in Artifactory to stop any accidental leak of internal tokens or credentials.",
+											},
+											"iac": {
+												Type:        schema.TypeBool,
+												Optional:    true,
+												Description: "Scans IaC files stored in Artifactory for early detection of cloud and infrastructure misconfigurations to prevent attacks and data leak. Only support by Terraform Backend package type.",
+											},
+											"applications": {
+												Type:        schema.TypeBool,
+												Optional:    true,
+												Description: "Detect whether common OSS libraries and services are used securely by the application.",
+											},
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -190,6 +249,22 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 		return repoPathsConfiguration
 	}
 
+	var unpackExposures = func(config *schema.Set) Exposures {
+		exposures := Exposures{}
+
+		e := config.List()[0].(map[string]interface{})
+		s := e["scanners_category"].(*schema.Set)
+		category := s.List()[0].(map[string]interface{})
+
+		exposures.ScannersCategory.MaliciousCode = category["malicious_code"].(bool)
+		exposures.ScannersCategory.Services = category["services"].(bool)
+		exposures.ScannersCategory.Secrets = category["secrets"].(bool)
+		exposures.ScannersCategory.IAC = category["iac"].(bool)
+		exposures.ScannersCategory.Applications = category["applications"].(bool)
+
+		return exposures
+	}
+
 	var unpackRepoConfig = func(config *schema.Set) *RepoConfiguration {
 		repoConfig := new(RepoConfiguration)
 
@@ -197,6 +272,7 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 			data := config.List()[0].(map[string]interface{})
 			repoConfig.VulnContextualAnalysis = data["vuln_contextual_analysis"].(bool)
 			repoConfig.RetentionInDays = data["retention_in_days"].(int)
+			repoConfig.Exposures = unpackExposures(data["exposures"].(*schema.Set))
 		}
 
 		return repoConfig
@@ -219,6 +295,22 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 		return repositoryConfig
 	}
 
+	var packExposures = func(exposures Exposures) []interface{} {
+		return []interface{}{
+			map[string]interface{}{
+				"scanners_category": []interface{}{
+					map[string]interface{}{
+						"malicious_code": exposures.ScannersCategory.MaliciousCode,
+						"services":       exposures.ScannersCategory.Services,
+						"secrets":        exposures.ScannersCategory.Secrets,
+						"iac":            exposures.ScannersCategory.IAC,
+						"applications":   exposures.ScannersCategory.Applications,
+					},
+				},
+			},
+		}
+	}
+
 	var packGeneralRepoConfig = func(repoConfig *RepoConfiguration) []interface{} {
 		if repoConfig == nil {
 			return []interface{}{}
@@ -227,6 +319,7 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 		m := map[string]interface{}{
 			"vuln_contextual_analysis": repoConfig.VulnContextualAnalysis,
 			"retention_in_days":        repoConfig.RetentionInDays,
+			"exposures":                packExposures(repoConfig.Exposures),
 		}
 
 		return []interface{}{m}
