@@ -47,13 +47,12 @@ func testAccCreateRepos(t *testing.T, repo, repoType, projectKey, packageType st
 	}
 
 	repository := Repository{
-		Rclass:    repoType,
-		XrayIndex: true,
+		Rclass:      repoType,
+		PackageType: "generic",
+		XrayIndex:   true,
 	}
 
-	if packageType == "" {
-		repository.PackageType = "generic"
-	} else {
+	if packageType != "" {
 		repository.PackageType = packageType
 	}
 
