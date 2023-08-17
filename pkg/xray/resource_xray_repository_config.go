@@ -116,7 +116,7 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 											"iac": {
 												Type:        schema.TypeBool,
 												Optional:    true,
-												Description: "Scans IaC files stored in Artifactory for early detection of cloud and infrastructure misconfigurations to prevent attacks and data leak. Only support by Terraform Backend package type.",
+												Description: "Scans IaC files stored in Artifactory for early detection of cloud and infrastructure misconfigurations to prevent attacks and data leak. Only supported by Terraform Backend package type.",
 											},
 											"applications": {
 												Type:        schema.TypeBool,

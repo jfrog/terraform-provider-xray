@@ -84,7 +84,7 @@ Optional:
 Optional:
 
 - `applications` (Boolean) Detect whether common OSS libraries and services are used securely by the application.
-- `iac` (Boolean) Scans IaC files stored in Artifactory for early detection of cloud and infrastructure misconfigurations to prevent attacks and data leak. Only support by Terraform Backend package type.
+- `iac` (Boolean) Scans IaC files stored in Artifactory for early detection of cloud and infrastructure misconfigurations to prevent attacks and data leak. Only supported by Terraform Backend package type.
 - `malicious_code` (Boolean)
 - `secrets` (Boolean) Detect any secret left exposed in any containers stored in Artifactory to stop any accidental leak of internal tokens or credentials.
 - `services` (Boolean) Detect whether common OSS libraries and services are configured securely, so application can be easily hardened by default.
