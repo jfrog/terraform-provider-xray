@@ -67,8 +67,29 @@ resource "xray_repository_config" "xray-repo-config" {
 
 Optional:
 
+- `exposures` (Block Set, Max: 1) Enables Xray to perform scans for multiple categories that cover security issues in your configurations and the usage of open source libraries in your code. Available only to CLOUD (SaaS)/SELF HOSTED for ENTERPRISE X and ENTERPRISE+ with Advanced DevSecOps (see [below for nested schema](#nestedblock--config--exposures))
 - `retention_in_days` (Number) The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository.
 - `vuln_contextual_analysis` (Boolean) Only for SaaS instances, will be available after Xray 3.59. Enables vulnerability contextual analysis.
+
+<a id="nestedblock--config--exposures"></a>
+### Nested Schema for `config.exposures`
+
+Optional:
+
+- `scanners_category` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--config--exposures--scanners_category))
+
+<a id="nestedblock--config--exposures--scanners_category"></a>
+### Nested Schema for `config.exposures.scanners_category`
+
+Optional:
+
+- `applications` (Boolean) Detect whether common OSS libraries and services are used securely by the application.
+- `iac` (Boolean) Scans IaC files stored in Artifactory for early detection of cloud and infrastructure misconfigurations to prevent attacks and data leak. Only support by Terraform Backend package type.
+- `malicious_code` (Boolean)
+- `secrets` (Boolean) Detect any secret left exposed in any containers stored in Artifactory to stop any accidental leak of internal tokens or credentials.
+- `services` (Boolean) Detect whether common OSS libraries and services are configured securely, so application can be easily hardened by default.
+
+
 
 
 <a id="nestedblock--paths_config"></a>
