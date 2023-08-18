@@ -6,13 +6,13 @@ import (
 	"testing"
 
 	"github.com/go-resty/resty/v2"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/jfrog/terraform-provider-shared/test"
-	"github.com/jfrog/terraform-provider-shared/util"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/jfrog/terraform-provider-shared/testutil"
+	"github.com/jfrog/terraform-provider-shared/util/sdk"
 )
 
 func TestAccRepositoryConfigRepoConfigNegative(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("xray-repo-config-", "xray_repository_config")
+	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
 	var testData = map[string]string{
 		"resource_name":                resourceName,
 		"repo_name":                    "repo-config-test-repo",
@@ -35,58 +35,164 @@ func TestAccRepositoryConfigRepoConfigNegative(t *testing.T) {
 
 		Steps: []resource.TestStep{
 			{
-				Config:      util.ExecuteTemplate(fqrn, TestDataRepoConfigErrorTemplate, testData),
+				Config:      sdk.ExecuteTemplate(fqrn, TestDataRepoConfigErrorTemplate, testData),
 				ExpectError: regexp.MustCompile("Conflicting configuration arguments"),
 			},
 		},
 	})
 }
 
-func TestAccRepositoryConfigRepoConfigCreate(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("xray-repo-config-", "xray_repository_config")
-	var testData = map[string]string{
-		"resource_name":     resourceName,
-		"repo_name":         "repo-config-test-repo",
-		"retention_in_days": "90",
+func TestAccRepositoryConfigRepoConfigCreate_VulnContextualAnalysis(t *testing.T) {
+	testCase := []struct {
+		packageType  string
+		validVersion string
+	}{
+		{"docker", "3.67.9"},
+		{"maven", "3.77.4"},
 	}
 
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			testAccPreCheck(t)
-			testAccDeleteRepo(t, testData["repo_name"])
-			testAccCreateRepos(t, testData["repo_name"], "local", "", "docker")
-		},
-		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
-			testAccDeleteRepo(t, testData["repo_name"])
-			err := fmt.Errorf("repo was deleted")
-			errorResp := dummyError()
-			return errorResp, err
-		}),
-		ProviderFactories: testAccProviders(),
+	version, err := sdk.GetXrayVersion(GetTestResty(t))
+	if err != nil {
+		t.Fail()
+		return
+	}
 
-		Steps: []resource.TestStep{
-			{
-				Config: util.ExecuteTemplate(fqrn, TestDataRepoConfigTemplate, testData),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(fqrn, "repo_name", testData["repo_name"]),
-					resource.TestCheckResourceAttr(fqrn, "config.0.retention_in_days", testData["retention_in_days"]),
-					resource.TestCheckResourceAttr(fqrn, "config.0.vuln_contextual_analysis", "true"),
-					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.services", "true"),
-					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.secrets", "true"),
-					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.applications", "true"),
-				),
+	for _, tc := range testCase {
+		t.Run(tc.packageType, testAccRepositoryConfigRepoConfigCreate_VulnContextualAnalysis(t, tc.packageType, tc.validVersion, version))
+	}
+}
+
+func testAccRepositoryConfigRepoConfigCreate_VulnContextualAnalysis(t *testing.T, packageType, validVersion, xrayVersion string) func(t *testing.T) {
+	return func(t *testing.T) {
+		_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
+		var testData = map[string]string{
+			"resource_name":            resourceName,
+			"repo_name":                "repo-config-test-repo",
+			"retention_in_days":        "90",
+			"vuln_contextual_analysis": "true",
+			"services_scan":            "false",
+			"secrets_scan":             "false",
+			"applications_scan":        "false",
+		}
+
+		valid, _ := sdk.CheckVersion(xrayVersion, validVersion)
+		if !valid {
+			t.Skipf("xray version %s does not support %s for exposures scanning", xrayVersion, packageType)
+			return
+		}
+
+		resource.Test(t, resource.TestCase{
+			PreCheck: func() {
+				testAccPreCheck(t)
+				testAccDeleteRepo(t, testData["repo_name"])
+				testAccCreateRepos(t, testData["repo_name"], "local", "", packageType)
 			},
-			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateVerify: true,
+			CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+				testAccDeleteRepo(t, testData["repo_name"])
+				err := fmt.Errorf("repo was deleted")
+				errorResp := dummyError()
+				return errorResp, err
+			}),
+			ProviderFactories: testAccProviders(),
+
+			Steps: []resource.TestStep{
+				{
+					Config: sdk.ExecuteTemplate(fqrn, TestDataRepoConfigTemplate, testData),
+					Check: resource.ComposeTestCheckFunc(
+						resource.TestCheckResourceAttr(fqrn, "repo_name", testData["repo_name"]),
+						resource.TestCheckResourceAttr(fqrn, "config.0.retention_in_days", testData["retention_in_days"]),
+						resource.TestCheckResourceAttr(fqrn, "config.0.vuln_contextual_analysis", testData["vuln_contextual_analysis"]),
+					),
+				},
+				{
+					ResourceName:      fqrn,
+					ImportState:       true,
+					ImportStateVerify: true,
+				},
 			},
-		},
-	})
+		})
+	}
+}
+
+func TestAccRepositoryConfigRepoConfigCreate_Exposure(t *testing.T) {
+	testCase := []struct {
+		packageType  string
+		validVersion string
+	}{
+		{"docker", "3.67.9"},
+		{"maven", "3.78.9"},
+		{"npm", "3.78.9"},
+		{"pypi", "3.78.9"},
+	}
+
+	version, err := sdk.GetXrayVersion(GetTestResty(t))
+	if err != nil {
+		t.Fail()
+		return
+	}
+
+	for _, tc := range testCase {
+		t.Run(tc.packageType, testAccRepositoryConfigRepoConfigCreate(t, tc.packageType, tc.validVersion, version))
+	}
+}
+
+func testAccRepositoryConfigRepoConfigCreate(t *testing.T, packageType, validVersion, xrayVersion string) func(t *testing.T) {
+	return func(t *testing.T) {
+		_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
+		var testData = map[string]string{
+			"resource_name":            resourceName,
+			"repo_name":                "repo-config-test-repo",
+			"retention_in_days":        "90",
+			"vuln_contextual_analysis": "false",
+			"services_scan":            "true",
+			"secrets_scan":             "true",
+			"applications_scan":        "false",
+		}
+
+		valid, _ := sdk.CheckVersion(xrayVersion, validVersion)
+		if !valid {
+			t.Skipf("xray version %s does not support %s for exposures scanning", xrayVersion, packageType)
+			return
+		}
+
+		resource.Test(t, resource.TestCase{
+			PreCheck: func() {
+				testAccPreCheck(t)
+				testAccDeleteRepo(t, testData["repo_name"])
+				testAccCreateRepos(t, testData["repo_name"], "local", "", packageType)
+			},
+			CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+				testAccDeleteRepo(t, testData["repo_name"])
+				err := fmt.Errorf("repo was deleted")
+				errorResp := dummyError()
+				return errorResp, err
+			}),
+			ProviderFactories: testAccProviders(),
+
+			Steps: []resource.TestStep{
+				{
+					Config: sdk.ExecuteTemplate(fqrn, TestDataRepoConfigTemplate, testData),
+					Check: resource.ComposeTestCheckFunc(
+						resource.TestCheckResourceAttr(fqrn, "repo_name", testData["repo_name"]),
+						resource.TestCheckResourceAttr(fqrn, "config.0.retention_in_days", testData["retention_in_days"]),
+						resource.TestCheckResourceAttr(fqrn, "config.0.vuln_contextual_analysis", testData["vuln_contextual_analysis"]),
+						resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.services", testData["services_scan"]),
+						resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.secrets", testData["secrets_scan"]),
+						resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.applications", testData["applications_scan"]),
+					),
+				},
+				{
+					ResourceName:      fqrn,
+					ImportState:       true,
+					ImportStateVerify: true,
+				},
+			},
+		})
+	}
 }
 
 func TestAccRepositoryConfigRepoConfigCreate_InvalidExposures(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("xray-repo-config-", "xray_repository_config")
+	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
 	var testData = map[string]string{
 		"resource_name":     resourceName,
 		"repo_name":         "repo-config-test-repo",
@@ -109,15 +215,15 @@ func TestAccRepositoryConfigRepoConfigCreate_InvalidExposures(t *testing.T) {
 
 		Steps: []resource.TestStep{
 			{
-				Config:      util.ExecuteTemplate(fqrn, TestDataRepoConfigInvalidExposuresTemplate, testData),
-				ExpectError: regexp.MustCompile(`.*Value for 'repo_config.exposure' parameter is invalid.*`),
+				Config:             sdk.ExecuteTemplate(fqrn, TestDataRepoConfigInvalidExposuresTemplate, testData),
+				ExpectNonEmptyPlan: true,
 			},
 		},
 	})
 }
 
 func TestAccRepositoryConfigRepoPathsCreate(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("xray-repo-config-", "xray_repository_config")
+	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
 	var testData = map[string]string{
 		"resource_name":                resourceName,
 		"repo_name":                    "repo-config-test-repo",
@@ -149,7 +255,7 @@ func TestAccRepositoryConfigRepoPathsCreate(t *testing.T) {
 
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, TestDataRepoPathsConfigTemplate, testData),
+				Config: sdk.ExecuteTemplate(fqrn, TestDataRepoPathsConfigTemplate, testData),
 				Check:  resource.ComposeTestCheckFunc(verifyRepositoryConfig(fqrn, testData)),
 			},
 			{
@@ -162,7 +268,7 @@ func TestAccRepositoryConfigRepoPathsCreate(t *testing.T) {
 }
 
 func TestAccRepositoryConfigRepoPathsUpdate(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("xray-repo-config-", "xray_repository_config")
+	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
 	var testData = map[string]string{
 		"resource_name":                resourceName,
 		"repo_name":                    "repo-config-test-repo",
@@ -208,11 +314,11 @@ func TestAccRepositoryConfigRepoPathsUpdate(t *testing.T) {
 
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, TestDataRepoPathsConfigTemplate, testData),
+				Config: sdk.ExecuteTemplate(fqrn, TestDataRepoPathsConfigTemplate, testData),
 				Check:  resource.ComposeTestCheckFunc(verifyRepositoryConfig(fqrn, testData)),
 			},
 			{
-				Config: util.ExecuteTemplate(fqrn, TestDataRepoPathsConfigTemplate, testDataUpdated),
+				Config: sdk.ExecuteTemplate(fqrn, TestDataRepoPathsConfigTemplate, testDataUpdated),
 				Check:  resource.ComposeTestCheckFunc(verifyRepositoryConfig(fqrn, testDataUpdated)),
 			},
 		},
@@ -270,13 +376,13 @@ resource "xray_repository_config" "{{ .resource_name }}" {
   repo_name = "{{ .repo_name }}"
 
   config {
-    vuln_contextual_analysis = true
+	vuln_contextual_analysis = {{ .vuln_contextual_analysis }}
     retention_in_days        = {{ .retention_in_days }}
     exposures {
       scanners_category {
-        services       = true
-        secrets        = true
-        applications   = true
+        services       = {{ .services_scan }}
+        secrets        = {{ .secrets_scan }}
+        applications   = {{ .applications_scan }}
       }
     }
   }

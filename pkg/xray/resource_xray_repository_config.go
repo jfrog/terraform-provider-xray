@@ -5,30 +5,24 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/jfrog/terraform-provider-shared/util"
+	"github.com/jfrog/terraform-provider-shared/util/sdk"
 	"github.com/jfrog/terraform-provider-shared/validator"
+	"golang.org/x/exp/slices"
 )
 
 type RepoConfiguration struct {
 	// Omitempty is used because 'vuln_contextual_analysis' is not supported by self-hosted Xray installation.
-	VulnContextualAnalysis bool      `json:"vuln_contextual_analysis,omitempty"`
-	RetentionInDays        int       `json:"retention_in_days,omitempty"`
-	Exposures              Exposures `json:"exposures"`
+	VulnContextualAnalysis *bool      `json:"vuln_contextual_analysis,omitempty"`
+	RetentionInDays        int        `json:"retention_in_days,omitempty"`
+	Exposures              *Exposures `json:"exposures,omitempty"`
 }
 
 type Exposures struct {
-	ScannersCategory ScannersCategory `json:"scanners_category"`
-}
-
-type ScannersCategory struct {
-	MaliciousCode bool `json:"malicious_code_scan,omitempty"`
-	Services      bool `json:"services_scan,omitempty"`
-	Secrets       bool `json:"secrets_scan,omitempty"`
-	IAC           bool `json:"iac_scan,omitempty"`
-	Applications  bool `json:"applications_scan,omitempty"`
+	ScannersCategory map[string]bool `json:"scanners_category"`
 }
 
 type PathsConfiguration struct {
@@ -55,6 +49,26 @@ type RepositoryConfiguration struct {
 	RepoPathsConfig *PathsConfiguration `json:"repo_paths_config,omitempty"`
 }
 
+var exposuresPackageTypes = func(xrayVersion string) []string {
+	packageTypes := []string{"docker", "terraformbackend"}
+
+	if ok, err := sdk.CheckVersion(xrayVersion, "3.78.9"); err == nil && ok {
+		packageTypes = append(packageTypes, "maven", "npm", "pypi")
+	}
+
+	return packageTypes
+}
+
+var vulnContextualAnalysisPackageTypes = func(xrayVersion string) []string {
+	packageTypes := []string{"docker"}
+
+	if ok, err := sdk.CheckVersion(xrayVersion, "3.77.4"); err == nil && ok {
+		packageTypes = append(packageTypes, "maven")
+	}
+
+	return packageTypes
+}
+
 func resourceXrayRepositoryConfig() *schema.Resource {
 	var repositoryConfigSchema = map[string]*schema.Schema{
 		"repo_name": {
@@ -74,7 +88,7 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 					"vuln_contextual_analysis": {
 						Type:        schema.TypeBool,
 						Optional:    true,
-						Description: "Only for SaaS instances, will be available after Xray 3.59. Enables vulnerability contextual analysis.",
+						Description: "Only for SaaS instances, will be available after Xray 3.59. Enables vulnerability contextual analysis. Must be set together with `exposures`. Supported for Docker, OCI, and Maven package types.",
 					},
 					"retention_in_days": {
 						Type:             schema.TypeInt,
@@ -88,7 +102,7 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 						Optional:    true,
 						MinItems:    1,
 						MaxItems:    1,
-						Description: "Enables Xray to perform scans for multiple categories that cover security issues in your configurations and the usage of open source libraries in your code. Available only to CLOUD (SaaS)/SELF HOSTED for ENTERPRISE X and ENTERPRISE+ with Advanced DevSecOps",
+						Description: "Enables Xray to perform scans for multiple categories that cover security issues in your configurations and the usage of open source libraries in your code. Available only to CLOUD (SaaS)/SELF HOSTED for ENTERPRISE X and ENTERPRISE+ with Advanced DevSecOps. Must be set together with `vuln_contextual_analysis`. Supported for Docker, Maven, NPM, PyPi, and Terraform Backend package type.",
 						Elem: &schema.Resource{
 							Schema: map[string]*schema.Schema{
 								"scanners_category": {
@@ -98,11 +112,6 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 									MaxItems: 1,
 									Elem: &schema.Resource{
 										Schema: map[string]*schema.Schema{
-											"malicious_code": {
-												Type:        schema.TypeBool,
-												Optional:    true,
-												Description: "",
-											},
 											"services": {
 												Type:        schema.TypeBool,
 												Optional:    true,
@@ -249,77 +258,113 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 		return repoPathsConfiguration
 	}
 
-	var unpackExposures = func(config *schema.Set) Exposures {
-		exposures := Exposures{}
+	var unpackExposures = func(config *schema.Set, xrayVersion, packageType string) *Exposures {
+		if !slices.Contains(exposuresPackageTypes(xrayVersion), packageType) {
+			return nil
+		}
+
+		if len(config.List()) == 0 {
+			return nil
+		}
 
 		e := config.List()[0].(map[string]interface{})
 		s := e["scanners_category"].(*schema.Set)
+		if len(s.List()) == 0 {
+			return nil
+		}
+
 		category := s.List()[0].(map[string]interface{})
 
-		exposures.ScannersCategory.MaliciousCode = category["malicious_code"].(bool)
-		exposures.ScannersCategory.Services = category["services"].(bool)
-		exposures.ScannersCategory.Secrets = category["secrets"].(bool)
-		exposures.ScannersCategory.IAC = category["iac"].(bool)
-		exposures.ScannersCategory.Applications = category["applications"].(bool)
+		exposures := Exposures{}
 
-		return exposures
+		switch packageType {
+		case "docker", "maven", "npm", "pypi":
+			exposures.ScannersCategory = map[string]bool{
+				"services_scan":     category["services"].(bool),
+				"secrets_scan":      category["secrets"].(bool),
+				"applications_scan": category["applications"].(bool),
+			}
+		case "terraformbackend":
+			exposures.ScannersCategory = map[string]bool{
+				"iac_scan": category["iac"].(bool),
+			}
+		}
+
+		return &exposures
 	}
 
-	var unpackRepoConfig = func(config *schema.Set) *RepoConfiguration {
+	var unpackRepoConfig = func(config *schema.Set, xrayVersion, packageType string) *RepoConfiguration {
 		repoConfig := new(RepoConfiguration)
 
 		if config != nil {
 			data := config.List()[0].(map[string]interface{})
-			repoConfig.VulnContextualAnalysis = data["vuln_contextual_analysis"].(bool)
+			if slices.Contains(vulnContextualAnalysisPackageTypes(xrayVersion), packageType) {
+				vulnContextualAnalysis := data["vuln_contextual_analysis"].(bool)
+				repoConfig.VulnContextualAnalysis = &vulnContextualAnalysis
+			}
 			repoConfig.RetentionInDays = data["retention_in_days"].(int)
-			repoConfig.Exposures = unpackExposures(data["exposures"].(*schema.Set))
+			repoConfig.Exposures = unpackExposures(data["exposures"].(*schema.Set), xrayVersion, packageType)
 		}
 
 		return repoConfig
 	}
 
-	var unpackRepositoryConfig = func(s *schema.ResourceData) RepositoryConfiguration {
-		d := &util.ResourceData{ResourceData: s}
+	var unpackRepositoryConfig = func(s *schema.ResourceData, xrayVersion, packageType string) RepositoryConfiguration {
+		d := &sdk.ResourceData{ResourceData: s}
 
 		repositoryConfig := RepositoryConfiguration{
 			RepoName: d.GetString("repo_name", false),
 		}
 
-		if _, ok := s.GetOk("config"); ok {
-			repositoryConfig.RepoConfig = unpackRepoConfig(s.Get("config").(*schema.Set))
+		if v, ok := s.GetOk("config"); ok {
+			repositoryConfig.RepoConfig = unpackRepoConfig(v.(*schema.Set), xrayVersion, packageType)
 		}
 
-		if _, ok := s.GetOk("paths_config"); ok {
-			repositoryConfig.RepoPathsConfig = unpackRepoPathConfig(s.Get("paths_config").(*schema.Set))
+		if v, ok := s.GetOk("paths_config"); ok {
+			repositoryConfig.RepoPathsConfig = unpackRepoPathConfig(v.(*schema.Set))
 		}
 		return repositoryConfig
 	}
 
-	var packExposures = func(exposures Exposures) []interface{} {
+	var packExposures = func(exposures *Exposures, packageType string) []interface{} {
+		scannersCategory := map[string]bool{
+			"services":     false,
+			"secrets":      false,
+			"iac":          false,
+			"applications": false,
+		}
+
+		switch packageType {
+		case "docker", "maven", "npm", "pypi":
+			scannersCategory["services"] = exposures.ScannersCategory["services_scan"]
+			scannersCategory["secrets"] = exposures.ScannersCategory["secrets_scan"]
+			scannersCategory["applications"] = exposures.ScannersCategory["applications_scan"]
+		case "terraformbackend":
+			scannersCategory["iac"] = exposures.ScannersCategory["iac_scan"]
+		}
+
 		return []interface{}{
-			map[string]interface{}{
-				"scanners_category": []interface{}{
-					map[string]interface{}{
-						"malicious_code": exposures.ScannersCategory.MaliciousCode,
-						"services":       exposures.ScannersCategory.Services,
-						"secrets":        exposures.ScannersCategory.Secrets,
-						"iac":            exposures.ScannersCategory.IAC,
-						"applications":   exposures.ScannersCategory.Applications,
-					},
-				},
+			map[string][]map[string]bool{
+				"scanners_category": {scannersCategory},
 			},
 		}
 	}
 
-	var packGeneralRepoConfig = func(repoConfig *RepoConfiguration) []interface{} {
+	var packGeneralRepoConfig = func(repoConfig *RepoConfiguration, xrayVersion, packageType string) []interface{} {
 		if repoConfig == nil {
 			return []interface{}{}
 		}
 
 		m := map[string]interface{}{
-			"vuln_contextual_analysis": repoConfig.VulnContextualAnalysis,
-			"retention_in_days":        repoConfig.RetentionInDays,
-			"exposures":                packExposures(repoConfig.Exposures),
+			"retention_in_days": repoConfig.RetentionInDays,
+		}
+
+		if slices.Contains(vulnContextualAnalysisPackageTypes(xrayVersion), packageType) {
+			m["vuln_contextual_analysis"] = *repoConfig.VulnContextualAnalysis
+		}
+
+		if slices.Contains(exposuresPackageTypes(xrayVersion), packageType) {
+			m["exposures"] = packExposures(repoConfig.Exposures, packageType)
 		}
 
 		return []interface{}{m}
@@ -364,11 +409,11 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 		return []interface{}{m}
 	}
 
-	var packRepositoryConfig = func(ctx context.Context, repositoryConfig RepositoryConfiguration, d *schema.ResourceData) diag.Diagnostics {
+	var packRepositoryConfig = func(ctx context.Context, repositoryConfig RepositoryConfiguration, d *schema.ResourceData, xrayVersion, packageType string) diag.Diagnostics {
 		if err := d.Set("repo_name", repositoryConfig.RepoName); err != nil {
 			return diag.FromErr(err)
 		}
-		if err := d.Set("config", packGeneralRepoConfig(repositoryConfig.RepoConfig)); err != nil {
+		if err := d.Set("config", packGeneralRepoConfig(repositoryConfig.RepoConfig, xrayVersion, packageType)); err != nil {
 			return diag.FromErr(err)
 		}
 		if err := d.Set("paths_config", packRepoPathsConfigList(repositoryConfig.RepoPathsConfig)); err != nil {
@@ -378,29 +423,62 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 		return nil
 	}
 
+	var getPackageType = func(client *resty.Client, repoKey string) (repoType string, err error) {
+		type Repository struct {
+			PackageType string `json:"packageType"`
+		}
+
+		repo := Repository{}
+
+		_, err = client.R().
+			SetResult(&repo).
+			SetPathParam("repoKey", repoKey).
+			Get("artifactory/api/repositories/{repoKey}")
+		if err != nil {
+			fmt.Printf("err: %v\n", err)
+			return "", err
+		}
+
+		return repo.PackageType, nil
+	}
+
 	var resourceXrayRepositoryConfigRead = func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 		repositoryConfig := RepositoryConfiguration{}
+		repoName := d.Id()
 
-		resp, err := m.(util.ProvderMetadata).Client.R().
+		metadata := m.(sdk.ProvderMetadata)
+
+		resp, err := metadata.Client.R().
 			SetResult(&repositoryConfig).
-			SetPathParam("repo_name", d.Id()).
+			SetPathParam("repo_name", repoName).
 			Get("xray/api/v1/repos_config/{repo_name}")
 
 		if err != nil {
 			if resp != nil && resp.StatusCode() != http.StatusOK {
-				tflog.Error(ctx, fmt.Sprintf("Repo (%s) is either not indexed or does not exist", d.Id()))
+				tflog.Error(ctx, fmt.Sprintf("Repo (%s) is either not indexed or does not exist", repoName))
 				d.SetId("")
 			}
 			return diag.FromErr(err)
 		}
 
-		return packRepositoryConfig(ctx, repositoryConfig, d)
+		packageType, err := getPackageType(metadata.Client, repoName)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+		return packRepositoryConfig(ctx, repositoryConfig, d, metadata.XrayVersion, packageType)
 	}
 
 	var resourceXrayRepositoryConfigCreate = func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-		repositoryConfig := unpackRepositoryConfig(d)
+		metadata := m.(sdk.ProvderMetadata)
+		packageType, err := getPackageType(metadata.Client, d.Get("repo_name").(string))
+		if err != nil {
+			return diag.FromErr(err)
+		}
 
-		_, err := m.(util.ProvderMetadata).Client.R().SetBody(&repositoryConfig).Put("xray/api/v1/repos_config")
+		repositoryConfig := unpackRepositoryConfig(d, metadata.XrayVersion, packageType)
+
+		_, err = metadata.Client.R().SetBody(&repositoryConfig).Put("xray/api/v1/repos_config")
 		if err != nil {
 			return diag.FromErr(err)
 		}
