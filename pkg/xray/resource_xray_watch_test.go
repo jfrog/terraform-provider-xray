@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/jfrog/terraform-provider-shared/client"
-	"github.com/jfrog/terraform-provider-shared/test"
-	"github.com/jfrog/terraform-provider-shared/util"
+	"github.com/jfrog/terraform-provider-shared/testutil"
+	"github.com/jfrog/terraform-provider-shared/util/sdk"
 )
 
 var testDataWatch = map[string]string{
@@ -33,12 +33,12 @@ var testDataWatch = map[string]string{
 }
 
 func TestAccWatch_allReposSinglePolicy(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
-	testData := util.MergeMaps(testDataWatch)
+	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
+	testData := sdk.MergeMaps(testDataWatch)
 
 	testData["resource_name"] = resourceName
-	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
-	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", testutil.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", testutil.RandomInt())
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
@@ -50,7 +50,7 @@ func TestAccWatch_allReposSinglePolicy(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, allReposSinglePolicyWatchTemplate, testData),
+				Config: sdk.ExecuteTemplate(fqrn, allReposSinglePolicyWatchTemplate, testData),
 				Check:  verifyXrayWatch(fqrn, testData),
 			},
 			{
@@ -63,12 +63,12 @@ func TestAccWatch_allReposSinglePolicy(t *testing.T) {
 }
 
 func TestAccWatch_allReposPathAntFilter(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
-	testData := util.MergeMaps(testDataWatch)
+	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
+	testData := sdk.MergeMaps(testDataWatch)
 
 	testData["resource_name"] = resourceName
-	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
-	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", testutil.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", testutil.RandomInt())
 	testData["exclude_patterns0"] = "**/*.md"
 	testData["include_patterns0"] = "**/*.js"
 
@@ -82,7 +82,7 @@ func TestAccWatch_allReposPathAntFilter(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, allReposPathAntFilterWatchTemplate, testData),
+				Config: sdk.ExecuteTemplate(fqrn, allReposPathAntFilterWatchTemplate, testData),
 				Check:  verifyXrayWatch(fqrn, testData),
 			},
 			{
@@ -95,12 +95,12 @@ func TestAccWatch_allReposPathAntFilter(t *testing.T) {
 }
 
 func TestAccWatch_allReposKvFilter(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
-	testData := util.MergeMaps(testDataWatch)
+	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
+	testData := sdk.MergeMaps(testDataWatch)
 
 	testData["resource_name"] = resourceName
-	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
-	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", testutil.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", testutil.RandomInt())
 	testData["kv_filter_key0"] = "test-property-name"
 	testData["kv_filter_value0"] = "test-property-value"
 
@@ -114,7 +114,7 @@ func TestAccWatch_allReposKvFilter(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, allReposKvFilterWatchTemplate, testData),
+				Config: sdk.ExecuteTemplate(fqrn, allReposKvFilterWatchTemplate, testData),
 				Check:  verifyXrayWatch(fqrn, testData),
 			},
 			{
@@ -127,15 +127,15 @@ func TestAccWatch_allReposKvFilter(t *testing.T) {
 }
 
 func TestAccWatch_allReposWithProjectKey(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
+	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
 	projectKey := RandomProjectName()
 
-	testData := util.MergeMaps(testDataWatch)
+	testData := sdk.MergeMaps(testDataWatch)
 
 	testData["resource_name"] = resourceName
 	testData["project_key"] = projectKey
-	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
-	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", testutil.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", testutil.RandomInt())
 
 	template := `resource "xray_security_policy" "security" {
 	  name        = "{{ .policy_name_0 }}"
@@ -184,11 +184,11 @@ func TestAccWatch_allReposWithProjectKey(t *testing.T) {
 
 	  watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
 	}`
-	config := util.ExecuteTemplate(fqrn, template, testData)
+	config := sdk.ExecuteTemplate(fqrn, template, testData)
 
-	updatedTestData := util.MergeMaps(testData)
+	updatedTestData := sdk.MergeMaps(testData)
 	updatedTestData["description"] = "New description"
-	updatedConfig := util.ExecuteTemplate(fqrn, template, updatedTestData)
+	updatedConfig := sdk.ExecuteTemplate(fqrn, template, updatedTestData)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -224,14 +224,14 @@ func TestAccWatch_allReposWithProjectKey(t *testing.T) {
 }
 
 func TestAccWatch_allReposMultiplePolicies(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
-	testData := util.MergeMaps(testDataWatch)
+	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
+	testData := sdk.MergeMaps(testDataWatch)
 
 	testData["resource_name"] = resourceName
-	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
-	testData["policy_name_0"] = fmt.Sprintf("xray-policy-1%d", test.RandomInt())
-	testData["policy_name_1"] = fmt.Sprintf("xray-policy-2%d", test.RandomInt())
-	testData["policy_name_2"] = fmt.Sprintf("xray-policy-3%d", test.RandomInt())
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", testutil.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-1%d", testutil.RandomInt())
+	testData["policy_name_1"] = fmt.Sprintf("xray-policy-2%d", testutil.RandomInt())
+	testData["policy_name_2"] = fmt.Sprintf("xray-policy-3%d", testutil.RandomInt())
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
@@ -246,7 +246,7 @@ func TestAccWatch_allReposMultiplePolicies(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, allReposMultiplePoliciesWatchTemplate, testData),
+				Config: sdk.ExecuteTemplate(fqrn, allReposMultiplePoliciesWatchTemplate, testData),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(fqrn, "name", testData["watch_name"]),
 					resource.TestCheckResourceAttr(fqrn, "description", testData["description"]),
@@ -281,15 +281,15 @@ func TestAccWatch_allReposMultiplePolicies(t *testing.T) {
 }
 
 func makeSingleRepositoryTestCase(repoType string, t *testing.T) (*testing.T, resource.TestCase) {
-	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
-	testData := util.MergeMaps(testDataWatch)
+	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
+	testData := sdk.MergeMaps(testDataWatch)
 
 	testData["resource_name"] = resourceName
-	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
-	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", testutil.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", testutil.RandomInt())
 	testData["watch_type"] = "repository"
 	testData["repo_type"] = repoType
-	testData["repo0"] = fmt.Sprintf("libs-release-%s-0-%d", repoType, test.RandomInt())
+	testData["repo0"] = fmt.Sprintf("libs-release-%s-0-%d", repoType, testutil.RandomInt())
 
 	return t, resource.TestCase{
 		PreCheck: func() {
@@ -306,7 +306,7 @@ func makeSingleRepositoryTestCase(repoType string, t *testing.T) (*testing.T, re
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, singleRepositoryWatchTemplate, testData),
+				Config: sdk.ExecuteTemplate(fqrn, singleRepositoryWatchTemplate, testData),
 				Check: resource.ComposeTestCheckFunc(
 					verifyXrayWatch(fqrn, testData),
 					resource.TestCheckTypeSetElemNestedAttrs(fqrn, "watch_resource.*.filter.*", map[string]string{
@@ -336,15 +336,15 @@ func TestAccWatch_singleRepository(t *testing.T) {
 }
 
 func TestAccWatch_singleRepositoryWithProjectKey(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
-	repoKey := fmt.Sprintf("local-%d", test.RandomInt())
+	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
+	repoKey := fmt.Sprintf("local-%d", testutil.RandomInt())
 	projectKey := RandomProjectName()
 
-	testData := util.MergeMaps(testDataWatch)
+	testData := sdk.MergeMaps(testDataWatch)
 	testData["resource_name"] = resourceName
 	testData["project_key"] = projectKey
-	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
-	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", testutil.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", testutil.RandomInt())
 	testData["watch_type"] = "repository"
 	testData["repo_type"] = "local"
 	testData["repo0"] = repoKey
@@ -395,7 +395,7 @@ func TestAccWatch_singleRepositoryWithProjectKey(t *testing.T) {
 	  watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
 	}`
 
-	config := util.ExecuteTemplate(fqrn, template, testData)
+	config := sdk.ExecuteTemplate(fqrn, template, testData)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -430,16 +430,16 @@ func TestAccWatch_singleRepositoryWithProjectKey(t *testing.T) {
 }
 
 func TestAccWatch_singleRepoMimeTypeFilter(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
-	testData := util.MergeMaps(testDataWatch)
+	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
+	testData := sdk.MergeMaps(testDataWatch)
 
 	repoType := "local"
 
 	testData["resource_name"] = resourceName
-	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
-	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", testutil.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", testutil.RandomInt())
 	testData["watch_type"] = "repository"
-	testData["repo0"] = fmt.Sprintf("libs-release-%s-0-%d", repoType, test.RandomInt())
+	testData["repo0"] = fmt.Sprintf("libs-release-%s-0-%d", repoType, testutil.RandomInt())
 	testData["repo_type"] = repoType
 	testData["filter_type_0"] = "mime-type"
 	testData["filter_value_0"] = "application/json"
@@ -458,7 +458,7 @@ func TestAccWatch_singleRepoMimeTypeFilter(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, singleRepositoryWatchTemplate, testData),
+				Config: sdk.ExecuteTemplate(fqrn, singleRepositoryWatchTemplate, testData),
 				Check: resource.ComposeTestCheckFunc(
 					verifyXrayWatch(fqrn, testData),
 					resource.TestCheckTypeSetElemNestedAttrs(fqrn, "watch_resource.*.filter.*", map[string]string{
@@ -472,16 +472,16 @@ func TestAccWatch_singleRepoMimeTypeFilter(t *testing.T) {
 }
 
 func TestAccWatch_singleRepoKvFilter(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
-	testData := util.MergeMaps(testDataWatch)
+	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
+	testData := sdk.MergeMaps(testDataWatch)
 
 	repoType := "local"
 
 	testData["resource_name"] = resourceName
-	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
-	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", testutil.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", testutil.RandomInt())
 	testData["watch_type"] = "repository"
-	testData["repo0"] = fmt.Sprintf("libs-release-%s-0-%d", repoType, test.RandomInt())
+	testData["repo0"] = fmt.Sprintf("libs-release-%s-0-%d", repoType, testutil.RandomInt())
 	testData["repo_type"] = repoType
 	testData["kv_filter_type"] = "property"
 	testData["kv_filter_key_0"] = "test-key-1"
@@ -502,7 +502,7 @@ func TestAccWatch_singleRepoKvFilter(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, kvFilters, testData),
+				Config: sdk.ExecuteTemplate(fqrn, kvFilters, testData),
 				Check: resource.ComposeTestCheckFunc(
 					verifyXrayWatch(fqrn, testData),
 					resource.TestCheckTypeSetElemNestedAttrs(fqrn, "watch_resource.*.kv_filter.*", map[string]string{
@@ -522,14 +522,14 @@ func TestAccWatch_singleRepoKvFilter(t *testing.T) {
 }
 
 func TestAccWatch_repositoryMissingRepoType(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
-	testData := util.MergeMaps(testDataWatch)
+	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
+	testData := sdk.MergeMaps(testDataWatch)
 
 	testData["resource_name"] = resourceName
-	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
-	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", testutil.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", testutil.RandomInt())
 	testData["watch_type"] = "repository"
-	testData["repo0"] = fmt.Sprintf("libs-release-local-0-%d", test.RandomInt())
+	testData["repo0"] = fmt.Sprintf("libs-release-local-0-%d", testutil.RandomInt())
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -546,7 +546,7 @@ func TestAccWatch_repositoryMissingRepoType(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config:      util.ExecuteTemplate(fqrn, singleRepositoryInvalidWatchTemplate, testData),
+				Config:      sdk.ExecuteTemplate(fqrn, singleRepositoryInvalidWatchTemplate, testData),
 				ExpectError: regexp.MustCompile(`attribute 'repo_type' not set when 'watch_resource\.type' is set to 'repository'`),
 			},
 		},
@@ -554,16 +554,16 @@ func TestAccWatch_repositoryMissingRepoType(t *testing.T) {
 }
 
 func TestAccWatch_multipleRepositories(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
-	testData := util.MergeMaps(testDataWatch)
+	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
+	testData := sdk.MergeMaps(testDataWatch)
 
 	testData["resource_name"] = resourceName
-	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
-	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", testutil.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", testutil.RandomInt())
 	testData["watch_type"] = "repository"
 	testData["repo_type"] = "local"
-	testData["repo0"] = fmt.Sprintf("libs-release-local-0-%d", test.RandomInt())
-	testData["repo1"] = fmt.Sprintf("libs-release-local-1-%d", test.RandomInt())
+	testData["repo0"] = fmt.Sprintf("libs-release-local-0-%d", testutil.RandomInt())
+	testData["repo1"] = fmt.Sprintf("libs-release-local-1-%d", testutil.RandomInt())
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -581,7 +581,7 @@ func TestAccWatch_multipleRepositories(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, multipleRepositoriesWatchTemplate, testData),
+				Config: sdk.ExecuteTemplate(fqrn, multipleRepositoriesWatchTemplate, testData),
 				Check:  verifyXrayWatch(fqrn, testData),
 			},
 			{
@@ -594,17 +594,17 @@ func TestAccWatch_multipleRepositories(t *testing.T) {
 }
 
 func TestAccWatch_multipleRepositoriesPathAntPatterns(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
-	testData := util.MergeMaps(testDataWatch)
+	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
+	testData := sdk.MergeMaps(testDataWatch)
 
 	testData["resource_name"] = resourceName
-	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
-	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", testutil.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", testutil.RandomInt())
 	testData["watch_type"] = "repository"
 	testData["repo_type"] = "local"
-	testData["repo0"] = fmt.Sprintf("libs-release-local-0-%d", test.RandomInt())
-	testData["repo1"] = fmt.Sprintf("libs-release-local-1-%d", test.RandomInt())
-	testData["repo2"] = fmt.Sprintf("libs-release-local-1-%d", test.RandomInt())
+	testData["repo0"] = fmt.Sprintf("libs-release-local-0-%d", testutil.RandomInt())
+	testData["repo1"] = fmt.Sprintf("libs-release-local-1-%d", testutil.RandomInt())
+	testData["repo2"] = fmt.Sprintf("libs-release-local-1-%d", testutil.RandomInt())
 	testData["include_patterns0"] = "**/*.js"
 	testData["exclude_patterns1"] = "**/*.txt"
 	testData["include_patterns2"] = "**/*.jar"
@@ -628,7 +628,7 @@ func TestAccWatch_multipleRepositoriesPathAntPatterns(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, pathAntPatterns, testData),
+				Config: sdk.ExecuteTemplate(fqrn, pathAntPatterns, testData),
 				Check: resource.ComposeTestCheckFunc(
 					verifyXrayWatch(fqrn, testData),
 					resource.TestCheckResourceAttr(fqrn, "watch_resource.0.type", testData["watch_type"]),
@@ -650,16 +650,16 @@ func TestAccWatch_multipleRepositoriesPathAntPatterns(t *testing.T) {
 }
 
 func TestAccWatch_PathAntPatternsError(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
-	testData := util.MergeMaps(testDataWatch)
+	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
+	testData := sdk.MergeMaps(testDataWatch)
 
 	testData["resource_name"] = resourceName
-	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
-	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", testutil.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", testutil.RandomInt())
 	testData["watch_type"] = "build"
 	testData["repo_type"] = "local"
-	testData["repo0"] = fmt.Sprintf("libs-release-local-0-%d", test.RandomInt())
-	testData["repo1"] = fmt.Sprintf("libs-release-local-1-%d", test.RandomInt())
+	testData["repo0"] = fmt.Sprintf("libs-release-local-0-%d", testutil.RandomInt())
+	testData["repo1"] = fmt.Sprintf("libs-release-local-1-%d", testutil.RandomInt())
 	testData["exclude_patterns0"] = "**/*.md"
 	testData["include_patterns0"] = "**/*.js"
 	testData["exclude_patterns1"] = "**/*.md"
@@ -681,7 +681,7 @@ func TestAccWatch_PathAntPatternsError(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config:      util.ExecuteTemplate(fqrn, pathAntPatterns, testData),
+				Config:      sdk.ExecuteTemplate(fqrn, pathAntPatterns, testData),
 				ExpectError: regexp.MustCompile("attribute 'path_ant_filter' is set when 'watch_resource.type' is not set to 'repository' or 'all-repos'"),
 			},
 		},
@@ -689,16 +689,16 @@ func TestAccWatch_PathAntPatternsError(t *testing.T) {
 }
 
 func TestAccWatch_multipleRepositoriesKvFilter(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
-	testData := util.MergeMaps(testDataWatch)
+	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
+	testData := sdk.MergeMaps(testDataWatch)
 
 	testData["resource_name"] = resourceName
-	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
-	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", testutil.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", testutil.RandomInt())
 	testData["watch_type"] = "repository"
 	testData["repo_type"] = "local"
-	testData["repo0"] = fmt.Sprintf("libs-release-local-0-%d", test.RandomInt())
-	testData["repo1"] = fmt.Sprintf("libs-release-local-1-%d", test.RandomInt())
+	testData["repo0"] = fmt.Sprintf("libs-release-local-0-%d", testutil.RandomInt())
+	testData["repo1"] = fmt.Sprintf("libs-release-local-1-%d", testutil.RandomInt())
 	testData["kv_filter_type"] = "property"
 	testData["kv_filter_key_0"] = "test-key-1"
 	testData["kv_filter_value_0"] = "test-value-1"
@@ -721,7 +721,7 @@ func TestAccWatch_multipleRepositoriesKvFilter(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, multipleRepositoriesKvFilter, testData),
+				Config: sdk.ExecuteTemplate(fqrn, multipleRepositoriesKvFilter, testData),
 				Check: resource.ComposeTestCheckFunc(
 					verifyXrayWatch(fqrn, testData),
 					resource.TestCheckResourceAttr(fqrn, "watch_resource.0.type", testData["watch_type"]),
@@ -749,15 +749,15 @@ func TestAccWatch_multipleRepositoriesKvFilter(t *testing.T) {
 }
 
 func TestAccWatch_KvFilterError(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
-	testData := util.MergeMaps(testDataWatch)
+	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
+	testData := sdk.MergeMaps(testDataWatch)
 
 	testData["resource_name"] = resourceName
-	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
-	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", testutil.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", testutil.RandomInt())
 	testData["watch_type"] = "build"
 	testData["repo_type"] = "local"
-	testData["repo0"] = fmt.Sprintf("libs-release-local-0-%d", test.RandomInt())
+	testData["repo0"] = fmt.Sprintf("libs-release-local-0-%d", testutil.RandomInt())
 	testData["kv_filter_type"] = "property"
 	testData["kv_filter_key_0"] = "test-key-1"
 	testData["kv_filter_value_0"] = "test-value-1"
@@ -776,7 +776,7 @@ func TestAccWatch_KvFilterError(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config:      util.ExecuteTemplate(fqrn, kvFilters, testData),
+				Config:      sdk.ExecuteTemplate(fqrn, kvFilters, testData),
 				ExpectError: regexp.MustCompile("attribute 'kv_filter' is set when 'watch_resource.type' is not set to 'repository' or 'all-repos'"),
 			},
 		},
@@ -784,15 +784,15 @@ func TestAccWatch_KvFilterError(t *testing.T) {
 }
 
 func TestAccWatch_build(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
-	testData := util.MergeMaps(testDataWatch)
+	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
+	testData := sdk.MergeMaps(testDataWatch)
 
 	testData["resource_name"] = resourceName
-	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
-	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", testutil.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", testutil.RandomInt())
 	testData["watch_type"] = "build"
-	testData["build_name0"] = fmt.Sprintf("release-pipeline-%d", test.RandomInt())
-	testData["build_name1"] = fmt.Sprintf("release-pipeline1-%d", test.RandomInt())
+	testData["build_name0"] = fmt.Sprintf("release-pipeline-%d", testutil.RandomInt())
+	testData["build_name1"] = fmt.Sprintf("release-pipeline1-%d", testutil.RandomInt())
 	builds := []string{testData["build_name0"]}
 
 	resource.Test(t, resource.TestCase{
@@ -804,7 +804,7 @@ func TestAccWatch_build(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, buildWatchTemplate, testData),
+				Config: sdk.ExecuteTemplate(fqrn, buildWatchTemplate, testData),
 				Check:  verifyXrayWatch(fqrn, testData),
 			},
 			{
@@ -817,16 +817,16 @@ func TestAccWatch_build(t *testing.T) {
 }
 
 func TestAccWatch_buildWithProjectKey(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
+	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
 	projectKey := RandomProjectName()
 
-	testData := util.MergeMaps(testDataWatch)
+	testData := sdk.MergeMaps(testDataWatch)
 	testData["resource_name"] = resourceName
 	testData["project_key"] = projectKey
-	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
-	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", testutil.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", testutil.RandomInt())
 	testData["watch_type"] = "build"
-	testData["build_name0"] = fmt.Sprintf("release-pipeline-%d", test.RandomInt())
+	testData["build_name0"] = fmt.Sprintf("release-pipeline-%d", testutil.RandomInt())
 
 	template := `resource "xray_security_policy" "security" {
 	  name        = "{{ .policy_name_0 }}"
@@ -872,7 +872,7 @@ func TestAccWatch_buildWithProjectKey(t *testing.T) {
 	  }
 	  watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
 	}`
-	config := util.ExecuteTemplate(fqrn, template, testData)
+	config := sdk.ExecuteTemplate(fqrn, template, testData)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -905,14 +905,14 @@ func TestAccWatch_buildWithProjectKey(t *testing.T) {
 }
 
 func TestAccWatch_allBuildsWithProjectKey(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
+	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
 	projectKey := RandomProjectName()
 
-	testData := util.MergeMaps(testDataWatch)
+	testData := sdk.MergeMaps(testDataWatch)
 	testData["resource_name"] = resourceName
 	testData["project_key"] = projectKey
-	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
-	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", testutil.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", testutil.RandomInt())
 	testData["watch_type"] = "all-builds"
 
 	template := `resource "xray_security_policy" "security" {
@@ -967,11 +967,11 @@ func TestAccWatch_allBuildsWithProjectKey(t *testing.T) {
 	  }
 	  watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
 	}`
-	config := util.ExecuteTemplate(fqrn, template, testData)
+	config := sdk.ExecuteTemplate(fqrn, template, testData)
 
-	updatedTestData := util.MergeMaps(testData)
+	updatedTestData := sdk.MergeMaps(testData)
 	updatedTestData["description"] = "New description"
-	updatedConfig := util.ExecuteTemplate(fqrn, template, updatedTestData)
+	updatedConfig := sdk.ExecuteTemplate(fqrn, template, updatedTestData)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -1007,15 +1007,15 @@ func TestAccWatch_allBuildsWithProjectKey(t *testing.T) {
 }
 
 func TestAccWatch_multipleBuilds(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
-	testData := util.MergeMaps(testDataWatch)
+	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
+	testData := sdk.MergeMaps(testDataWatch)
 
 	testData["resource_name"] = resourceName
-	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
-	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", testutil.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", testutil.RandomInt())
 	testData["watch_type"] = "build"
-	testData["build_name0"] = fmt.Sprintf("release-pipeline-%d", test.RandomInt())
-	testData["build_name1"] = fmt.Sprintf("release-pipeline1-%d", test.RandomInt())
+	testData["build_name0"] = fmt.Sprintf("release-pipeline-%d", testutil.RandomInt())
+	testData["build_name1"] = fmt.Sprintf("release-pipeline1-%d", testutil.RandomInt())
 	builds := []string{testData["build_name0"], testData["build_name1"]}
 
 	resource.Test(t, resource.TestCase{
@@ -1027,7 +1027,7 @@ func TestAccWatch_multipleBuilds(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, multipleBuildsWatchTemplate, testData),
+				Config: sdk.ExecuteTemplate(fqrn, multipleBuildsWatchTemplate, testData),
 				Check:  verifyXrayWatch(fqrn, testData),
 			},
 			{
@@ -1040,12 +1040,12 @@ func TestAccWatch_multipleBuilds(t *testing.T) {
 }
 
 func TestAccWatch_allBuilds(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
-	testData := util.MergeMaps(testDataWatch)
+	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
+	testData := sdk.MergeMaps(testDataWatch)
 
 	testData["resource_name"] = resourceName
-	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
-	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", testutil.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", testutil.RandomInt())
 	testData["watch_type"] = "all-builds"
 
 	resource.Test(t, resource.TestCase{
@@ -1056,7 +1056,7 @@ func TestAccWatch_allBuilds(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, allBuildsWatchTemplate, testData),
+				Config: sdk.ExecuteTemplate(fqrn, allBuildsWatchTemplate, testData),
 				Check: resource.ComposeTestCheckFunc(
 					verifyXrayWatch(fqrn, testData),
 					resource.TestCheckTypeSetElemAttr(fqrn, "watch_resource.*.ant_filter.*.exclude_patterns.*", "a*"),
@@ -1077,12 +1077,12 @@ func TestAccWatch_allBuilds(t *testing.T) {
 }
 
 func TestAccWatch_invalidBuildFilter(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
-	testData := util.MergeMaps(testDataWatch)
+	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
+	testData := sdk.MergeMaps(testDataWatch)
 
 	testData["resource_name"] = resourceName
-	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
-	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", testutil.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", testutil.RandomInt())
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -1092,7 +1092,7 @@ func TestAccWatch_invalidBuildFilter(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config:      util.ExecuteTemplate(fqrn, invalidBuildsWatchFilterTemplate, testData),
+				Config:      sdk.ExecuteTemplate(fqrn, invalidBuildsWatchFilterTemplate, testData),
 				ExpectError: regexp.MustCompile(`attribute 'ant_filter' is set when 'watch_resource\.type' is not set to 'all-builds' or 'all-projects'`),
 			},
 		},
@@ -1100,12 +1100,12 @@ func TestAccWatch_invalidBuildFilter(t *testing.T) {
 }
 
 func TestAccWatch_allProjects(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
-	testData := util.MergeMaps(testDataWatch)
+	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
+	testData := sdk.MergeMaps(testDataWatch)
 
 	testData["resource_name"] = resourceName
-	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
-	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", testutil.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", testutil.RandomInt())
 	testData["watch_type"] = "all-projects"
 
 	resource.Test(t, resource.TestCase{
@@ -1116,7 +1116,7 @@ func TestAccWatch_allProjects(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, allProjectsWatchTemplate, testData),
+				Config: sdk.ExecuteTemplate(fqrn, allProjectsWatchTemplate, testData),
 				Check: resource.ComposeTestCheckFunc(
 					verifyXrayWatch(fqrn, testData),
 					resource.TestCheckTypeSetElemAttr(fqrn, "watch_resource.*.ant_filter.*.exclude_patterns.*", "a*"),
@@ -1135,15 +1135,15 @@ func TestAccWatch_allProjects(t *testing.T) {
 
 //goland:noinspection GoErrorStringFormat
 func TestAccWatch_singleProject(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
-	testData := util.MergeMaps(testDataWatch)
+	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
+	testData := sdk.MergeMaps(testDataWatch)
 
 	testData["resource_name"] = resourceName
-	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
-	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", testutil.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", testutil.RandomInt())
 	testData["watch_type"] = "project"
-	testData["project_name_0"] = fmt.Sprintf("test-project-%d", test.RandomInt())
-	testData["project_name_1"] = fmt.Sprintf("test-project-%d", test.RandomInt())
+	testData["project_name_0"] = fmt.Sprintf("test-project-%d", testutil.RandomInt())
+	testData["project_name_1"] = fmt.Sprintf("test-project-%d", testutil.RandomInt())
 	testData["project_key_0"] = "test1"
 	testData["project_key_1"] = "test2"
 
@@ -1172,7 +1172,7 @@ func TestAccWatch_singleProject(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, singleProjectWatchTemplate, testData),
+				Config: sdk.ExecuteTemplate(fqrn, singleProjectWatchTemplate, testData),
 				Check:  verifyXrayWatch(fqrn, testData),
 			},
 			{
@@ -1185,12 +1185,12 @@ func TestAccWatch_singleProject(t *testing.T) {
 }
 
 func TestAccWatch_invalidProjectFilter(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("watch-", "xray_watch")
-	testData := util.MergeMaps(testDataWatch)
+	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
+	testData := sdk.MergeMaps(testDataWatch)
 
 	testData["resource_name"] = resourceName
-	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", test.RandomInt())
-	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", test.RandomInt())
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", testutil.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", testutil.RandomInt())
 	testData["watch_type"] = "project"
 
 	resource.Test(t, resource.TestCase{
@@ -1202,7 +1202,7 @@ func TestAccWatch_invalidProjectFilter(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 
-				Config:      util.ExecuteTemplate(fqrn, invalidProjectWatchFilterTemplate, testData),
+				Config:      sdk.ExecuteTemplate(fqrn, invalidProjectWatchFilterTemplate, testData),
 				ExpectError: regexp.MustCompile(`attribute 'ant_filter' is set when 'watch_resource\.type' is not set to 'all-builds' or 'all-projects'`),
 			},
 		},

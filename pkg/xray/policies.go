@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/jfrog/terraform-provider-shared/util"
+	"github.com/jfrog/terraform-provider-shared/util/sdk"
 	"github.com/jfrog/terraform-provider-shared/validator"
 )
 
@@ -91,7 +91,7 @@ var commonActionsSchema = map[string]*schema.Schema{
 }
 
 var getPolicySchema = func(criteriaSchema map[string]*schema.Schema, actionsSchema map[string]*schema.Schema) map[string]*schema.Schema {
-	return util.MergeMaps(
+	return sdk.MergeMaps(
 		getProjectKeySchema(false, ""),
 		map[string]*schema.Schema{
 			"name": {
@@ -314,7 +314,7 @@ func unpackSecurityCriteria(tfCriteria map[string]interface{}) *PolicyRuleCriter
 		criteria.MaliciousPackage = v.(bool)
 	}
 	if v, ok := tfCriteria["vulnerability_ids"]; ok {
-		criteria.VulnerabilityIds = util.CastToStringArr(v.(*schema.Set).List())
+		criteria.VulnerabilityIds = sdk.CastToStringArr(v.(*schema.Set).List())
 	}
 	if _, ok := tfCriteria["exposures"]; ok {
 		criteria.Exposures = unpackExposures(tfCriteria["exposures"].([]interface{}))
@@ -333,7 +333,7 @@ func unpackSecurityCriteria(tfCriteria map[string]interface{}) *PolicyRuleCriter
 func unpackLicenseCriteria(tfCriteria map[string]interface{}) *PolicyRuleCriteria {
 	criteria := new(PolicyRuleCriteria)
 	if v, ok := tfCriteria["allow_unknown"]; ok {
-		criteria.AllowUnknown = util.BoolPtr(v.(bool))
+		criteria.AllowUnknown = sdk.BoolPtr(v.(bool))
 	}
 	if v, ok := tfCriteria["banned_licenses"]; ok {
 		criteria.BannedLicenses = unpackLicenses(v.(*schema.Set))
@@ -342,7 +342,7 @@ func unpackLicenseCriteria(tfCriteria map[string]interface{}) *PolicyRuleCriteri
 		criteria.AllowedLicenses = unpackLicenses(v.(*schema.Set))
 	}
 	if v, ok := tfCriteria["multi_license_permissive"]; ok {
-		criteria.MultiLicensePermissive = util.BoolPtr(v.(bool))
+		criteria.MultiLicensePermissive = sdk.BoolPtr(v.(bool))
 	}
 
 	return criteria
@@ -440,10 +440,10 @@ func unpackExposures(l []interface{}) *PolicyExposures {
 	m := l[0].(map[string]interface{})
 	exposures := &PolicyExposures{
 		MinSeverity:  StringPtr(m["min_severity"].(string)),
-		Secrets:      util.BoolPtr(m["secrets"].(bool)),
-		Applications: util.BoolPtr(m["applications"].(bool)),
-		Services:     util.BoolPtr(m["services"].(bool)),
-		Iac:          util.BoolPtr(m["iac"].(bool)),
+		Secrets:      sdk.BoolPtr(m["secrets"].(bool)),
+		Applications: sdk.BoolPtr(m["applications"].(bool)),
+		Services:     sdk.BoolPtr(m["services"].(bool)),
+		Iac:          sdk.BoolPtr(m["iac"].(bool)),
 	}
 	return exposures
 }
@@ -716,7 +716,7 @@ func resourceXrayPolicyCreate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, policy.ProjectKey)
+	req, err := getRestyRequest(m.(sdk.ProvderMetadata).Client, policy.ProjectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -734,7 +734,7 @@ func resourceXrayPolicyRead(ctx context.Context, d *schema.ResourceData, m inter
 	policy := Policy{}
 
 	projectKey := d.Get("project_key").(string)
-	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, projectKey)
+	req, err := getRestyRequest(m.(sdk.ProvderMetadata).Client, projectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -761,7 +761,7 @@ func resourceXrayPolicyUpdate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, policy.ProjectKey)
+	req, err := getRestyRequest(m.(sdk.ProvderMetadata).Client, policy.ProjectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -786,7 +786,7 @@ func resourceXrayPolicyDelete(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, policy.ProjectKey)
+	req, err := getRestyRequest(m.(sdk.ProvderMetadata).Client, policy.ProjectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}

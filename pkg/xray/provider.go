@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/jfrog/terraform-provider-shared/client"
-	"github.com/jfrog/terraform-provider-shared/util"
+	"github.com/jfrog/terraform-provider-shared/util/sdk"
 	"github.com/jfrog/terraform-provider-shared/validator"
 )
 
@@ -45,7 +45,7 @@ func Provider() *schema.Provider {
 			},
 		},
 
-		ResourcesMap: util.AddTelemetry(
+		ResourcesMap: sdk.AddTelemetry(
 			productId,
 			map[string]*schema.Resource{
 				"xray_security_policy":          resourceXraySecurityPolicyV2(),
@@ -97,23 +97,29 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 
 	checkLicense := d.Get("check_license").(bool)
 	if checkLicense {
-		licenseErr := util.CheckArtifactoryLicense(restyBase, "Enterprise", "Commercial")
+		licenseErr := sdk.CheckArtifactoryLicense(restyBase, "Enterprise", "Commercial")
 		if licenseErr != nil {
 			return nil, licenseErr
 		}
 	}
 
-	version, err := util.GetArtifactoryVersion(restyBase)
+	artifactoryVersion, err := sdk.GetArtifactoryVersion(restyBase)
+	if err != nil {
+		return nil, diag.FromErr(err)
+	}
+
+	xrayVersion, err := sdk.GetXrayVersion(restyBase)
 	if err != nil {
 		return nil, diag.FromErr(err)
 	}
 
 	featureUsage := fmt.Sprintf("Terraform/%s", terraformVersion)
-	util.SendUsage(ctx, restyBase, productId, featureUsage)
+	sdk.SendUsage(ctx, restyBase, productId, featureUsage)
 
-	return util.ProvderMetadata{
+	return sdk.ProvderMetadata{
 		Client:             restyBase,
-		ArtifactoryVersion: version,
+		ArtifactoryVersion: artifactoryVersion,
+		XrayVersion:        xrayVersion,
 	}, nil
 
 }

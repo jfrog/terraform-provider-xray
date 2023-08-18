@@ -7,7 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/jfrog/terraform-provider-shared/util"
+	"github.com/jfrog/terraform-provider-shared/util/sdk"
 )
 
 func resourceXraySettings() *schema.Resource {
@@ -38,7 +38,7 @@ type DbSyncDailyUpdatesTime struct {
 }
 
 func unpackDBSyncTime(s *schema.ResourceData) DbSyncDailyUpdatesTime {
-	d := &util.ResourceData{ResourceData: s}
+	d := &sdk.ResourceData{ResourceData: s}
 	dbSyncTime := DbSyncDailyUpdatesTime{
 		DbSyncTime: d.GetString("db_sync_updates_time", false),
 	}
@@ -54,7 +54,7 @@ func packDBSyncTime(dbSyncTime DbSyncDailyUpdatesTime, d *schema.ResourceData) d
 
 func resourceXrayDbSyncTimeRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	dbSyncTime := DbSyncDailyUpdatesTime{}
-	resp, err := m.(util.ProvderMetadata).Client.R().SetResult(&dbSyncTime).Get("xray/api/v1/configuration/dbsync/time")
+	resp, err := m.(sdk.ProvderMetadata).Client.R().SetResult(&dbSyncTime).Get("xray/api/v1/configuration/dbsync/time")
 	if err != nil {
 		if resp != nil && resp.StatusCode() != http.StatusOK {
 			log.Printf("Critical error. DB sync settings (%s) not found.", d.Id())
@@ -67,7 +67,7 @@ func resourceXrayDbSyncTimeRead(_ context.Context, d *schema.ResourceData, m int
 
 func resourceXrayDbSyncTimeUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	dbSyncTime := unpackDBSyncTime(d)
-	_, err := m.(util.ProvderMetadata).Client.R().SetBody(dbSyncTime).Put("xray/api/v1/configuration/dbsync/time")
+	_, err := m.(sdk.ProvderMetadata).Client.R().SetBody(dbSyncTime).Put("xray/api/v1/configuration/dbsync/time")
 	if err != nil {
 		return diag.FromErr(err)
 	}

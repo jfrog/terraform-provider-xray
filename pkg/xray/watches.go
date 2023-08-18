@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/jfrog/terraform-provider-shared/util"
+	"github.com/jfrog/terraform-provider-shared/util/sdk"
 	"golang.org/x/exp/slices"
 )
 
@@ -178,8 +178,8 @@ func unpackAntFilters(d *schema.Set, filterType string) []WatchFilter {
 
 		// create JSON string from slice:
 		// from []string{"a", "b"} to `["ExcludePatterns": ["a", "b"]]`
-		excludePatterns, _ := json.Marshal(util.CastToStringArr(antValue["exclude_patterns"].([]interface{})))
-		includePatterns, _ := json.Marshal(util.CastToStringArr(antValue["include_patterns"].([]interface{})))
+		excludePatterns, _ := json.Marshal(sdk.CastToStringArr(antValue["exclude_patterns"].([]interface{})))
+		includePatterns, _ := json.Marshal(sdk.CastToStringArr(antValue["include_patterns"].([]interface{})))
 		filterJsonString := fmt.Sprintf(
 			`{"ExcludePatterns": %s, "IncludePatterns": %s}`,
 			excludePatterns,
@@ -397,7 +397,7 @@ func packWatch(ctx context.Context, watch Watch, d *schema.ResourceData) diag.Di
 func resourceXrayWatchCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	watch := unpackWatch(d)
 
-	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, watch.ProjectKey)
+	req, err := getRestyRequest(m.(sdk.ProvderMetadata).Client, watch.ProjectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -427,7 +427,7 @@ func resourceXrayWatchRead(ctx context.Context, d *schema.ResourceData, m interf
 	watch := Watch{}
 
 	projectKey := d.Get("project_key").(string)
-	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, projectKey)
+	req, err := getRestyRequest(m.(sdk.ProvderMetadata).Client, projectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -452,7 +452,7 @@ func resourceXrayWatchRead(ctx context.Context, d *schema.ResourceData, m interf
 func resourceXrayWatchUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	watch := unpackWatch(d)
 
-	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, watch.ProjectKey)
+	req, err := getRestyRequest(m.(sdk.ProvderMetadata).Client, watch.ProjectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -478,7 +478,7 @@ func resourceXrayWatchUpdate(ctx context.Context, d *schema.ResourceData, m inte
 func resourceXrayWatchDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	watch := unpackWatch(d)
 
-	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, watch.ProjectKey)
+	req, err := getRestyRequest(m.(sdk.ProvderMetadata).Client, watch.ProjectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}

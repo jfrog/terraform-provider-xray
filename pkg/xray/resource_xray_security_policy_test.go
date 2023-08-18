@@ -8,9 +8,9 @@ import (
 
 	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/go-version"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/jfrog/terraform-provider-shared/test"
-	"github.com/jfrog/terraform-provider-shared/util"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/jfrog/terraform-provider-shared/testutil"
+	"github.com/jfrog/terraform-provider-shared/util/sdk"
 )
 
 const criteriaTypeCvss = "cvss"
@@ -39,12 +39,12 @@ var testDataSecurity = map[string]string{
 }
 
 func TestAccSecurityPolicy_unknownMinSeveritySecurityPolicy_beforeVersion3602(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
 
-	testData := util.MergeMaps(testDataSecurity)
+	testData := sdk.MergeMaps(testDataSecurity)
 	testData["resource_name"] = resourceName
-	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-%d", test.RandomInt())
-	testData["rule_name"] = fmt.Sprintf("test-security-rule-%d", test.RandomInt())
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-%d", testutil.RandomInt())
 	testData["min_severity"] = "All severities"
 
 	var onOrAfterVersion3602 = func() (bool, error) {
@@ -89,7 +89,7 @@ func TestAccSecurityPolicy_unknownMinSeveritySecurityPolicy_beforeVersion3602(t 
 		Steps: []resource.TestStep{
 			{
 				SkipFunc: onOrAfterVersion3602,
-				Config:   util.ExecuteTemplate(fqrn, securityPolicyMinSeverity, testData),
+				Config:   sdk.ExecuteTemplate(fqrn, securityPolicyMinSeverity, testData),
 				Check:    verifySecurityPolicy(fqrn, testData, criteriaTypeSeverity),
 			},
 		},
@@ -99,11 +99,11 @@ func TestAccSecurityPolicy_unknownMinSeveritySecurityPolicy_beforeVersion3602(t 
 // The test will try to create a security policy with the type of "license"
 // The Policy criteria will be ignored in this case
 func TestAccSecurityPolicy_badTypeInSecurityPolicy(t *testing.T) {
-	policyName := fmt.Sprintf("terraform-security-policy-1-%d", test.RandomInt())
+	policyName := fmt.Sprintf("terraform-security-policy-1-%d", testutil.RandomInt())
 	policyDesc := "policy created by xray acceptance tests"
-	ruleName := fmt.Sprintf("test-security-rule-1-%d", test.RandomInt())
+	ruleName := fmt.Sprintf("test-security-rule-1-%d", testutil.RandomInt())
 	rangeTo := 5
-	resourceName := "policy-" + strconv.Itoa(test.RandomInt())
+	resourceName := "policy-" + strconv.Itoa(testutil.RandomInt())
 	fqrn := "xray_security_policy." + resourceName
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -121,11 +121,11 @@ func TestAccSecurityPolicy_badTypeInSecurityPolicy(t *testing.T) {
 // The test will try to use "allowed_licenses" in the security policy criteria
 // That field is acceptable only in license policy. No API call, expected to fail on the TF resource verification
 func TestAccSecurityPolicy_badSecurityCriteria(t *testing.T) {
-	policyName := fmt.Sprintf("terraform-security-policy-2-%d", test.RandomInt())
+	policyName := fmt.Sprintf("terraform-security-policy-2-%d", testutil.RandomInt())
 	policyDesc := "policy created by xray acceptance tests"
-	ruleName := fmt.Sprintf("test-security-rule-2-%d", test.RandomInt())
+	ruleName := fmt.Sprintf("test-security-rule-2-%d", testutil.RandomInt())
 	allowedLicense := "BSD-4-Clause"
-	resourceName := "policy-" + strconv.Itoa(test.RandomInt())
+	resourceName := "policy-" + strconv.Itoa(testutil.RandomInt())
 	fqrn := "xray_security_policy." + resourceName
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -143,12 +143,12 @@ func TestAccSecurityPolicy_badSecurityCriteria(t *testing.T) {
 // This test will try to create a security policy with "build_failure_grace_period_in_days" set,
 // but with "fail_build" set to false, which conflicts with the field mentioned above.
 func TestAccSecurityPolicy_badGracePeriod(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
-	testData := util.MergeMaps(testDataSecurity)
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
 
 	testData["resource_name"] = resourceName
-	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-3-%d", test.RandomInt())
-	testData["rule_name"] = fmt.Sprintf("test-security-rule-3-%d", test.RandomInt())
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-3-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-3-%d", testutil.RandomInt())
 	testData["fail_build"] = "false"
 	testData["grace_period_days"] = "5"
 
@@ -158,7 +158,7 @@ func TestAccSecurityPolicy_badGracePeriod(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config:      util.ExecuteTemplate(fqrn, securityPolicyCVSS, testData),
+				Config:      sdk.ExecuteTemplate(fqrn, securityPolicyCVSS, testData),
 				ExpectError: regexp.MustCompile("Found Invalid Policy"),
 			},
 		},
@@ -166,14 +166,14 @@ func TestAccSecurityPolicy_badGracePeriod(t *testing.T) {
 }
 
 func TestAccSecurityPolicy_withProjectKey(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
-	projectKey := fmt.Sprintf("testproj%d", test.RandSelect(1, 2, 3, 4, 5))
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	projectKey := fmt.Sprintf("testproj%d", testutil.RandSelect(1, 2, 3, 4, 5))
 
-	testData := util.MergeMaps(testDataSecurity)
+	testData := sdk.MergeMaps(testDataSecurity)
 	testData["resource_name"] = resourceName
 	testData["project_key"] = projectKey
-	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-4-%d", test.RandomInt())
-	testData["rule_name"] = fmt.Sprintf("test-security-rule-4-%d", test.RandomInt())
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-4-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-4-%d", testutil.RandomInt())
 
 	template := `resource "xray_security_policy" "{{ .resource_name }}" {
 		name        = "{{ .policy_name }}"
@@ -205,11 +205,11 @@ func TestAccSecurityPolicy_withProjectKey(t *testing.T) {
 		}
 	}`
 
-	config := util.ExecuteTemplate(fqrn, template, testData)
+	config := sdk.ExecuteTemplate(fqrn, template, testData)
 
-	updatedTestData := util.MergeMaps(testData)
+	updatedTestData := sdk.MergeMaps(testData)
 	updatedTestData["policy_description"] = "New description"
-	updatedConfig := util.ExecuteTemplate(fqrn, template, updatedTestData)
+	updatedConfig := sdk.ExecuteTemplate(fqrn, template, updatedTestData)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -245,12 +245,12 @@ func TestAccSecurityPolicy_withProjectKey(t *testing.T) {
 
 // CVSS criteria, block downloading of unscanned and active
 func TestAccSecurityPolicy_createBlockDownloadTrueCVSS(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
-	testData := util.MergeMaps(testDataSecurity)
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
 
 	testData["resource_name"] = resourceName
-	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-4-%d", test.RandomInt())
-	testData["rule_name"] = fmt.Sprintf("test-security-rule-4-%d", test.RandomInt())
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-4-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-4-%d", testutil.RandomInt())
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -258,7 +258,7 @@ func TestAccSecurityPolicy_createBlockDownloadTrueCVSS(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, securityPolicyCVSS, testData),
+				Config: sdk.ExecuteTemplate(fqrn, securityPolicyCVSS, testData),
 				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeCvss),
 			},
 			{
@@ -272,12 +272,12 @@ func TestAccSecurityPolicy_createBlockDownloadTrueCVSS(t *testing.T) {
 
 // CVSS criteria, allow downloading of unscanned and active
 func TestAccSecurityPolicy_createBlockDownloadFalseCVSS(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
-	testData := util.MergeMaps(testDataSecurity)
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
 
 	testData["resource_name"] = resourceName
-	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-5-%d", test.RandomInt())
-	testData["rule_name"] = fmt.Sprintf("test-security-rule-5-%d", test.RandomInt())
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-5-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-5-%d", testutil.RandomInt())
 	testData["block_unscanned"] = "false"
 	testData["block_active"] = "false"
 
@@ -287,7 +287,7 @@ func TestAccSecurityPolicy_createBlockDownloadFalseCVSS(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, securityPolicyCVSS, testData),
+				Config: sdk.ExecuteTemplate(fqrn, securityPolicyCVSS, testData),
 				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeCvss),
 			},
 			{
@@ -301,12 +301,12 @@ func TestAccSecurityPolicy_createBlockDownloadFalseCVSS(t *testing.T) {
 
 // Min severity criteria, block downloading of unscanned and active
 func TestAccSecurityPolicy_createBlockDownloadTrueMinSeverity(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
-	testData := util.MergeMaps(testDataSecurity)
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
 
 	testData["resource_name"] = resourceName
-	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-6-%d", test.RandomInt())
-	testData["rule_name"] = fmt.Sprintf("test-security-rule-6-%d", test.RandomInt())
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-6-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-6-%d", testutil.RandomInt())
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -314,7 +314,7 @@ func TestAccSecurityPolicy_createBlockDownloadTrueMinSeverity(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, securityPolicyMinSeverity, testData),
+				Config: sdk.ExecuteTemplate(fqrn, securityPolicyMinSeverity, testData),
 				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeSeverity),
 			},
 			{
@@ -328,12 +328,12 @@ func TestAccSecurityPolicy_createBlockDownloadTrueMinSeverity(t *testing.T) {
 
 // Min severity criteria, block downloading of unscanned and active, fix_version_dependant = true
 func TestAccSecurityPolicy_createFixVersionDepMinSeverity(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
-	testData := util.MergeMaps(testDataSecurity)
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
 
 	testData["resource_name"] = resourceName
-	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-6-%d", test.RandomInt())
-	testData["rule_name"] = fmt.Sprintf("test-security-rule-6-%d", test.RandomInt())
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-6-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-6-%d", testutil.RandomInt())
 	testData["min_severity"] = "High"
 	testData["fix_version_dependant"] = "true"
 
@@ -343,7 +343,7 @@ func TestAccSecurityPolicy_createFixVersionDepMinSeverity(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, securityPolicyFixVersionDep, testData),
+				Config: sdk.ExecuteTemplate(fqrn, securityPolicyFixVersionDep, testData),
 				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeSeverity),
 			},
 			{
@@ -358,12 +358,12 @@ func TestAccSecurityPolicy_createFixVersionDepMinSeverity(t *testing.T) {
 
 // Malicious package criteria, block downloading of unscanned and active, fix_version_dependant = false
 func TestAccSecurityPolicy_createMaliciousPackage(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
-	testData := util.MergeMaps(testDataSecurity)
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
 
 	testData["resource_name"] = resourceName
-	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-6-%d", test.RandomInt())
-	testData["rule_name"] = fmt.Sprintf("test-security-rule-6-%d", test.RandomInt())
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-6-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-6-%d", testutil.RandomInt())
 	testData["malicious_package"] = "true"
 	testData["fix_version_dependant"] = "false"
 
@@ -373,7 +373,7 @@ func TestAccSecurityPolicy_createMaliciousPackage(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, securityPolicyMaliciousPkgFixVersionDep, testData),
+				Config: sdk.ExecuteTemplate(fqrn, securityPolicyMaliciousPkgFixVersionDep, testData),
 				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeMaliciousPkg),
 			},
 			{
@@ -387,12 +387,12 @@ func TestAccSecurityPolicy_createMaliciousPackage(t *testing.T) {
 }
 
 func TestAccSecurityPolicy_createMaliciousPackageFail(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
-	testData := util.MergeMaps(testDataSecurity)
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
 
 	testData["resource_name"] = resourceName
-	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-6-%d", test.RandomInt())
-	testData["rule_name"] = fmt.Sprintf("test-security-rule-6-%d", test.RandomInt())
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-6-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-6-%d", testutil.RandomInt())
 	testData["malicious_package"] = "true"
 	testData["fix_version_dependant"] = "true"
 
@@ -402,7 +402,7 @@ func TestAccSecurityPolicy_createMaliciousPackageFail(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config:      util.ExecuteTemplate(fqrn, securityPolicyMaliciousPkgFixVersionDep, testData),
+				Config:      sdk.ExecuteTemplate(fqrn, securityPolicyMaliciousPkgFixVersionDep, testData),
 				ExpectError: regexp.MustCompile("fix_version_dependant must be set to false if malicious_package is true"),
 			},
 		},
@@ -410,12 +410,12 @@ func TestAccSecurityPolicy_createMaliciousPackageFail(t *testing.T) {
 }
 
 func TestAccSecurityPolicy_createMaliciousPackageCvssMinSeverityFail(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
-	testData := util.MergeMaps(testDataSecurity)
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
 
 	testData["resource_name"] = resourceName
-	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-6-%d", test.RandomInt())
-	testData["rule_name"] = fmt.Sprintf("test-security-rule-6-%d", test.RandomInt())
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-6-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-6-%d", testutil.RandomInt())
 	testData["malicious_package"] = "true"
 	testData["min_severity"] = "High"
 
@@ -425,7 +425,7 @@ func TestAccSecurityPolicy_createMaliciousPackageCvssMinSeverityFail(t *testing.
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config:      util.ExecuteTemplate(fqrn, securityPolicyCVSSMinSeverityMaliciousPkg, testData),
+				Config:      sdk.ExecuteTemplate(fqrn, securityPolicyCVSSMinSeverityMaliciousPkg, testData),
 				ExpectError: regexp.MustCompile("malicious_package can't be set together with min_severity and/or cvss_range"),
 			},
 		},
@@ -433,12 +433,12 @@ func TestAccSecurityPolicy_createMaliciousPackageCvssMinSeverityFail(t *testing.
 }
 
 func TestAccSecurityPolicy_createCvssMinSeverityFail(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
-	testData := util.MergeMaps(testDataSecurity)
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
 
 	testData["resource_name"] = resourceName
-	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-6-%d", test.RandomInt())
-	testData["rule_name"] = fmt.Sprintf("test-security-rule-6-%d", test.RandomInt())
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-6-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-6-%d", testutil.RandomInt())
 	testData["malicious_package"] = "false"
 	testData["min_severity"] = "High"
 
@@ -448,7 +448,7 @@ func TestAccSecurityPolicy_createCvssMinSeverityFail(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config:      util.ExecuteTemplate(fqrn, securityPolicyCVSSMinSeverityMaliciousPkg, testData),
+				Config:      sdk.ExecuteTemplate(fqrn, securityPolicyCVSSMinSeverityMaliciousPkg, testData),
 				ExpectError: regexp.MustCompile("min_severity can't be set together with cvss_range"),
 			},
 		},
@@ -457,12 +457,12 @@ func TestAccSecurityPolicy_createCvssMinSeverityFail(t *testing.T) {
 
 // Min severity criteria, allow downloading of unscanned and active
 func TestAccSecurityPolicy_createBlockDownloadFalseMinSeverity(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
-	testData := util.MergeMaps(testDataSecurity)
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
 
 	testData["resource_name"] = resourceName
-	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-7-%d", test.RandomInt())
-	testData["rule_name"] = fmt.Sprintf("test-security-rule-7-%d", test.RandomInt())
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-7-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-7-%d", testutil.RandomInt())
 	testData["block_unscanned"] = "false"
 	testData["block_active"] = "false"
 
@@ -472,7 +472,7 @@ func TestAccSecurityPolicy_createBlockDownloadFalseMinSeverity(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, securityPolicyMinSeverity, testData),
+				Config: sdk.ExecuteTemplate(fqrn, securityPolicyMinSeverity, testData),
 				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeSeverity),
 			},
 			{
@@ -486,12 +486,12 @@ func TestAccSecurityPolicy_createBlockDownloadFalseMinSeverity(t *testing.T) {
 
 // CVSS criteria, use float values for CVSS range
 func TestAccSecurityPolicy_createCVSSFloat(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
-	testData := util.MergeMaps(testDataSecurity)
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
 
 	testData["resource_name"] = resourceName
-	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-8-%d", test.RandomInt())
-	testData["rule_name"] = fmt.Sprintf("test-security-rule-8-%d", test.RandomInt())
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-8-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-8-%d", testutil.RandomInt())
 	testData["cvss_from"] = "1.5"
 	testData["cvss_to"] = "5.3"
 
@@ -501,7 +501,7 @@ func TestAccSecurityPolicy_createCVSSFloat(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, securityPolicyCVSS, testData),
+				Config: sdk.ExecuteTemplate(fqrn, securityPolicyCVSS, testData),
 				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeCvss),
 			},
 			{
@@ -515,12 +515,12 @@ func TestAccSecurityPolicy_createCVSSFloat(t *testing.T) {
 
 // Negative test, block unscanned cannot be set without blocking of download
 func TestAccSecurityPolicy_blockMismatchCVSS(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
-	testData := util.MergeMaps(testDataSecurity)
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
 
 	testData["resource_name"] = resourceName
-	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-9-%d", test.RandomInt())
-	testData["rule_name"] = fmt.Sprintf("test-security-rule-9-%d", test.RandomInt())
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-9-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-9-%d", testutil.RandomInt())
 	testData["block_unscanned"] = "true"
 	testData["block_active"] = "false"
 
@@ -530,7 +530,7 @@ func TestAccSecurityPolicy_blockMismatchCVSS(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config:      util.ExecuteTemplate(fqrn, securityPolicyCVSS, testData),
+				Config:      sdk.ExecuteTemplate(fqrn, securityPolicyCVSS, testData),
 				ExpectError: regexp.MustCompile("Found Invalid Policy"),
 			},
 		},
@@ -538,12 +538,12 @@ func TestAccSecurityPolicy_blockMismatchCVSS(t *testing.T) {
 }
 
 func TestAccSecurityPolicy_noActions(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
-	testData := util.MergeMaps(testDataSecurity)
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
 
 	testData["resource_name"] = resourceName
-	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-9-%d", test.RandomInt())
-	testData["rule_name"] = fmt.Sprintf("test-security-rule-9-%d", test.RandomInt())
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-9-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-9-%d", testutil.RandomInt())
 	testData["block_unscanned"] = "false"
 	testData["block_active"] = "false"
 	testData["CVE_1"] = "CVE-2022-12345"
@@ -556,7 +556,7 @@ func TestAccSecurityPolicy_noActions(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config:      util.ExecuteTemplate(fqrn, securityPolicyNoActions, testData),
+				Config:      sdk.ExecuteTemplate(fqrn, securityPolicyNoActions, testData),
 				ExpectError: regexp.MustCompile("Insufficient actions blocks"),
 			},
 		},
@@ -564,12 +564,12 @@ func TestAccSecurityPolicy_noActions(t *testing.T) {
 }
 
 func TestAccSecurityPolicy_vulnerabilityIds(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
-	testData := util.MergeMaps(testDataSecurity)
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
 
 	testData["resource_name"] = resourceName
-	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-9-%d", test.RandomInt())
-	testData["rule_name"] = fmt.Sprintf("test-security-rule-9-%d", test.RandomInt())
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-9-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-9-%d", testutil.RandomInt())
 	testData["block_unscanned"] = "false"
 	testData["block_active"] = "false"
 	testData["CVE_1"] = "CVE-2022-12345"
@@ -582,7 +582,7 @@ func TestAccSecurityPolicy_vulnerabilityIds(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, securityPolicyVulnIds, testData),
+				Config: sdk.ExecuteTemplate(fqrn, securityPolicyVulnIds, testData),
 				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeVulnerabilityIds),
 			},
 			{
@@ -595,13 +595,13 @@ func TestAccSecurityPolicy_vulnerabilityIds(t *testing.T) {
 }
 
 func TestAccSecurityPolicy_vulnerabilityIdsIncorrectCVEFails(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
-	testData := util.MergeMaps(testDataSecurity)
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
 
 	for _, invalidCVE := range []string{"CVE-20211-67890", "CVE-2021-678", "Xray-12345", "cve-2021-67890", "CVE-11-67890", "XRAY-1"} {
 		testData["resource_name"] = resourceName
-		testData["policy_name"] = fmt.Sprintf("terraform-security-policy-9-%d", test.RandomInt())
-		testData["rule_name"] = fmt.Sprintf("test-security-rule-9-%d", test.RandomInt())
+		testData["policy_name"] = fmt.Sprintf("terraform-security-policy-9-%d", testutil.RandomInt())
+		testData["rule_name"] = fmt.Sprintf("test-security-rule-9-%d", testutil.RandomInt())
 		testData["block_unscanned"] = "false"
 		testData["block_active"] = "false"
 		testData["CVE_1"] = invalidCVE
@@ -614,7 +614,7 @@ func TestAccSecurityPolicy_vulnerabilityIdsIncorrectCVEFails(t *testing.T) {
 			ProviderFactories: testAccProviders(),
 			Steps: []resource.TestStep{
 				{
-					Config:      util.ExecuteTemplate(fqrn, securityPolicyVulnIds, testData),
+					Config:      sdk.ExecuteTemplate(fqrn, securityPolicyVulnIds, testData),
 					ExpectError: regexp.MustCompile("invalid value for vulnerability_ids"),
 				},
 			},
@@ -623,8 +623,8 @@ func TestAccSecurityPolicy_vulnerabilityIdsIncorrectCVEFails(t *testing.T) {
 }
 
 func TestAccSecurityPolicy_conflictingAttributesFail(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
-	testData := util.MergeMaps(testDataSecurity)
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
 
 	testAttributes := []string{
 		"vulnerability_ids = [\"CVE-2022-12345\", \"CVE-2021-67890\", \"XRAY-1234\"]",
@@ -640,8 +640,8 @@ func TestAccSecurityPolicy_conflictingAttributesFail(t *testing.T) {
 				continue
 			}
 			testData["resource_name"] = resourceName
-			testData["policy_name"] = fmt.Sprintf("terraform-security-policy-9-%d", test.RandomInt())
-			testData["rule_name"] = fmt.Sprintf("test-security-rule-9-%d", test.RandomInt())
+			testData["policy_name"] = fmt.Sprintf("terraform-security-policy-9-%d", testutil.RandomInt())
+			testData["rule_name"] = fmt.Sprintf("test-security-rule-9-%d", testutil.RandomInt())
 			testData["block_unscanned"] = "false"
 			testData["block_active"] = "false"
 			testData["test_attribute"] = testAttribute
@@ -654,7 +654,7 @@ func TestAccSecurityPolicy_conflictingAttributesFail(t *testing.T) {
 				ProviderFactories: testAccProviders(),
 				Steps: []resource.TestStep{
 					{
-						Config:      util.ExecuteTemplate(fqrn, securityPolicyVulnIdsConflict, testData),
+						Config:      sdk.ExecuteTemplate(fqrn, securityPolicyVulnIdsConflict, testData),
 						ExpectError: regexp.MustCompile("can't be set together"),
 					},
 				},
@@ -663,12 +663,12 @@ func TestAccSecurityPolicy_conflictingAttributesFail(t *testing.T) {
 	}
 }
 func TestAccSecurityPolicy_vulnerabilityIdsLimitFail(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
-	testData := util.MergeMaps(testDataSecurity)
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
 	CVEString := generateListOfNames("CVE-2022-", 101)
 	testData["resource_name"] = resourceName
-	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-9-%d", test.RandomInt())
-	testData["rule_name"] = fmt.Sprintf("test-security-rule-9-%d", test.RandomInt())
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-9-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-9-%d", testutil.RandomInt())
 	testData["block_unscanned"] = "false"
 	testData["block_active"] = "false"
 	testData["CVEs"] = CVEString
@@ -679,7 +679,7 @@ func TestAccSecurityPolicy_vulnerabilityIdsLimitFail(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config:      util.ExecuteTemplate(fqrn, securityPolicyVulnIdsLimit, testData),
+				Config:      sdk.ExecuteTemplate(fqrn, securityPolicyVulnIdsLimit, testData),
 				ExpectError: regexp.MustCompile("Too many list items"),
 			},
 		},
@@ -687,12 +687,12 @@ func TestAccSecurityPolicy_vulnerabilityIdsLimitFail(t *testing.T) {
 }
 
 func TestAccSecurityPolicy_exposures(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("policy-", "xray_security_policy")
-	testData := util.MergeMaps(testDataSecurity)
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
 
 	testData["resource_name"] = resourceName
-	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-6-%d", test.RandomInt())
-	testData["rule_name"] = fmt.Sprintf("test-security-rule-6-%d", test.RandomInt())
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-6-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-6-%d", testutil.RandomInt())
 	testData["exposures_min_severity"] = "High"
 	testData["exposures_secrets"] = "true"
 	testData["exposures_applications"] = "true"
@@ -705,7 +705,7 @@ func TestAccSecurityPolicy_exposures(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, securityPolicyExposures, testData),
+				Config: sdk.ExecuteTemplate(fqrn, securityPolicyExposures, testData),
 				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeExposures),
 			},
 			{

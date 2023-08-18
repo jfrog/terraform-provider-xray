@@ -7,10 +7,10 @@ import (
 	"testing"
 
 	"github.com/go-resty/resty/v2"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/jfrog/terraform-provider-shared/client"
-	"github.com/jfrog/terraform-provider-shared/test"
-	"github.com/jfrog/terraform-provider-shared/util"
+	"github.com/jfrog/terraform-provider-shared/testutil"
+	"github.com/jfrog/terraform-provider-shared/util/sdk"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -466,17 +466,17 @@ func TestAccReport_BadVulnerabilitiesFilter(t *testing.T) {
 
 func mkFilterTestCase(t *testing.T, resourceFields map[string]interface{}, filterFields map[string]interface{},
 	reportName string, resourceName string) (*testing.T, resource.TestCase) {
-	_, fqrn, name := test.MkNames(reportName, resourceName)
+	_, fqrn, name := testutil.MkNames(reportName, resourceName)
 
-	allFields := util.MergeMaps(filterFields, resourceFields)
-	allFieldsHcl := util.FmtMapToHcl(allFields)
+	allFields := sdk.MergeMaps(filterFields, resourceFields)
+	allFieldsHcl := sdk.FmtMapToHcl(allFields)
 	const remoteRepoFull = `
 		resource "%s" "%s" {
 %s
 		}
 	`
-	extraChecks := test.MapToTestChecks(fqrn, resourceFields)
-	defaultChecks := test.MapToTestChecks(fqrn, allFields)
+	extraChecks := testutil.MapToTestChecks(fqrn, resourceFields)
+	defaultChecks := testutil.MapToTestChecks(fqrn, allFields)
 
 	checks := append(defaultChecks, extraChecks...)
 	config := fmt.Sprintf(remoteRepoFull, resourceName, name, allFieldsHcl)
@@ -496,10 +496,10 @@ func mkFilterTestCase(t *testing.T, resourceFields map[string]interface{}, filte
 
 func mkFilterNegativeTestCase(t *testing.T, resourceFields map[string]interface{}, filterFields map[string]interface{},
 	reportName string, resourceName string, expectedErrorMessage string) (*testing.T, resource.TestCase) {
-	_, _, name := test.MkNames(reportName, resourceName)
+	_, _, name := testutil.MkNames(reportName, resourceName)
 
-	allFields := util.MergeMaps(filterFields, resourceFields)
-	allFieldsHcl := util.FmtMapToHcl(allFields)
+	allFields := sdk.MergeMaps(filterFields, resourceFields)
+	allFieldsHcl := sdk.FmtMapToHcl(allFields)
 	const remoteRepoFull = `
 		resource "%s" "%s" {
 %s

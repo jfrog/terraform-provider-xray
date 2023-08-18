@@ -9,13 +9,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/jfrog/terraform-provider-shared/util"
+	"github.com/jfrog/terraform-provider-shared/util/sdk"
 	"github.com/jfrog/terraform-provider-shared/validator"
 	"golang.org/x/exp/slices"
 )
 
 var getReportSchema = func(filtersSchema map[string]*schema.Schema) map[string]*schema.Schema {
-	return util.MergeMaps(
+	return sdk.MergeMaps(
 		getProjectKeySchema(false, ""),
 		map[string]*schema.Schema{
 			"report_id": {
@@ -353,8 +353,8 @@ func unpackRepository(d *schema.Set) *[]Repository {
 			f := raw.(map[string]interface{})
 			repository := Repository{
 				Name:                f["name"].(string),
-				IncludePathPatterns: util.CastToStringArr(f["include_path_patterns"].(*schema.Set).List()),
-				ExcludePathPatterns: util.CastToStringArr(f["exclude_path_patterns"].(*schema.Set).List()),
+				IncludePathPatterns: sdk.CastToStringArr(f["include_path_patterns"].(*schema.Set).List()),
+				ExcludePathPatterns: sdk.CastToStringArr(f["exclude_path_patterns"].(*schema.Set).List()),
 			}
 			repositories = append(repositories, repository)
 		}
@@ -369,9 +369,9 @@ func unpackBuilds(d *schema.Set) *Builds {
 		var builds Builds
 		f := d.List()[0].(map[string]interface{})
 		builds = Builds{
-			Names:                  util.CastToStringArr(f["names"].(*schema.Set).List()),
-			IncludePatterns:        util.CastToStringArr(f["include_patterns"].(*schema.Set).List()),
-			ExcludePatterns:        util.CastToStringArr(f["exclude_patterns"].(*schema.Set).List()),
+			Names:                  sdk.CastToStringArr(f["names"].(*schema.Set).List()),
+			IncludePatterns:        sdk.CastToStringArr(f["include_patterns"].(*schema.Set).List()),
+			ExcludePatterns:        sdk.CastToStringArr(f["exclude_patterns"].(*schema.Set).List()),
 			NumberOfLatestVersions: f["number_of_latest_versions"].(int),
 		}
 		return &builds
@@ -385,9 +385,9 @@ func unpackReleaseBundles(d *schema.Set) *ReleaseBundles {
 		var releaseBundles ReleaseBundles
 		f := d.List()[0].(map[string]interface{})
 		releaseBundles = ReleaseBundles{
-			Names:                  util.CastToStringArr(f["names"].(*schema.Set).List()),
-			IncludePatterns:        util.CastToStringArr(f["include_patterns"].(*schema.Set).List()),
-			ExcludePatterns:        util.CastToStringArr(f["exclude_patterns"].(*schema.Set).List()),
+			Names:                  sdk.CastToStringArr(f["names"].(*schema.Set).List()),
+			IncludePatterns:        sdk.CastToStringArr(f["include_patterns"].(*schema.Set).List()),
+			ExcludePatterns:        sdk.CastToStringArr(f["exclude_patterns"].(*schema.Set).List()),
 			NumberOfLatestVersions: f["number_of_latest_versions"].(int),
 		}
 		return &releaseBundles
@@ -401,8 +401,8 @@ func unpackProjects(d *schema.Set) *Projects {
 		var projects Projects
 		f := d.List()[0].(map[string]interface{})
 		projects = Projects{
-			Names:                  util.CastToStringArr(f["names"].(*schema.Set).List()),
-			IncludeKeyPatterns:     util.CastToStringArr(f["include_key_patterns"].(*schema.Set).List()),
+			Names:                  sdk.CastToStringArr(f["names"].(*schema.Set).List()),
+			IncludeKeyPatterns:     sdk.CastToStringArr(f["include_key_patterns"].(*schema.Set).List()),
 			NumberOfLatestVersions: f["number_of_latest_versions"].(int),
 		}
 		return &projects
@@ -433,7 +433,7 @@ func unpackVulnerabilitiesFilters(filter *schema.Set) *Filters {
 		filters.IssueId = m["issue_id"].(string)
 	}
 
-	filters.Severities = util.CastToStringArr(m["severities"].(*schema.Set).List())
+	filters.Severities = sdk.CastToStringArr(m["severities"].(*schema.Set).List())
 
 	if m["cvss_score"] != nil {
 		filters.CvssScore = unpackCvssScore(m["cvss_score"].(*schema.Set))
@@ -465,8 +465,8 @@ func unpackLicensesFilters(filter *schema.Set) *Filters {
 	filters.Unknown = m["unknown"].(bool)
 	filters.Unrecognized = m["unrecognized"].(bool)
 
-	filters.LicenseNames = util.CastToStringArr(m["license_names"].(*schema.Set).List())
-	filters.LicensePatterns = util.CastToStringArr(m["license_patterns"].(*schema.Set).List())
+	filters.LicenseNames = sdk.CastToStringArr(m["license_names"].(*schema.Set).List())
+	filters.LicensePatterns = sdk.CastToStringArr(m["license_patterns"].(*schema.Set).List())
 
 	if m["scan_date"] != nil {
 		filters.ScanDate = unpackStartAndEndDate(m["scan_date"].(*schema.Set))
@@ -510,8 +510,8 @@ func unpackViolationsFilters(filter *schema.Set) *Filters {
 			filters.Type = m["type"].(string)
 		}
 
-		filters.WatchNames = util.CastToStringArr(m["watch_names"].(*schema.Set).List())
-		filters.WatchPatterns = util.CastToStringArr(m["watch_patterns"].(*schema.Set).List())
+		filters.WatchNames = sdk.CastToStringArr(m["watch_names"].(*schema.Set).List())
+		filters.WatchPatterns = sdk.CastToStringArr(m["watch_patterns"].(*schema.Set).List())
 
 		if m["component"] != nil {
 			filters.Component = m["component"].(string)
@@ -521,8 +521,8 @@ func unpackViolationsFilters(filter *schema.Set) *Filters {
 			filters.Artifact = m["artifact"].(string)
 		}
 
-		filters.PolicyNames = util.CastToStringArr(m["policy_names"].(*schema.Set).List())
-		filters.Severities = util.CastToStringArr(m["severities"].(*schema.Set).List())
+		filters.PolicyNames = sdk.CastToStringArr(m["policy_names"].(*schema.Set).List())
+		filters.Severities = sdk.CastToStringArr(m["severities"].(*schema.Set).List())
 
 		if m["updated"].(*schema.Set).Len() > 0 {
 			filters.Updated = unpackStartAndEndDate(m["updated"].(*schema.Set))
@@ -548,8 +548,8 @@ func unpackViolationsLicensesFilters(filter *schema.Set) *LicenseFilter {
 	filters.Unknown = m["unknown"].(bool)
 	filters.Unrecognized = m["unrecognized"].(bool)
 
-	filters.LicenseNames = util.CastToStringArr(m["license_names"].(*schema.Set).List())
-	filters.LicensePatterns = util.CastToStringArr(m["license_patterns"].(*schema.Set).List())
+	filters.LicenseNames = sdk.CastToStringArr(m["license_names"].(*schema.Set).List())
+	filters.LicensePatterns = sdk.CastToStringArr(m["license_patterns"].(*schema.Set).List())
 
 	return &filters
 }
@@ -565,7 +565,7 @@ func unpackOperationalRisksFilters(filter *schema.Set) *Filters {
 		filters.Artifact = m["artifact"].(string)
 	}
 
-	filters.Risks = util.CastToStringArr(m["risks"].(*schema.Set).List())
+	filters.Risks = sdk.CastToStringArr(m["risks"].(*schema.Set).List())
 
 	if m["scan_date"] != nil {
 		filters.ScanDate = unpackStartAndEndDate(m["scan_date"].(*schema.Set))
@@ -628,7 +628,7 @@ func resourceXrayReportRead(ctx context.Context, d *schema.ResourceData, m inter
 	report := Report{}
 
 	projectKey := d.Get("project_key").(string)
-	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, projectKey)
+	req, err := getRestyRequest(m.(sdk.ProvderMetadata).Client, projectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -650,7 +650,7 @@ func resourceXrayReportRead(ctx context.Context, d *schema.ResourceData, m inter
 
 func resourceXrayReportDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	projectKey := d.Get("project_key").(string)
-	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, projectKey)
+	req, err := getRestyRequest(m.(sdk.ProvderMetadata).Client, projectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -669,7 +669,7 @@ func resourceXrayReportDelete(_ context.Context, d *schema.ResourceData, m inter
 
 func createReport(reportType string, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	report := unpackReport(d, reportType)
-	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, report.ProjectKey)
+	req, err := getRestyRequest(m.(sdk.ProvderMetadata).Client, report.ProjectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}

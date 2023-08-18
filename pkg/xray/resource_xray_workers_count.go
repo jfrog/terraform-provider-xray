@@ -7,7 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/jfrog/terraform-provider-shared/util"
+	"github.com/jfrog/terraform-provider-shared/util/sdk"
 )
 
 func resourceXrayWorkersCount() *schema.Resource {
@@ -19,7 +19,7 @@ func resourceXrayWorkersCount() *schema.Resource {
 		},
 	}
 
-	newExistingContentSchema := util.MergeMaps(
+	newExistingContentSchema := sdk.MergeMaps(
 		newContentSchema,
 		map[string]*schema.Schema{
 			"existing_content": {
@@ -150,7 +150,7 @@ func resourceXrayWorkersCount() *schema.Resource {
 	}
 
 	var packContent = func(d *schema.ResourceData, attr string, src interface{}, hclContentConstructor func(src interface{}) map[string]interface{}) []error {
-		setValue := util.MkLens(d)
+		setValue := sdk.MkLens(d)
 
 		resource := workersCountSchema[attr].Elem.(*schema.Resource)
 		content := hclContentConstructor(src)
@@ -219,7 +219,7 @@ func resourceXrayWorkersCount() *schema.Resource {
 
 	var resourceXrayWorkersCountRead = func(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 		workersCount := WorkersCount{}
-		resp, err := m.(util.ProvderMetadata).Client.R().
+		resp, err := m.(sdk.ProvderMetadata).Client.R().
 			SetResult(&workersCount).
 			Get("xray/api/v1/configuration/workersCount")
 		if err != nil {
@@ -234,7 +234,7 @@ func resourceXrayWorkersCount() *schema.Resource {
 
 	var resourceXrayWorkersCountUpdate = func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 		workersCount := unpackWorkersCount(d)
-		_, err := m.(util.ProvderMetadata).Client.R().
+		_, err := m.(sdk.ProvderMetadata).Client.R().
 			SetBody(workersCount).
 			Put("xray/api/v1/configuration/workersCount")
 

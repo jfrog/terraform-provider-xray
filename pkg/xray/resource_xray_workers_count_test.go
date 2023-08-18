@@ -4,18 +4,18 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/jfrog/terraform-provider-shared/test"
-	"github.com/jfrog/terraform-provider-shared/util"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/jfrog/terraform-provider-shared/testutil"
+	"github.com/jfrog/terraform-provider-shared/util/sdk"
 )
 
 func TestAccWorkersCount_create(t *testing.T) {
-	_, _, resourceName := test.MkNames("workers-count-", "xray_workers_count")
+	_, _, resourceName := testutil.MkNames("workers-count-", "xray_workers_count")
 
 	params := map[string]interface{}{
 		"workersCountName": resourceName,
 	}
-	workersCountConfig := util.ExecuteTemplate("TestAccWorkersCount_create", `
+	workersCountConfig := sdk.ExecuteTemplate("TestAccWorkersCount_create", `
 		resource "xray_workers_count" "{{ .workersCountName }}" {
 		  index {
 		    new_content      = 4
