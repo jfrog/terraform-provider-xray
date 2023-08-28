@@ -107,8 +107,7 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 							Schema: map[string]*schema.Schema{
 								"scanners_category": {
 									Type:     schema.TypeSet,
-									Optional: true,
-									MinItems: 1,
+									Required: true,
 									MaxItems: 1,
 									Elem: &schema.Resource{
 										Schema: map[string]*schema.Schema{
@@ -278,9 +277,18 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 		exposures := Exposures{}
 
 		switch packageType {
-		case "docker", "maven", "npm", "pypi":
+		case "docker":
 			exposures.ScannersCategory = map[string]bool{
 				"services_scan":     category["services"].(bool),
+				"secrets_scan":      category["secrets"].(bool),
+				"applications_scan": category["applications"].(bool),
+			}
+		case "maven":
+			exposures.ScannersCategory = map[string]bool{
+				"secrets_scan": category["secrets"].(bool),
+			}
+		case "npm", "pypi":
+			exposures.ScannersCategory = map[string]bool{
 				"secrets_scan":      category["secrets"].(bool),
 				"applications_scan": category["applications"].(bool),
 			}
@@ -335,8 +343,13 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 		}
 
 		switch packageType {
-		case "docker", "maven", "npm", "pypi":
+		case "docker":
 			scannersCategory["services"] = exposures.ScannersCategory["services_scan"]
+			scannersCategory["secrets"] = exposures.ScannersCategory["secrets_scan"]
+			scannersCategory["applications"] = exposures.ScannersCategory["applications_scan"]
+		case "maven":
+			scannersCategory["secrets"] = exposures.ScannersCategory["secrets_scan"]
+		case "npm", "pypi":
 			scannersCategory["secrets"] = exposures.ScannersCategory["secrets_scan"]
 			scannersCategory["applications"] = exposures.ScannersCategory["applications_scan"]
 		case "terraformbackend":

@@ -45,10 +45,11 @@ func TestAccRepositoryConfigRepoConfigNegative(t *testing.T) {
 func TestAccRepositoryConfigRepoConfigCreate_VulnContextualAnalysis(t *testing.T) {
 	testCase := []struct {
 		packageType  string
+		template     string
 		validVersion string
 	}{
-		{"docker", "3.67.9"},
-		{"maven", "3.77.4"},
+		{"docker", TestDataRepoConfigDockerTemplate, "3.67.9"},
+		{"maven", TestDataRepoConfigMavenTemplate, "3.77.4"},
 	}
 
 	version, err := sdk.GetXrayVersion(GetTestResty(t))
@@ -58,11 +59,11 @@ func TestAccRepositoryConfigRepoConfigCreate_VulnContextualAnalysis(t *testing.T
 	}
 
 	for _, tc := range testCase {
-		t.Run(tc.packageType, testAccRepositoryConfigRepoConfigCreate_VulnContextualAnalysis(t, tc.packageType, tc.validVersion, version))
+		t.Run(tc.packageType, testAccRepositoryConfigRepoConfigCreate_VulnContextualAnalysis(t, tc.packageType, tc.template, tc.validVersion, version))
 	}
 }
 
-func testAccRepositoryConfigRepoConfigCreate_VulnContextualAnalysis(t *testing.T, packageType, validVersion, xrayVersion string) func(t *testing.T) {
+func testAccRepositoryConfigRepoConfigCreate_VulnContextualAnalysis(t *testing.T, packageType, template, validVersion, xrayVersion string) func(t *testing.T) {
 	return func(t *testing.T) {
 		_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
 		var testData = map[string]string{
@@ -97,7 +98,7 @@ func testAccRepositoryConfigRepoConfigCreate_VulnContextualAnalysis(t *testing.T
 
 			Steps: []resource.TestStep{
 				{
-					Config: sdk.ExecuteTemplate(fqrn, TestDataRepoConfigTemplate, testData),
+					Config: sdk.ExecuteTemplate(fqrn, template, testData),
 					Check: resource.ComposeTestCheckFunc(
 						resource.TestCheckResourceAttr(fqrn, "repo_name", testData["repo_name"]),
 						resource.TestCheckResourceAttr(fqrn, "config.0.retention_in_days", testData["retention_in_days"]),
@@ -117,12 +118,54 @@ func testAccRepositoryConfigRepoConfigCreate_VulnContextualAnalysis(t *testing.T
 func TestAccRepositoryConfigRepoConfigCreate_Exposure(t *testing.T) {
 	testCase := []struct {
 		packageType  string
+		template     string
 		validVersion string
+		checkFunc    func(fqrn string, testData map[string]string) resource.TestCheckFunc
 	}{
-		{"docker", "3.67.9"},
-		{"maven", "3.78.9"},
-		{"npm", "3.78.9"},
-		{"pypi", "3.78.9"},
+		{
+			"docker",
+			TestDataRepoConfigDockerTemplate,
+			"3.67.9",
+			func(fqrn string, testData map[string]string) resource.TestCheckFunc {
+				return resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.services", testData["services_scan"]),
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.secrets", testData["secrets_scan"]),
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.applications", testData["applications_scan"]),
+				)
+			},
+		},
+		{
+			"maven",
+			TestDataRepoConfigMavenTemplate,
+			"3.78.9",
+			func(fqrn string, testData map[string]string) resource.TestCheckFunc {
+				return resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.secrets", testData["secrets_scan"]),
+				)
+			},
+		},
+		{
+			"npm",
+			TestDataRepoConfigNpmPyPiTemplate,
+			"3.78.9",
+			func(fqrn string, testData map[string]string) resource.TestCheckFunc {
+				return resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.secrets", testData["secrets_scan"]),
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.applications", testData["applications_scan"]),
+				)
+			},
+		},
+		{
+			"pypi",
+			TestDataRepoConfigNpmPyPiTemplate,
+			"3.78.9",
+			func(fqrn string, testData map[string]string) resource.TestCheckFunc {
+				return resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.secrets", testData["secrets_scan"]),
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.applications", testData["applications_scan"]),
+				)
+			},
+		},
 	}
 
 	version, err := sdk.GetXrayVersion(GetTestResty(t))
@@ -132,11 +175,11 @@ func TestAccRepositoryConfigRepoConfigCreate_Exposure(t *testing.T) {
 	}
 
 	for _, tc := range testCase {
-		t.Run(tc.packageType, testAccRepositoryConfigRepoConfigCreate(t, tc.packageType, tc.validVersion, version))
+		t.Run(tc.packageType, testAccRepositoryConfigRepoConfigCreate(t, tc.packageType, tc.template, tc.validVersion, version, tc.checkFunc))
 	}
 }
 
-func testAccRepositoryConfigRepoConfigCreate(t *testing.T, packageType, validVersion, xrayVersion string) func(t *testing.T) {
+func testAccRepositoryConfigRepoConfigCreate(t *testing.T, packageType, template, validVersion, xrayVersion string, checkFunc func(fqrn string, testData map[string]string) resource.TestCheckFunc) func(t *testing.T) {
 	return func(t *testing.T) {
 		_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
 		var testData = map[string]string{
@@ -146,7 +189,7 @@ func testAccRepositoryConfigRepoConfigCreate(t *testing.T, packageType, validVer
 			"vuln_contextual_analysis": "false",
 			"services_scan":            "true",
 			"secrets_scan":             "true",
-			"applications_scan":        "false",
+			"applications_scan":        "true",
 		}
 
 		valid, _ := sdk.CheckVersion(xrayVersion, validVersion)
@@ -171,15 +214,8 @@ func testAccRepositoryConfigRepoConfigCreate(t *testing.T, packageType, validVer
 
 			Steps: []resource.TestStep{
 				{
-					Config: sdk.ExecuteTemplate(fqrn, TestDataRepoConfigTemplate, testData),
-					Check: resource.ComposeTestCheckFunc(
-						resource.TestCheckResourceAttr(fqrn, "repo_name", testData["repo_name"]),
-						resource.TestCheckResourceAttr(fqrn, "config.0.retention_in_days", testData["retention_in_days"]),
-						resource.TestCheckResourceAttr(fqrn, "config.0.vuln_contextual_analysis", testData["vuln_contextual_analysis"]),
-						resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.services", testData["services_scan"]),
-						resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.secrets", testData["secrets_scan"]),
-						resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.applications", testData["applications_scan"]),
-					),
+					Config: sdk.ExecuteTemplate(fqrn, template, testData),
+					Check:  checkFunc(fqrn, testData),
 				},
 				{
 					ResourceName:      fqrn,
@@ -371,20 +407,53 @@ resource "xray_repository_config" "{{ .resource_name }}" {
   }
 }`
 
-const TestDataRepoConfigTemplate = `
+const TestDataRepoConfigDockerTemplate = `
 resource "xray_repository_config" "{{ .resource_name }}" {
   repo_name = "{{ .repo_name }}"
 
   config {
-	vuln_contextual_analysis = {{ .vuln_contextual_analysis }}
     retention_in_days        = {{ .retention_in_days }}
-    exposures {
+	vuln_contextual_analysis = {{ .vuln_contextual_analysis }}
+
+	exposures {
       scanners_category {
-        services       = {{ .services_scan }}
-        secrets        = {{ .secrets_scan }}
-        applications   = {{ .applications_scan }}
+        services     = true
+        secrets      = true
+        applications = true
       }
-    }
+	}
+  }
+}`
+
+const TestDataRepoConfigMavenTemplate = `
+resource "xray_repository_config" "{{ .resource_name }}" {
+  repo_name = "{{ .repo_name }}"
+
+  config {
+    retention_in_days        = {{ .retention_in_days }}
+	vuln_contextual_analysis = {{ .vuln_contextual_analysis }}
+
+	exposures {
+      scanners_category {
+        secrets      = true
+      }
+	}
+  }
+}`
+
+const TestDataRepoConfigNpmPyPiTemplate = `
+resource "xray_repository_config" "{{ .resource_name }}" {
+  repo_name = "{{ .repo_name }}"
+
+  config {
+    retention_in_days        = {{ .retention_in_days }}
+
+	exposures {
+      scanners_category {
+        secrets      = true
+        applications = true
+      }
+	}
   }
 }`
 
