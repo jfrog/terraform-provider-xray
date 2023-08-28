@@ -74,9 +74,9 @@ Optional:
 <a id="nestedblock--config--exposures"></a>
 ### Nested Schema for `config.exposures`
 
-Optional:
+Required:
 
-- `scanners_category` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--config--exposures--scanners_category))
+- `scanners_category` (Block Set, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--config--exposures--scanners_category))
 
 <a id="nestedblock--config--exposures--scanners_category"></a>
 ### Nested Schema for `config.exposures.scanners_category`
