@@ -6,13 +6,13 @@ import (
 	"testing"
 
 	"github.com/go-resty/resty/v2"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/jfrog/terraform-provider-shared/test"
-	"github.com/jfrog/terraform-provider-shared/util"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/jfrog/terraform-provider-shared/testutil"
+	"github.com/jfrog/terraform-provider-shared/util/sdk"
 )
 
 func TestAccRepositoryConfigRepoConfigNegative(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("xray-repo-config-", "xray_repository_config")
+	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
 	var testData = map[string]string{
 		"resource_name":                resourceName,
 		"repo_name":                    "repo-config-test-repo",
@@ -35,15 +35,200 @@ func TestAccRepositoryConfigRepoConfigNegative(t *testing.T) {
 
 		Steps: []resource.TestStep{
 			{
-				Config:      util.ExecuteTemplate(fqrn, TestDataRepoConfigErrorTemplate, testData),
+				Config:      sdk.ExecuteTemplate(fqrn, TestDataRepoConfigErrorTemplate, testData),
 				ExpectError: regexp.MustCompile("Conflicting configuration arguments"),
 			},
 		},
 	})
 }
 
-func TestAccRepositoryConfigRepoConfigCreate(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("xray-repo-config-", "xray_repository_config")
+func TestAccRepositoryConfigRepoConfigCreate_VulnContextualAnalysis(t *testing.T) {
+	testCase := []struct {
+		packageType  string
+		template     string
+		validVersion string
+	}{
+		{"docker", TestDataRepoConfigDockerTemplate, "3.67.9"},
+		{"maven", TestDataRepoConfigMavenTemplate, "3.77.4"},
+	}
+
+	version, err := sdk.GetXrayVersion(GetTestResty(t))
+	if err != nil {
+		t.Fail()
+		return
+	}
+
+	for _, tc := range testCase {
+		t.Run(tc.packageType, testAccRepositoryConfigRepoConfigCreate_VulnContextualAnalysis(t, tc.packageType, tc.template, tc.validVersion, version))
+	}
+}
+
+func testAccRepositoryConfigRepoConfigCreate_VulnContextualAnalysis(t *testing.T, packageType, template, validVersion, xrayVersion string) func(t *testing.T) {
+	return func(t *testing.T) {
+		_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
+		var testData = map[string]string{
+			"resource_name":            resourceName,
+			"repo_name":                "repo-config-test-repo",
+			"retention_in_days":        "90",
+			"vuln_contextual_analysis": "true",
+			"services_scan":            "false",
+			"secrets_scan":             "false",
+			"applications_scan":        "false",
+		}
+
+		valid, _ := sdk.CheckVersion(xrayVersion, validVersion)
+		if !valid {
+			t.Skipf("xray version %s does not support %s for exposures scanning", xrayVersion, packageType)
+			return
+		}
+
+		resource.Test(t, resource.TestCase{
+			PreCheck: func() {
+				testAccPreCheck(t)
+				testAccDeleteRepo(t, testData["repo_name"])
+				testAccCreateRepos(t, testData["repo_name"], "local", "", packageType)
+			},
+			CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+				testAccDeleteRepo(t, testData["repo_name"])
+				err := fmt.Errorf("repo was deleted")
+				errorResp := dummyError()
+				return errorResp, err
+			}),
+			ProviderFactories: testAccProviders(),
+
+			Steps: []resource.TestStep{
+				{
+					Config: sdk.ExecuteTemplate(fqrn, template, testData),
+					Check: resource.ComposeTestCheckFunc(
+						resource.TestCheckResourceAttr(fqrn, "repo_name", testData["repo_name"]),
+						resource.TestCheckResourceAttr(fqrn, "config.0.retention_in_days", testData["retention_in_days"]),
+						resource.TestCheckResourceAttr(fqrn, "config.0.vuln_contextual_analysis", testData["vuln_contextual_analysis"]),
+					),
+				},
+				{
+					ResourceName:      fqrn,
+					ImportState:       true,
+					ImportStateVerify: true,
+				},
+			},
+		})
+	}
+}
+
+func TestAccRepositoryConfigRepoConfigCreate_Exposure(t *testing.T) {
+	testCase := []struct {
+		packageType  string
+		template     string
+		validVersion string
+		checkFunc    func(fqrn string, testData map[string]string) resource.TestCheckFunc
+	}{
+		{
+			"docker",
+			TestDataRepoConfigDockerTemplate,
+			"3.67.9",
+			func(fqrn string, testData map[string]string) resource.TestCheckFunc {
+				return resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.services", testData["services_scan"]),
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.secrets", testData["secrets_scan"]),
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.applications", testData["applications_scan"]),
+				)
+			},
+		},
+		{
+			"maven",
+			TestDataRepoConfigMavenTemplate,
+			"3.78.9",
+			func(fqrn string, testData map[string]string) resource.TestCheckFunc {
+				return resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.secrets", testData["secrets_scan"]),
+				)
+			},
+		},
+		{
+			"npm",
+			TestDataRepoConfigNpmPyPiTemplate,
+			"3.78.9",
+			func(fqrn string, testData map[string]string) resource.TestCheckFunc {
+				return resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.secrets", testData["secrets_scan"]),
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.applications", testData["applications_scan"]),
+				)
+			},
+		},
+		{
+			"pypi",
+			TestDataRepoConfigNpmPyPiTemplate,
+			"3.78.9",
+			func(fqrn string, testData map[string]string) resource.TestCheckFunc {
+				return resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.secrets", testData["secrets_scan"]),
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.applications", testData["applications_scan"]),
+				)
+			},
+		},
+	}
+
+	version, err := sdk.GetXrayVersion(GetTestResty(t))
+	if err != nil {
+		t.Fail()
+		return
+	}
+
+	for _, tc := range testCase {
+		t.Run(tc.packageType, testAccRepositoryConfigRepoConfigCreate(t, tc.packageType, tc.template, tc.validVersion, version, tc.checkFunc))
+	}
+}
+
+func testAccRepositoryConfigRepoConfigCreate(t *testing.T, packageType, template, validVersion, xrayVersion string, checkFunc func(fqrn string, testData map[string]string) resource.TestCheckFunc) func(t *testing.T) {
+	return func(t *testing.T) {
+		_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
+		var testData = map[string]string{
+			"resource_name":            resourceName,
+			"repo_name":                "repo-config-test-repo",
+			"retention_in_days":        "90",
+			"vuln_contextual_analysis": "false",
+			"services_scan":            "true",
+			"secrets_scan":             "true",
+			"applications_scan":        "true",
+		}
+
+		valid, _ := sdk.CheckVersion(xrayVersion, validVersion)
+		if !valid {
+			t.Skipf("xray version %s does not support %s for exposures scanning", xrayVersion, packageType)
+			return
+		}
+
+		resource.Test(t, resource.TestCase{
+			PreCheck: func() {
+				testAccPreCheck(t)
+				testAccDeleteRepo(t, testData["repo_name"])
+				testAccCreateRepos(t, testData["repo_name"], "local", "", packageType)
+			},
+			CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+				testAccDeleteRepo(t, testData["repo_name"])
+				err := fmt.Errorf("repo was deleted")
+				errorResp := dummyError()
+				return errorResp, err
+			}),
+			ProviderFactories: testAccProviders(),
+
+			Steps: []resource.TestStep{
+				{
+					Config: sdk.ExecuteTemplate(fqrn, template, testData),
+					Check:  checkFunc(fqrn, testData),
+				},
+				{
+					ResourceName:      fqrn,
+					ImportState:       true,
+					ImportStateVerify: true,
+				},
+			},
+		})
+	}
+}
+
+func TestAccRepositoryConfigRepoConfigCreate_InvalidExposures(t *testing.T) {
+	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
 	var testData = map[string]string{
 		"resource_name":     resourceName,
 		"repo_name":         "repo-config-test-repo",
@@ -54,7 +239,7 @@ func TestAccRepositoryConfigRepoConfigCreate(t *testing.T) {
 		PreCheck: func() {
 			testAccPreCheck(t)
 			testAccDeleteRepo(t, testData["repo_name"])
-			testAccCreateRepos(t, testData["repo_name"], "local", "")
+			testAccCreateRepos(t, testData["repo_name"], "local", "", "docker")
 		},
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
 			testAccDeleteRepo(t, testData["repo_name"])
@@ -66,23 +251,15 @@ func TestAccRepositoryConfigRepoConfigCreate(t *testing.T) {
 
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, TestDataRepoConfigTemplate, testData),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(fqrn, "repo_name", testData["repo_name"]),
-					resource.TestCheckResourceAttr(fqrn, "config.0.retention_in_days", testData["retention_in_days"]),
-				),
-			},
-			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateVerify: true,
+				Config:             sdk.ExecuteTemplate(fqrn, TestDataRepoConfigInvalidExposuresTemplate, testData),
+				ExpectNonEmptyPlan: true,
 			},
 		},
 	})
 }
 
 func TestAccRepositoryConfigRepoPathsCreate(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("xray-repo-config-", "xray_repository_config")
+	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
 	var testData = map[string]string{
 		"resource_name":                resourceName,
 		"repo_name":                    "repo-config-test-repo",
@@ -102,7 +279,7 @@ func TestAccRepositoryConfigRepoPathsCreate(t *testing.T) {
 		PreCheck: func() {
 			testAccPreCheck(t)
 			testAccDeleteRepo(t, testData["repo_name"])
-			testAccCreateRepos(t, testData["repo_name"], "local", "")
+			testAccCreateRepos(t, testData["repo_name"], "local", "", "")
 		},
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
 			testAccDeleteRepo(t, testData["repo_name"])
@@ -114,7 +291,7 @@ func TestAccRepositoryConfigRepoPathsCreate(t *testing.T) {
 
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, TestDataRepoPathsConfigTemplate, testData),
+				Config: sdk.ExecuteTemplate(fqrn, TestDataRepoPathsConfigTemplate, testData),
 				Check:  resource.ComposeTestCheckFunc(verifyRepositoryConfig(fqrn, testData)),
 			},
 			{
@@ -127,7 +304,7 @@ func TestAccRepositoryConfigRepoPathsCreate(t *testing.T) {
 }
 
 func TestAccRepositoryConfigRepoPathsUpdate(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("xray-repo-config-", "xray_repository_config")
+	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
 	var testData = map[string]string{
 		"resource_name":                resourceName,
 		"repo_name":                    "repo-config-test-repo",
@@ -161,7 +338,7 @@ func TestAccRepositoryConfigRepoPathsUpdate(t *testing.T) {
 		PreCheck: func() {
 			testAccPreCheck(t)
 			testAccDeleteRepo(t, testData["repo_name"])
-			testAccCreateRepos(t, testData["repo_name"], "local", "")
+			testAccCreateRepos(t, testData["repo_name"], "local", "", "")
 		},
 		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
 			testAccDeleteRepo(t, testData["repo_name"])
@@ -173,11 +350,11 @@ func TestAccRepositoryConfigRepoPathsUpdate(t *testing.T) {
 
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, TestDataRepoPathsConfigTemplate, testData),
+				Config: sdk.ExecuteTemplate(fqrn, TestDataRepoPathsConfigTemplate, testData),
 				Check:  resource.ComposeTestCheckFunc(verifyRepositoryConfig(fqrn, testData)),
 			},
 			{
-				Config: util.ExecuteTemplate(fqrn, TestDataRepoPathsConfigTemplate, testDataUpdated),
+				Config: sdk.ExecuteTemplate(fqrn, TestDataRepoPathsConfigTemplate, testDataUpdated),
 				Check:  resource.ComposeTestCheckFunc(verifyRepositoryConfig(fqrn, testDataUpdated)),
 			},
 		},
@@ -202,70 +379,119 @@ func verifyRepositoryConfig(fqrn string, testData map[string]string) resource.Te
 
 const TestDataRepoConfigErrorTemplate = `
 resource "xray_repository_config" "{{ .resource_name }}" {
-  
-  repo_name  = "{{ .repo_name }}"
-  
+  repo_name = "{{ .repo_name }}"
+
   config {
-    retention_in_days       = {{ .retention_in_days }} 
+    retention_in_days = {{ .retention_in_days }} 
   }
-  
+
   paths_config {
-    
     pattern {
-      include              = "{{ .pattern0_include }}"
-      exclude              = "{{ .pattern0_exclude }}"
-      index_new_artifacts  = {{ .pattern0_index_new_artifacts }}
-      retention_in_days    = {{ .pattern0_retention_in_days }}
+      include             = "{{ .pattern0_include }}"
+      exclude             = "{{ .pattern0_exclude }}"
+      index_new_artifacts = {{ .pattern0_index_new_artifacts }}
+      retention_in_days   = {{ .pattern0_retention_in_days }}
     }
 
-   pattern {
-      include              = "{{ .pattern1_include }}"
-      exclude              = "{{ .pattern1_exclude }}"
-      index_new_artifacts  = {{ .pattern1_index_new_artifacts }}
-      retention_in_days    = {{ .pattern1_retention_in_days }}
+    pattern {
+      include             = "{{ .pattern1_include }}"
+      exclude             = "{{ .pattern1_exclude }}"
+      index_new_artifacts = {{ .pattern1_index_new_artifacts }}
+      retention_in_days   = {{ .pattern1_retention_in_days }}
     }
-  
-   all_other_artifacts {
+
+    all_other_artifacts {
       index_new_artifacts = {{ .other_index_new_artifacts }}
       retention_in_days   = {{ .other_retention_in_days }}
     }
   }
 }`
 
-const TestDataRepoConfigTemplate = `
+const TestDataRepoConfigDockerTemplate = `
 resource "xray_repository_config" "{{ .resource_name }}" {
-  
-  repo_name  = "{{ .repo_name }}"
-  
-  config {
-    #vuln_contextual_analysis  = true
-    retention_in_days          = {{ .retention_in_days }} 
-  }
+  repo_name = "{{ .repo_name }}"
 
+  config {
+    retention_in_days        = {{ .retention_in_days }}
+	vuln_contextual_analysis = {{ .vuln_contextual_analysis }}
+
+	exposures {
+      scanners_category {
+        services     = true
+        secrets      = true
+        applications = true
+      }
+	}
+  }
+}`
+
+const TestDataRepoConfigMavenTemplate = `
+resource "xray_repository_config" "{{ .resource_name }}" {
+  repo_name = "{{ .repo_name }}"
+
+  config {
+    retention_in_days        = {{ .retention_in_days }}
+	vuln_contextual_analysis = {{ .vuln_contextual_analysis }}
+
+	exposures {
+      scanners_category {
+        secrets      = true
+      }
+	}
+  }
+}`
+
+const TestDataRepoConfigNpmPyPiTemplate = `
+resource "xray_repository_config" "{{ .resource_name }}" {
+  repo_name = "{{ .repo_name }}"
+
+  config {
+    retention_in_days        = {{ .retention_in_days }}
+
+	exposures {
+      scanners_category {
+        secrets      = true
+        applications = true
+      }
+	}
+  }
+}`
+
+const TestDataRepoConfigInvalidExposuresTemplate = `
+resource "xray_repository_config" "{{ .resource_name }}" {
+  repo_name = "{{ .repo_name }}"
+
+  config {
+    vuln_contextual_analysis = true
+    retention_in_days = {{ .retention_in_days }}
+    exposures {
+      scanners_category {
+        iac = true
+      }
+    }
+  }
 }`
 
 const TestDataRepoPathsConfigTemplate = `
 resource "xray_repository_config" "{{ .resource_name }}" {
-  
-  repo_name  = "{{ .repo_name }}"
+  repo_name = "{{ .repo_name }}"
 
   paths_config {
-    
     pattern {
-      include              = "{{ .pattern0_include }}"
-      exclude              = "{{ .pattern0_exclude }}"
-      index_new_artifacts  = {{ .pattern0_index_new_artifacts }}
-      retention_in_days    = {{ .pattern0_retention_in_days }}
+      include             = "{{ .pattern0_include }}"
+      exclude             = "{{ .pattern0_exclude }}"
+      index_new_artifacts = {{ .pattern0_index_new_artifacts }}
+      retention_in_days   = {{ .pattern0_retention_in_days }}
     }
 
-   pattern {
-      include              = "{{ .pattern1_include }}"
-      exclude              = "{{ .pattern1_exclude }}"
-      index_new_artifacts  = {{ .pattern1_index_new_artifacts }}
-      retention_in_days    = {{ .pattern1_retention_in_days }}
+    pattern {
+      include             = "{{ .pattern1_include }}"
+      exclude             = "{{ .pattern1_exclude }}"
+      index_new_artifacts = {{ .pattern1_index_new_artifacts }}
+      retention_in_days   = {{ .pattern1_retention_in_days }}
     }
-  
-   all_other_artifacts {
+
+    all_other_artifacts {
       index_new_artifacts = {{ .other_index_new_artifacts }}
       retention_in_days   = {{ .other_retention_in_days }}
     }

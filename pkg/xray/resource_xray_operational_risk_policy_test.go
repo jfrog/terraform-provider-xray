@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	"github.com/go-resty/resty/v2"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/jfrog/terraform-provider-shared/test"
-	"github.com/jfrog/terraform-provider-shared/util"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/jfrog/terraform-provider-shared/testutil"
+	"github.com/jfrog/terraform-provider-shared/util/sdk"
 )
 
 var testDataOperationalRisk = map[string]string{
@@ -28,8 +28,8 @@ var testDataOperationalRisk = map[string]string{
 }
 
 func TestAccOperationalRiskPolicy_withProjectKey(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("policy-", "xray_operational_risk_policy")
-	projectKey := fmt.Sprintf("testproj%d", test.RandSelect(1, 2, 3, 4, 5))
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_operational_risk_policy")
+	projectKey := fmt.Sprintf("testproj%d", testutil.RandSelect(1, 2, 3, 4, 5))
 
 	template := `resource "xray_operational_risk_policy" "{{ .resource_name }}" {
 		name        = "{{ .policy_name }}"
@@ -58,16 +58,16 @@ func TestAccOperationalRiskPolicy_withProjectKey(t *testing.T) {
 		}
 	}`
 
-	testData := util.MergeMaps(testDataOperationalRisk)
+	testData := sdk.MergeMaps(testDataOperationalRisk)
 	testData["resource_name"] = resourceName
 	testData["project_key"] = projectKey
 	testData["op_risk_min_risk"] = "Medium"
 
-	config := util.ExecuteTemplate(fqrn, template, testData)
+	config := sdk.ExecuteTemplate(fqrn, template, testData)
 
-	updatedTestData := util.MergeMaps(testData)
+	updatedTestData := sdk.MergeMaps(testData)
 	updatedTestData["policy_description"] = "New description"
-	updatedConfig := util.ExecuteTemplate(fqrn, template, updatedTestData)
+	updatedConfig := sdk.ExecuteTemplate(fqrn, template, updatedTestData)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -102,7 +102,7 @@ func TestAccOperationalRiskPolicy_withProjectKey(t *testing.T) {
 }
 
 func TestAccOperationalRiskPolicy_minRiskCriteria(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("policy-", "xray_operational_risk_policy")
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_operational_risk_policy")
 
 	const opertionalRiskPolicyMinRisk = `resource "xray_operational_risk_policy" "{{ .resource_name }}" {
 		name = "{{ .policy_name }}"
@@ -129,7 +129,7 @@ func TestAccOperationalRiskPolicy_minRiskCriteria(t *testing.T) {
 		}
 	}`
 
-	testData := util.MergeMaps(testDataOperationalRisk)
+	testData := sdk.MergeMaps(testDataOperationalRisk)
 	testData["resource_name"] = resourceName
 	testData["op_risk_min_risk"] = "Medium"
 
@@ -139,7 +139,7 @@ func TestAccOperationalRiskPolicy_minRiskCriteria(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, opertionalRiskPolicyMinRisk, testData),
+				Config: sdk.ExecuteTemplate(fqrn, opertionalRiskPolicyMinRisk, testData),
 				Check: resource.ComposeTestCheckFunc(
 					verifyOpertionalRiskPolicy(fqrn, testData),
 					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_min_risk", testData["op_risk_min_risk"]),
@@ -155,7 +155,7 @@ func TestAccOperationalRiskPolicy_minRiskCriteria(t *testing.T) {
 }
 
 func TestAccOperationalRiskPolicy_customCriteria(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("policy-", "xray_operational_risk_policy")
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_operational_risk_policy")
 
 	const opertionalRiskPolicyCustom = `resource "xray_operational_risk_policy" "{{ .resource_name }}" {
 		name = "{{ .policy_name }}"
@@ -191,16 +191,16 @@ func TestAccOperationalRiskPolicy_customCriteria(t *testing.T) {
 		}
 	}`
 
-	testData := util.MergeMaps(testDataOperationalRisk)
+	testData := sdk.MergeMaps(testDataOperationalRisk)
 	testData["resource_name"] = resourceName
 	testData["op_risk_custom_use_and_condition"] = "true"
 	testData["op_risk_custom_is_eol"] = "false"
-	testData["op_risk_custom_release_date_greater_than_months"] = test.RandSelect("6", "12", "18", "24", "30", "36").(string)
-	testData["op_risk_custom_newer_versions_greater_than"] = test.RandSelect("1", "2", "3", "4", "5").(string)
-	testData["op_risk_custom_release_cadence_per_year_less_than"] = test.RandSelect("1", "2", "3", "4", "5").(string)
-	testData["op_risk_custom_commits_less_than"] = test.RandSelect("10", "25", "50", "100").(string)
-	testData["op_risk_custom_committers_less_than"] = test.RandSelect("1", "2", "3", "4", "5").(string)
-	testData["op_risk_custom_risk"] = test.RandSelect("high", "medium", "low").(string)
+	testData["op_risk_custom_release_date_greater_than_months"] = testutil.RandSelect("6", "12", "18", "24", "30", "36").(string)
+	testData["op_risk_custom_newer_versions_greater_than"] = testutil.RandSelect("1", "2", "3", "4", "5").(string)
+	testData["op_risk_custom_release_cadence_per_year_less_than"] = testutil.RandSelect("1", "2", "3", "4", "5").(string)
+	testData["op_risk_custom_commits_less_than"] = testutil.RandSelect("10", "25", "50", "100").(string)
+	testData["op_risk_custom_committers_less_than"] = testutil.RandSelect("1", "2", "3", "4", "5").(string)
+	testData["op_risk_custom_risk"] = testutil.RandSelect("high", "medium", "low").(string)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -208,7 +208,7 @@ func TestAccOperationalRiskPolicy_customCriteria(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, opertionalRiskPolicyCustom, testData),
+				Config: sdk.ExecuteTemplate(fqrn, opertionalRiskPolicyCustom, testData),
 				Check: resource.ComposeTestCheckFunc(
 					verifyOpertionalRiskPolicy(fqrn, testData),
 					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.use_and_condition", testData["op_risk_custom_use_and_condition"]),
@@ -247,9 +247,9 @@ func verifyOpertionalRiskPolicy(fqrn string, testData map[string]string) resourc
 }
 
 func TestAccOperationalRiskPolicy_criteriaValidation(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("policy-", "xray_operational_risk_policy")
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_operational_risk_policy")
 
-	testData := util.MergeMaps(testDataOperationalRisk)
+	testData := sdk.MergeMaps(testDataOperationalRisk)
 	testData["resource_name"] = resourceName
 
 	template := `
@@ -282,7 +282,7 @@ func TestAccOperationalRiskPolicy_criteriaValidation(t *testing.T) {
 		}
 	}`
 
-	config := util.ExecuteTemplate(fqrn, template, testData)
+	config := sdk.ExecuteTemplate(fqrn, template, testData)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },

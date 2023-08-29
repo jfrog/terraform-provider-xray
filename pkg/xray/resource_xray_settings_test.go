@@ -5,12 +5,12 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/jfrog/terraform-provider-shared/test"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/jfrog/terraform-provider-shared/testutil"
 )
 
 func TestDbSyncTime(t *testing.T) {
-	_, fqrn, resourceName := test.MkNames("db_sync-", "xray_settings")
+	_, fqrn, resourceName := testutil.MkNames("db_sync-", "xray_settings")
 	time := "18:45"
 
 	resource.Test(t, resource.TestCase{
@@ -26,7 +26,7 @@ func TestDbSyncTime(t *testing.T) {
 }
 
 func TestDbSyncTimeNegative(t *testing.T) {
-	_, _, resourceName := test.MkNames("db_sync-", "xray_settings")
+	_, _, resourceName := testutil.MkNames("db_sync-", "xray_settings")
 	var invalidTime = []string{"24:00", "24:55", "", "12:0", "string", "12pm", "9:00"}
 	for _, time := range invalidTime {
 		resource.Test(t, resource.TestCase{

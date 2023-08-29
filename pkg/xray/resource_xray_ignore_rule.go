@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/jfrog/terraform-provider-shared/util"
+	"github.com/jfrog/terraform-provider-shared/util/sdk"
 )
 
 type IgnoreRule struct {
@@ -50,7 +50,7 @@ type IgnoreFilterNameVersionPath struct {
 }
 
 func resourceXrayIgnoreRule() *schema.Resource {
-	var ignoreRuleSchema = util.MergeMaps(
+	var ignoreRuleSchema = sdk.MergeMaps(
 		getProjectKeySchema(true, ""),
 		map[string]*schema.Schema{
 			"id": {
@@ -417,7 +417,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 		}
 
 		ignoreFilters := IgnoreFilters{}
-		data := &util.ResourceData{ResourceData: d}
+		data := &sdk.ResourceData{ResourceData: d}
 		vulnerabilities := data.GetSet("vulnerabilities")
 		if len(vulnerabilities) > 0 {
 			ignoreFilters.Vulnerabilities = vulnerabilities
@@ -466,7 +466,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 		ignoreRule := IgnoreRule{}
 
 		projectKey := d.Get("project_key").(string)
-		req, err := getRestyRequest(m.(util.ProvderMetadata).Client, projectKey)
+		req, err := getRestyRequest(m.(sdk.ProvderMetadata).Client, projectKey)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -494,7 +494,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 			return diag.FromErr(err)
 		}
 
-		req, err := getRestyRequest(m.(util.ProvderMetadata).Client, ignoreRule.ProjectKey)
+		req, err := getRestyRequest(m.(sdk.ProvderMetadata).Client, ignoreRule.ProjectKey)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -533,7 +533,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 			return diag.FromErr(err)
 		}
 
-		req, err := getRestyRequest(m.(util.ProvderMetadata).Client, ignoreRule.ProjectKey)
+		req, err := getRestyRequest(m.(sdk.ProvderMetadata).Client, ignoreRule.ProjectKey)
 		if err != nil {
 			return diag.FromErr(err)
 		}

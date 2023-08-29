@@ -2,7 +2,7 @@ package xray
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/jfrog/terraform-provider-shared/util"
+	"github.com/jfrog/terraform-provider-shared/util/sdk"
 	"github.com/jfrog/terraform-provider-shared/validator"
 )
 
@@ -20,7 +20,7 @@ func resourceXrayWatch() *schema.Resource {
 
 		CustomizeDiff: watchResourceDiff,
 
-		Schema: util.MergeMaps(
+		Schema: sdk.MergeMaps(
 			getProjectKeySchema(false, "Support repository and build watch resource types. When specifying individual repository or build they must be already assigned to the project. Build must be added as indexed resources."),
 			map[string]*schema.Schema{
 				"name": {

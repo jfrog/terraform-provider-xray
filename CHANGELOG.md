@@ -1,3 +1,11 @@
+## 1.15.0 (August 29, 2023). Tested on Artifactory 7.63.14 and Xray 3.80.9
+
+BUG FIXES:
+
+* resource/xray_repository_config: added `exposures` to `config` to support JFrog Advanced Security scanning. 
+
+PR: [#133](https://github.com/jfrog/terraform-provider-xray/pull/133)
+
 ## 1.14.2 (July 24, 2023). Tested on Artifactory 7.63.5 and Xray 3.78.10
 
 BUG FIXES:

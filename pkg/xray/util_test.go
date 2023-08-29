@@ -8,9 +8,10 @@ import (
 
 	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	tf "github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/jfrog/terraform-provider-shared/client"
-	"github.com/jfrog/terraform-provider-shared/test"
-	"github.com/jfrog/terraform-provider-shared/util"
+	"github.com/jfrog/terraform-provider-shared/testutil"
+	"github.com/jfrog/terraform-provider-shared/util/sdk"
 )
 
 func checkPolicy(id string, request *resty.Request) (*resty.Response, error) {
@@ -31,15 +32,15 @@ func testCheckPolicyDeleted(id string, t *testing.T, request *resty.Request) *re
 
 type CheckFun func(id string, request *resty.Request) (*resty.Response, error)
 
-func verifyDeleted(id string, check CheckFun) func(*terraform.State) error {
-	return func(s *terraform.State) error {
+func verifyDeleted(id string, check CheckFun) func(*tf.State) error {
+	return func(s *tf.State) error {
 		rs, ok := s.RootModule().Resources[id]
 		if !ok {
 			return fmt.Errorf("error: Resource id [%s] not found", id)
 		}
 		provider, _ := testAccProviders()["xray"]()
 		provider.Configure(context.Background(), terraform.NewResourceConfigRaw(nil))
-		c := provider.Meta().(util.ProvderMetadata).Client
+		c := provider.Meta().(sdk.ProvderMetadata).Client
 		resp, err := check(rs.Primary.ID, c.R())
 		if err != nil {
 			if resp != nil {
@@ -55,13 +56,13 @@ func verifyDeleted(id string, check CheckFun) func(*terraform.State) error {
 }
 
 func GetTestResty(t *testing.T) *resty.Client {
-	artifactoryUrl := test.GetEnvVarWithFallback(t, "XRAY_URL", "JFROG_URL")
+	artifactoryUrl := testutil.GetEnvVarWithFallback(t, "XRAY_URL", "JFROG_URL")
 	restyClient, err := client.Build(artifactoryUrl, "")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	accessToken := test.GetEnvVarWithFallback(t, "XRAY_ACCESS_TOKEN", "JFROG_ACCESS_TOKEN")
+	accessToken := testutil.GetEnvVarWithFallback(t, "XRAY_ACCESS_TOKEN", "JFROG_ACCESS_TOKEN")
 	restyClient, err = client.AddAuth(restyClient, "", accessToken)
 	if err != nil {
 		t.Fatal(err)
@@ -116,7 +117,7 @@ func generateListOfNames(prefix string, number int) string {
 	var CVEs []string
 	n := 0
 	for n < number {
-		CVEs = append(CVEs, fmt.Sprintf("\"%s%d\",", prefix, test.RandomInt()))
+		CVEs = append(CVEs, fmt.Sprintf("\"%s%d\",", prefix, testutil.RandomInt()))
 		n++
 	}
 	return fmt.Sprintf("%s", CVEs)

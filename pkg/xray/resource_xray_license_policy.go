@@ -2,7 +2,7 @@ package xray
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/jfrog/terraform-provider-shared/util"
+	"github.com/jfrog/terraform-provider-shared/util/sdk"
 	"github.com/jfrog/terraform-provider-shared/validator"
 )
 
@@ -38,7 +38,7 @@ func resourceXrayLicensePolicyV2() *schema.Resource {
 		},
 	}
 
-	var actionsSchema = util.MergeMaps(
+	var actionsSchema = sdk.MergeMaps(
 		commonActionsSchema,
 		map[string]*schema.Schema{
 			"custom_severity": {
