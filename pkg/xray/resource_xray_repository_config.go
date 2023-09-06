@@ -78,11 +78,11 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 			ValidateDiagFunc: validator.StringIsNotEmpty,
 		},
 		"config": {
-			Type:          schema.TypeSet,
-			Optional:      true,
-			MaxItems:      1,
-			Description:   "Single repository configuration. Only one of 'config' or 'paths_config' can be set.",
-			ConflictsWith: []string{"paths_config"},
+			Type:         schema.TypeSet,
+			Optional:     true,
+			MaxItems:     1,
+			Description:  "Single repository configuration. Only one of 'config' or 'paths_config' can be set.",
+			AtLeastOneOf: []string{"paths_config"},
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					"vuln_contextual_analysis": {
@@ -141,42 +141,43 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 			},
 		},
 		"paths_config": {
-			Type:        schema.TypeSet,
-			Optional:    true,
-			MaxItems:    1,
-			Description: `Enables you to set a more granular retention period. It enables you to scan future artifacts within the specific path, and set a retention period for the historical data of artifacts after they are scanned`,
+			Type:         schema.TypeSet,
+			Optional:     true,
+			MaxItems:     1,
+			Description:  "Enables you to set a more granular retention period. It enables you to scan future artifacts within the specific path, and set a retention period for the historical data of artifacts after they are scanned",
+			AtLeastOneOf: []string{"config"},
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					"pattern": {
 						Type:        schema.TypeList,
 						Required:    true,
 						MinItems:    1,
-						Description: `Pattern, applied to the repositories.`,
+						Description: "Pattern, applied to the repositories.",
 						Elem: &schema.Resource{
 							Schema: map[string]*schema.Schema{
 								"include": {
 									Type:             schema.TypeString,
 									Required:         true,
-									Description:      `Include pattern.`,
+									Description:      "Include pattern.",
 									ValidateDiagFunc: validator.StringIsNotEmpty,
 								},
 								"exclude": {
 									Type:             schema.TypeString,
 									Optional:         true,
-									Description:      `Exclude pattern.`,
+									Description:      "Exclude pattern.",
 									ValidateDiagFunc: validator.StringIsNotEmpty,
 								},
 								"index_new_artifacts": {
 									Type:        schema.TypeBool,
 									Optional:    true,
 									Default:     true,
-									Description: `If checked, Xray will scan newly added artifacts in the path. Note that existing artifacts will not be scanned. If the folder contains existing artifacts that have been scanned, and you do not want to index new artifacts in that folder, you can choose not to index that folder.`,
+									Description: "If checked, Xray will scan newly added artifacts in the path. Note that existing artifacts will not be scanned. If the folder contains existing artifacts that have been scanned, and you do not want to index new artifacts in that folder, you can choose not to index that folder.",
 								},
 								"retention_in_days": {
 									Type:             schema.TypeInt,
 									Optional:         true,
 									Default:          90,
-									Description:      `The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository.`,
+									Description:      "The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository.",
 									ValidateDiagFunc: validator.IntAtLeast(0),
 								},
 							},
@@ -185,7 +186,7 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 					"all_other_artifacts": {
 						Type:        schema.TypeSet,
 						Required:    true,
-						Description: `If you select by pattern, you must define a retention period for all other artifacts in the repository in the All Other Artifacts setting.`,
+						Description: "If you select by pattern, you must define a retention period for all other artifacts in the repository in the All Other Artifacts setting.",
 						MinItems:    1,
 						MaxItems:    1,
 						Elem: &schema.Resource{
@@ -194,13 +195,13 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 									Type:        schema.TypeBool,
 									Optional:    true,
 									Default:     true,
-									Description: `If checked, Xray will scan newly added artifacts in the path. Note that existing artifacts will not be scanned. If the folder contains existing artifacts that have been scanned, and you do not want to index new artifacts in that folder, you can choose not to index that folder.`,
+									Description: "If checked, Xray will scan newly added artifacts in the path. Note that existing artifacts will not be scanned. If the folder contains existing artifacts that have been scanned, and you do not want to index new artifacts in that folder, you can choose not to index that folder.",
 								},
 								"retention_in_days": {
 									Type:             schema.TypeInt,
 									Optional:         true,
 									Default:          90,
-									Description:      `The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository.`,
+									Description:      "The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository.",
 									ValidateDiagFunc: validator.IntAtLeast(0),
 								},
 							},
@@ -372,7 +373,7 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 			"retention_in_days": repoConfig.RetentionInDays,
 		}
 
-		if slices.Contains(vulnContextualAnalysisPackageTypes(xrayVersion), packageType) {
+		if repoConfig.VulnContextualAnalysis != nil && slices.Contains(vulnContextualAnalysisPackageTypes(xrayVersion), packageType) {
 			m["vuln_contextual_analysis"] = *repoConfig.VulnContextualAnalysis
 		}
 
@@ -528,5 +529,4 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 		Schema:      repositoryConfigSchema,
 		Description: "Provides an Xray repository config resource. See [Xray Indexing Resources](https://www.jfrog.com/confluence/display/JFROG/Indexing+Xray+Resources#IndexingXrayResources-SetaRetentionPeriod) and [REST API](https://www.jfrog.com/confluence/display/JFROG/Xray+REST+API#XrayRESTAPI-UpdateRepositoriesConfigurations) for more details.",
 	}
-
 }
