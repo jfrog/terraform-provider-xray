@@ -1,3 +1,11 @@
+## 1.16.0 (September 7, 2023). Tested on Artifactory 7.63.14 and Xray 3.81.8
+
+IMPROVEMENTS:
+* resource/xray_repository_config: added validation to ensure either `config` or `path_config` attribute is defined. 
+
+PR: [#135](https://github.com/jfrog/terraform-provider-xray/pull/135)
+Issue: [#134](https://github.com/jfrog/terraform-provider-xray/issues/134)
+
 ## 1.15.0 (August 29, 2023). Tested on Artifactory 7.63.14 and Xray 3.80.9
 
 BUG FIXES:
