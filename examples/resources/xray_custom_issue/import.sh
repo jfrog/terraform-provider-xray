@@ -1,0 +1,1 @@
+terraform import xray_custom_issue.my-issue-1 my-issue-1
