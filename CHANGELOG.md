@@ -1,3 +1,12 @@
+## 1.17.0 (September 13, 2023). Tested on Artifactory 7.68.7 and Xray 3.82.6
+
+FEATURES:
+
+* resource/xray_custom_issue: add a new resource allowing to custom issue event to be managed.
+
+PR: [#136](https://github.com/jfrog/terraform-provider-xray/pull/136)
+Issue: [#123](https://github.com/jfrog/terraform-provider-xray/issues/123)
+
 ## 1.16.0 (September 7, 2023). Tested on Artifactory 7.63.14 and Xray 3.81.8
 
 IMPROVEMENTS:
@@ -41,7 +50,6 @@ IMPROVEMENTS:
 
 PR: [#122](https://github.com/jfrog/terraform-provider-xray/pull/122)
 Issues: [#120](https://github.com/jfrog/terraform-provider-xray/issues/120), [#121](https://github.com/jfrog/terraform-provider-xray/issues/121)
-
 
 ## 1.13.0 (April 19, 2023). Tested on Artifactory 7.55.10 and Xray 3.71.6
 

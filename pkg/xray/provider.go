@@ -60,6 +60,7 @@ func Provider() *schema.Provider {
 				"xray_licenses_report":          resourceXrayLicensesReport(),
 				"xray_violations_report":        resourceXrayViolationsReport(),
 				"xray_operational_risks_report": resourceXrayOperationalRisksReport(),
+				"xray_custom_issue":             resourceXrayCustomIssue(),
 			},
 		),
 	}
