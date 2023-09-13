@@ -1,6 +1,7 @@
 package xray
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/go-resty/resty/v2"
@@ -182,6 +183,57 @@ func TestAccCustomIssue_full(t *testing.T) {
 			},
 		},
 	})
+}
+
+func TestAccCustomIssue_invalid(t *testing.T) {
+	testCases := []struct {
+		name       string
+		extras     map[string]string
+		errorRegex string
+	}{
+		{name: "name", extras: map[string]string{"name": "xray"}, errorRegex: `.*must not begin with 'xray' \(case insensitive\).*`},
+		{name: "type", extras: map[string]string{"type": "foo"}, errorRegex: ".*Invalid string.*"},
+		{name: "provider_name", extras: map[string]string{"provider_name": "jfrog"}, errorRegex: `.*must not be 'jfrog' \(case insensitive\).*`},
+		{name: "package_type", extras: map[string]string{"package_type": "foo"}, errorRegex: ".*Invalid string.*"},
+		{name: "severity", extras: map[string]string{"severity": "foo"}, errorRegex: ".*Invalid string.*"},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			_, _, resourceName := testutil.MkNames("custom-issue-", "xray_custom_issue")
+
+			testData := sdk.MergeMaps(
+				map[string]string{
+					"name":                          resourceName,
+					"description":                   "test description",
+					"summary":                       "test summary",
+					"type":                          "security",
+					"provider_name":                 "test",
+					"package_type":                  "generic",
+					"severity":                      "Medium",
+					"component_id":                  "aero:aero",
+					"component_vulnerable_versions": "[0.2.3]",
+					"component_vulnerable_ranges_vulnerable_versions": "[0.2.3]",
+					"cve":         "CVE-2017-1000386",
+					"cve_cvss_v2": "2.4",
+					"source_id":   "CVE-2017-1000386",
+				},
+				testCase.extras,
+			)
+
+			config := sdk.ExecuteTemplate("TestAccCustomIssue_invalid", template, testData)
+
+			resource.Test(t, resource.TestCase{
+				PreCheck:          func() { testAccPreCheck(t) },
+				ProviderFactories: testAccProviders(),
+				Steps: []resource.TestStep{
+					{
+						Config:      config,
+						ExpectError: regexp.MustCompile(testCase.errorRegex),
+					},
+				},
+			})
+		})
+	}
 }
 
 func testCheckCustomIssue(id string, request *resty.Request) (*resty.Response, error) {
