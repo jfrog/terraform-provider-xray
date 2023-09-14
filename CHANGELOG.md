@@ -1,3 +1,11 @@
+## 1.17.1 (September 15, 2023)
+
+IMPROVEMENTS:
+
+* resource/xray_watch: replace potentially unsafe string intepolation with struct marshalling.
+
+PR: [#137](https://github.com/jfrog/terraform-provider-xray/pull/137)
+
 ## 1.17.0 (September 13, 2023). Tested on Artifactory 7.68.7 and Xray 3.82.6
 
 FEATURES:
@@ -10,6 +18,7 @@ Issue: [#123](https://github.com/jfrog/terraform-provider-xray/issues/123)
 ## 1.16.0 (September 7, 2023). Tested on Artifactory 7.63.14 and Xray 3.81.8
 
 IMPROVEMENTS:
+
 * resource/xray_repository_config: added validation to ensure either `config` or `path_config` attribute is defined. 
 
 PR: [#135](https://github.com/jfrog/terraform-provider-xray/pull/135)
