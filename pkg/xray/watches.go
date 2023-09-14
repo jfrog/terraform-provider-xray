@@ -173,22 +173,26 @@ func unpackAntFilters(d *schema.Set, filterType string) []WatchFilter {
 
 	var filters []WatchFilter
 
+	type antFilterValue struct {
+		ExcludePatterns []string `json:"ExcludePatterns"`
+		IncludePatterns []string `json:"IncludePatterns"`
+	}
+
 	for _, raw := range tfFilters {
 		antValue := raw.(map[string]interface{})
 
 		// create JSON string from slice:
 		// from []string{"a", "b"} to `["ExcludePatterns": ["a", "b"]]`
-		excludePatterns, _ := json.Marshal(sdk.CastToStringArr(antValue["exclude_patterns"].([]interface{})))
-		includePatterns, _ := json.Marshal(sdk.CastToStringArr(antValue["include_patterns"].([]interface{})))
-		filterJsonString := fmt.Sprintf(
-			`{"ExcludePatterns": %s, "IncludePatterns": %s}`,
-			excludePatterns,
-			includePatterns,
+		filterValue, _ := json.Marshal(
+			&antFilterValue{
+				ExcludePatterns: sdk.CastToStringArr(antValue["exclude_patterns"].([]interface{})),
+				IncludePatterns: sdk.CastToStringArr(antValue["include_patterns"].([]interface{})),
+			},
 		)
 
 		filter := WatchFilter{
 			Type:  filterType,
-			Value: json.RawMessage(filterJsonString),
+			Value: json.RawMessage(filterValue),
 		}
 		filters = append(filters, filter)
 	}
