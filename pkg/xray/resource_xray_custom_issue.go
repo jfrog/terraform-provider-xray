@@ -277,7 +277,7 @@ func resourceXrayCustomIssue() *schema.Resource {
 		return ss
 	}
 
-	var packComponents = func(data *schema.Set, components []Component) []interface{} {
+	var packComponents = func(components []Component) []interface{} {
 		var cs []interface{}
 
 		for _, component := range components {
@@ -333,7 +333,7 @@ func resourceXrayCustomIssue() *schema.Resource {
 		if err := d.Set("source", packSources(customIssue.Sources)); err != nil {
 			return diag.FromErr(err)
 		}
-		if err := d.Set("component", packComponents(d.Get("component").(*schema.Set), customIssue.Components)); err != nil {
+		if err := d.Set("component", packComponents(customIssue.Components)); err != nil {
 			return diag.FromErr(err)
 		}
 

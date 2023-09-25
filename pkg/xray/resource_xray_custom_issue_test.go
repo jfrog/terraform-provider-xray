@@ -10,71 +10,71 @@ import (
 	"github.com/jfrog/terraform-provider-shared/util/sdk"
 )
 
-const template = `
-	resource "xray_custom_issue" "{{ .name }}" {
-		name          = "{{ .name }}"
-		description   = "{{ .description }}"
-		summary       = "{{ .summary }}"
-		type          = "{{ .type }}"
-		provider_name = "{{ .provider_name }}"
-		package_type  = "{{ .package_type }}"
-		severity      = "{{ .severity }}"
-
-		component {
-			id                  = "{{ .component_id }}"
-			vulnerable_versions = ["{{ .component_vulnerable_versions }}"]
-			vulnerable_ranges {
-				vulnerable_versions = ["{{ .component_vulnerable_ranges_vulnerable_versions }}"]
-			}
-		}
-
-		cve {
-			cve     = "{{ .cve }}"
-			cvss_v2 = "{{ .cve_cvss_v2 }}"
-		}
-
-		source {
-			id = "{{ .source_id }}"
-		}
-	}
-`
-
-const fullTemplate = `
-	resource "xray_custom_issue" "{{ .name }}" {
-		name          = "{{ .name }}"
-		description   = "{{ .description }}"
-		summary       = "{{ .summary }}"
-		type          = "{{ .type }}"
-		provider_name = "{{ .provider_name }}"
-		package_type  = "{{ .package_type }}"
-		severity      = "{{ .severity }}"
-
-		component {
-			id                  = "{{ .component_id }}"
-			vulnerable_versions = ["{{ .component_vulnerable_versions }}"]
-			fixed_versions      = ["{{ .component_fixed_versions }}"]
-			vulnerable_ranges {
-				vulnerable_versions = ["{{ .component_vulnerable_ranges_vulnerable_versions }}"]
-				fixed_versions      = ["{{ .component_vulnerable_ranges_fixed_versions }}"]
-			}
-		}
-
-		cve {
-			cve     = "{{ .cve }}"
-			cvss_v2 = "{{ .cve_cvss_v2 }}"
-			cvss_v3 = "{{ .cve_cvss_v3 }}"
-		}
-
-		source {
-			id   = "{{ .source_id }}"
-			name = "{{ .source_name }}"
-			url  = "{{ .source_url }}"
-		}
-	}
-`
-
 func TestAccCustomIssue_full(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("custom-issue-", "xray_custom_issue")
+
+	const template = `
+		resource "xray_custom_issue" "{{ .name }}" {
+			name          = "{{ .name }}"
+			description   = "{{ .description }}"
+			summary       = "{{ .summary }}"
+			type          = "{{ .type }}"
+			provider_name = "{{ .provider_name }}"
+			package_type  = "{{ .package_type }}"
+			severity      = "{{ .severity }}"
+
+			component {
+				id                  = "{{ .component_id }}"
+				vulnerable_versions = ["{{ .component_vulnerable_versions }}"]
+				vulnerable_ranges {
+					vulnerable_versions = ["{{ .component_vulnerable_ranges_vulnerable_versions }}"]
+				}
+			}
+
+			cve {
+				cve     = "{{ .cve }}"
+				cvss_v2 = "{{ .cve_cvss_v2 }}"
+			}
+
+			source {
+				id = "{{ .source_id }}"
+			}
+		}
+	`
+
+	const fullTemplate = `
+		resource "xray_custom_issue" "{{ .name }}" {
+			name          = "{{ .name }}"
+			description   = "{{ .description }}"
+			summary       = "{{ .summary }}"
+			type          = "{{ .type }}"
+			provider_name = "{{ .provider_name }}"
+			package_type  = "{{ .package_type }}"
+			severity      = "{{ .severity }}"
+
+			component {
+				id                  = "{{ .component_id }}"
+				vulnerable_versions = ["{{ .component_vulnerable_versions }}"]
+				fixed_versions      = ["{{ .component_fixed_versions }}"]
+				vulnerable_ranges {
+					vulnerable_versions = ["{{ .component_vulnerable_ranges_vulnerable_versions }}"]
+					fixed_versions      = ["{{ .component_vulnerable_ranges_fixed_versions }}"]
+				}
+			}
+
+			cve {
+				cve     = "{{ .cve }}"
+				cvss_v2 = "{{ .cve_cvss_v2 }}"
+				cvss_v3 = "{{ .cve_cvss_v3 }}"
+			}
+
+			source {
+				id   = "{{ .source_id }}"
+				name = "{{ .source_name }}"
+				url  = "{{ .source_url }}"
+			}
+		}
+	`
 
 	testData := map[string]string{
 		"name":                          resourceName,
@@ -186,6 +186,35 @@ func TestAccCustomIssue_full(t *testing.T) {
 }
 
 func TestAccCustomIssue_invalid(t *testing.T) {
+	const template = `
+		resource "xray_custom_issue" "{{ .name }}" {
+			name          = "{{ .name }}"
+			description   = "{{ .description }}"
+			summary       = "{{ .summary }}"
+			type          = "{{ .type }}"
+			provider_name = "{{ .provider_name }}"
+			package_type  = "{{ .package_type }}"
+			severity      = "{{ .severity }}"
+
+			component {
+				id                  = "{{ .component_id }}"
+				vulnerable_versions = ["{{ .component_vulnerable_versions }}"]
+				vulnerable_ranges {
+					vulnerable_versions = ["{{ .component_vulnerable_ranges_vulnerable_versions }}"]
+				}
+			}
+
+			cve {
+				cve     = "{{ .cve }}"
+				cvss_v2 = "{{ .cve_cvss_v2 }}"
+			}
+
+			source {
+				id = "{{ .source_id }}"
+			}
+		}
+	`
+
 	testCases := []struct {
 		name       string
 		extras     map[string]string
