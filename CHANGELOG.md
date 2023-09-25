@@ -1,3 +1,12 @@
+## 1.18.0 (September 26, 2023)
+
+FEATURES:
+
+* resource/xray_webhook: add a new resource allowing webhook to be managed.
+
+PR: [#139](https://github.com/jfrog/terraform-provider-xray/pull/139)
+Issue: [#7](https://github.com/jfrog/terraform-provider-xray/issues/7)
+
 ## 1.17.1 (September 15, 2023). Tested on Artifactory 7.68.7 and Xray 3.82.6
 
 IMPROVEMENTS:
@@ -10,7 +19,7 @@ PR: [#137](https://github.com/jfrog/terraform-provider-xray/pull/137)
 
 FEATURES:
 
-* resource/xray_custom_issue: add a new resource allowing to custom issue event to be managed.
+* resource/xray_custom_issue: add a new resource allowing custom issue event to be managed.
 
 PR: [#136](https://github.com/jfrog/terraform-provider-xray/pull/136)
 Issue: [#123](https://github.com/jfrog/terraform-provider-xray/issues/123)
