@@ -38,7 +38,7 @@ func resourceXrayOperationalRiskPolicy() *schema.Resource {
 		"op_risk_min_risk": {
 			Type:             schema.TypeString,
 			Optional:         true,
-			Description:      "The minimum operational risk that will be impacted by the policy.",
+			Description:      "The minimum operational risk that will be impacted by the policy: High, Medium, Low",
 			ValidateDiagFunc: validator.StringInSlice(true, "High", "Medium", "Low"),
 		},
 		"op_risk_custom": {
@@ -62,35 +62,30 @@ func resourceXrayOperationalRiskPolicy() *schema.Resource {
 					"release_date_greater_than_months": {
 						Type:             schema.TypeInt,
 						Optional:         true,
-						Default:          6,
 						Description:      "Release age greater than (in months): 6, 12, 18, 24, 30, or 36",
 						ValidateDiagFunc: validation.ToDiagFunc(validation.IntInSlice([]int{6, 12, 18, 24, 30, 36})),
 					},
 					"newer_versions_greater_than": {
 						Type:             schema.TypeInt,
 						Optional:         true,
-						Default:          1,
 						Description:      "Number of releases since greater than: 1, 2, 3, 4, or 5",
 						ValidateDiagFunc: validation.ToDiagFunc(validation.IntInSlice([]int{1, 2, 3, 4, 5})),
 					},
 					"release_cadence_per_year_less_than": {
 						Type:             schema.TypeInt,
 						Optional:         true,
-						Default:          1,
 						Description:      "Release cadence less than per year: 1, 2, 3, 4, or 5",
 						ValidateDiagFunc: validation.ToDiagFunc(validation.IntInSlice([]int{1, 2, 3, 4, 5})),
 					},
 					"commits_less_than": {
 						Type:             schema.TypeInt,
 						Optional:         true,
-						Default:          10,
 						Description:      "Number of commits less than per year: 10, 25, 50, or 100",
 						ValidateDiagFunc: validation.ToDiagFunc(validation.IntInSlice([]int{10, 25, 50, 100})),
 					},
 					"committers_less_than": {
 						Type:             schema.TypeInt,
 						Optional:         true,
-						Default:          1,
 						Description:      "Number of committers less than per year: 1, 2, 3, 4, or 5",
 						ValidateDiagFunc: validation.ToDiagFunc(validation.IntInSlice([]int{1, 2, 3, 4, 5})),
 					},

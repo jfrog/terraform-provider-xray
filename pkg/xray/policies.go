@@ -187,12 +187,12 @@ type PolicyExposures struct {
 type OperationalRiskCriteria struct {
 	UseAndCondition               bool   `json:"use_and_condition"`
 	IsEOL                         bool   `json:"is_eol"`
-	ReleaseDateGreaterThanMonths  int    `json:"release_date_greater_than_months"`
-	NewerVersionsGreaterThan      int    `json:"newer_versions_greater_than"`
-	ReleaseCadencePerYearLessThan int    `json:"release_cadence_per_year_less_than"`
-	CommitsLessThan               int    `json:"commits_less_than"`
-	CommittersLessThan            int    `json:"committers_less_than"`
-	Risk                          string `json:"risk"`
+	ReleaseDateGreaterThanMonths  int    `json:"release_date_greater_than_months,omitempty"`
+	NewerVersionsGreaterThan      int    `json:"newer_versions_greater_than,omitempty"`
+	ReleaseCadencePerYearLessThan int    `json:"release_cadence_per_year_less_than,omitempty"`
+	CommitsLessThan               int    `json:"commits_less_than,omitempty"`
+	CommittersLessThan            int    `json:"committers_less_than,omitempty"`
+	Risk                          string `json:"risk,omitempty"`
 }
 
 type PolicyRuleCriteria struct {
