@@ -1,3 +1,12 @@
+## 2.0.0 (September 27, 2023). Tested on Artifactory 7.68.11 and Xray 3.82.11
+
+ BREAKING CHANGES:
+
+ * resource/xray_operational_risk_policy: remove default values for attributes `op_risk_custom.release_date_greater_than_months`, `op_risk_custom.newer_versions_greater_than`, `op_risk_custom.release_cadence_per_year_less_than`, `op_risk_custom.commits_less_than`, and `op_risk_custom.committers_less_than`. They are now require to be defined explicitly if you wish to set any values. There may be state drifts for this policy resource as the provide code can't distinguish between default values vs configuration values so it can't automatically upgrade the TF state.
+
+PR: [#140](https://github.com/jfrog/terraform-provider-xray/pull/140)
+Issue: [#138](https://github.com/jfrog/terraform-provider-xray/issues/138)
+
 ## 1.18.0 (September 26, 2023). Tested on Artifactory 7.68.11 and Xray 3.82.11
 
 FEATURES:

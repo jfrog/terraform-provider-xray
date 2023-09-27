@@ -150,7 +150,7 @@ Optional:
 Optional:
 
 - `op_risk_custom` (Block List, Max: 1) Custom Condition (see [below for nested schema](#nestedblock--rule--criteria--op_risk_custom))
-- `op_risk_min_risk` (String) The minimum operational risk that will be impacted by the policy.
+- `op_risk_min_risk` (String) The minimum operational risk that will be impacted by the policy: High, Medium, Low
 
 <a id="nestedblock--rule--criteria--op_risk_custom"></a>
 ### Nested Schema for `rule.criteria.op_risk_custom`
