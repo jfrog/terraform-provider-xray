@@ -1,4 +1,10 @@
-## 2.0.0 (September 27, 2023). Tested on Artifactory 7.68.14 and Xray 3.83.8
+## 2.0.1 (October 12, 2023). Tested on Artifactory 7.68.14 and Xray 3.83.8
+
+SECURITY:
+
+* provider: Bump golang.org/x/net from 0.11.0 to 0.17.0 PR: [#142](https://github.com/jfrog/terraform-provider-xray/pull/142)
+
+## 2.0.0 (September 27, 2023). Tested on Artifactory 7.68.11 and Xray 3.82.11
 
  BREAKING CHANGES:
 
