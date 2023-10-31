@@ -377,7 +377,7 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 			m["vuln_contextual_analysis"] = *repoConfig.VulnContextualAnalysis
 		}
 
-		if slices.Contains(exposuresPackageTypes(xrayVersion), packageType) {
+		if repoConfig.Exposures != nil && slices.Contains(exposuresPackageTypes(xrayVersion), packageType) {
 			m["exposures"] = packExposures(repoConfig.Exposures, packageType)
 		}
 
