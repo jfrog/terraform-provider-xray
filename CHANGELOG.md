@@ -1,3 +1,12 @@
+## 2.0.2 (November 1, 2023). Tested on Artifactory 7.71.3 and Xray 3.83.10
+
+BUG FIXES:
+
+* resource/xray_repository_config: fix provider crash after upgrading from 1.12.0 to >=1.15.0.
+
+PR: [#145](https://github.com/jfrog/terraform-provider-xray/pull/145)
+Issue: [#141](https://github.com/jfrog/terraform-provider-xray/issues/141) and [#144](https://github.com/jfrog/terraform-provider-xray/issues/144)
+
 ## 2.0.1 (October 12, 2023). Tested on Artifactory 7.71.3 and Xray 3.83.10
 
 SECURITY:

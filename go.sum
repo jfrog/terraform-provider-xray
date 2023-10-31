@@ -107,8 +107,8 @@ github.com/imdario/mergo v0.3.11/go.mod h1:jmQim1M+e3UYxmgPu/WyfjB3N3VflVyUjjjwH
 github.com/imdario/mergo v0.3.13 h1:lFzP57bqS/wsqKssCGmtLAb8A0wKjLGrve2q3PPVcBk=
 github.com/imdario/mergo v0.3.13/go.mod h1:4lJ1jqUDcsbIECGy0RUJAXNIhg+6ocWgb1ALK2O4oXg=
 github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 h1:BQSFePA1RWJOlocH6Fxy8MmwDt+yVQYULKfN0RoTN8A=
-github.com/jfrog/terraform-provider-shared v1.18.0 h1:wH+cCL7DPmIp1bQlSfrMG+67tDExMj/MlCQOQgFZuQQ=
-github.com/jfrog/terraform-provider-shared v1.18.0/go.mod h1:JvTKRAXMQyX6gQjESY+YK2lJLeW8uKTVHar5HDTnvp0=
+github.com/jfrog/terraform-provider-shared v1.20.2 h1:PAHPn0H1CkMWApPaEM5QXYILMOmzgtLuE/clfcQp5Mc=
+github.com/jfrog/terraform-provider-shared v1.20.2/go.mod h1:37QaQbp1XSbA/Lnk6HAdh6D2EzUBK+Rk9ZCasQ0BJr4=
 github.com/jhump/protoreflect v1.6.0 h1:h5jfMVslIg6l29nsMs0D8Wj17RDVdNYti0vDN/PZZoE=
 github.com/kevinburke/ssh_config v1.2.0 h1:x584FjTGwHzMwvHx18PXxbBVzfnxogHaAReU4gf13a4=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
