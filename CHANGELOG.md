@@ -1,3 +1,9 @@
+## 2.0.3 (November 17, 2023). Tested on Artifactory 7.71.4 and Xray 3.85.5
+
+BUG FIXES:
+
+* resource/xray_ignore_rule: remove validation against setting attributes `build` and `component` at the same time. PR: [#147](https://github.com/jfrog/terraform-provider-xray/pull/147) Issue: [#146](https://github.com/jfrog/terraform-provider-xray/issues/146)
+
 ## 2.0.2 (November 1, 2023). Tested on Artifactory 7.71.3 and Xray 3.83.10
 
 BUG FIXES:

@@ -195,11 +195,10 @@ func resourceXrayIgnoreRule() *schema.Resource {
 				},
 			},
 			"component": {
-				Type:          schema.TypeSet,
-				Optional:      true,
-				ForceNew:      true,
-				ConflictsWith: []string{"build", "release_bundle"},
-				Description:   "List of specific components to ignore. Omit to apply to all.",
+				Type:        schema.TypeSet,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "List of specific components to ignore. Omit to apply to all.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
