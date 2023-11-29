@@ -1,3 +1,9 @@
+## 2.0.4 (November 30, 2023). Tested on Artifactory 7.71.5 and Xray 3.86.3
+
+BUG FIXES:
+
+* resource/xray_ignore_rule: Remove validation against setting attributes `vulnerabilities` and `cves` at the same time. Removed `Computed` attribute for `cves` to avoid state drift and forced replacement. PR: [#151](https://github.com/jfrog/terraform-provider-xray/pull/151) Issue: [#148](https://github.com/jfrog/terraform-provider-xray/issues/148)
+
 ## 2.0.3 (November 17, 2023). Tested on Artifactory 7.71.4 and Xray 3.85.5
 
 BUG FIXES:

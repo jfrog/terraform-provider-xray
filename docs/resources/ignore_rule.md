@@ -66,7 +66,7 @@ resource "xray_ignore_rule" "ignore-111" {
 - `artifact` (Block Set) List of specific artifacts to ignore. Omit to apply to all. (see [below for nested schema](#nestedblock--artifact))
 - `build` (Block Set) List of specific builds to ignore. Omit to apply to all. (see [below for nested schema](#nestedblock--build))
 - `component` (Block Set) List of specific components to ignore. Omit to apply to all. (see [below for nested schema](#nestedblock--component))
-- `cves` (Set of String) List of specific CVEs to ignore. Omit to apply to all.
+- `cves` (Set of String) List of specific CVEs to ignore. Omit to apply to all. Should set to 'any' when 'vulnerabilities' is set to 'any'.
 - `docker_layers` (Set of String) List of Docker layer SHA256 hashes to ignore. Omit to apply to all.
 - `expiration_date` (String) The Ignore Rule will be active until the expiration date. At that date it will automatically get deleted. The rule with the expiration date less than current day, will error out.
 - `licenses` (Set of String) List of specific licenses to ignore. Omit to apply to all.

@@ -439,6 +439,7 @@ func TestAccIgnoreRule_docker_layers(t *testing.T) {
 		  notes            = "fake notes"
 		  expiration_date  = "{{ .expirationDate }}"
 		  vulnerabilities  = ["any"]
+		  cves             = ["any"]
 
 		  docker_layers = [
 		    "2ae0e4835a9a6e22e35dd0fcce7d7354999476b7dad8698d2d7a77c80bfc647b",
@@ -527,6 +528,7 @@ func sourceTestCase(source string, t *testing.T) (*testing.T, resource.TestCase)
 		  notes            = "fake notes"
 		  expiration_date  = "{{ .expirationDate }}"
 		  vulnerabilities  = ["any"]
+		  cves             = ["any"]
 
 		  {{ .source }} {
 			  name    = "fake-name"
@@ -573,6 +575,7 @@ func TestAccIgnoreRule_artifact(t *testing.T) {
 		  notes            = "fake notes"
 		  expiration_date  = "{{ .expirationDate }}"
 		  vulnerabilities  = ["any"]
+		  cves             = ["any"]
 
 		  artifact {
 			  name    = "fake-name"
@@ -648,36 +651,49 @@ func TestAccIgnoreRule_invalid_artifact_path(t *testing.T) {
 func TestAccIgnoreRule_with_project_key(t *testing.T) {
 	_, fqrn, name := testutil.MkNames("ignore-rule-", "xray_ignore_rule")
 	expirationDate := time.Now().Add(time.Hour * 48)
-	projectKey := fmt.Sprintf("testproj%d", testutil.RandSelect(1, 2, 3, 4, 5))
+	projectKey := fmt.Sprintf("testproj%d", testutil.RandomInt())
 
-	config := sdk.ExecuteTemplate("TestAccIgnoreRule", `
-		resource "xray_ignore_rule" "{{ .name }}" {
-		  notes            = "fake notes"
-		  expiration_date  = "{{ .expirationDate }}"
-		  vulnerabilities  = ["any"]
-		  project_key      = "{{ .projectKey }}"
-
-		  docker_layers = [
-		    "2ae0e4835a9a6e22e35dd0fcce7d7354999476b7dad8698d2d7a77c80bfc647b",
-			"a8db0e25d5916e70023114bb2d2497cd85327486bd6e0dc2092b349a1ab3a0a0"
-		  ]
+	config := sdk.ExecuteTemplate(
+		"TestAccIgnoreRule",
+		`resource "project" "{{ .projectKey }}" {
+			key          = "{{ .projectKey }}"
+			display_name = "{{ .projectKey }}"
+			admin_privileges {
+				manage_members   = true
+				manage_resources = true
+				index_resources  = true
+			}
 		}
-	`, map[string]interface{}{
-		"name":           name,
-		"expirationDate": expirationDate.Format("2006-01-02"),
-		"projectKey":     projectKey,
-	})
+
+		resource "xray_ignore_rule" "{{ .name }}" {
+			notes            = "fake notes"
+			expiration_date  = "{{ .expirationDate }}"
+			vulnerabilities  = ["any"]
+			cves             = ["any"]
+			project_key      = project.{{ .projectKey }}.key
+
+			docker_layers = [
+				"2ae0e4835a9a6e22e35dd0fcce7d7354999476b7dad8698d2d7a77c80bfc647b",
+				"a8db0e25d5916e70023114bb2d2497cd85327486bd6e0dc2092b349a1ab3a0a0"
+			]
+		}`,
+		map[string]interface{}{
+			"name":           name,
+			"expirationDate": expirationDate.Format("2006-01-02"),
+			"projectKey":     projectKey,
+		},
+	)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			testAccPreCheck(t)
-			CreateProject(t, projectKey)
-		},
+		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviders(),
-		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
-			DeleteProject(t, projectKey)
-			return testCheckIgnoreRule(id, request)
-		}),
+		ExternalProviders: map[string]resource.ExternalProvider{
+			"project": {
+				Source:            "registry.terraform.io/jfrog/project",
+				VersionConstraint: "1.3.4",
+			},
+		},
+		CheckDestroy: verifyDeleted(fqrn, testCheckIgnoreRule),
 		Steps: []resource.TestStep{
 			{
 				Config: config,
