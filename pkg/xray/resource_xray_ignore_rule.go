@@ -88,7 +88,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 				Optional:      true,
 				ForceNew:      true,
 				Description:   "List of specific vulnerabilities to ignore. Omit to apply to all.",
-				ConflictsWith: []string{"cves", "licenses", "operational_risk"},
+				ConflictsWith: []string{"licenses", "operational_risk"},
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -97,9 +97,8 @@ func resourceXrayIgnoreRule() *schema.Resource {
 				Type:          schema.TypeSet,
 				Optional:      true,
 				ForceNew:      true,
-				Computed:      true, // If "vulnerabilities" is set to "any" and "cves" omitted (user can't set a conflicting attribute), the value "any" for "cves" will be returned in the response body from the Xray anyway. To avoid state drift this attribute is "Computed".
-				Description:   "List of specific CVEs to ignore. Omit to apply to all.",
-				ConflictsWith: []string{"vulnerabilities", "licenses", "operational_risk"},
+				Description:   "List of specific CVEs to ignore. Omit to apply to all. Should set to 'any' when 'vulnerabilities' is set to 'any'.",
+				ConflictsWith: []string{"licenses", "operational_risk"},
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -417,6 +416,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 
 		ignoreFilters := IgnoreFilters{}
 		data := &sdk.ResourceData{ResourceData: d}
+
 		vulnerabilities := data.GetSet("vulnerabilities")
 		if len(vulnerabilities) > 0 {
 			ignoreFilters.Vulnerabilities = vulnerabilities
@@ -462,7 +462,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 	}
 
 	var resourceXrayIgnoreRuleRead = func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-		ignoreRule := IgnoreRule{}
+		var ignoreRule IgnoreRule
 
 		projectKey := d.Get("project_key").(string)
 		req, err := getRestyRequest(m.(sdk.ProvderMetadata).Client, projectKey)
@@ -472,9 +472,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 
 		resp, err := req.
 			SetResult(&ignoreRule).
-			SetPathParams(map[string]string{
-				"id": d.Id(),
-			}).
+			SetPathParam("id", d.Id()).
 			Get("xray/api/v1/ignore_rules/{id}")
 		if err != nil {
 			if resp != nil && resp.StatusCode() == http.StatusNotFound {
@@ -502,7 +500,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 			Info string `json:"info"`
 		}
 
-		response := IgnoreRuleCreateResponse{}
+		var response IgnoreRuleCreateResponse
 
 		_, err = req.
 			SetBody(ignoreRule).
@@ -538,9 +536,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 		}
 
 		resp, err := req.
-			SetPathParams(map[string]string{
-				"id": d.Id(),
-			}).
+			SetPathParam("id", d.Id()).
 			Delete("xray/api/v1/ignore_rules/{id}")
 		if err != nil && resp.StatusCode() == http.StatusInternalServerError {
 			d.SetId("")
