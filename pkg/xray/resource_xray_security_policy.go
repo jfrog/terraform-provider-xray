@@ -126,7 +126,7 @@ func resourceXraySecurityPolicyV2() *schema.Resource {
 }
 
 var criteriaMaliciousPkgDiff = func(ctx context.Context, diff *schema.ResourceDiff, v interface{}) error {
-	rules := diff.Get("rule").([]interface{})
+	rules := diff.Get("rule").(*schema.Set).List()
 	if len(rules) == 0 {
 		return nil
 	}

@@ -63,8 +63,6 @@ func TestAccSecurityPolicy_unknownMinSeveritySecurityPolicy_beforeVersion3602(t 
 			return false, err
 		}
 
-		fmt.Printf("Ver: %v\n", ver)
-
 		fixedVersion, err := version.NewVersion("3.60.2")
 		if err != nil {
 			return false, err
@@ -492,6 +490,7 @@ func TestAccSecurityPolicy_createCVSSFloat(t *testing.T) {
 	testData["resource_name"] = resourceName
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-8-%d", testutil.RandomInt())
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-8-%d", testutil.RandomInt())
+	testData["rule_name_2"] = fmt.Sprintf("test-security-rule-8-%d", testutil.RandomInt())
 	testData["cvss_from"] = "1.5"
 	testData["cvss_to"] = "5.3"
 
@@ -915,6 +914,29 @@ const securityPolicyCVSS = `resource "xray_security_policy" "{{ .resource_name }
 	rule {
 		name = "{{ .rule_name }}"
 		priority = 1
+		criteria {
+			cvss_range {
+				from = {{ .cvss_from }}
+				to = {{ .cvss_to }}
+			}
+		}
+		actions {
+			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			fail_build = {{ .fail_build }}
+			notify_watch_recipients = {{ .notify_watch_recipients }}
+			notify_deployer = {{ .notify_deployer }}
+			create_ticket_enabled = {{ .create_ticket_enabled }}
+			build_failure_grace_period_in_days = {{ .grace_period_days }}
+			block_download {
+				unscanned = {{ .block_unscanned }}
+				active = {{ .block_active }}
+			}
+		}
+	}
+
+	rule {
+		name = "{{ .rule_name_2 }}"
+		priority = 2
 		criteria {
 			cvss_range {
 				from = {{ .cvss_from }}
