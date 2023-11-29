@@ -672,10 +672,10 @@ func TestAccIgnoreRule_with_project_key(t *testing.T) {
 			cves             = ["any"]
 			project_key      = project.{{ .projectKey }}.key
 
-			build {
-				name    = "fake-name"
-				version = "fake-version"
-			}
+			docker_layers = [
+				"2ae0e4835a9a6e22e35dd0fcce7d7354999476b7dad8698d2d7a77c80bfc647b",
+				"a8db0e25d5916e70023114bb2d2497cd85327486bd6e0dc2092b349a1ab3a0a0"
+			]
 		}`,
 		map[string]interface{}{
 			"name":           name,
