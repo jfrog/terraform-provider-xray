@@ -203,8 +203,8 @@ pipelines:
                                   --header "accept: application/json, text/plain, */*" \
                                   --header "x-requested-with: XMLHttpRequest" \
                                   --header "cookie: ACCESSTOKEN=${ACCESSTOKEN}; REFRESHTOKEN=${REFRESHTOKEN}")
-            - export XRAY_ACCESS_TOKEN=${ACCESS_KEY}
-            - echo "Unset ARTIFACTORY_USERNAME and ARTIFACTORY_PASSWORD, acceptance test will use XRAY_ACCESS_TOKEN instead"
+            - export JFROG_ACCESS_TOKEN=${ACCESS_KEY}
+            - echo "Unset ARTIFACTORY_USERNAME and ARTIFACTORY_PASSWORD, acceptance test will use JFROG_ACCESS_TOKEN instead"
             - unset ARTIFACTORY_USERNAME && unset ARTIFACTORY_PASSWORD
             - printenv
             - export TF_ACC=1
