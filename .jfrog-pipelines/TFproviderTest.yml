@@ -152,7 +152,7 @@ pipelines:
               auto:
                 language: go
                 versions:
-                  - "1.18"
+                  - "1.21"
           integrations:
             - name: gcpK8sPartnershipProject
             - name: partnersSlack
