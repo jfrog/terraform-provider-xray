@@ -165,7 +165,7 @@ func TestAccSecurityPolicy_badGracePeriod(t *testing.T) {
 
 func TestAccSecurityPolicy_withProjectKey(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
-	projectKey := fmt.Sprintf("testproj%d", testutil.RandSelect(1, 2, 3, 4, 5))
+	projectKey := fmt.Sprintf("testproj%d", testutil.RandomInt())
 
 	testData := sdk.MergeMaps(testDataSecurity)
 	testData["resource_name"] = resourceName
@@ -248,7 +248,8 @@ func TestAccSecurityPolicy_createBlockDownloadTrueCVSS(t *testing.T) {
 
 	testData["resource_name"] = resourceName
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-4-%d", testutil.RandomInt())
-	testData["rule_name"] = fmt.Sprintf("test-security-rule-4-%d", testutil.RandomInt())
+	testData["rule_name_1"] = fmt.Sprintf("test-security-rule-4-%d", testutil.RandomInt())
+	testData["rule_name_2"] = fmt.Sprintf("test-security-rule-4-%d", testutil.RandomInt())
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -275,7 +276,8 @@ func TestAccSecurityPolicy_createBlockDownloadFalseCVSS(t *testing.T) {
 
 	testData["resource_name"] = resourceName
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-5-%d", testutil.RandomInt())
-	testData["rule_name"] = fmt.Sprintf("test-security-rule-5-%d", testutil.RandomInt())
+	testData["rule_name_1"] = fmt.Sprintf("test-security-rule-5-%d", testutil.RandomInt())
+	testData["rule_name_2"] = fmt.Sprintf("test-security-rule-5-%d", testutil.RandomInt())
 	testData["block_unscanned"] = "false"
 	testData["block_active"] = "false"
 
