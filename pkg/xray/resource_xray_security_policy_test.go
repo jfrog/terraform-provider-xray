@@ -38,6 +38,38 @@ var testDataSecurity = map[string]string{
 	"criteriaType":                      "cvss",
 }
 
+func TestAccSecurityPolicy_multipleRules(t *testing.T) {
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
+
+	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-3-%d", testutil.RandomInt())
+	testData["rule_name_1"] = fmt.Sprintf("test-security-rule-3-%d", testutil.RandomInt())
+	testData["rule_name_2"] = fmt.Sprintf("test-security-rule-3-%d", testutil.RandomInt())
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config: sdk.ExecuteTemplate(fqrn, securityPolicyTwoRules, testData),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "name", testData["policy_name"]),
+					resource.TestCheckResourceAttr(fqrn, "description", testData["policy_description"]),
+					resource.TestCheckResourceAttr(fqrn, "rule.#", "2"),
+					resource.TestCheckTypeSetElemNestedAttrs(fqrn, "rule.*", map[string]string{
+						"name": testData["rule_name_1"],
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(fqrn, "rule.*", map[string]string{
+						"name": testData["rule_name_2"],
+					}),
+				),
+			},
+		},
+	})
+}
+
 func TestAccSecurityPolicy_unknownMinSeveritySecurityPolicy_beforeVersion3602(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
 
@@ -62,8 +94,6 @@ func TestAccSecurityPolicy_unknownMinSeveritySecurityPolicy_beforeVersion3602(t 
 		if err != nil {
 			return false, err
 		}
-
-		fmt.Printf("Ver: %v\n", ver)
 
 		fixedVersion, err := version.NewVersion("3.60.2")
 		if err != nil {
@@ -167,7 +197,7 @@ func TestAccSecurityPolicy_badGracePeriod(t *testing.T) {
 
 func TestAccSecurityPolicy_withProjectKey(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
-	projectKey := fmt.Sprintf("testproj%d", testutil.RandSelect(1, 2, 3, 4, 5))
+	projectKey := fmt.Sprintf("testproj%d", testutil.RandomInt())
 
 	testData := sdk.MergeMaps(testDataSecurity)
 	testData["resource_name"] = resourceName
@@ -915,6 +945,58 @@ const securityPolicyCVSS = `resource "xray_security_policy" "{{ .resource_name }
 	rule {
 		name = "{{ .rule_name }}"
 		priority = 1
+		criteria {
+			cvss_range {
+				from = {{ .cvss_from }}
+				to = {{ .cvss_to }}
+			}
+		}
+		actions {
+			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			fail_build = {{ .fail_build }}
+			notify_watch_recipients = {{ .notify_watch_recipients }}
+			notify_deployer = {{ .notify_deployer }}
+			create_ticket_enabled = {{ .create_ticket_enabled }}
+			build_failure_grace_period_in_days = {{ .grace_period_days }}
+			block_download {
+				unscanned = {{ .block_unscanned }}
+				active = {{ .block_active }}
+			}
+		}
+	}
+}`
+
+const securityPolicyTwoRules = `resource "xray_security_policy" "{{ .resource_name }}" {
+	name = "{{ .policy_name }}"
+	description = "{{ .policy_description }}"
+	type = "security"
+
+	rule {
+		name = "{{ .rule_name_1 }}"
+		priority = 1
+		criteria {
+			cvss_range {
+				from = {{ .cvss_from }}
+				to = {{ .cvss_to }}
+			}
+		}
+		actions {
+			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			fail_build = {{ .fail_build }}
+			notify_watch_recipients = {{ .notify_watch_recipients }}
+			notify_deployer = {{ .notify_deployer }}
+			create_ticket_enabled = {{ .create_ticket_enabled }}
+			build_failure_grace_period_in_days = {{ .grace_period_days }}
+			block_download {
+				unscanned = {{ .block_unscanned }}
+				active = {{ .block_active }}
+			}
+		}
+	}
+
+	rule {
+		name = "{{ .rule_name_2 }}"
+		priority = 2
 		criteria {
 			cvss_range {
 				from = {{ .cvss_from }}

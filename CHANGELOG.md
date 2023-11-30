@@ -1,4 +1,10 @@
-## 2.0.4 (November 30, 2023). Tested on Artifactory 7.71.5 and Xray 3.86.3
+## 2.0.5 (November 30, 2023). Tested on Artifactory 7.71.5 and Xray 3.86.3
+
+BUG FIXES:
+
+* resource/xray_security_policy: Fix ordering of multiple `rule` attributes causes state drift. PR: [#152](https://github.com/jfrog/terraform-provider-xray/pull/152) Issue: [#149](https://github.com/jfrog/terraform-provider-xray/issues/149)
+
+## 2.0.4 (November 29, 2023). Tested on Artifactory 7.71.5 and Xray 3.86.3
 
 BUG FIXES:
 

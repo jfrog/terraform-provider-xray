@@ -128,7 +128,7 @@ var getPolicySchema = func(criteriaSchema map[string]*schema.Schema, actionsSche
 				Description: "Modification timestamp",
 			},
 			"rule": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Required:    true,
 				Description: "A list of user-defined rules allowing you to trigger violations for specific vulnerability or license breaches by setting a license or security criteria, with a corresponding set of automatic actions according to your needs. Rules are processed according to the ascending order in which they are placed in the Rules list on the Policy. If a rule is met, the subsequent rules in the list will not be applied.",
 				Elem: &schema.Resource{
@@ -277,28 +277,26 @@ func unpackPolicy(d *schema.ResourceData) (*Policy, error) {
 	if v, ok := d.GetOk("author"); ok {
 		policy.Author = v.(string)
 	}
-	policyRules, err := unpackRules(d.Get("rule").([]interface{}), policy.Type)
+	policyRules, err := unpackRules(d.Get("rule").(*schema.Set), policy.Type)
 	policy.Rules = &policyRules
 
 	return policy, err
 }
 
-func unpackRules(configured []interface{}, policyType string) (policyRules []PolicyRule, err error) {
+func unpackRules(configured *schema.Set, policyType string) (policyRules []PolicyRule, err error) {
 	var rules []PolicyRule
 
-	if configured != nil {
-		for _, raw := range configured {
-			rule := new(PolicyRule)
-			data := raw.(map[string]interface{})
-			rule.Name = data["name"].(string)
-			rule.Priority = data["priority"].(int)
+	for _, raw := range configured.List() {
+		rule := new(PolicyRule)
+		data := raw.(map[string]interface{})
+		rule.Name = data["name"].(string)
+		rule.Priority = data["priority"].(int)
 
-			rule.Criteria, err = unpackCriteria(data["criteria"].(*schema.Set), policyType)
-			if v, ok := data["actions"]; ok {
-				rule.Actions = unpackActions(v.(*schema.Set))
-			}
-			rules = append(rules, *rule)
+		rule.Criteria, err = unpackCriteria(data["criteria"].(*schema.Set), policyType)
+		if v, ok := data["actions"]; ok {
+			rule.Actions = unpackActions(v.(*schema.Set))
 		}
+		rules = append(rules, *rule)
 	}
 
 	return rules, err
