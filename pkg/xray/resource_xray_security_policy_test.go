@@ -147,6 +147,7 @@ func TestAccSecurityPolicy_badGracePeriod(t *testing.T) {
 	testData["resource_name"] = resourceName
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-3-%d", testutil.RandomInt())
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-3-%d", testutil.RandomInt())
+	testData["rule_name_2"] = fmt.Sprintf("test-security-rule-3-%d", testutil.RandomInt())
 	testData["fail_build"] = "false"
 	testData["grace_period_days"] = "5"
 
@@ -248,7 +249,7 @@ func TestAccSecurityPolicy_createBlockDownloadTrueCVSS(t *testing.T) {
 
 	testData["resource_name"] = resourceName
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-4-%d", testutil.RandomInt())
-	testData["rule_name_1"] = fmt.Sprintf("test-security-rule-4-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-4-%d", testutil.RandomInt())
 	testData["rule_name_2"] = fmt.Sprintf("test-security-rule-4-%d", testutil.RandomInt())
 
 	resource.Test(t, resource.TestCase{
@@ -276,7 +277,7 @@ func TestAccSecurityPolicy_createBlockDownloadFalseCVSS(t *testing.T) {
 
 	testData["resource_name"] = resourceName
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-5-%d", testutil.RandomInt())
-	testData["rule_name_1"] = fmt.Sprintf("test-security-rule-5-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-5-%d", testutil.RandomInt())
 	testData["rule_name_2"] = fmt.Sprintf("test-security-rule-5-%d", testutil.RandomInt())
 	testData["block_unscanned"] = "false"
 	testData["block_active"] = "false"
@@ -416,6 +417,7 @@ func TestAccSecurityPolicy_createMaliciousPackageCvssMinSeverityFail(t *testing.
 	testData["resource_name"] = resourceName
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-6-%d", testutil.RandomInt())
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-6-%d", testutil.RandomInt())
+	testData["rule_name_2"] = fmt.Sprintf("test-security-rule-6-%d", testutil.RandomInt())
 	testData["malicious_package"] = "true"
 	testData["min_severity"] = "High"
 
@@ -439,6 +441,7 @@ func TestAccSecurityPolicy_createCvssMinSeverityFail(t *testing.T) {
 	testData["resource_name"] = resourceName
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-6-%d", testutil.RandomInt())
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-6-%d", testutil.RandomInt())
+	testData["rule_name_2"] = fmt.Sprintf("test-security-rule-6-%d", testutil.RandomInt())
 	testData["malicious_package"] = "false"
 	testData["min_severity"] = "High"
 
@@ -522,6 +525,7 @@ func TestAccSecurityPolicy_blockMismatchCVSS(t *testing.T) {
 	testData["resource_name"] = resourceName
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-9-%d", testutil.RandomInt())
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-9-%d", testutil.RandomInt())
+	testData["rule_name_2"] = fmt.Sprintf("test-security-rule-9-%d", testutil.RandomInt())
 	testData["block_unscanned"] = "true"
 	testData["block_active"] = "false"
 
