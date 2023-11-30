@@ -38,6 +38,38 @@ var testDataSecurity = map[string]string{
 	"criteriaType":                      "cvss",
 }
 
+func TestAccSecurityPolicy_multipleRules(t *testing.T) {
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
+
+	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-3-%d", testutil.RandomInt())
+	testData["rule_name_1"] = fmt.Sprintf("test-security-rule-3-%d", testutil.RandomInt())
+	testData["rule_name_2"] = fmt.Sprintf("test-security-rule-3-%d", testutil.RandomInt())
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      verifyDeleted(fqrn, testCheckPolicy),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config: sdk.ExecuteTemplate(fqrn, securityPolicyTwoRules, testData),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "name", testData["policy_name"]),
+					resource.TestCheckResourceAttr(fqrn, "description", testData["policy_description"]),
+					resource.TestCheckResourceAttr(fqrn, "rule.#", "2"),
+					resource.TestCheckTypeSetElemNestedAttrs(fqrn, "rule.*", map[string]string{
+						"name": testData["rule_name_1"],
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(fqrn, "rule.*", map[string]string{
+						"name": testData["rule_name_2"],
+					}),
+				),
+			},
+		},
+	})
+}
+
 func TestAccSecurityPolicy_unknownMinSeveritySecurityPolicy_beforeVersion3602(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
 
@@ -147,7 +179,6 @@ func TestAccSecurityPolicy_badGracePeriod(t *testing.T) {
 	testData["resource_name"] = resourceName
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-3-%d", testutil.RandomInt())
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-3-%d", testutil.RandomInt())
-	testData["rule_name_2"] = fmt.Sprintf("test-security-rule-3-%d", testutil.RandomInt())
 	testData["fail_build"] = "false"
 	testData["grace_period_days"] = "5"
 
@@ -250,7 +281,6 @@ func TestAccSecurityPolicy_createBlockDownloadTrueCVSS(t *testing.T) {
 	testData["resource_name"] = resourceName
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-4-%d", testutil.RandomInt())
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-4-%d", testutil.RandomInt())
-	testData["rule_name_2"] = fmt.Sprintf("test-security-rule-4-%d", testutil.RandomInt())
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -278,7 +308,6 @@ func TestAccSecurityPolicy_createBlockDownloadFalseCVSS(t *testing.T) {
 	testData["resource_name"] = resourceName
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-5-%d", testutil.RandomInt())
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-5-%d", testutil.RandomInt())
-	testData["rule_name_2"] = fmt.Sprintf("test-security-rule-5-%d", testutil.RandomInt())
 	testData["block_unscanned"] = "false"
 	testData["block_active"] = "false"
 
@@ -417,7 +446,6 @@ func TestAccSecurityPolicy_createMaliciousPackageCvssMinSeverityFail(t *testing.
 	testData["resource_name"] = resourceName
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-6-%d", testutil.RandomInt())
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-6-%d", testutil.RandomInt())
-	testData["rule_name_2"] = fmt.Sprintf("test-security-rule-6-%d", testutil.RandomInt())
 	testData["malicious_package"] = "true"
 	testData["min_severity"] = "High"
 
@@ -441,7 +469,6 @@ func TestAccSecurityPolicy_createCvssMinSeverityFail(t *testing.T) {
 	testData["resource_name"] = resourceName
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-6-%d", testutil.RandomInt())
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-6-%d", testutil.RandomInt())
-	testData["rule_name_2"] = fmt.Sprintf("test-security-rule-6-%d", testutil.RandomInt())
 	testData["malicious_package"] = "false"
 	testData["min_severity"] = "High"
 
@@ -495,7 +522,6 @@ func TestAccSecurityPolicy_createCVSSFloat(t *testing.T) {
 	testData["resource_name"] = resourceName
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-8-%d", testutil.RandomInt())
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-8-%d", testutil.RandomInt())
-	testData["rule_name_2"] = fmt.Sprintf("test-security-rule-8-%d", testutil.RandomInt())
 	testData["cvss_from"] = "1.5"
 	testData["cvss_to"] = "5.3"
 
@@ -525,7 +551,6 @@ func TestAccSecurityPolicy_blockMismatchCVSS(t *testing.T) {
 	testData["resource_name"] = resourceName
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-9-%d", testutil.RandomInt())
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-9-%d", testutil.RandomInt())
-	testData["rule_name_2"] = fmt.Sprintf("test-security-rule-9-%d", testutil.RandomInt())
 	testData["block_unscanned"] = "true"
 	testData["block_active"] = "false"
 
@@ -919,6 +944,35 @@ const securityPolicyCVSS = `resource "xray_security_policy" "{{ .resource_name }
 	type = "security"
 	rule {
 		name = "{{ .rule_name }}"
+		priority = 1
+		criteria {
+			cvss_range {
+				from = {{ .cvss_from }}
+				to = {{ .cvss_to }}
+			}
+		}
+		actions {
+			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			fail_build = {{ .fail_build }}
+			notify_watch_recipients = {{ .notify_watch_recipients }}
+			notify_deployer = {{ .notify_deployer }}
+			create_ticket_enabled = {{ .create_ticket_enabled }}
+			build_failure_grace_period_in_days = {{ .grace_period_days }}
+			block_download {
+				unscanned = {{ .block_unscanned }}
+				active = {{ .block_active }}
+			}
+		}
+	}
+}`
+
+const securityPolicyTwoRules = `resource "xray_security_policy" "{{ .resource_name }}" {
+	name = "{{ .policy_name }}"
+	description = "{{ .policy_description }}"
+	type = "security"
+
+	rule {
+		name = "{{ .rule_name_1 }}"
 		priority = 1
 		criteria {
 			cvss_range {
