@@ -1,3 +1,9 @@
+## 2.1.0 (December 7, 2023)
+
+IMPROVEMENTS:
+
+* resource/xray_watch: add support for watch type `releaseBundle`, `all-releaseBundles`, `releaseBundleV2`, and `all-releaseBundlesV2`. PR: [#153](https://github.com/jfrog/terraform-provider-xray/pull/153) Issue: [#150](https://github.com/jfrog/terraform-provider-xray/issues/159)
+
 ## 2.0.5 (November 30, 2023). Tested on Artifactory 7.71.5 and Xray 3.86.3
 
 BUG FIXES:
