@@ -517,9 +517,9 @@ func watchResourceDiff(_ context.Context, diff *schema.ResourceDiff, v interface
 
 		// validate type with filter and ant_filter
 		antFilters := r["ant_filter"].(*schema.Set).List()
-		antPatternsResourceTypes := []string{"all-builds", "all-projects"}
+		antPatternsResourceTypes := []string{"all-builds", "all-projects", "all-releaseBundles", "all-releaseBundlesV2"}
 		if !slices.Contains(antPatternsResourceTypes, resourceType) && len(antFilters) > 0 {
-			return fmt.Errorf("attribute 'ant_filter' is set when 'watch_resource.type' is not set to 'all-builds' or 'all-projects'")
+			return fmt.Errorf("attribute 'ant_filter' is set when 'watch_resource.type' is not set to 'all-builds', 'all-projects', 'all-releaseBundles', or 'all-releaseBundlesV2'")
 		}
 
 		repositoryResourceTypes := []string{"repository", "all-repos"}

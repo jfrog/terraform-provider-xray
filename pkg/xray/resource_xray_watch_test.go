@@ -1094,7 +1094,7 @@ func TestAccWatch_invalidBuildFilter(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      util.ExecuteTemplate(fqrn, invalidBuildsWatchFilterTemplate, testData),
-				ExpectError: regexp.MustCompile(`attribute 'ant_filter' is set when 'watch_resource\.type' is not set to 'all-builds' or 'all-projects'`),
+				ExpectError: regexp.MustCompile(`attribute 'ant_filter' is set when 'watch_resource.type' is not set to 'all-builds', 'all-projects', 'all-releaseBundles', or 'all-releaseBundlesV2'`),
 			},
 		},
 	})
@@ -1134,7 +1134,6 @@ func TestAccWatch_allProjects(t *testing.T) {
 	})
 }
 
-//goland:noinspection GoErrorStringFormat
 func TestAccWatch_singleProject(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
 	testData := sdk.MergeMaps(testDataWatch)
@@ -1204,7 +1203,79 @@ func TestAccWatch_invalidProjectFilter(t *testing.T) {
 			{
 
 				Config:      util.ExecuteTemplate(fqrn, invalidProjectWatchFilterTemplate, testData),
-				ExpectError: regexp.MustCompile(`attribute 'ant_filter' is set when 'watch_resource\.type' is not set to 'all-builds' or 'all-projects'`),
+				ExpectError: regexp.MustCompile(`attribute 'ant_filter' is set when 'watch_resource.type' is not set to 'all-builds', 'all-projects', 'all-releaseBundles', or 'all-releaseBundlesV2'`),
+			},
+		},
+	})
+}
+
+func TestAccWatch_allReleaseBundle(t *testing.T) {
+	for _, watchType := range []string{"all-releaseBundles", "all-releaseBundlesV2"} {
+		t.Run(watchType, func(t *testing.T) {
+			resource.Test(allReleaseBundleTestCase(watchType, t))
+		})
+	}
+}
+
+func allReleaseBundleTestCase(watchType string, t *testing.T) (*testing.T, resource.TestCase) {
+	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
+	testData := sdk.MergeMaps(testDataWatch)
+
+	testData["resource_name"] = resourceName
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", testutil.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", testutil.RandomInt())
+	testData["watch_type"] = watchType
+
+	return t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+		},
+		CheckDestroy:      verifyDeleted(fqrn, testCheckWatch),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config: util.ExecuteTemplate(fqrn, allReleaseBundlesWatchTemplate, testData),
+				Check: resource.ComposeTestCheckFunc(
+					verifyXrayWatch(fqrn, testData),
+					resource.TestCheckTypeSetElemAttr(fqrn, "watch_resource.*.ant_filter.*.exclude_patterns.*", "a*"),
+					resource.TestCheckTypeSetElemAttr(fqrn, "watch_resource.*.ant_filter.*.exclude_patterns.*", "b*"),
+					resource.TestCheckTypeSetElemAttr(fqrn, "watch_resource.*.ant_filter.*.include_patterns.*", "ab*"),
+				),
+			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	}
+}
+
+func TestAccWatch_singleReleaseBundle(t *testing.T) {
+	// NOTE: can't test release bundle V2 due to no API to add release bundle to Xray scan index,
+	// which is required before a watch with release bundle v2 can be created.
+	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
+	testData := sdk.MergeMaps(testDataWatch)
+
+	testData["resource_name"] = resourceName
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", testutil.RandomInt())
+	testData["watch_type"] = "releaseBundle"
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", testutil.RandomInt())
+	testData["release_bundle_name"] = fmt.Sprintf("test-release-bundle-%d", testutil.RandomInt())
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      verifyDeleted(fqrn, testCheckWatch),
+		ProviderFactories: testAccProviders(),
+		Steps: []resource.TestStep{
+			{
+				Config: util.ExecuteTemplate(fqrn, singleReleaseBundleWatchTemplate, testData),
+				Check:  verifyXrayWatch(fqrn, testData),
+			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
@@ -2159,6 +2230,99 @@ resource "xray_watch" "{{ .resource_name }}" {
   	name = xray_security_policy.security.name
   	type = "security"
   }
+  watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
+}`
+
+const allReleaseBundlesWatchTemplate = `resource "xray_security_policy" "security" {
+  name        = "{{ .policy_name_0 }}"
+  description = "Security policy description"
+  type        = "security"
+  rule {
+    name     = "rule-name-severity"
+    priority = 1
+    criteria {
+      min_severity = "High"
+    }
+    actions {
+      webhooks = []
+      mails    = ["test@email.com"]
+      block_download {
+        unscanned = true
+        active    = true
+      }
+      block_release_bundle_distribution  = true
+      fail_build                         = true
+      notify_watch_recipients            = true
+      notify_deployer                    = true
+      create_ticket_enabled              = false
+      build_failure_grace_period_in_days = 5
+    }
+  }
+}
+
+resource "xray_watch" "{{ .resource_name }}" {
+  name        	= "{{ .watch_name }}"
+  description 	= "{{ .description }}"
+  active 		= {{ .active }}
+
+  watch_resource {
+	type       	= "{{ .watch_type }}"
+	bin_mgr_id  = "default"
+	ant_filter {
+		exclude_patterns = ["a*", "b*"]
+		include_patterns = ["ab*"]
+	}
+  }
+  assigned_policy {
+  	name 	= xray_security_policy.security.name
+  	type 	= "security"
+  }
+  watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
+}`
+
+const singleReleaseBundleWatchTemplate = `resource "xray_security_policy" "security" {
+  name        = "{{ .policy_name_0 }}"
+  description = "Security policy description"
+  type        = "security"
+  rule {
+    name     = "rule-name-severity"
+    priority = 1
+    criteria {
+      min_severity = "High"
+    }
+    actions {
+      webhooks = []
+      mails    = ["test@email.com"]
+      block_download {
+        unscanned = true
+        active    = true
+      }
+      block_release_bundle_distribution  = true
+      fail_build                         = true
+      notify_watch_recipients            = true
+      notify_deployer                    = true
+      create_ticket_enabled              = false
+      build_failure_grace_period_in_days = 5
+    }
+  }
+}
+
+resource "xray_watch" "{{ .resource_name }}" {
+  name        	= "{{ .watch_name }}"
+  description 	= "{{ .description }}"
+  active 		= {{ .active }}
+
+  watch_resource {
+	type   = "releaseBundle"
+	bin_mgr_id  = "default"
+	name   = "{{ .release_bundle_name }}"
+  }
+
+  assigned_policy {
+  	name 	= xray_security_policy.security.name
+  	type 	= "security"
+  }
+
   watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
 }`
 
