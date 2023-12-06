@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/jfrog/terraform-provider-shared/util/sdk"
+	"github.com/jfrog/terraform-provider-shared/util"
 )
 
 type Webhook struct {
@@ -110,7 +110,7 @@ func resourceXrayWebhook() *schema.Resource {
 	var resourceXrayWebhookRead = func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 		webhook := Webhook{}
 
-		req, err := getRestyRequest(m.(sdk.ProvderMetadata).Client, "")
+		req, err := getRestyRequest(m.(util.ProvderMetadata).Client, "")
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -171,7 +171,7 @@ func resourceXrayWebhook() *schema.Resource {
 			return diag.FromErr(err)
 		}
 
-		req, err := getRestyRequest(m.(sdk.ProvderMetadata).Client, "")
+		req, err := getRestyRequest(m.(util.ProvderMetadata).Client, "")
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -194,7 +194,7 @@ func resourceXrayWebhook() *schema.Resource {
 			return diag.FromErr(err)
 		}
 
-		req, err := getRestyRequest(m.(sdk.ProvderMetadata).Client, "")
+		req, err := getRestyRequest(m.(util.ProvderMetadata).Client, "")
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -217,7 +217,7 @@ func resourceXrayWebhook() *schema.Resource {
 	}
 
 	var resourceXrayWebhookDelete = func(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-		req, err := getRestyRequest(m.(sdk.ProvderMetadata).Client, "")
+		req, err := getRestyRequest(m.(util.ProvderMetadata).Client, "")
 		if err != nil {
 			return diag.FromErr(err)
 		}

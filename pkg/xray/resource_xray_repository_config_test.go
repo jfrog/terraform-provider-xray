@@ -8,7 +8,7 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/jfrog/terraform-provider-shared/testutil"
-	"github.com/jfrog/terraform-provider-shared/util/sdk"
+	"github.com/jfrog/terraform-provider-shared/util"
 )
 
 func TestAccRepositoryConfigRepoNoConfig(t *testing.T) {
@@ -18,7 +18,7 @@ func TestAccRepositoryConfigRepoNoConfig(t *testing.T) {
 		"repo_name":     "repo-config-test-repo",
 	}
 
-	config := sdk.ExecuteTemplate(
+	config := util.ExecuteTemplate(
 		fqrn,
 		`resource "xray_repository_config" "{{ .resource_name }}" {
 			repo_name = "{{ .repo_name }}"
@@ -49,7 +49,7 @@ func TestAccRepositoryConfigRepoConfigCreate_VulnContextualAnalysis(t *testing.T
 		{"maven", TestDataRepoConfigMavenTemplate, "3.77.4"},
 	}
 
-	version, err := sdk.GetXrayVersion(GetTestResty(t))
+	version, err := util.GetXrayVersion(GetTestResty(t))
 	if err != nil {
 		t.Fail()
 		return
@@ -73,7 +73,7 @@ func testAccRepositoryConfigRepoConfigCreate_VulnContextualAnalysis(t *testing.T
 			"applications_scan":        "false",
 		}
 
-		valid, _ := sdk.CheckVersion(xrayVersion, validVersion)
+		valid, _ := util.CheckVersion(xrayVersion, validVersion)
 		if !valid {
 			t.Skipf("xray version %s does not support %s for exposures scanning", xrayVersion, packageType)
 			return
@@ -95,7 +95,7 @@ func testAccRepositoryConfigRepoConfigCreate_VulnContextualAnalysis(t *testing.T
 
 			Steps: []resource.TestStep{
 				{
-					Config: sdk.ExecuteTemplate(fqrn, template, testData),
+					Config: util.ExecuteTemplate(fqrn, template, testData),
 					Check: resource.ComposeTestCheckFunc(
 						resource.TestCheckResourceAttr(fqrn, "repo_name", testData["repo_name"]),
 						resource.TestCheckResourceAttr(fqrn, "config.0.retention_in_days", testData["retention_in_days"]),
@@ -165,7 +165,7 @@ func TestAccRepositoryConfigRepoConfigCreate_exposure(t *testing.T) {
 		},
 	}
 
-	version, err := sdk.GetXrayVersion(GetTestResty(t))
+	version, err := util.GetXrayVersion(GetTestResty(t))
 	if err != nil {
 		t.Fail()
 		return
@@ -187,7 +187,7 @@ func TestAccRepositoryConfigRepoConfigCreate_no_exposure(t *testing.T) {
 		}
 	}`
 	validVersion := "3.75.10"
-	version, err := sdk.GetXrayVersion(GetTestResty(t))
+	version, err := util.GetXrayVersion(GetTestResty(t))
 	if err != nil {
 		t.Fail()
 		return
@@ -220,7 +220,7 @@ func testAccRepositoryConfigRepoConfigCreate(t *testing.T, packageType, template
 			"applications_scan":        "true",
 		}
 
-		valid, _ := sdk.CheckVersion(xrayVersion, validVersion)
+		valid, _ := util.CheckVersion(xrayVersion, validVersion)
 		if !valid {
 			t.Skipf("xray version %s does not support %s for exposures scanning", xrayVersion, packageType)
 			return
@@ -241,7 +241,7 @@ func testAccRepositoryConfigRepoConfigCreate(t *testing.T, packageType, template
 			ProviderFactories: testAccProviders(),
 			Steps: []resource.TestStep{
 				{
-					Config: sdk.ExecuteTemplate(fqrn, template, testData),
+					Config: util.ExecuteTemplate(fqrn, template, testData),
 					Check:  checkFunc(fqrn, testData),
 				},
 				{
@@ -278,7 +278,7 @@ func TestAccRepositoryConfigRepoConfigCreate_InvalidExposures(t *testing.T) {
 
 		Steps: []resource.TestStep{
 			{
-				Config:             sdk.ExecuteTemplate(fqrn, TestDataRepoConfigInvalidExposuresTemplate, testData),
+				Config:             util.ExecuteTemplate(fqrn, TestDataRepoConfigInvalidExposuresTemplate, testData),
 				ExpectNonEmptyPlan: true,
 			},
 		},
@@ -318,7 +318,7 @@ func TestAccRepositoryConfigRepoPathsCreate(t *testing.T) {
 
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, TestDataRepoPathsConfigTemplate, testData),
+				Config: util.ExecuteTemplate(fqrn, TestDataRepoPathsConfigTemplate, testData),
 				Check:  resource.ComposeTestCheckFunc(verifyRepositoryConfig(fqrn, testData)),
 			},
 			{
@@ -377,11 +377,11 @@ func TestAccRepositoryConfigRepoPathsUpdate(t *testing.T) {
 
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, TestDataRepoPathsConfigTemplate, testData),
+				Config: util.ExecuteTemplate(fqrn, TestDataRepoPathsConfigTemplate, testData),
 				Check:  resource.ComposeTestCheckFunc(verifyRepositoryConfig(fqrn, testData)),
 			},
 			{
-				Config: sdk.ExecuteTemplate(fqrn, TestDataRepoPathsConfigTemplate, testDataUpdated),
+				Config: util.ExecuteTemplate(fqrn, TestDataRepoPathsConfigTemplate, testDataUpdated),
 				Check:  resource.ComposeTestCheckFunc(verifyRepositoryConfig(fqrn, testDataUpdated)),
 			},
 		},

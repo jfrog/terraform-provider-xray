@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/jfrog/terraform-provider-shared/client"
 	"github.com/jfrog/terraform-provider-shared/testutil"
+	"github.com/jfrog/terraform-provider-shared/util"
 	"github.com/jfrog/terraform-provider-shared/util/sdk"
 )
 
@@ -50,7 +51,7 @@ func TestAccWatch_allReposSinglePolicy(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, allReposSinglePolicyWatchTemplate, testData),
+				Config: util.ExecuteTemplate(fqrn, allReposSinglePolicyWatchTemplate, testData),
 				Check:  verifyXrayWatch(fqrn, testData),
 			},
 			{
@@ -82,7 +83,7 @@ func TestAccWatch_allReposPathAntFilter(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, allReposPathAntFilterWatchTemplate, testData),
+				Config: util.ExecuteTemplate(fqrn, allReposPathAntFilterWatchTemplate, testData),
 				Check:  verifyXrayWatch(fqrn, testData),
 			},
 			{
@@ -114,7 +115,7 @@ func TestAccWatch_allReposKvFilter(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, allReposKvFilterWatchTemplate, testData),
+				Config: util.ExecuteTemplate(fqrn, allReposKvFilterWatchTemplate, testData),
 				Check:  verifyXrayWatch(fqrn, testData),
 			},
 			{
@@ -184,11 +185,11 @@ func TestAccWatch_allReposWithProjectKey(t *testing.T) {
 
 	  watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
 	}`
-	config := sdk.ExecuteTemplate(fqrn, template, testData)
+	config := util.ExecuteTemplate(fqrn, template, testData)
 
 	updatedTestData := sdk.MergeMaps(testData)
 	updatedTestData["description"] = "New description"
-	updatedConfig := sdk.ExecuteTemplate(fqrn, template, updatedTestData)
+	updatedConfig := util.ExecuteTemplate(fqrn, template, updatedTestData)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -246,7 +247,7 @@ func TestAccWatch_allReposMultiplePolicies(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, allReposMultiplePoliciesWatchTemplate, testData),
+				Config: util.ExecuteTemplate(fqrn, allReposMultiplePoliciesWatchTemplate, testData),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(fqrn, "name", testData["watch_name"]),
 					resource.TestCheckResourceAttr(fqrn, "description", testData["description"]),
@@ -306,7 +307,7 @@ func makeSingleRepositoryTestCase(repoType string, t *testing.T) (*testing.T, re
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, singleRepositoryWatchTemplate, testData),
+				Config: util.ExecuteTemplate(fqrn, singleRepositoryWatchTemplate, testData),
 				Check: resource.ComposeTestCheckFunc(
 					verifyXrayWatch(fqrn, testData),
 					resource.TestCheckTypeSetElemNestedAttrs(fqrn, "watch_resource.*.filter.*", map[string]string{
@@ -395,7 +396,7 @@ func TestAccWatch_singleRepositoryWithProjectKey(t *testing.T) {
 	  watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
 	}`
 
-	config := sdk.ExecuteTemplate(fqrn, template, testData)
+	config := util.ExecuteTemplate(fqrn, template, testData)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -458,7 +459,7 @@ func TestAccWatch_singleRepoMimeTypeFilter(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, singleRepositoryWatchTemplate, testData),
+				Config: util.ExecuteTemplate(fqrn, singleRepositoryWatchTemplate, testData),
 				Check: resource.ComposeTestCheckFunc(
 					verifyXrayWatch(fqrn, testData),
 					resource.TestCheckTypeSetElemNestedAttrs(fqrn, "watch_resource.*.filter.*", map[string]string{
@@ -502,7 +503,7 @@ func TestAccWatch_singleRepoKvFilter(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, kvFilters, testData),
+				Config: util.ExecuteTemplate(fqrn, kvFilters, testData),
 				Check: resource.ComposeTestCheckFunc(
 					verifyXrayWatch(fqrn, testData),
 					resource.TestCheckTypeSetElemNestedAttrs(fqrn, "watch_resource.*.kv_filter.*", map[string]string{
@@ -546,7 +547,7 @@ func TestAccWatch_repositoryMissingRepoType(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config:      sdk.ExecuteTemplate(fqrn, singleRepositoryInvalidWatchTemplate, testData),
+				Config:      util.ExecuteTemplate(fqrn, singleRepositoryInvalidWatchTemplate, testData),
 				ExpectError: regexp.MustCompile(`attribute 'repo_type' not set when 'watch_resource\.type' is set to 'repository'`),
 			},
 		},
@@ -581,7 +582,7 @@ func TestAccWatch_multipleRepositories(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, multipleRepositoriesWatchTemplate, testData),
+				Config: util.ExecuteTemplate(fqrn, multipleRepositoriesWatchTemplate, testData),
 				Check:  verifyXrayWatch(fqrn, testData),
 			},
 			{
@@ -628,7 +629,7 @@ func TestAccWatch_multipleRepositoriesPathAntPatterns(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, pathAntPatterns, testData),
+				Config: util.ExecuteTemplate(fqrn, pathAntPatterns, testData),
 				Check: resource.ComposeTestCheckFunc(
 					verifyXrayWatch(fqrn, testData),
 					resource.TestCheckResourceAttr(fqrn, "watch_resource.0.type", testData["watch_type"]),
@@ -681,7 +682,7 @@ func TestAccWatch_PathAntPatternsError(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config:      sdk.ExecuteTemplate(fqrn, pathAntPatterns, testData),
+				Config:      util.ExecuteTemplate(fqrn, pathAntPatterns, testData),
 				ExpectError: regexp.MustCompile("attribute 'path_ant_filter' is set when 'watch_resource.type' is not set to 'repository' or 'all-repos'"),
 			},
 		},
@@ -721,7 +722,7 @@ func TestAccWatch_multipleRepositoriesKvFilter(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, multipleRepositoriesKvFilter, testData),
+				Config: util.ExecuteTemplate(fqrn, multipleRepositoriesKvFilter, testData),
 				Check: resource.ComposeTestCheckFunc(
 					verifyXrayWatch(fqrn, testData),
 					resource.TestCheckResourceAttr(fqrn, "watch_resource.0.type", testData["watch_type"]),
@@ -776,7 +777,7 @@ func TestAccWatch_KvFilterError(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config:      sdk.ExecuteTemplate(fqrn, kvFilters, testData),
+				Config:      util.ExecuteTemplate(fqrn, kvFilters, testData),
 				ExpectError: regexp.MustCompile("attribute 'kv_filter' is set when 'watch_resource.type' is not set to 'repository' or 'all-repos'"),
 			},
 		},
@@ -804,7 +805,7 @@ func TestAccWatch_build(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, buildWatchTemplate, testData),
+				Config: util.ExecuteTemplate(fqrn, buildWatchTemplate, testData),
 				Check:  verifyXrayWatch(fqrn, testData),
 			},
 			{
@@ -872,7 +873,7 @@ func TestAccWatch_buildWithProjectKey(t *testing.T) {
 	  }
 	  watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
 	}`
-	config := sdk.ExecuteTemplate(fqrn, template, testData)
+	config := util.ExecuteTemplate(fqrn, template, testData)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -967,11 +968,11 @@ func TestAccWatch_allBuildsWithProjectKey(t *testing.T) {
 	  }
 	  watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
 	}`
-	config := sdk.ExecuteTemplate(fqrn, template, testData)
+	config := util.ExecuteTemplate(fqrn, template, testData)
 
 	updatedTestData := sdk.MergeMaps(testData)
 	updatedTestData["description"] = "New description"
-	updatedConfig := sdk.ExecuteTemplate(fqrn, template, updatedTestData)
+	updatedConfig := util.ExecuteTemplate(fqrn, template, updatedTestData)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -1027,7 +1028,7 @@ func TestAccWatch_multipleBuilds(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, multipleBuildsWatchTemplate, testData),
+				Config: util.ExecuteTemplate(fqrn, multipleBuildsWatchTemplate, testData),
 				Check:  verifyXrayWatch(fqrn, testData),
 			},
 			{
@@ -1056,7 +1057,7 @@ func TestAccWatch_allBuilds(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, allBuildsWatchTemplate, testData),
+				Config: util.ExecuteTemplate(fqrn, allBuildsWatchTemplate, testData),
 				Check: resource.ComposeTestCheckFunc(
 					verifyXrayWatch(fqrn, testData),
 					resource.TestCheckTypeSetElemAttr(fqrn, "watch_resource.*.ant_filter.*.exclude_patterns.*", "a*"),
@@ -1092,7 +1093,7 @@ func TestAccWatch_invalidBuildFilter(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config:      sdk.ExecuteTemplate(fqrn, invalidBuildsWatchFilterTemplate, testData),
+				Config:      util.ExecuteTemplate(fqrn, invalidBuildsWatchFilterTemplate, testData),
 				ExpectError: regexp.MustCompile(`attribute 'ant_filter' is set when 'watch_resource\.type' is not set to 'all-builds' or 'all-projects'`),
 			},
 		},
@@ -1116,7 +1117,7 @@ func TestAccWatch_allProjects(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, allProjectsWatchTemplate, testData),
+				Config: util.ExecuteTemplate(fqrn, allProjectsWatchTemplate, testData),
 				Check: resource.ComposeTestCheckFunc(
 					verifyXrayWatch(fqrn, testData),
 					resource.TestCheckTypeSetElemAttr(fqrn, "watch_resource.*.ant_filter.*.exclude_patterns.*", "a*"),
@@ -1172,7 +1173,7 @@ func TestAccWatch_singleProject(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, singleProjectWatchTemplate, testData),
+				Config: util.ExecuteTemplate(fqrn, singleProjectWatchTemplate, testData),
 				Check:  verifyXrayWatch(fqrn, testData),
 			},
 			{
@@ -1202,7 +1203,7 @@ func TestAccWatch_invalidProjectFilter(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 
-				Config:      sdk.ExecuteTemplate(fqrn, invalidProjectWatchFilterTemplate, testData),
+				Config:      util.ExecuteTemplate(fqrn, invalidProjectWatchFilterTemplate, testData),
 				ExpectError: regexp.MustCompile(`attribute 'ant_filter' is set when 'watch_resource\.type' is not set to 'all-builds' or 'all-projects'`),
 			},
 		},

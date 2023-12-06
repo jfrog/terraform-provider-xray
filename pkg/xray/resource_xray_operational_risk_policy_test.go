@@ -8,6 +8,7 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/jfrog/terraform-provider-shared/testutil"
+	"github.com/jfrog/terraform-provider-shared/util"
 	"github.com/jfrog/terraform-provider-shared/util/sdk"
 )
 
@@ -63,11 +64,11 @@ func TestAccOperationalRiskPolicy_withProjectKey(t *testing.T) {
 	testData["project_key"] = projectKey
 	testData["op_risk_min_risk"] = "Medium"
 
-	config := sdk.ExecuteTemplate(fqrn, template, testData)
+	config := util.ExecuteTemplate(fqrn, template, testData)
 
 	updatedTestData := sdk.MergeMaps(testData)
 	updatedTestData["policy_description"] = "New description"
-	updatedConfig := sdk.ExecuteTemplate(fqrn, template, updatedTestData)
+	updatedConfig := util.ExecuteTemplate(fqrn, template, updatedTestData)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -139,7 +140,7 @@ func TestAccOperationalRiskPolicy_minRiskCriteria(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, opertionalRiskPolicyMinRisk, testData),
+				Config: util.ExecuteTemplate(fqrn, opertionalRiskPolicyMinRisk, testData),
 				Check: resource.ComposeTestCheckFunc(
 					verifyOpertionalRiskPolicy(fqrn, testData),
 					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_min_risk", testData["op_risk_min_risk"]),
@@ -237,7 +238,7 @@ func TestAccOperationalRiskPolicy_customCriteria(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, opertionalRiskPolicyCustom, testData),
+				Config: util.ExecuteTemplate(fqrn, opertionalRiskPolicyCustom, testData),
 				Check: resource.ComposeTestCheckFunc(
 					verifyOpertionalRiskPolicy(fqrn, testData),
 					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.use_and_condition", testData["op_risk_custom_use_and_condition"]),
@@ -251,7 +252,7 @@ func TestAccOperationalRiskPolicy_customCriteria(t *testing.T) {
 				),
 			},
 			{
-				Config: sdk.ExecuteTemplate(fqrn, opertionalRiskPolicyCustomUnset, testData),
+				Config: util.ExecuteTemplate(fqrn, opertionalRiskPolicyCustomUnset, testData),
 				Check: resource.ComposeTestCheckFunc(
 					verifyOpertionalRiskPolicy(fqrn, testData),
 					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.use_and_condition", testData["op_risk_custom_use_and_condition"]),
@@ -322,7 +323,7 @@ func TestAccOperationalRiskPolicy_customCriteria_migration(t *testing.T) {
 						Source:            "registry.terraform.io/jfrog/xray",
 					},
 				},
-				Config: sdk.ExecuteTemplate(fqrn, opertionalRiskPolicyCustom, testData),
+				Config: util.ExecuteTemplate(fqrn, opertionalRiskPolicyCustom, testData),
 				Check: resource.ComposeTestCheckFunc(
 					verifyOpertionalRiskPolicy(fqrn, testData),
 					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.use_and_condition", testData["op_risk_custom_use_and_condition"]),
@@ -337,7 +338,7 @@ func TestAccOperationalRiskPolicy_customCriteria_migration(t *testing.T) {
 			},
 			{
 				ProviderFactories: testAccProviders(),
-				Config:            sdk.ExecuteTemplate(fqrn, opertionalRiskPolicyCustom, testData),
+				Config:            util.ExecuteTemplate(fqrn, opertionalRiskPolicyCustom, testData),
 				Check: resource.ComposeTestCheckFunc(
 					verifyOpertionalRiskPolicy(fqrn, testData),
 					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.use_and_condition", testData["op_risk_custom_use_and_condition"]),
@@ -406,7 +407,7 @@ func TestAccOperationalRiskPolicy_criteriaValidation(t *testing.T) {
 		}
 	}`
 
-	config := sdk.ExecuteTemplate(fqrn, template, testData)
+	config := util.ExecuteTemplate(fqrn, template, testData)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },

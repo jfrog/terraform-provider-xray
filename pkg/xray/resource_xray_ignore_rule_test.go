@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/jfrog/terraform-provider-shared/client"
 	"github.com/jfrog/terraform-provider-shared/testutil"
-	"github.com/jfrog/terraform-provider-shared/util/sdk"
+	"github.com/jfrog/terraform-provider-shared/util"
 )
 
 func TestAccIgnoreRule_objectives(t *testing.T) {
@@ -26,7 +26,7 @@ func objectiveTestCase(objective string, t *testing.T) (*testing.T, resource.Tes
 	_, fqrn, name := testutil.MkNames("ignore-rule-", "xray_ignore_rule")
 	expirationDate := time.Now().Add(time.Hour * 48)
 
-	config := sdk.ExecuteTemplate("TestAccIgnoreRule", `
+	config := util.ExecuteTemplate("TestAccIgnoreRule", `
 		resource "xray_ignore_rule" "{{ .name }}" {
 		  notes            = "fake notes"
 		  expiration_date  = "{{ .expirationDate }}"
@@ -67,7 +67,7 @@ func TestAccIgnoreRule_operational_risk(t *testing.T) {
 	_, fqrn, name := testutil.MkNames("ignore-rule-", "xray_ignore_rule")
 	expirationDate := time.Now().Add(time.Hour * 48)
 
-	config := sdk.ExecuteTemplate("TestAccIgnoreRule", `
+	config := util.ExecuteTemplate("TestAccIgnoreRule", `
 		resource "xray_ignore_rule" "{{ .name }}" {
 		  notes            = "fake notes"
 		  expiration_date  = "{{ .expirationDate }}"
@@ -111,7 +111,7 @@ func TestAccIgnoreRule_invalid_operational_risk(t *testing.T) {
 	_, _, name := testutil.MkNames("ignore-rule-", "xray_ignore_rule")
 	expirationDate := time.Now().Add(time.Hour * 48)
 
-	config := sdk.ExecuteTemplate("TestAccIgnoreRule", `
+	config := util.ExecuteTemplate("TestAccIgnoreRule", `
 		resource "xray_ignore_rule" "{{ .name }}" {
 		  notes            = "fake notes"
 		  expiration_date  = "{{ .expirationDate }}"
@@ -142,7 +142,7 @@ func TestAccIgnoreRule_scopes_policies(t *testing.T) {
 	_, fqrn, name := testutil.MkNames("ignore-rule-", "xray_ignore_rule")
 	expirationDate := time.Now().Add(time.Hour * 48)
 
-	config := sdk.ExecuteTemplate("TestAccIgnoreRule", `
+	config := util.ExecuteTemplate("TestAccIgnoreRule", `
 		resource "xray_security_policy" "fake_policy" {
 			name        = "fake-policy"
 			description = "Security policy description"
@@ -210,7 +210,7 @@ func TestAccIgnoreRule_scopes_watches_policies(t *testing.T) {
 	_, fqrn, name := testutil.MkNames("ignore-rule-", "xray_ignore_rule")
 	expirationDate := time.Now().Add(time.Hour * 48)
 
-	config := sdk.ExecuteTemplate("TestAccIgnoreRule", `
+	config := util.ExecuteTemplate("TestAccIgnoreRule", `
 		resource "xray_security_policy" "security" {
 			name        = "fake-policy"
 			description = "Security policy description"
@@ -296,7 +296,7 @@ func TestAccIgnoreRule_scopes_watches_policies(t *testing.T) {
 func TestAccIgnoreRule_scopes_no_expiration_policies(t *testing.T) {
 	_, fqrn, name := testutil.MkNames("ignore-rule-", "xray_ignore_rule")
 
-	config := sdk.ExecuteTemplate("TestAccIgnoreRule", `
+	config := util.ExecuteTemplate("TestAccIgnoreRule", `
 		resource "xray_security_policy" "security" {
 			name        = "fake-policy"
 			description = "Security policy description"
@@ -356,7 +356,7 @@ func TestAccIgnoreRule_scopes_no_expiration_policies(t *testing.T) {
 func TestAccIgnoreRule_scopes_no_expiration_watches(t *testing.T) {
 	_, fqrn, name := testutil.MkNames("ignore-rule-", "xray_ignore_rule")
 
-	config := sdk.ExecuteTemplate("TestAccIgnoreRule", `
+	config := util.ExecuteTemplate("TestAccIgnoreRule", `
 		resource "xray_security_policy" "security" {
 			name        = "fake-policy"
 			description = "Security policy description"
@@ -434,7 +434,7 @@ func TestAccIgnoreRule_docker_layers(t *testing.T) {
 	_, fqrn, name := testutil.MkNames("ignore-rule-", "xray_ignore_rule")
 	expirationDate := time.Now().Add(time.Hour * 48)
 
-	config := sdk.ExecuteTemplate("TestAccIgnoreRule", `
+	config := util.ExecuteTemplate("TestAccIgnoreRule", `
 		resource "xray_ignore_rule" "{{ .name }}" {
 		  notes            = "fake notes"
 		  expiration_date  = "{{ .expirationDate }}"
@@ -481,7 +481,7 @@ func TestAccIgnoreRule_invalid_docker_layers(t *testing.T) {
 	_, _, name := testutil.MkNames("ignore-rule-", "xray_ignore_rule")
 	expirationDate := time.Now().Add(time.Hour * 48)
 
-	config := sdk.ExecuteTemplate("TestAccIgnoreRule", `
+	config := util.ExecuteTemplate("TestAccIgnoreRule", `
 		resource "xray_ignore_rule" "{{ .name }}" {
 		  notes            = "fake notes"
 		  expiration_date  = "{{ .expirationDate }}"
@@ -523,7 +523,7 @@ func sourceTestCase(source string, t *testing.T) (*testing.T, resource.TestCase)
 	_, fqrn, name := testutil.MkNames("ignore-rule-", "xray_ignore_rule")
 	expirationDate := time.Now().Add(time.Hour * 48)
 
-	config := sdk.ExecuteTemplate("TestAccIgnoreRule", `
+	config := util.ExecuteTemplate("TestAccIgnoreRule", `
 		resource "xray_ignore_rule" "{{ .name }}" {
 		  notes            = "fake notes"
 		  expiration_date  = "{{ .expirationDate }}"
@@ -570,7 +570,7 @@ func TestAccIgnoreRule_artifact(t *testing.T) {
 	_, fqrn, name := testutil.MkNames("ignore-rule-", "xray_ignore_rule")
 	expirationDate := time.Now().Add(time.Hour * 48)
 
-	config := sdk.ExecuteTemplate("TestAccIgnoreRule", `
+	config := util.ExecuteTemplate("TestAccIgnoreRule", `
 		resource "xray_ignore_rule" "{{ .name }}" {
 		  notes            = "fake notes"
 		  expiration_date  = "{{ .expirationDate }}"
@@ -619,7 +619,7 @@ func TestAccIgnoreRule_invalid_artifact_path(t *testing.T) {
 	_, _, name := testutil.MkNames("ignore-rule-", "xray_ignore_rule")
 	expirationDate := time.Now().Add(time.Hour * 48)
 
-	config := sdk.ExecuteTemplate("TestAccIgnoreRule", `
+	config := util.ExecuteTemplate("TestAccIgnoreRule", `
 		resource "xray_ignore_rule" "{{ .name }}" {
 		  notes            = "fake notes"
 		  expiration_date  = "{{ .expirationDate }}"
@@ -653,7 +653,7 @@ func TestAccIgnoreRule_with_project_key(t *testing.T) {
 	expirationDate := time.Now().Add(time.Hour * 48)
 	projectKey := fmt.Sprintf("testproj%d", testutil.RandomInt())
 
-	config := sdk.ExecuteTemplate(
+	config := util.ExecuteTemplate(
 		"TestAccIgnoreRule",
 		`resource "project" "{{ .projectKey }}" {
 			key          = "{{ .projectKey }}"

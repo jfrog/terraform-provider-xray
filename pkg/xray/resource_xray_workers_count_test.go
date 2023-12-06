@@ -6,7 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/jfrog/terraform-provider-shared/testutil"
-	"github.com/jfrog/terraform-provider-shared/util/sdk"
+	"github.com/jfrog/terraform-provider-shared/util"
 )
 
 func TestAccWorkersCount_create(t *testing.T) {
@@ -15,7 +15,7 @@ func TestAccWorkersCount_create(t *testing.T) {
 	params := map[string]interface{}{
 		"workersCountName": resourceName,
 	}
-	workersCountConfig := sdk.ExecuteTemplate("TestAccWorkersCount_create", `
+	workersCountConfig := util.ExecuteTemplate("TestAccWorkersCount_create", `
 		resource "xray_workers_count" "{{ .workersCountName }}" {
 		  index {
 		    new_content      = 4

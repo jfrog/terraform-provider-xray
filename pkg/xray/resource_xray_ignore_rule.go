@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/jfrog/terraform-provider-shared/util"
 	"github.com/jfrog/terraform-provider-shared/util/sdk"
 )
 
@@ -465,7 +466,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 		var ignoreRule IgnoreRule
 
 		projectKey := d.Get("project_key").(string)
-		req, err := getRestyRequest(m.(sdk.ProvderMetadata).Client, projectKey)
+		req, err := getRestyRequest(m.(util.ProvderMetadata).Client, projectKey)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -491,7 +492,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 			return diag.FromErr(err)
 		}
 
-		req, err := getRestyRequest(m.(sdk.ProvderMetadata).Client, ignoreRule.ProjectKey)
+		req, err := getRestyRequest(m.(util.ProvderMetadata).Client, ignoreRule.ProjectKey)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -530,7 +531,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 			return diag.FromErr(err)
 		}
 
-		req, err := getRestyRequest(m.(sdk.ProvderMetadata).Client, ignoreRule.ProjectKey)
+		req, err := getRestyRequest(m.(util.ProvderMetadata).Client, ignoreRule.ProjectKey)
 		if err != nil {
 			return diag.FromErr(err)
 		}

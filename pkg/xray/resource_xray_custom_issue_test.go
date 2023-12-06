@@ -7,6 +7,7 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/jfrog/terraform-provider-shared/testutil"
+	"github.com/jfrog/terraform-provider-shared/util"
 	"github.com/jfrog/terraform-provider-shared/util/sdk"
 )
 
@@ -92,7 +93,7 @@ func TestAccCustomIssue_full(t *testing.T) {
 		"source_id":   "CVE-2017-1000386",
 	}
 
-	config := sdk.ExecuteTemplate("TestAccCustomIssue_full", template, testData)
+	config := util.ExecuteTemplate("TestAccCustomIssue_full", template, testData)
 
 	updatedTestData := map[string]string{
 		"name":                          resourceName,
@@ -114,7 +115,7 @@ func TestAccCustomIssue_full(t *testing.T) {
 		"source_name": "CVE-2017-1000386",
 		"source_url":  "https://nvd.nist.gov/vuln/detail/CVE-2017-1000386",
 	}
-	updatedConfig := sdk.ExecuteTemplate("TestAccCustomIssue_full", fullTemplate, updatedTestData)
+	updatedConfig := util.ExecuteTemplate("TestAccCustomIssue_full", fullTemplate, updatedTestData)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -249,7 +250,7 @@ func TestAccCustomIssue_invalid(t *testing.T) {
 				testCase.extras,
 			)
 
-			config := sdk.ExecuteTemplate("TestAccCustomIssue_invalid", template, testData)
+			config := util.ExecuteTemplate("TestAccCustomIssue_invalid", template, testData)
 
 			resource.Test(t, resource.TestCase{
 				PreCheck:          func() { testAccPreCheck(t) },
