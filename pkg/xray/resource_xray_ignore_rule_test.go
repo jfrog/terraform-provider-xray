@@ -132,7 +132,7 @@ func TestAccIgnoreRule_invalid_operational_risk(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      config,
-				ExpectError: regexp.MustCompile(`expected operational_risk to be one of \[any\], got invalid-risk`),
+				ExpectError: regexp.MustCompile(`expected operational_risk to be one of \["any"\], got invalid-risk`),
 			},
 		},
 	})
