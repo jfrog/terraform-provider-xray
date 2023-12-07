@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/jfrog/terraform-provider-shared/testutil"
+	"github.com/jfrog/terraform-provider-shared/util"
 	"github.com/jfrog/terraform-provider-shared/util/sdk"
 )
 
@@ -53,7 +54,7 @@ func TestAccSecurityPolicy_multipleRules(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, securityPolicyTwoRules, testData),
+				Config: util.ExecuteTemplate(fqrn, securityPolicyTwoRules, testData),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(fqrn, "name", testData["policy_name"]),
 					resource.TestCheckResourceAttr(fqrn, "description", testData["policy_description"]),
@@ -119,7 +120,7 @@ func TestAccSecurityPolicy_unknownMinSeveritySecurityPolicy_beforeVersion3602(t 
 		Steps: []resource.TestStep{
 			{
 				SkipFunc: onOrAfterVersion3602,
-				Config:   sdk.ExecuteTemplate(fqrn, securityPolicyMinSeverity, testData),
+				Config:   util.ExecuteTemplate(fqrn, securityPolicyMinSeverity, testData),
 				Check:    verifySecurityPolicy(fqrn, testData, criteriaTypeSeverity),
 			},
 		},
@@ -188,7 +189,7 @@ func TestAccSecurityPolicy_badGracePeriod(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config:      sdk.ExecuteTemplate(fqrn, securityPolicyCVSS, testData),
+				Config:      util.ExecuteTemplate(fqrn, securityPolicyCVSS, testData),
 				ExpectError: regexp.MustCompile("Found Invalid Policy"),
 			},
 		},
@@ -235,11 +236,11 @@ func TestAccSecurityPolicy_withProjectKey(t *testing.T) {
 		}
 	}`
 
-	config := sdk.ExecuteTemplate(fqrn, template, testData)
+	config := util.ExecuteTemplate(fqrn, template, testData)
 
 	updatedTestData := sdk.MergeMaps(testData)
 	updatedTestData["policy_description"] = "New description"
-	updatedConfig := sdk.ExecuteTemplate(fqrn, template, updatedTestData)
+	updatedConfig := util.ExecuteTemplate(fqrn, template, updatedTestData)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -288,7 +289,7 @@ func TestAccSecurityPolicy_createBlockDownloadTrueCVSS(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, securityPolicyCVSS, testData),
+				Config: util.ExecuteTemplate(fqrn, securityPolicyCVSS, testData),
 				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeCvss),
 			},
 			{
@@ -317,7 +318,7 @@ func TestAccSecurityPolicy_createBlockDownloadFalseCVSS(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, securityPolicyCVSS, testData),
+				Config: util.ExecuteTemplate(fqrn, securityPolicyCVSS, testData),
 				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeCvss),
 			},
 			{
@@ -344,7 +345,7 @@ func TestAccSecurityPolicy_createBlockDownloadTrueMinSeverity(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, securityPolicyMinSeverity, testData),
+				Config: util.ExecuteTemplate(fqrn, securityPolicyMinSeverity, testData),
 				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeSeverity),
 			},
 			{
@@ -373,7 +374,7 @@ func TestAccSecurityPolicy_createFixVersionDepMinSeverity(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, securityPolicyFixVersionDep, testData),
+				Config: util.ExecuteTemplate(fqrn, securityPolicyFixVersionDep, testData),
 				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeSeverity),
 			},
 			{
@@ -403,7 +404,7 @@ func TestAccSecurityPolicy_createMaliciousPackage(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, securityPolicyMaliciousPkgFixVersionDep, testData),
+				Config: util.ExecuteTemplate(fqrn, securityPolicyMaliciousPkgFixVersionDep, testData),
 				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeMaliciousPkg),
 			},
 			{
@@ -432,7 +433,7 @@ func TestAccSecurityPolicy_createMaliciousPackageFail(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config:      sdk.ExecuteTemplate(fqrn, securityPolicyMaliciousPkgFixVersionDep, testData),
+				Config:      util.ExecuteTemplate(fqrn, securityPolicyMaliciousPkgFixVersionDep, testData),
 				ExpectError: regexp.MustCompile("fix_version_dependant must be set to false if malicious_package is true"),
 			},
 		},
@@ -455,7 +456,7 @@ func TestAccSecurityPolicy_createMaliciousPackageCvssMinSeverityFail(t *testing.
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config:      sdk.ExecuteTemplate(fqrn, securityPolicyCVSSMinSeverityMaliciousPkg, testData),
+				Config:      util.ExecuteTemplate(fqrn, securityPolicyCVSSMinSeverityMaliciousPkg, testData),
 				ExpectError: regexp.MustCompile("malicious_package can't be set together with min_severity and/or cvss_range"),
 			},
 		},
@@ -478,7 +479,7 @@ func TestAccSecurityPolicy_createCvssMinSeverityFail(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config:      sdk.ExecuteTemplate(fqrn, securityPolicyCVSSMinSeverityMaliciousPkg, testData),
+				Config:      util.ExecuteTemplate(fqrn, securityPolicyCVSSMinSeverityMaliciousPkg, testData),
 				ExpectError: regexp.MustCompile("min_severity can't be set together with cvss_range"),
 			},
 		},
@@ -502,7 +503,7 @@ func TestAccSecurityPolicy_createBlockDownloadFalseMinSeverity(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, securityPolicyMinSeverity, testData),
+				Config: util.ExecuteTemplate(fqrn, securityPolicyMinSeverity, testData),
 				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeSeverity),
 			},
 			{
@@ -531,7 +532,7 @@ func TestAccSecurityPolicy_createCVSSFloat(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, securityPolicyCVSS, testData),
+				Config: util.ExecuteTemplate(fqrn, securityPolicyCVSS, testData),
 				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeCvss),
 			},
 			{
@@ -560,7 +561,7 @@ func TestAccSecurityPolicy_blockMismatchCVSS(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config:      sdk.ExecuteTemplate(fqrn, securityPolicyCVSS, testData),
+				Config:      util.ExecuteTemplate(fqrn, securityPolicyCVSS, testData),
 				ExpectError: regexp.MustCompile("Found Invalid Policy"),
 			},
 		},
@@ -586,7 +587,7 @@ func TestAccSecurityPolicy_noActions(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config:      sdk.ExecuteTemplate(fqrn, securityPolicyNoActions, testData),
+				Config:      util.ExecuteTemplate(fqrn, securityPolicyNoActions, testData),
 				ExpectError: regexp.MustCompile("Insufficient actions blocks"),
 			},
 		},
@@ -612,7 +613,7 @@ func TestAccSecurityPolicy_vulnerabilityIds(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, securityPolicyVulnIds, testData),
+				Config: util.ExecuteTemplate(fqrn, securityPolicyVulnIds, testData),
 				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeVulnerabilityIds),
 			},
 			{
@@ -644,7 +645,7 @@ func TestAccSecurityPolicy_vulnerabilityIdsIncorrectCVEFails(t *testing.T) {
 			ProviderFactories: testAccProviders(),
 			Steps: []resource.TestStep{
 				{
-					Config:      sdk.ExecuteTemplate(fqrn, securityPolicyVulnIds, testData),
+					Config:      util.ExecuteTemplate(fqrn, securityPolicyVulnIds, testData),
 					ExpectError: regexp.MustCompile("invalid value for vulnerability_ids"),
 				},
 			},
@@ -684,7 +685,7 @@ func TestAccSecurityPolicy_conflictingAttributesFail(t *testing.T) {
 				ProviderFactories: testAccProviders(),
 				Steps: []resource.TestStep{
 					{
-						Config:      sdk.ExecuteTemplate(fqrn, securityPolicyVulnIdsConflict, testData),
+						Config:      util.ExecuteTemplate(fqrn, securityPolicyVulnIdsConflict, testData),
 						ExpectError: regexp.MustCompile("can't be set together"),
 					},
 				},
@@ -709,7 +710,7 @@ func TestAccSecurityPolicy_vulnerabilityIdsLimitFail(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config:      sdk.ExecuteTemplate(fqrn, securityPolicyVulnIdsLimit, testData),
+				Config:      util.ExecuteTemplate(fqrn, securityPolicyVulnIdsLimit, testData),
 				ExpectError: regexp.MustCompile("Too many list items"),
 			},
 		},
@@ -735,7 +736,7 @@ func TestAccSecurityPolicy_exposures(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, securityPolicyExposures, testData),
+				Config: util.ExecuteTemplate(fqrn, securityPolicyExposures, testData),
 				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeExposures),
 			},
 			{

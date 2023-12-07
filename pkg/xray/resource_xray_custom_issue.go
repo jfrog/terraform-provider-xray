@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/jfrog/terraform-provider-shared/util"
 	"github.com/jfrog/terraform-provider-shared/util/sdk"
 	"github.com/jfrog/terraform-provider-shared/validator"
 )
@@ -460,7 +461,7 @@ func resourceXrayCustomIssue() *schema.Resource {
 	var resourceXrayCustomIssueRead = func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 		customIssue := CustomIssue{}
 
-		req, err := getRestyRequest(m.(sdk.ProvderMetadata).Client, "")
+		req, err := getRestyRequest(m.(util.ProvderMetadata).Client, "")
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -486,7 +487,7 @@ func resourceXrayCustomIssue() *schema.Resource {
 			return diag.FromErr(err)
 		}
 
-		req, err := getRestyRequest(m.(sdk.ProvderMetadata).Client, "")
+		req, err := getRestyRequest(m.(util.ProvderMetadata).Client, "")
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -509,7 +510,7 @@ func resourceXrayCustomIssue() *schema.Resource {
 			return diag.FromErr(err)
 		}
 
-		req, err := getRestyRequest(m.(sdk.ProvderMetadata).Client, "")
+		req, err := getRestyRequest(m.(util.ProvderMetadata).Client, "")
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -528,7 +529,7 @@ func resourceXrayCustomIssue() *schema.Resource {
 	}
 
 	var resourceXrayCustomIssueDelete = func(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-		req, err := getRestyRequest(m.(sdk.ProvderMetadata).Client, "")
+		req, err := getRestyRequest(m.(util.ProvderMetadata).Client, "")
 		if err != nil {
 			return diag.FromErr(err)
 		}

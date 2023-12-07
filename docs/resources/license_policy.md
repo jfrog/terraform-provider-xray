@@ -95,7 +95,7 @@ resource "xray_license_policy" "banned_licenses" {
 ### Required
 
 - `name` (String) Name of the policy (must be unique)
-- `rule` (Block List, Min: 1) A list of user-defined rules allowing you to trigger violations for specific vulnerability or license breaches by setting a license or security criteria, with a corresponding set of automatic actions according to your needs. Rules are processed according to the ascending order in which they are placed in the Rules list on the Policy. If a rule is met, the subsequent rules in the list will not be applied. (see [below for nested schema](#nestedblock--rule))
+- `rule` (Block Set, Min: 1) A list of user-defined rules allowing you to trigger violations for specific vulnerability or license breaches by setting a license or security criteria, with a corresponding set of automatic actions according to your needs. Rules are processed according to the ascending order in which they are placed in the Rules list on the Policy. If a rule is met, the subsequent rules in the list will not be applied. (see [below for nested schema](#nestedblock--rule))
 - `type` (String) Type of the policy
 
 ### Optional

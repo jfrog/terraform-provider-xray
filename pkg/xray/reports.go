@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/jfrog/terraform-provider-shared/util"
 	"github.com/jfrog/terraform-provider-shared/util/sdk"
 	"github.com/jfrog/terraform-provider-shared/validator"
 	"golang.org/x/exp/slices"
@@ -628,7 +629,7 @@ func resourceXrayReportRead(ctx context.Context, d *schema.ResourceData, m inter
 	report := Report{}
 
 	projectKey := d.Get("project_key").(string)
-	req, err := getRestyRequest(m.(sdk.ProvderMetadata).Client, projectKey)
+	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, projectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -650,7 +651,7 @@ func resourceXrayReportRead(ctx context.Context, d *schema.ResourceData, m inter
 
 func resourceXrayReportDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	projectKey := d.Get("project_key").(string)
-	req, err := getRestyRequest(m.(sdk.ProvderMetadata).Client, projectKey)
+	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, projectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -669,7 +670,7 @@ func resourceXrayReportDelete(_ context.Context, d *schema.ResourceData, m inter
 
 func createReport(reportType string, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	report := unpackReport(d, reportType)
-	req, err := getRestyRequest(m.(sdk.ProvderMetadata).Client, report.ProjectKey)
+	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, report.ProjectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}

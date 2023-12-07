@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/jfrog/terraform-provider-shared/util"
 	"github.com/jfrog/terraform-provider-shared/util/sdk"
 	"github.com/jfrog/terraform-provider-shared/validator"
 	"golang.org/x/exp/slices"
@@ -52,7 +53,7 @@ type RepositoryConfiguration struct {
 var exposuresPackageTypes = func(xrayVersion string) []string {
 	packageTypes := []string{"docker", "terraformbackend"}
 
-	if ok, err := sdk.CheckVersion(xrayVersion, "3.78.9"); err == nil && ok {
+	if ok, err := util.CheckVersion(xrayVersion, "3.78.9"); err == nil && ok {
 		packageTypes = append(packageTypes, "maven", "npm", "pypi")
 	}
 
@@ -62,7 +63,7 @@ var exposuresPackageTypes = func(xrayVersion string) []string {
 var vulnContextualAnalysisPackageTypes = func(xrayVersion string) []string {
 	packageTypes := []string{"docker"}
 
-	if ok, err := sdk.CheckVersion(xrayVersion, "3.77.4"); err == nil && ok {
+	if ok, err := util.CheckVersion(xrayVersion, "3.77.4"); err == nil && ok {
 		packageTypes = append(packageTypes, "maven")
 	}
 
@@ -460,7 +461,7 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 		repositoryConfig := RepositoryConfiguration{}
 		repoName := d.Id()
 
-		metadata := m.(sdk.ProvderMetadata)
+		metadata := m.(util.ProvderMetadata)
 
 		resp, err := metadata.Client.R().
 			SetResult(&repositoryConfig).
@@ -484,7 +485,7 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 	}
 
 	var resourceXrayRepositoryConfigCreate = func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-		metadata := m.(sdk.ProvderMetadata)
+		metadata := m.(util.ProvderMetadata)
 		packageType, err := getPackageType(metadata.Client, d.Get("repo_name").(string))
 		if err != nil {
 			return diag.FromErr(err)

@@ -1,10 +1,26 @@
 package xray
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/jfrog/terraform-provider-shared/util/sdk"
 	"github.com/jfrog/terraform-provider-shared/validator"
 )
+
+var supportedResourceTypes = []string{
+	"repository",
+	"all-repos",
+	"build",
+	"all-builds",
+	"project",
+	"all-projects",
+	"releaseBundle",
+	"all-releaseBundles",
+	"releaseBundleV2",
+	"all-releaseBundlesV2",
+}
 
 func resourceXrayWatch() *schema.Resource {
 	return &schema.Resource{
@@ -49,8 +65,8 @@ func resourceXrayWatch() *schema.Resource {
 							"type": {
 								Type:             schema.TypeString,
 								Required:         true,
-								Description:      "Type of resource to be watched. Options: `all-repos`, `repository`, `all-builds`, `build`, `project`, `all-projects`.",
-								ValidateDiagFunc: validator.StringInSlice(true, "all-repos", "repository", "all-builds", "build", "project", "all-projects"),
+								Description:      fmt.Sprintf("Type of resource to be watched. Options: %s.", strings.Join(supportedResourceTypes, ", ")),
+								ValidateDiagFunc: validator.StringInSlice(true, supportedResourceTypes...),
 							},
 							"bin_mgr_id": {
 								Type:        schema.TypeString,
@@ -61,7 +77,7 @@ func resourceXrayWatch() *schema.Resource {
 							"name": {
 								Type:        schema.TypeString,
 								Optional:    true,
-								Description: "The name of the build, repository or project. Xray indexing must be enabled on the repository or build",
+								Description: "The name of the build, repository, project, or release bundle. Xray indexing must be enabled on the repository, build, or release bundle.",
 							},
 							"repo_type": {
 								Type:             schema.TypeString,

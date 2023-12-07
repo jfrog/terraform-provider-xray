@@ -8,6 +8,7 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/jfrog/terraform-provider-shared/testutil"
+	"github.com/jfrog/terraform-provider-shared/util"
 	"github.com/jfrog/terraform-provider-shared/util/sdk"
 )
 
@@ -75,7 +76,7 @@ func TestAccLicensePolicy_badGracePeriod(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config:      sdk.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),
+				Config:      util.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),
 				ExpectError: regexp.MustCompile("Found Invalid Policy"),
 			},
 		},
@@ -126,11 +127,11 @@ func TestAccLicensePolicy_withProjectKey(t *testing.T) {
 		}
 	}`
 
-	config := sdk.ExecuteTemplate(fqrn, template, testData)
+	config := util.ExecuteTemplate(fqrn, template, testData)
 
 	updatedTestData := sdk.MergeMaps(testData)
 	updatedTestData["policy_description"] = "New description"
-	updatedConfig := sdk.ExecuteTemplate(fqrn, template, updatedTestData)
+	updatedConfig := util.ExecuteTemplate(fqrn, template, updatedTestData)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -180,7 +181,7 @@ func TestAccLicensePolicy_createAllowedLic(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),
+				Config: util.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),
 				Check:  verifyLicensePolicy(fqrn, testData, testData["allowedOrBanned"]),
 			},
 			{
@@ -209,7 +210,7 @@ func TestAccLicensePolicy_createAllowedLicCustom(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),
+				Config: util.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),
 				Check:  verifyLicensePolicy(fqrn, testData, testData["allowedOrBanned"]),
 			},
 			{
@@ -236,7 +237,7 @@ func TestAccLicensePolicy_createBannedLic(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),
+				Config: util.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),
 				Check:  verifyLicensePolicy(fqrn, testData, testData["allowedOrBanned"]),
 			},
 			{
@@ -265,7 +266,7 @@ func TestAccLicensePolicy_createBannedLicCustom(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),
+				Config: util.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),
 				Check:  verifyLicensePolicy(fqrn, testData, testData["allowedOrBanned"]),
 			},
 			{
@@ -293,7 +294,7 @@ func TestAccLicensePolicy_createMultiLicensePermissiveFalse(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),
+				Config: util.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),
 				Check:  verifyLicensePolicy(fqrn, testData, testData["allowedOrBanned"]),
 			},
 			{
@@ -323,7 +324,7 @@ func TestAccLicensePolicy_createBlockFalse(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: sdk.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),
+				Config: util.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),
 				Check:  verifyLicensePolicy(fqrn, testData, testData["allowedOrBanned"]),
 			},
 			{

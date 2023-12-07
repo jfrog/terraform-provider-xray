@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/jfrog/terraform-provider-shared/util"
 	"github.com/jfrog/terraform-provider-shared/util/sdk"
 )
 
@@ -219,7 +220,7 @@ func resourceXrayWorkersCount() *schema.Resource {
 
 	var resourceXrayWorkersCountRead = func(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 		workersCount := WorkersCount{}
-		resp, err := m.(sdk.ProvderMetadata).Client.R().
+		resp, err := m.(util.ProvderMetadata).Client.R().
 			SetResult(&workersCount).
 			Get("xray/api/v1/configuration/workersCount")
 		if err != nil {
@@ -234,7 +235,7 @@ func resourceXrayWorkersCount() *schema.Resource {
 
 	var resourceXrayWorkersCountUpdate = func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 		workersCount := unpackWorkersCount(d)
-		_, err := m.(sdk.ProvderMetadata).Client.R().
+		_, err := m.(util.ProvderMetadata).Client.R().
 			SetBody(workersCount).
 			Put("xray/api/v1/configuration/workersCount")
 

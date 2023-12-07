@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/jfrog/terraform-provider-shared/client"
+	"github.com/jfrog/terraform-provider-shared/util"
 	"github.com/jfrog/terraform-provider-shared/util/sdk"
 	"github.com/jfrog/terraform-provider-shared/validator"
 )
@@ -105,20 +106,20 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 		}
 	}
 
-	artifactoryVersion, err := sdk.GetArtifactoryVersion(restyBase)
+	artifactoryVersion, err := util.GetArtifactoryVersion(restyBase)
 	if err != nil {
 		return nil, diag.FromErr(err)
 	}
 
-	xrayVersion, err := sdk.GetXrayVersion(restyBase)
+	xrayVersion, err := util.GetXrayVersion(restyBase)
 	if err != nil {
 		return nil, diag.FromErr(err)
 	}
 
 	featureUsage := fmt.Sprintf("Terraform/%s", terraformVersion)
-	sdk.SendUsage(ctx, restyBase, productId, featureUsage)
+	go util.SendUsage(ctx, restyBase, productId, featureUsage)
 
-	return sdk.ProvderMetadata{
+	return util.ProvderMetadata{
 		Client:             restyBase,
 		ArtifactoryVersion: artifactoryVersion,
 		XrayVersion:        xrayVersion,

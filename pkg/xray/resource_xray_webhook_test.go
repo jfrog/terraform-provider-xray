@@ -8,7 +8,7 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/jfrog/terraform-provider-shared/testutil"
-	"github.com/jfrog/terraform-provider-shared/util/sdk"
+	"github.com/jfrog/terraform-provider-shared/util"
 )
 
 func TestAccWebhook_full(t *testing.T) {
@@ -43,7 +43,7 @@ func TestAccWebhook_full(t *testing.T) {
 		"header2_value": "header2_value",
 	}
 
-	config := sdk.ExecuteTemplate("TestAccWebhook_full", template, testData)
+	config := util.ExecuteTemplate("TestAccWebhook_full", template, testData)
 
 	const updateTemplate = `
 		resource "xray_webhook" "{{ .name }}" {
@@ -59,7 +59,7 @@ func TestAccWebhook_full(t *testing.T) {
 		"url":         url,
 		"use_proxy":   "false",
 	}
-	updatedConfig := sdk.ExecuteTemplate("TestAccWebhook_full", updateTemplate, updatedTestData)
+	updatedConfig := util.ExecuteTemplate("TestAccWebhook_full", updateTemplate, updatedTestData)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -117,7 +117,7 @@ func TestAccWebhook_invalid_name(t *testing.T) {
 		"url":  url,
 	}
 
-	config := sdk.ExecuteTemplate("TestAccWebhook_invalid_name", template, testData)
+	config := util.ExecuteTemplate("TestAccWebhook_invalid_name", template, testData)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -145,7 +145,7 @@ func TestAccWebhook_invalid_url(t *testing.T) {
 		"name": resourceName,
 	}
 
-	config := sdk.ExecuteTemplate("TestAccWebhook_invalid_name", template, testData)
+	config := util.ExecuteTemplate("TestAccWebhook_invalid_name", template, testData)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
