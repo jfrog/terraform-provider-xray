@@ -191,10 +191,3 @@ Optional:
 
 - `exclude_path_patterns` (Set of String) Exclude path patterns.
 - `include_path_patterns` (Set of String) Include path patterns.
-
-## Import
-
-Violations reports can be imported using their names, e.g.
-```
-$ terraform import xray_violations_report.report test-violations-report 
-```

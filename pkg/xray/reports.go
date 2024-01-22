@@ -312,16 +312,6 @@ func unpackReport(d *schema.ResourceData, reportType string) *Report {
 	return &report
 }
 
-func unpackReportProjectKey(d *schema.ResourceData) *Report {
-	report := Report{}
-
-	if v, ok := d.GetOk("project_key"); ok {
-		report.ProjectKey = v.(string)
-	}
-
-	return &report
-}
-
 func unpackResources(configured *schema.Set) *Resources {
 	var resources Resources
 	m := configured.List()[0].(map[string]interface{})
@@ -606,22 +596,18 @@ func unpackStartAndEndDate(d *schema.Set) *StartAndEndDate {
 }
 
 func resourceXrayVulnerabilitiesReportCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
 	return createReport("vulnerabilities", d, m)
 }
 
 func resourceXrayLicensesReportCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
 	return createReport("licenses", d, m)
 }
 
 func resourceXrayViolationsReportCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
 	return createReport("violations", d, m)
 }
 
 func resourceXrayOperationalRisksReportCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
 	return createReport("operationalRisks", d, m)
 }
 
@@ -657,9 +643,7 @@ func resourceXrayReportDelete(_ context.Context, d *schema.ResourceData, m inter
 	}
 
 	resp, err := req.
-		SetPathParams(map[string]string{
-			"reportId": d.Id(),
-		}).
+		SetPathParam("reportId", d.Id()).
 		Delete("xray/api/v1/reports/{reportId}")
 	if err != nil && resp.StatusCode() == http.StatusNotFound {
 		d.SetId("")
@@ -813,7 +797,6 @@ func reportResourceDiff(_ context.Context, diff *schema.ResourceDiff, v interfac
 				}
 			}
 		}
-
 	}
 	return nil
 }

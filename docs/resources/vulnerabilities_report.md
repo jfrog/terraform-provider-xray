@@ -166,10 +166,3 @@ Optional:
 
 - `exclude_path_patterns` (Set of String) Exclude path patterns.
 - `include_path_patterns` (Set of String) Include path patterns.
-
-## Import
-
-Vulnerabilities reports can be imported using their names, e.g.
-```
-$ terraform import xray_vulnerabilities_report.report test-vulnerabilities-report
-```
