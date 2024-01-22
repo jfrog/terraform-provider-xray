@@ -137,10 +137,3 @@ Optional:
 
 - `exclude_path_patterns` (Set of String) Exclude path patterns.
 - `include_path_patterns` (Set of String) Include path patterns.
-
-## Import
-
-License reports can be imported using their names, e.g.
-```
-$ terraform import xray_licenses_report.test-license-report report
-```
