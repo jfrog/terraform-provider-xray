@@ -3,7 +3,6 @@ package xray
 import (
 	"fmt"
 	"regexp"
-	"strings"
 	"testing"
 
 	"github.com/go-resty/resty/v2"
@@ -11,8 +10,6 @@ import (
 	"github.com/jfrog/terraform-provider-shared/client"
 	"github.com/jfrog/terraform-provider-shared/testutil"
 	"github.com/jfrog/terraform-provider-shared/util/sdk"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 )
 
 var licenseFilterFields = map[string]interface{}{
@@ -276,8 +273,7 @@ func TestAccReport_Licenses(t *testing.T) {
 
 	for _, reportResource := range resourcesList {
 		resourceNameInReport := reportResource["name"].(string)
-		title := cases.Title(language.AmericanEnglish).String(strings.ToLower(resourceNameInReport))
-		t.Run(title, func(t *testing.T) {
+		t.Run(resourceNameInReport, func(t *testing.T) {
 			resource.Test(mkFilterTestCase(t, reportResource, licenseFilterFields, terraformReportName,
 				terraformResourceName))
 		})
@@ -290,8 +286,7 @@ func TestAccReport_OperationalRisks(t *testing.T) {
 
 	for _, reportResource := range resourcesList {
 		resourceNameInReport := reportResource["name"].(string)
-		title := cases.Title(language.AmericanEnglish).String(strings.ToLower(resourceNameInReport))
-		t.Run(title, func(t *testing.T) {
+		t.Run(resourceNameInReport, func(t *testing.T) {
 			resource.Test(mkFilterTestCase(t, reportResource, opRisksFilterFields, terraformReportName,
 				terraformResourceName))
 		})
@@ -304,8 +299,7 @@ func TestAccReport_Violations(t *testing.T) {
 
 	for _, reportResource := range resourcesList {
 		resourceNameInReport := reportResource["name"].(string)
-		title := cases.Title(language.AmericanEnglish).String(strings.ToLower(resourceNameInReport))
-		t.Run(title, func(t *testing.T) {
+		t.Run(resourceNameInReport, func(t *testing.T) {
 			resource.Test(mkFilterTestCase(t, reportResource, violationsFilterFields[0], terraformReportName,
 				terraformResourceName))
 		})
@@ -317,8 +311,7 @@ func TestAccViolationsReportFilters(t *testing.T) {
 	terraformResourceName := "xray_violations_report"
 
 	for _, violationsFilter := range violationsFilterFields {
-		title := cases.Title(language.AmericanEnglish).String(strings.ToLower("various_violations_filters"))
-		t.Run(title, func(t *testing.T) {
+		t.Run("various_violations_filters", func(t *testing.T) {
 			resource.Test(mkFilterTestCase(t, resourcesList[0], violationsFilter, terraformReportName,
 				terraformResourceName))
 		})
@@ -331,8 +324,7 @@ func TestAccReport_Vulnerabilities(t *testing.T) {
 
 	for _, reportResource := range resourcesList {
 		resourceNameInReport := reportResource["name"].(string)
-		title := cases.Title(language.AmericanEnglish).String(strings.ToLower(resourceNameInReport))
-		t.Run(title, func(t *testing.T) {
+		t.Run(resourceNameInReport, func(t *testing.T) {
 			resource.Test(mkFilterTestCase(t, reportResource, vulnerabilitiesFilterFields, terraformReportName,
 				terraformResourceName))
 		})
@@ -346,8 +338,7 @@ func TestAccReport_BadResource(t *testing.T) {
 
 	for _, reportResource := range resourcesListNegative {
 		resourceNameInReport := reportResource["name"].(string)
-		title := cases.Title(language.AmericanEnglish).String(strings.ToLower(resourceNameInReport))
-		t.Run(title, func(t *testing.T) {
+		t.Run(resourceNameInReport, func(t *testing.T) {
 			resource.Test(mkFilterNegativeTestCase(t, reportResource, licenseFilterFields, terraformReportName,
 				terraformResourceName, expectedErrorMessage))
 		})
@@ -375,8 +366,7 @@ func TestAccReport_BadLicenseFilter(t *testing.T) {
 	}
 
 	resourceNameInReport := resourcesList[0]["name"].(string)
-	title := cases.Title(language.AmericanEnglish).String(strings.ToLower(resourceNameInReport))
-	t.Run(title, func(t *testing.T) {
+	t.Run(resourceNameInReport, func(t *testing.T) {
 		resource.Test(mkFilterNegativeTestCase(t, resourcesList[0], filterFieldsConflict, terraformReportName,
 			terraformResourceName, expectedErrorMessage))
 	})
@@ -421,8 +411,7 @@ func TestAccReport_BadViolationsFilter(t *testing.T) {
 	}
 
 	resourceNameInReport := resourcesList[0]["name"].(string)
-	title := cases.Title(language.AmericanEnglish).String(strings.ToLower(resourceNameInReport))
-	t.Run(title, func(t *testing.T) {
+	t.Run(resourceNameInReport, func(t *testing.T) {
 		resource.Test(mkFilterNegativeTestCase(t, resourcesList[0], filterFieldsConflict, terraformReportName,
 			terraformResourceName, expectedErrorMessage))
 	})
@@ -457,8 +446,7 @@ func TestAccReport_BadVulnerabilitiesFilter(t *testing.T) {
 	}
 
 	resourceNameInReport := resourcesList[0]["name"].(string)
-	title := cases.Title(language.AmericanEnglish).String(strings.ToLower(resourceNameInReport))
-	t.Run(title, func(t *testing.T) {
+	t.Run(resourceNameInReport, func(t *testing.T) {
 		resource.Test(mkFilterNegativeTestCase(t, resourcesList[0], filterFieldsConflict, terraformReportName,
 			terraformResourceName, expectedErrorMessage))
 	})
