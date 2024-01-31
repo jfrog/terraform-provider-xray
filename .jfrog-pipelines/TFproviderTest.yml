@@ -5,7 +5,7 @@ resources:
       gitProvider: partnership_github
       path: jfrog/terraform-provider-xray # if path is modified, change the name as well, per Pipelines doc
       branches:
-        include: master
+        include: main
       buildOn:
         commit: false
         pullRequestCreate: true
@@ -17,7 +17,7 @@ resources:
       gitProvider: partnership_github
       path: jfrog/terraform-provider-shared # if path is modified, change the name as well, per Pipelines doc
       branches:
-        include: master
+        include: main
 pipelines:
   - name: tf_provider_xray_gke
     configuration:
