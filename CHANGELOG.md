@@ -1,3 +1,9 @@
+## 2.1.2 (Feburary 1, 2024)
+
+IMPROVEMENTS:
+
+* resource/xray_ignore_rule: ensure when all nested attributes (e.g. `name`, `version`, etc.) change, they will trigger a re-creation of the resource. PR: [#162](https://github.com/jfrog/terraform-provider-xray/pull/162) Issue: [#156](https://github.com/jfrog/terraform-provider-xray/issues/156)
+
 ## 2.1.1 (January 22, 2024). Tested on Artifactory 7.71.11 and Xray 3.87.9
 
 IMPROVEMENTS:

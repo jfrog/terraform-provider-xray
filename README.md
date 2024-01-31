@@ -412,6 +412,6 @@ can for tagging releases of the package. We've adopted the following versioning 
 See the [contribution guide](CONTRIBUTIONS.md).
 
 ## License
-Copyright (c) 2021 JFrog.
+Copyright (c) 2024 JFrog.
 
 Apache 2.0 licensed, see [LICENSE](LICENSE) file.
