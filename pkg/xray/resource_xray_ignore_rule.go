@@ -162,11 +162,13 @@ func resourceXrayIgnoreRule() *schema.Resource {
 						"name": {
 							Type:        schema.TypeString,
 							Required:    true,
+							ForceNew:    true,
 							Description: "Name of the release bundle",
 						},
 						"version": {
 							Type:             schema.TypeString,
 							Optional:         true,
+							ForceNew:         true,
 							Description:      "Version of the release bundle",
 							ValidateDiagFunc: validation.ToDiagFunc(validation.StringIsNotEmpty),
 						},
@@ -183,11 +185,13 @@ func resourceXrayIgnoreRule() *schema.Resource {
 						"name": {
 							Type:        schema.TypeString,
 							Required:    true,
+							ForceNew:    true,
 							Description: "Name of the build",
 						},
 						"version": {
 							Type:             schema.TypeString,
 							Optional:         true,
+							ForceNew:         true,
 							Description:      "Version of the build",
 							ValidateDiagFunc: validation.ToDiagFunc(validation.StringIsNotEmpty),
 						},
@@ -204,11 +208,13 @@ func resourceXrayIgnoreRule() *schema.Resource {
 						"name": {
 							Type:        schema.TypeString,
 							Required:    true,
+							ForceNew:    true,
 							Description: "Name of the component",
 						},
 						"version": {
 							Type:             schema.TypeString,
 							Optional:         true,
+							ForceNew:         true,
 							Description:      "Version of the component",
 							ValidateDiagFunc: validation.ToDiagFunc(validation.StringIsNotEmpty),
 						},
@@ -226,17 +232,20 @@ func resourceXrayIgnoreRule() *schema.Resource {
 						"name": {
 							Type:        schema.TypeString,
 							Required:    true,
+							ForceNew:    true,
 							Description: "Name of the artifact. Wildcards are not supported.",
 						},
 						"version": {
 							Type:             schema.TypeString,
 							Optional:         true,
+							ForceNew:         true,
 							Description:      "Version of the artifact",
 							ValidateDiagFunc: validation.ToDiagFunc(validation.StringIsNotEmpty),
 						},
 						"path": {
 							Type:        schema.TypeString,
 							Optional:    true,
+							ForceNew:    true,
 							Description: "Path of the artifact. Must end with a '/'",
 							ValidateDiagFunc: validation.ToDiagFunc(
 								validation.All(
