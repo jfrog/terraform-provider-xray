@@ -2,7 +2,7 @@
 terraform {
   required_providers {
     xray = {
-      source  = "registry.terraform.io/jfrog/xray"
+      source  = "jfrog/xray"
       version = "0.0.1"
     }
   }

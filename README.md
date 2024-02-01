@@ -20,17 +20,17 @@ Create a new Terraform file with `xray` resource (and `artifactory` resource as 
 terraform {
   required_providers {
     artifactory = {
-      source  = "registry.terraform.io/jfrog/artifactory"
+      source  = "jfrog/artifactory"
       version = "2.9.1"
     }
 
     project = {
-      source  = "registry.terraform.io/jfrog/project"
+      source  = "jfrog/project"
       version = "1.0.1"
     }
 
     xray = {
-      source  = "registry.terraform.io/jfrog/xray"
+      source  = "jfrog/xray"
       version = "0.0.1"
     }
   }

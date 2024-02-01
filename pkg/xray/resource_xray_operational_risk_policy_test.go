@@ -320,7 +320,7 @@ func TestAccOperationalRiskPolicy_customCriteria_migration(t *testing.T) {
 				ExternalProviders: map[string]resource.ExternalProvider{
 					"xray": {
 						VersionConstraint: "1.18.0",
-						Source:            "registry.terraform.io/jfrog/xray",
+						Source:            "jfrog/xray",
 					},
 				},
 				Config: util.ExecuteTemplate(fqrn, opertionalRiskPolicyCustom, testData),

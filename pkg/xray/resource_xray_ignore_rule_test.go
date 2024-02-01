@@ -689,7 +689,7 @@ func TestAccIgnoreRule_with_project_key(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		ExternalProviders: map[string]resource.ExternalProvider{
 			"project": {
-				Source:            "registry.terraform.io/jfrog/project",
+				Source:            "jfrog/project",
 				VersionConstraint: "1.3.4",
 			},
 		},

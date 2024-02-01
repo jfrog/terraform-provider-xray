@@ -31,5 +31,3 @@ Provides an Xray webhoook resource. See [Xray Webhooks](https://jfrog.com/help/r
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-
-
