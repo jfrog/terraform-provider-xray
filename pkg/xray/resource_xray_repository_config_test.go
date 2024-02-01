@@ -2,16 +2,17 @@ package xray
 
 import (
 	"fmt"
+	"os"
 	"regexp"
+	"strings"
 	"testing"
 
-	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/jfrog/terraform-provider-shared/testutil"
 	"github.com/jfrog/terraform-provider-shared/util"
 )
 
-func TestAccRepositoryConfigRepoNoConfig(t *testing.T) {
+func TestAccRepositoryConfig_RepoNoConfig(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
 	var testData = map[string]string{
 		"resource_name": resourceName,
@@ -39,7 +40,137 @@ func TestAccRepositoryConfigRepoNoConfig(t *testing.T) {
 	})
 }
 
-func TestAccRepositoryConfigRepoConfigCreate_VulnContextualAnalysis(t *testing.T) {
+// TestAccRepositoryConfig_JasDisabled needs to be run against a JPD that does not have JAS enabled
+// Set JFROG_URL to this instance and set env var JFROG_JAS_DISABLED=true
+func TestAccRepositoryConfig_JasDisabled(t *testing.T) {
+	jasDisabled := os.Getenv("JFROG_JAS_DISABLED")
+	if strings.ToLower(jasDisabled) != "true" {
+		t.Skipf("Env var JFROG_JAS_DISABLED is not set to 'true'")
+	}
+
+	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
+	var testData = map[string]string{
+		"resource_name":     resourceName,
+		"repo_name":         "repo-config-test-repo",
+		"retention_in_days": "90",
+	}
+	config := util.ExecuteTemplate(
+		fqrn,
+		`resource "xray_repository_config" "{{ .resource_name }}" {
+			repo_name   = "{{ .repo_name }}"
+			jas_enabled = false
+
+			config {
+				retention_in_days = {{ .retention_in_days }}
+			}
+		}`,
+		testData,
+	)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviders(),
+
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "repo_name", testData["repo_name"]),
+					resource.TestCheckResourceAttr(fqrn, "config.0.retention_in_days", testData["retention_in_days"]),
+				),
+			},
+		},
+	})
+}
+
+// TestAccRepositoryConfig_JasDisabled_vulnContextualAnalysis_set needs to be run against a JPD that does not have JAS enabled
+// Set JFROG_URL to this instance and set env var JFROG_JAS_DISABLED=true
+func TestAccRepositoryConfig_JasDisabled_vulnContextualAnalysis_set(t *testing.T) {
+	jasDisabled := os.Getenv("JFROG_JAS_DISABLED")
+	if strings.ToLower(jasDisabled) != "true" {
+		t.Skipf("Env var JFROG_JAS_DISABLED is not set to 'true'")
+	}
+
+	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
+
+	config := util.ExecuteTemplate(
+		fqrn,
+		`resource "xray_repository_config" "{{ .resource_name }}" {
+			repo_name   = "repo-config-test-repo"
+			jas_enabled = false
+
+			config {
+				vuln_contextual_analysis = true
+				retention_in_days = 90
+			}
+		}`,
+		map[string]string{
+			"resource_name": resourceName,
+		},
+	)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviders(),
+
+		Steps: []resource.TestStep{
+			{
+				Config:      config,
+				ExpectError: regexp.MustCompile(`.*config\.vuln_contextual_analysis can not be set when jas_enabled is set to 'true'.*`),
+			},
+		},
+	})
+}
+
+// TestAccRepositoryConfig_JasDisabled_exposures_set needs to be run against a JPD that does not have JAS enabled
+// Set JFROG_URL to this instance and set env var JFROG_JAS_DISABLED=true
+func TestAccRepositoryConfig_JasDisabled_exposures_set(t *testing.T) {
+	jasDisabled := os.Getenv("JFROG_JAS_DISABLED")
+	if strings.ToLower(jasDisabled) != "true" {
+		t.Skipf("Env var JFROG_JAS_DISABLED is not set to 'true'")
+	}
+
+	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
+
+	config := util.ExecuteTemplate(
+		fqrn,
+		`resource "xray_repository_config" "{{ .resource_name }}" {
+			repo_name   = "repo-config-test-repo"
+			jas_enabled = false
+
+			config {
+				retention_in_days = 90
+				exposures {
+					scanners_category {
+						iac = true
+					}
+				}
+			}
+		}`,
+		map[string]string{
+			"resource_name": resourceName,
+		},
+	)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviders(),
+
+		Steps: []resource.TestStep{
+			{
+				Config:      config,
+				ExpectError: regexp.MustCompile(`.*config\.exposures can not be set when jas_enabled is set to 'true'.*`),
+			},
+		},
+	})
+}
+
+func TestAccRepositoryConfig_RepoConfig_Create_VulnContextualAnalysis(t *testing.T) {
+	jasDisabled := os.Getenv("JFROG_JAS_DISABLED")
+	if strings.ToLower(jasDisabled) == "true" {
+		t.Skipf("Env var JFROG_JAS_DISABLED is set to 'true'")
+	}
+
 	testCase := []struct {
 		packageType  string
 		template     string
@@ -71,6 +202,7 @@ func testAccRepositoryConfigRepoConfigCreate_VulnContextualAnalysis(t *testing.T
 			"services_scan":            "false",
 			"secrets_scan":             "false",
 			"applications_scan":        "false",
+			"package_type":             packageType,
 		}
 
 		valid, _ := util.CheckVersion(xrayVersion, validVersion)
@@ -80,19 +212,14 @@ func testAccRepositoryConfigRepoConfigCreate_VulnContextualAnalysis(t *testing.T
 		}
 
 		resource.Test(t, resource.TestCase{
-			PreCheck: func() {
-				testAccPreCheck(t)
-				testAccDeleteRepo(t, testData["repo_name"])
-				testAccCreateRepos(t, testData["repo_name"], "local", "", packageType)
-			},
-			CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
-				testAccDeleteRepo(t, testData["repo_name"])
-				err := fmt.Errorf("repo was deleted")
-				errorResp := dummyError()
-				return errorResp, err
-			}),
+			PreCheck:          func() { testAccPreCheck(t) },
 			ProviderFactories: testAccProviders(),
-
+			ExternalProviders: map[string]resource.ExternalProvider{
+				"artifactory": {
+					Source:            "jfrog/artifactory",
+					VersionConstraint: "10.1.2",
+				},
+			},
 			Steps: []resource.TestStep{
 				{
 					Config: util.ExecuteTemplate(fqrn, template, testData),
@@ -105,6 +232,7 @@ func testAccRepositoryConfigRepoConfigCreate_VulnContextualAnalysis(t *testing.T
 				{
 					ResourceName:      fqrn,
 					ImportState:       true,
+					ImportStateId:     fmt.Sprintf("%s:true", testData["repo_name"]),
 					ImportStateVerify: true,
 				},
 			},
@@ -112,7 +240,12 @@ func testAccRepositoryConfigRepoConfigCreate_VulnContextualAnalysis(t *testing.T
 	}
 }
 
-func TestAccRepositoryConfigRepoConfigCreate_exposure(t *testing.T) {
+func TestAccRepositoryConfig_RepoConfigCreate_exposure(t *testing.T) {
+	jasDisabled := os.Getenv("JFROG_JAS_DISABLED")
+	if strings.ToLower(jasDisabled) == "true" {
+		t.Skipf("Env var JFROG_JAS_DISABLED is set to 'true'")
+	}
+
 	testCase := []struct {
 		packageType  string
 		template     string
@@ -125,6 +258,7 @@ func TestAccRepositoryConfigRepoConfigCreate_exposure(t *testing.T) {
 			"3.67.9",
 			func(fqrn string, testData map[string]string) resource.TestCheckFunc {
 				return resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "jas_enabled", "true"),
 					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.services", testData["services_scan"]),
 					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.secrets", testData["secrets_scan"]),
 					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.applications", testData["applications_scan"]),
@@ -176,11 +310,25 @@ func TestAccRepositoryConfigRepoConfigCreate_exposure(t *testing.T) {
 	}
 }
 
-func TestAccRepositoryConfigRepoConfigCreate_no_exposure(t *testing.T) {
+func TestAccRepositoryConfig_RepoConfigCreate_no_exposure(t *testing.T) {
+	jasDisabled := os.Getenv("JFROG_JAS_DISABLED")
+	if strings.ToLower(jasDisabled) == "true" {
+		t.Skipf("Env var JFROG_JAS_DISABLED is set to 'true'")
+	}
+
 	packageTypes := []string{"alpine", "bower", "composer", "conan", "conda", "debian", "gems", "generic", "go", "gradle", "ivy", "nuget", "rpm", "sbt"}
 	template := `
+	resource "artifactory_local_{{ .package_type }}_repository" "{{ .repo_name }}" {
+		key        = "{{ .repo_name }}"
+		xray_index = true
+		{{ if eq .package_type "debian" }}
+		index_compression_formats = ["bz2"]
+		{{ end }}
+	}
+
 	resource "xray_repository_config" "{{ .resource_name }}" {
-		repo_name = "{{ .repo_name }}"
+		repo_name   = artifactory_local_{{ .package_type }}_repository.{{ .repo_name }}.key
+		jas_enabled = true
 
 		config {
 			retention_in_days = {{ .retention_in_days }}
@@ -218,6 +366,7 @@ func testAccRepositoryConfigRepoConfigCreate(t *testing.T, packageType, template
 			"services_scan":            "true",
 			"secrets_scan":             "true",
 			"applications_scan":        "true",
+			"package_type":             packageType,
 		}
 
 		valid, _ := util.CheckVersion(xrayVersion, validVersion)
@@ -227,18 +376,14 @@ func testAccRepositoryConfigRepoConfigCreate(t *testing.T, packageType, template
 		}
 
 		resource.Test(t, resource.TestCase{
-			PreCheck: func() {
-				testAccPreCheck(t)
-				testAccDeleteRepo(t, testData["repo_name"])
-				testAccCreateRepos(t, testData["repo_name"], "local", "", packageType)
-			},
-			CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
-				testAccDeleteRepo(t, testData["repo_name"])
-				err := fmt.Errorf("repo was deleted")
-				errorResp := dummyError()
-				return errorResp, err
-			}),
+			PreCheck:          func() { testAccPreCheck(t) },
 			ProviderFactories: testAccProviders(),
+			ExternalProviders: map[string]resource.ExternalProvider{
+				"artifactory": {
+					Source:            "jfrog/artifactory",
+					VersionConstraint: "10.1.2",
+				},
+			},
 			Steps: []resource.TestStep{
 				{
 					Config: util.ExecuteTemplate(fqrn, template, testData),
@@ -247,6 +392,7 @@ func testAccRepositoryConfigRepoConfigCreate(t *testing.T, packageType, template
 				{
 					ResourceName:      fqrn,
 					ImportState:       true,
+					ImportStateId:     fmt.Sprintf("%s:true", testData["repo_name"]),
 					ImportStateVerify: true,
 				},
 			},
@@ -254,28 +400,29 @@ func testAccRepositoryConfigRepoConfigCreate(t *testing.T, packageType, template
 	}
 }
 
-func TestAccRepositoryConfigRepoConfigCreate_InvalidExposures(t *testing.T) {
+func TestAccRepositoryConfig_RepoConfigCreate_InvalidExposures(t *testing.T) {
+	jasDisabled := os.Getenv("JFROG_JAS_DISABLED")
+	if strings.ToLower(jasDisabled) == "true" {
+		t.Skipf("Env var JFROG_JAS_DISABLED is set to 'true'")
+	}
+
 	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
 	var testData = map[string]string{
 		"resource_name":     resourceName,
 		"repo_name":         "repo-config-test-repo",
 		"retention_in_days": "90",
+		"package_type":      "docker_v2",
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			testAccPreCheck(t)
-			testAccDeleteRepo(t, testData["repo_name"])
-			testAccCreateRepos(t, testData["repo_name"], "local", "", "docker")
-		},
-		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
-			testAccDeleteRepo(t, testData["repo_name"])
-			err := fmt.Errorf("repo was deleted")
-			errorResp := dummyError()
-			return errorResp, err
-		}),
+		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviders(),
-
+		ExternalProviders: map[string]resource.ExternalProvider{
+			"artifactory": {
+				Source:            "jfrog/artifactory",
+				VersionConstraint: "10.1.2",
+			},
+		},
 		Steps: []resource.TestStep{
 			{
 				Config:             util.ExecuteTemplate(fqrn, TestDataRepoConfigInvalidExposuresTemplate, testData),
@@ -285,11 +432,12 @@ func TestAccRepositoryConfigRepoConfigCreate_InvalidExposures(t *testing.T) {
 	})
 }
 
-func TestAccRepositoryConfigRepoPathsCreate(t *testing.T) {
+func TestAccRepositoryConfig_RepoPathsCreate(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
 	var testData = map[string]string{
 		"resource_name":                resourceName,
 		"repo_name":                    "repo-config-test-repo",
+		"jas_enabled":                  "false",
 		"pattern0_include":             "core/**",
 		"pattern0_exclude":             "core/external/**",
 		"pattern0_index_new_artifacts": "true",
@@ -300,22 +448,18 @@ func TestAccRepositoryConfigRepoPathsCreate(t *testing.T) {
 		"pattern1_retention_in_days":   "45",
 		"other_index_new_artifacts":    "true",
 		"other_retention_in_days":      "60",
+		"package_type":                 "generic",
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			testAccPreCheck(t)
-			testAccDeleteRepo(t, testData["repo_name"])
-			testAccCreateRepos(t, testData["repo_name"], "local", "", "")
-		},
-		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
-			testAccDeleteRepo(t, testData["repo_name"])
-			err := fmt.Errorf("repo was deleted")
-			errorResp := dummyError()
-			return errorResp, err
-		}),
+		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviders(),
-
+		ExternalProviders: map[string]resource.ExternalProvider{
+			"artifactory": {
+				Source:            "jfrog/artifactory",
+				VersionConstraint: "10.1.2",
+			},
+		},
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, TestDataRepoPathsConfigTemplate, testData),
@@ -324,17 +468,19 @@ func TestAccRepositoryConfigRepoPathsCreate(t *testing.T) {
 			{
 				ResourceName:      fqrn,
 				ImportState:       true,
+				ImportStateId:     fmt.Sprintf("%s:false", testData["repo_name"]),
 				ImportStateVerify: true,
 			},
 		},
 	})
 }
 
-func TestAccRepositoryConfigRepoPathsUpdate(t *testing.T) {
+func TestAccRepositoryConfig_RepoPathsUpdate(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
 	var testData = map[string]string{
 		"resource_name":                resourceName,
 		"repo_name":                    "repo-config-test-repo",
+		"jas_enabled":                  "false",
 		"pattern0_include":             "core/**",
 		"pattern0_exclude":             "core/external/**",
 		"pattern0_index_new_artifacts": "true",
@@ -345,10 +491,12 @@ func TestAccRepositoryConfigRepoPathsUpdate(t *testing.T) {
 		"pattern1_retention_in_days":   "45",
 		"other_index_new_artifacts":    "true",
 		"other_retention_in_days":      "60",
+		"package_type":                 "generic",
 	}
 	var testDataUpdated = map[string]string{
 		"resource_name":                resourceName,
 		"repo_name":                    "repo-config-test-repo",
+		"jas_enabled":                  "false",
 		"pattern0_include":             "core1/**",
 		"pattern0_exclude":             "core1/external/**",
 		"pattern0_index_new_artifacts": "false",
@@ -359,22 +507,18 @@ func TestAccRepositoryConfigRepoPathsUpdate(t *testing.T) {
 		"pattern1_retention_in_days":   "50",
 		"other_index_new_artifacts":    "false",
 		"other_retention_in_days":      "70",
+		"package_type":                 "generic",
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			testAccPreCheck(t)
-			testAccDeleteRepo(t, testData["repo_name"])
-			testAccCreateRepos(t, testData["repo_name"], "local", "", "")
-		},
-		CheckDestroy: verifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
-			testAccDeleteRepo(t, testData["repo_name"])
-			err := fmt.Errorf("repo was deleted")
-			errorResp := dummyError()
-			return errorResp, err
-		}),
+		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviders(),
-
+		ExternalProviders: map[string]resource.ExternalProvider{
+			"artifactory": {
+				Source:            "jfrog/artifactory",
+				VersionConstraint: "10.1.2",
+			},
+		},
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, TestDataRepoPathsConfigTemplate, testData),
@@ -391,6 +535,7 @@ func TestAccRepositoryConfigRepoPathsUpdate(t *testing.T) {
 func verifyRepositoryConfig(fqrn string, testData map[string]string) resource.TestCheckFunc {
 	return resource.ComposeTestCheckFunc(
 		resource.TestCheckResourceAttr(fqrn, "repo_name", testData["repo_name"]),
+		resource.TestCheckResourceAttr(fqrn, "jas_enabled", testData["jas_enabled"]),
 		resource.TestCheckResourceAttr(fqrn, "paths_config.0.pattern.0.include", testData["pattern0_include"]),
 		resource.TestCheckResourceAttr(fqrn, "paths_config.0.pattern.0.exclude", testData["pattern0_exclude"]),
 		resource.TestCheckResourceAttr(fqrn, "paths_config.0.pattern.0.index_new_artifacts", testData["pattern0_index_new_artifacts"]),
@@ -405,8 +550,14 @@ func verifyRepositoryConfig(fqrn string, testData map[string]string) resource.Te
 }
 
 const TestDataRepoConfigDockerTemplate = `
+resource "artifactory_local_docker_v2_repository" "{{ .repo_name }}" {
+	key        = "{{ .repo_name }}"
+	xray_index = true
+}
+
 resource "xray_repository_config" "{{ .resource_name }}" {
-  repo_name = "{{ .repo_name }}"
+  repo_name   = artifactory_local_docker_v2_repository.{{ .repo_name }}.key
+  jas_enabled = true
 
   config {
     retention_in_days        = {{ .retention_in_days }}
@@ -423,8 +574,14 @@ resource "xray_repository_config" "{{ .resource_name }}" {
 }`
 
 const TestDataRepoConfigMavenTemplate = `
+resource "artifactory_local_maven_repository" "{{ .repo_name }}" {
+	key        = "{{ .repo_name }}"
+	xray_index = true
+}
+
 resource "xray_repository_config" "{{ .resource_name }}" {
-  repo_name = "{{ .repo_name }}"
+  repo_name = artifactory_local_maven_repository.{{ .repo_name }}.key
+  jas_enabled = true
 
   config {
     retention_in_days        = {{ .retention_in_days }}
@@ -432,15 +589,21 @@ resource "xray_repository_config" "{{ .resource_name }}" {
 
 	exposures {
       scanners_category {
-        secrets      = true
+        secrets = true
       }
 	}
   }
 }`
 
 const TestDataRepoConfigNpmPyPiTemplate = `
+resource "artifactory_local_{{ .package_type }}_repository" "{{ .repo_name }}" {
+	key        = "{{ .repo_name }}"
+	xray_index = true
+}
+
 resource "xray_repository_config" "{{ .resource_name }}" {
-  repo_name = "{{ .repo_name }}"
+  repo_name = artifactory_local_{{ .package_type }}_repository.{{ .repo_name }}.key
+  jas_enabled = true
 
   config {
     retention_in_days = {{ .retention_in_days }}
@@ -455,8 +618,14 @@ resource "xray_repository_config" "{{ .resource_name }}" {
 }`
 
 const TestDataRepoConfigInvalidExposuresTemplate = `
+resource "artifactory_local_{{ .package_type }}_repository" "{{ .repo_name }}" {
+	key        = "{{ .repo_name }}"
+	xray_index = true
+}
+
 resource "xray_repository_config" "{{ .resource_name }}" {
-  repo_name = "{{ .repo_name }}"
+  repo_name = artifactory_local_{{ .package_type }}_repository.{{ .repo_name }}.key
+  jas_enabled = true
 
   config {
     vuln_contextual_analysis = true
@@ -470,8 +639,13 @@ resource "xray_repository_config" "{{ .resource_name }}" {
 }`
 
 const TestDataRepoPathsConfigTemplate = `
+resource "artifactory_local_{{ .package_type }}_repository" "{{ .repo_name }}" {
+	key        = "{{ .repo_name }}"
+	xray_index = true
+}
+
 resource "xray_repository_config" "{{ .resource_name }}" {
-  repo_name = "{{ .repo_name }}"
+  repo_name = artifactory_local_{{ .package_type }}_repository.{{ .repo_name }}.key
 
   paths_config {
     pattern {

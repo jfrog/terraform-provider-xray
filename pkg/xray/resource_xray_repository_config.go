@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -78,6 +80,12 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 			Description:      "Repository name.",
 			ValidateDiagFunc: validator.StringIsNotEmpty,
 		},
+		"jas_enabled": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     false,
+			Description: "Specified if JFrog Advanced Security is enabled or not. Default to 'false'",
+		},
 		"config": {
 			Type:         schema.TypeSet,
 			Optional:     true,
@@ -101,7 +109,6 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 					"exposures": {
 						Type:        schema.TypeSet,
 						Optional:    true,
-						MinItems:    1,
 						MaxItems:    1,
 						Description: "Enables Xray to perform scans for multiple categories that cover security issues in your configurations and the usage of open source libraries in your code. Available only to CLOUD (SaaS)/SELF HOSTED for ENTERPRISE X and ENTERPRISE+ with Advanced DevSecOps. Must be set together with `vuln_contextual_analysis`. Supported for Docker, Maven, NPM, PyPi, and Terraform Backend package type.",
 						Elem: &schema.Resource{
@@ -303,31 +310,36 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 		return &exposures
 	}
 
-	var unpackRepoConfig = func(config *schema.Set, xrayVersion, packageType string) *RepoConfiguration {
+	var unpackRepoConfig = func(ctx context.Context, config *schema.Set, xrayVersion, packageType string, jasEnabled bool) *RepoConfiguration {
 		repoConfig := new(RepoConfiguration)
 
 		if config != nil {
 			data := config.List()[0].(map[string]interface{})
-			if slices.Contains(vulnContextualAnalysisPackageTypes(xrayVersion), packageType) {
-				vulnContextualAnalysis := data["vuln_contextual_analysis"].(bool)
-				repoConfig.VulnContextualAnalysis = &vulnContextualAnalysis
-			}
 			repoConfig.RetentionInDays = data["retention_in_days"].(int)
-			repoConfig.Exposures = unpackExposures(data["exposures"].(*schema.Set), xrayVersion, packageType)
+
+			if jasEnabled {
+				if slices.Contains(vulnContextualAnalysisPackageTypes(xrayVersion), packageType) {
+					vulnContextualAnalysis := data["vuln_contextual_analysis"].(bool)
+					repoConfig.VulnContextualAnalysis = &vulnContextualAnalysis
+				}
+				repoConfig.Exposures = unpackExposures(data["exposures"].(*schema.Set), xrayVersion, packageType)
+			}
 		}
 
 		return repoConfig
 	}
 
-	var unpackRepositoryConfig = func(s *schema.ResourceData, xrayVersion, packageType string) RepositoryConfiguration {
+	var unpackRepositoryConfig = func(ctx context.Context, s *schema.ResourceData, xrayVersion, packageType string) RepositoryConfiguration {
 		d := &sdk.ResourceData{ResourceData: s}
 
 		repositoryConfig := RepositoryConfiguration{
 			RepoName: d.GetString("repo_name", false),
 		}
 
+		jasEnabled := d.GetBool("jas_enabled", false)
+
 		if v, ok := s.GetOk("config"); ok {
-			repositoryConfig.RepoConfig = unpackRepoConfig(v.(*schema.Set), xrayVersion, packageType)
+			repositoryConfig.RepoConfig = unpackRepoConfig(ctx, v.(*schema.Set), xrayVersion, packageType, jasEnabled)
 		}
 
 		if v, ok := s.GetOk("paths_config"); ok {
@@ -365,7 +377,7 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 		}
 	}
 
-	var packGeneralRepoConfig = func(repoConfig *RepoConfiguration, xrayVersion, packageType string) []interface{} {
+	var packGeneralRepoConfig = func(repoConfig *RepoConfiguration, xrayVersion, packageType string, jasEnabled bool) []interface{} {
 		if repoConfig == nil {
 			return []interface{}{}
 		}
@@ -374,12 +386,14 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 			"retention_in_days": repoConfig.RetentionInDays,
 		}
 
-		if repoConfig.VulnContextualAnalysis != nil && slices.Contains(vulnContextualAnalysisPackageTypes(xrayVersion), packageType) {
-			m["vuln_contextual_analysis"] = *repoConfig.VulnContextualAnalysis
-		}
+		if jasEnabled {
+			if repoConfig.VulnContextualAnalysis != nil && slices.Contains(vulnContextualAnalysisPackageTypes(xrayVersion), packageType) {
+				m["vuln_contextual_analysis"] = *repoConfig.VulnContextualAnalysis
+			}
 
-		if repoConfig.Exposures != nil && slices.Contains(exposuresPackageTypes(xrayVersion), packageType) {
-			m["exposures"] = packExposures(repoConfig.Exposures, packageType)
+			if repoConfig.Exposures != nil && slices.Contains(exposuresPackageTypes(xrayVersion), packageType) {
+				m["exposures"] = packExposures(repoConfig.Exposures, packageType)
+			}
 		}
 
 		return []interface{}{m}
@@ -424,11 +438,17 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 		return []interface{}{m}
 	}
 
-	var packRepositoryConfig = func(ctx context.Context, repositoryConfig RepositoryConfiguration, d *schema.ResourceData, xrayVersion, packageType string) diag.Diagnostics {
+	var packRepositoryConfig = func(repositoryConfig RepositoryConfiguration, d *schema.ResourceData, xrayVersion, packageType string) diag.Diagnostics {
 		if err := d.Set("repo_name", repositoryConfig.RepoName); err != nil {
 			return diag.FromErr(err)
 		}
-		if err := d.Set("config", packGeneralRepoConfig(repositoryConfig.RepoConfig, xrayVersion, packageType)); err != nil {
+
+		jasEnabled := false
+		if v, ok := d.GetOk("jas_enabled"); ok {
+			jasEnabled = v.(bool)
+		}
+
+		if err := d.Set("config", packGeneralRepoConfig(repositoryConfig.RepoConfig, xrayVersion, packageType, jasEnabled)); err != nil {
 			return diag.FromErr(err)
 		}
 		if err := d.Set("paths_config", packRepoPathsConfigList(repositoryConfig.RepoPathsConfig)); err != nil {
@@ -481,7 +501,7 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 			return diag.FromErr(err)
 		}
 
-		return packRepositoryConfig(ctx, repositoryConfig, d, metadata.XrayVersion, packageType)
+		return packRepositoryConfig(repositoryConfig, d, metadata.XrayVersion, packageType)
 	}
 
 	var resourceXrayRepositoryConfigCreate = func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -491,7 +511,7 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 			return diag.FromErr(err)
 		}
 
-		repositoryConfig := unpackRepositoryConfig(d, metadata.XrayVersion, packageType)
+		repositoryConfig := unpackRepositoryConfig(ctx, d, metadata.XrayVersion, packageType)
 
 		_, err = metadata.Client.R().SetBody(&repositoryConfig).Put("xray/api/v1/repos_config")
 		if err != nil {
@@ -517,6 +537,36 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 		}}
 	}
 
+	var jasEnabledResourceDiff = func(ctx context.Context, diff *schema.ResourceDiff, v interface{}) error {
+		jasEnabled := false
+		if v, ok := diff.GetOk("jas_enabled"); ok {
+			jasEnabled = v.(bool)
+		}
+
+		if !jasEnabled {
+			configSet := diff.Get("config").(*schema.Set).List()
+			if len(configSet) == 0 {
+				return nil
+			}
+
+			config := configSet[0].(map[string]interface{})
+
+			if v, ok := config["vuln_contextual_analysis"]; ok && v.(bool) {
+				return fmt.Errorf("config.vuln_contextual_analysis can not be set when jas_enabled is set to 'true'")
+			}
+
+			tflog.Debug(ctx, "jasEnabledResourceDiff", map[string]any{
+				"config":              config,
+				"config['exposures']": config["exposures"],
+			})
+			if v, ok := config["exposures"]; ok && v.(*schema.Set).Len() > 0 {
+				return fmt.Errorf("config.exposures can not be set when jas_enabled is set to 'true'")
+			}
+		}
+
+		return nil
+	}
+
 	return &schema.Resource{
 		CreateContext: resourceXrayRepositoryConfigCreate,
 		ReadContext:   resourceXrayRepositoryConfigRead,
@@ -524,8 +574,23 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 		DeleteContext: resourceXrayRepositoryConfigDelete,
 
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: func(_ context.Context, d *schema.ResourceData, meta any) ([]*schema.ResourceData, error) {
+				parts := strings.SplitN(d.Id(), ":", 2)
+
+				if len(parts) == 2 && parts[0] != "" && parts[1] != "" {
+					d.SetId(parts[0])
+					jasEnabled, err := strconv.ParseBool(parts[1])
+					if err != nil {
+						return nil, err
+					}
+					d.Set("jas_enabled", jasEnabled)
+				}
+
+				return []*schema.ResourceData{d}, nil
+			},
 		},
+
+		CustomizeDiff: jasEnabledResourceDiff,
 
 		Schema:      repositoryConfigSchema,
 		Description: "Provides an Xray repository config resource. See [Xray Indexing Resources](https://www.jfrog.com/confluence/display/JFROG/Indexing+Xray+Resources#IndexingXrayResources-SetaRetentionPeriod) and [REST API](https://www.jfrog.com/confluence/display/JFROG/Xray+REST+API#XrayRESTAPI-UpdateRepositoriesConfigurations) for more details.",

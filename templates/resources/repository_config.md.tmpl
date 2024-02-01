@@ -16,8 +16,18 @@ Provides an Xray repository config resource. See [Xray Indexing Resources](https
 
 ## Import
 
-Import is supported using the following syntax:
+To import repository configuration, you'll need to specific if your JFrog Platform has Advanced Security enabled as part of the resource ID along with repository name, separated by a colon (`:`).
 
-```shell
-terraform import xray_repository_config.my-config config-repo-name
+For instance, using the following config during import:
+```terraform
+resource "xray_repository_config" "xray-repo-config" {
+  repo_name   = "example-repo-local"
+  jas_enabled = false
+
+  config {
+    retention_in_days = 90
+  }
+}
 ```
+
+Then use `terraform import xray_repository_config.xray-repo-config example-repo-local:false` to import the repository configuration `xray-repo-config` with `jas_enabled` set to `false`.

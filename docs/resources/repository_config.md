@@ -37,7 +37,8 @@ resource "xray_repository_config" "xray-repo-config-pattern" {
 }
 
 resource "xray_repository_config" "xray-repo-config" {
-  repo_name = "example-repo-local"
+  repo_name   = "example-repo-local"
+  jas_enabled = true
 
   config {
     vuln_contextual_analysis = true
@@ -56,6 +57,7 @@ resource "xray_repository_config" "xray-repo-config" {
 ### Optional
 
 - `config` (Block Set, Max: 1) Single repository configuration. Only one of 'config' or 'paths_config' can be set. (see [below for nested schema](#nestedblock--config))
+- `jas_enabled` (Boolean) Specified if JFrog Advanced Security is enabled or not. Default to 'false'
 - `paths_config` (Block Set, Max: 1) Enables you to set a more granular retention period. It enables you to scan future artifacts within the specific path, and set a retention period for the historical data of artifacts after they are scanned (see [below for nested schema](#nestedblock--paths_config))
 
 ### Read-Only
@@ -123,8 +125,18 @@ Optional:
 
 ## Import
 
-Import is supported using the following syntax:
+To import repository configuration, you'll need to specific if your JFrog Platform has Advanced Security enabled as part of the resource ID along with repository name, separated by a colon (`:`).
 
-```shell
-terraform import xray_repository_config.my-config config-repo-name
+For instance, using the following config during import:
+```terraform
+resource "xray_repository_config" "xray-repo-config" {
+  repo_name   = "example-repo-local"
+  jas_enabled = false
+
+  config {
+    retention_in_days = 90
+  }
+}
 ```
+
+Then use `terraform import xray_repository_config.xray-repo-config example-repo-local:false` to import the repository configuration `xray-repo-config` with `jas_enabled` set to `false`.
