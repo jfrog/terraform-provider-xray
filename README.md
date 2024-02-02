@@ -21,17 +21,17 @@ terraform {
   required_providers {
     artifactory = {
       source  = "jfrog/artifactory"
-      version = "2.9.1"
+      version = "10.1.2"
     }
 
     project = {
       source  = "jfrog/project"
-      version = "1.0.1"
+      version = "1.3.4"
     }
 
     xray = {
       source  = "jfrog/xray"
-      version = "0.0.1"
+      version = "2.2.0"
     }
   }
 }
@@ -383,8 +383,6 @@ resource "xray_watch" "project" {
   watch_recipients = ["test@email.com", "test1@email.com"]
 }
 ```
-
-
 </details>
 
 
