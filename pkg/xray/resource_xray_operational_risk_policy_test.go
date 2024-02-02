@@ -61,6 +61,7 @@ func TestAccOperationalRiskPolicy_withProjectKey(t *testing.T) {
 
 	testData := sdk.MergeMaps(testDataOperationalRisk)
 	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-operational-risk-policy-%d", testutil.RandomInt())
 	testData["project_key"] = projectKey
 	testData["op_risk_min_risk"] = "Medium"
 
@@ -132,6 +133,7 @@ func TestAccOperationalRiskPolicy_minRiskCriteria(t *testing.T) {
 
 	testData := sdk.MergeMaps(testDataOperationalRisk)
 	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-operational-risk-policy-%d", testutil.RandomInt())
 	testData["op_risk_min_risk"] = "Medium"
 
 	resource.Test(t, resource.TestCase{
@@ -194,6 +196,7 @@ func TestAccOperationalRiskPolicy_customCriteria(t *testing.T) {
 
 	testData := sdk.MergeMaps(testDataOperationalRisk)
 	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-operational-risk-policy-%d", testutil.RandomInt())
 	testData["op_risk_custom_use_and_condition"] = "true"
 	testData["op_risk_custom_is_eol"] = "false"
 	testData["op_risk_custom_release_date_greater_than_months"] = testutil.RandSelect("6", "12", "18", "24", "30", "36").(string)
@@ -308,6 +311,7 @@ func TestAccOperationalRiskPolicy_customCriteria_migration(t *testing.T) {
 
 	testData := sdk.MergeMaps(testDataOperationalRisk)
 	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-operational-risk-policy-%d", testutil.RandomInt())
 	testData["op_risk_custom_use_and_condition"] = "true"
 	testData["op_risk_custom_is_eol"] = "false"
 	testData["op_risk_custom_risk"] = testutil.RandSelect("high", "medium", "low").(string)
@@ -320,7 +324,7 @@ func TestAccOperationalRiskPolicy_customCriteria_migration(t *testing.T) {
 				ExternalProviders: map[string]resource.ExternalProvider{
 					"xray": {
 						VersionConstraint: "1.18.0",
-						Source:            "registry.terraform.io/jfrog/xray",
+						Source:            "jfrog/xray",
 					},
 				},
 				Config: util.ExecuteTemplate(fqrn, opertionalRiskPolicyCustom, testData),
@@ -376,6 +380,7 @@ func TestAccOperationalRiskPolicy_criteriaValidation(t *testing.T) {
 
 	testData := sdk.MergeMaps(testDataOperationalRisk)
 	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-operational-risk-policy-%d", testutil.RandomInt())
 
 	template := `
 	resource "xray_operational_risk_policy" "{{ .resource_name }}" {

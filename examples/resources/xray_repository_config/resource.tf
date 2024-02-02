@@ -24,7 +24,8 @@ resource "xray_repository_config" "xray-repo-config-pattern" {
 }
 
 resource "xray_repository_config" "xray-repo-config" {
-  repo_name = "example-repo-local"
+  repo_name   = "example-repo-local"
+  jas_enabled = true
 
   config {
     vuln_contextual_analysis = true

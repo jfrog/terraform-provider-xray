@@ -1,8 +1,9 @@
-## 2.1.2 (Feburary 1, 2024)
+## 2.2.0 (Feburary 2, 2024). Tested on Artifactory 7.77.3 and Xray 3.88.10
 
 IMPROVEMENTS:
 
 * resource/xray_ignore_rule: ensure when all nested attributes (e.g. `name`, `version`, etc.) change, they will trigger a re-creation of the resource. PR: [#162](https://github.com/jfrog/terraform-provider-xray/pull/162) Issue: [#156](https://github.com/jfrog/terraform-provider-xray/issues/156)
+* resource/xray_repository_config: add new attribute `jas_enabled` to allow users to specify if their JFrog Platform has Advanced Security enabled or not. This affects how the provider interacts with Xray API. PR: [#163](https://github.com/jfrog/terraform-provider-xray/pull/163) Issue: [#159](https://github.com/jfrog/terraform-provider-xray/issues/159)
 
 ## 2.1.1 (January 22, 2024). Tested on Artifactory 7.71.11 and Xray 3.87.9
 
