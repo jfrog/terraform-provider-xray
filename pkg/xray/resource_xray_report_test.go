@@ -127,6 +127,10 @@ var violationsFilterFields = []map[string]interface{}{
 				},
 				"summary_contains": "kernel",
 				"has_remediation":  true,
+				"published": map[string]interface{}{
+					"start": "2023-02-01T08:00:00Z",
+					"end":   "2023-02-14T08:00:00Z",
+				},
 			},
 		},
 	},
@@ -458,16 +462,15 @@ func mkFilterTestCase(t *testing.T, resourceFields map[string]interface{}, filte
 
 	allFields := sdk.MergeMaps(filterFields, resourceFields)
 	allFieldsHcl := sdk.FmtMapToHcl(allFields)
-	const remoteRepoFull = `
-		resource "%s" "%s" {
+	const resourceTempl = `
+resource "%s" "%s" {
 %s
-		}
-	`
+}`
 	extraChecks := testutil.MapToTestChecks(fqrn, resourceFields)
 	defaultChecks := testutil.MapToTestChecks(fqrn, allFields)
 
 	checks := append(defaultChecks, extraChecks...)
-	config := fmt.Sprintf(remoteRepoFull, resourceName, name, allFieldsHcl)
+	config := fmt.Sprintf(resourceTempl, resourceName, name, allFieldsHcl)
 
 	return t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -488,13 +491,12 @@ func mkFilterNegativeTestCase(t *testing.T, resourceFields map[string]interface{
 
 	allFields := sdk.MergeMaps(filterFields, resourceFields)
 	allFieldsHcl := sdk.FmtMapToHcl(allFields)
-	const remoteRepoFull = `
-		resource "%s" "%s" {
+	const resourceTempl = `
+resource "%s" "%s" {
 %s
-		}
-	`
+}`
 
-	config := fmt.Sprintf(remoteRepoFull, resourceName, name, allFieldsHcl)
+	config := fmt.Sprintf(resourceTempl, resourceName, name, allFieldsHcl)
 
 	return t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },

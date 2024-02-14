@@ -128,6 +128,28 @@ func resourceXrayViolationsReport() *schema.Resource {
 						Optional:    true,
 						Description: "Whether the issue has a fix or not.",
 					},
+					"published": {
+						Type:        schema.TypeSet,
+						Optional:    true,
+						MaxItems:    1,
+						Description: "",
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"start": {
+									Type:             schema.TypeString,
+									Optional:         true,
+									ValidateDiagFunc: validation.ToDiagFunc(validation.IsRFC3339Time),
+									Description:      "Published from date.",
+								},
+								"end": {
+									Type:             schema.TypeString,
+									Optional:         true,
+									ValidateDiagFunc: validation.ToDiagFunc(validation.IsRFC3339Time),
+									Description:      "Published to date.",
+								},
+							},
+						},
+					},
 				},
 			},
 		},

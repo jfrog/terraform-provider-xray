@@ -1,3 +1,9 @@
+## 2.3.0 (Feburary 15, 2024). Tested on Artifactory 7.77.5 and Xray 3.88.12
+
+IMPROVEMENTS:
+
+* resource/xray_violations_report: add `published` attribute for `security_filters` to support `start` and `end` dates. PR: [#164](https://github.com/jfrog/terraform-provider-xray/pull/164) Issue: [#161](https://github.com/jfrog/terraform-provider-xray/issues/161)
+
 ## 2.2.0 (Feburary 2, 2024). Tested on Artifactory 7.77.3 and Xray 3.88.10
 
 IMPROVEMENTS:
