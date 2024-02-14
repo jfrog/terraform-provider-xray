@@ -269,11 +269,12 @@ type StartAndEndDate struct {
 }
 
 type SecurityFilter struct {
-	Cve             string     `json:"cve,omitempty"`
-	IssueId         string     `json:"issue_id,omitempty"`
-	CvssScore       *CvssScore `json:"cvss_score,omitempty"`
-	SummaryContains string     `json:"summary_contains"`
-	HasRemediation  bool       `json:"has_remediation,omitempty"`
+	Cve             string           `json:"cve,omitempty"`
+	IssueId         string           `json:"issue_id,omitempty"`
+	CvssScore       *CvssScore       `json:"cvss_score,omitempty"`
+	SummaryContains string           `json:"summary_contains"`
+	HasRemediation  bool             `json:"has_remediation,omitempty"`
+	Published       *StartAndEndDate `json:"published,omitempty"`
 }
 
 type LicenseFilter struct {
@@ -488,6 +489,10 @@ func unpackViolationsSecurityFilters(filter *schema.Set) *SecurityFilter {
 
 	securityFilter.HasRemediation = m["has_remediation"].(bool)
 
+	if m["updated"] != nil {
+		securityFilter.Published = unpackStartAndEndDate(m["published"].(*schema.Set))
+	}
+
 	return &securityFilter
 }
 
@@ -659,9 +664,11 @@ func createReport(reportType string, d *schema.ResourceData, m interface{}) diag
 		return diag.FromErr(err)
 	}
 
-	_, err = req.SetBody(report).SetResult(&report).
-		Post("xray/api/v1/reports/" + reportType)
-
+	_, err = req.
+		SetBody(report).
+		SetResult(&report).
+		SetPathParam("reportType", reportType).
+		Post("xray/api/v1/reports/{reportType}")
 	if err != nil {
 		return diag.FromErr(err)
 	}
