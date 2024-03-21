@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -630,11 +629,14 @@ func resourceXrayReportRead(ctx context.Context, d *schema.ResourceData, m inter
 		SetPathParam("reportId", d.Id()).
 		Get("xray/api/v1/reports/{reportId}")
 	if err != nil {
-		if resp != nil && resp.StatusCode() == http.StatusNotFound {
-			tflog.Warn(ctx, fmt.Sprintf("Xray report (%s) not found, removing from state", d.Id()))
-			d.SetId("")
-		}
 		return diag.FromErr(err)
+	}
+	if resp.StatusCode() == http.StatusNotFound {
+		d.SetId("")
+		return diag.Errorf("report (%s) not found, removing from state", d.Id())
+	}
+	if resp.IsError() {
+		return diag.Errorf("%s", resp.String())
 	}
 
 	return nil
@@ -650,10 +652,15 @@ func resourceXrayReportDelete(_ context.Context, d *schema.ResourceData, m inter
 	resp, err := req.
 		SetPathParam("reportId", d.Id()).
 		Delete("xray/api/v1/reports/{reportId}")
-	if err != nil && resp.StatusCode() == http.StatusNotFound {
-		d.SetId("")
+	if err != nil {
 		return diag.FromErr(err)
 	}
+	if resp.IsError() {
+		return diag.Errorf("%s", resp.String())
+	}
+
+	d.SetId("")
+
 	return nil
 }
 
@@ -664,13 +671,16 @@ func createReport(reportType string, d *schema.ResourceData, m interface{}) diag
 		return diag.FromErr(err)
 	}
 
-	_, err = req.
+	resp, err := req.
 		SetBody(report).
 		SetResult(&report).
 		SetPathParam("reportType", reportType).
 		Post("xray/api/v1/reports/{reportType}")
 	if err != nil {
 		return diag.FromErr(err)
+	}
+	if resp.IsError() {
+		return diag.Errorf("%s", resp.String())
 	}
 
 	d.SetId(fmt.Sprintf("%d", report.ReportId))

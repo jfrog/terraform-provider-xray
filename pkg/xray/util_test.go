@@ -43,13 +43,11 @@ func verifyDeleted(id string, check CheckFun) func(*tf.State) error {
 		c := provider.Meta().(util.ProvderMetadata).Client
 		resp, err := check(rs.Primary.ID, c.R())
 		if err != nil {
-			if resp != nil {
-				switch resp.StatusCode() {
-				case http.StatusNotFound, http.StatusBadRequest, http.StatusInternalServerError:
-					return nil
-				}
-			}
 			return err
+		}
+		switch resp.StatusCode() {
+		case http.StatusNotFound, http.StatusBadRequest, http.StatusInternalServerError:
+			return nil
 		}
 		return fmt.Errorf("error: %s still exists", rs.Primary.ID)
 	}

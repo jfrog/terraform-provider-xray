@@ -417,11 +417,14 @@ func resourceXrayWatchCreate(ctx context.Context, d *schema.ResourceData, m inte
 		}
 	}
 
-	_, err = req.
+	resp, err := req.
 		SetBody(watch).
 		Post("xray/api/v2/watches")
 	if err != nil {
 		return diag.FromErr(err)
+	}
+	if resp.IsError() {
+		return diag.Errorf("%s", resp.String())
 	}
 
 	d.SetId(watch.GeneralData.Name)
@@ -444,11 +447,14 @@ func resourceXrayWatchRead(ctx context.Context, d *schema.ResourceData, m interf
 		}).
 		Get("xray/api/v2/watches/{name}")
 	if err != nil {
-		if resp != nil && resp.StatusCode() == http.StatusNotFound {
-			tflog.Warn(ctx, fmt.Sprintf("Xray watch (%s) not found, removing from state", d.Id()))
-			d.SetId("")
-		}
 		return diag.FromErr(err)
+	}
+	if resp.StatusCode() == http.StatusNotFound {
+		d.SetId("")
+		return diag.Errorf("watch (%s) not found, removing from state", d.Id())
+	}
+	if resp.IsError() {
+		return diag.Errorf("%s", resp.String())
 	}
 
 	return packWatch(ctx, watch, d)
@@ -469,11 +475,14 @@ func resourceXrayWatchUpdate(ctx context.Context, d *schema.ResourceData, m inte
 		}).
 		Put("xray/api/v2/watches/{name}")
 	if err != nil {
-		if resp != nil && resp.StatusCode() == http.StatusNotFound {
-			tflog.Warn(ctx, fmt.Sprintf("Xray watch (%s) not found, removing from state", d.Id()))
-			d.SetId("")
-		}
 		return diag.FromErr(err)
+	}
+	if resp.StatusCode() == http.StatusNotFound {
+		d.SetId("")
+		return diag.Errorf("watch (%s) not found, removing from state", d.Id())
+	}
+	if resp.IsError() {
+		return diag.Errorf("%s", resp.String())
 	}
 
 	d.SetId(watch.GeneralData.Name)
@@ -493,10 +502,18 @@ func resourceXrayWatchDelete(_ context.Context, d *schema.ResourceData, m interf
 			"name": d.Id(),
 		}).
 		Delete("xray/api/v2/watches/{name}")
-	if err != nil && resp.StatusCode() == http.StatusNotFound {
-		d.SetId("")
+	if err != nil {
 		return diag.FromErr(err)
 	}
+	if resp.StatusCode() == http.StatusNotFound {
+		d.SetId("")
+	}
+	if resp.IsError() {
+		return diag.Errorf("%s", resp.String())
+	}
+
+	d.SetId("")
+
 	return nil
 }
 

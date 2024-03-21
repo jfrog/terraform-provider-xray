@@ -226,6 +226,9 @@ func resourceXrayWorkersCount() *schema.Resource {
 		if err != nil {
 			return diag.FromErr(err)
 		}
+		if resp.IsError() {
+			return diag.Errorf("%s", resp.String())
+		}
 
 		hash := sha256.Sum256(resp.Body())
 		d.SetId(fmt.Sprintf("%x", hash))
@@ -235,12 +238,14 @@ func resourceXrayWorkersCount() *schema.Resource {
 
 	var resourceXrayWorkersCountUpdate = func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 		workersCount := unpackWorkersCount(d)
-		_, err := m.(util.ProvderMetadata).Client.R().
+		resp, err := m.(util.ProvderMetadata).Client.R().
 			SetBody(workersCount).
 			Put("xray/api/v1/configuration/workersCount")
-
 		if err != nil {
 			return diag.FromErr(err)
+		}
+		if resp.IsError() {
+			return diag.Errorf("%s", resp.String())
 		}
 
 		diagnostic := resourceXrayWorkersCountRead(ctx, d, m)
