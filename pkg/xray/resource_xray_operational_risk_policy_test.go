@@ -215,9 +215,9 @@ func TestAccOperationalRiskPolicy_customCriteria(t *testing.T) {
 			priority = 1
 			criteria {
 				op_risk_custom {
-					use_and_condition                  = {{ .op_risk_custom_use_and_condition }}
-					is_eol                             = {{ .op_risk_custom_is_eol }}
-					risk                               = "{{ .op_risk_custom_risk }}"
+					use_and_condition = {{ .op_risk_custom_use_and_condition }}
+					is_eol            = {{ .op_risk_custom_is_eol }}
+					risk              = "{{ .op_risk_custom_risk }}"
 				}
 			}
 			actions {
@@ -241,20 +241,6 @@ func TestAccOperationalRiskPolicy_customCriteria(t *testing.T) {
 		ProviderFactories: testAccProviders(),
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, opertionalRiskPolicyCustom, testData),
-				Check: resource.ComposeTestCheckFunc(
-					verifyOpertionalRiskPolicy(fqrn, testData),
-					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.use_and_condition", testData["op_risk_custom_use_and_condition"]),
-					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.is_eol", testData["op_risk_custom_is_eol"]),
-					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.release_date_greater_than_months", testData["op_risk_custom_release_date_greater_than_months"]),
-					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.newer_versions_greater_than", testData["op_risk_custom_newer_versions_greater_than"]),
-					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.release_cadence_per_year_less_than", testData["op_risk_custom_release_cadence_per_year_less_than"]),
-					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.commits_less_than", testData["op_risk_custom_commits_less_than"]),
-					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.committers_less_than", testData["op_risk_custom_committers_less_than"]),
-					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.risk", testData["op_risk_custom_risk"]),
-				),
-			},
-			{
 				Config: util.ExecuteTemplate(fqrn, opertionalRiskPolicyCustomUnset, testData),
 				Check: resource.ComposeTestCheckFunc(
 					verifyOpertionalRiskPolicy(fqrn, testData),
@@ -265,6 +251,20 @@ func TestAccOperationalRiskPolicy_customCriteria(t *testing.T) {
 					resource.TestCheckNoResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.release_cadence_per_year_less_than"),
 					resource.TestCheckNoResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.commits_less_than"),
 					resource.TestCheckNoResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.committers_less_than"),
+					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.risk", testData["op_risk_custom_risk"]),
+				),
+			},
+			{
+				Config: util.ExecuteTemplate(fqrn, opertionalRiskPolicyCustom, testData),
+				Check: resource.ComposeTestCheckFunc(
+					verifyOpertionalRiskPolicy(fqrn, testData),
+					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.use_and_condition", testData["op_risk_custom_use_and_condition"]),
+					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.is_eol", testData["op_risk_custom_is_eol"]),
+					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.release_date_greater_than_months", testData["op_risk_custom_release_date_greater_than_months"]),
+					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.newer_versions_greater_than", testData["op_risk_custom_newer_versions_greater_than"]),
+					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.release_cadence_per_year_less_than", testData["op_risk_custom_release_cadence_per_year_less_than"]),
+					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.commits_less_than", testData["op_risk_custom_commits_less_than"]),
+					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.committers_less_than", testData["op_risk_custom_committers_less_than"]),
 					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.risk", testData["op_risk_custom_risk"]),
 				),
 			},

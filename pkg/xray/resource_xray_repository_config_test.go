@@ -14,9 +14,10 @@ import (
 
 func TestAccRepositoryConfig_RepoNoConfig(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
+	_, _, repoName := testutil.MkNames("local-generic", "artifactory_local_generic_repository")
 	var testData = map[string]string{
 		"resource_name": resourceName,
-		"repo_name":     "repo-config-test-repo",
+		"repo_name":     repoName,
 	}
 
 	config := util.ExecuteTemplate(
@@ -70,7 +71,6 @@ func TestAccRepositoryConfig_JasDisabled(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviders(),
-
 		Steps: []resource.TestStep{
 			{
 				Config: config,
@@ -92,11 +92,12 @@ func TestAccRepositoryConfig_JasDisabled_vulnContextualAnalysis_set(t *testing.T
 	}
 
 	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
+	_, _, repoName := testutil.MkNames("local-generic", "artifactory_local_generic_repository")
 
 	config := util.ExecuteTemplate(
 		fqrn,
 		`resource "xray_repository_config" "{{ .resource_name }}" {
-			repo_name   = "repo-config-test-repo"
+			repo_name   = "{{ .repo_name }}"
 			jas_enabled = false
 
 			config {
@@ -106,6 +107,7 @@ func TestAccRepositoryConfig_JasDisabled_vulnContextualAnalysis_set(t *testing.T
 		}`,
 		map[string]string{
 			"resource_name": resourceName,
+			"repo_name":     repoName,
 		},
 	)
 
@@ -194,9 +196,10 @@ func TestAccRepositoryConfig_RepoConfig_Create_VulnContextualAnalysis(t *testing
 func testAccRepositoryConfigRepoConfigCreate_VulnContextualAnalysis(t *testing.T, packageType, template, validVersion, xrayVersion string) func(t *testing.T) {
 	return func(t *testing.T) {
 		_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
+		_, _, repoName := testutil.MkNames("local-docker-v2", fmt.Sprintf("artifactory_local_%s_repository", packageType))
 		var testData = map[string]string{
 			"resource_name":            resourceName,
-			"repo_name":                "repo-config-test-repo",
+			"repo_name":                repoName,
 			"retention_in_days":        "90",
 			"vuln_contextual_analysis": "true",
 			"services_scan":            "false",
@@ -306,7 +309,7 @@ func TestAccRepositoryConfig_RepoConfigCreate_exposure(t *testing.T) {
 	}
 
 	for _, tc := range testCase {
-		t.Run(tc.packageType, testAccRepositoryConfigRepoConfigCreate(t, tc.packageType, tc.template, tc.validVersion, version, tc.checkFunc))
+		t.Run(tc.packageType, testAccRepositoryConfigRepoConfigCreate(tc.packageType, tc.template, tc.validVersion, version, tc.checkFunc))
 	}
 }
 
@@ -351,16 +354,17 @@ func TestAccRepositoryConfig_RepoConfigCreate_no_exposure(t *testing.T) {
 	}
 
 	for _, packageType := range packageTypes {
-		t.Run(packageType, testAccRepositoryConfigRepoConfigCreate(t, packageType, template, validVersion, version, checkFunc))
+		t.Run(packageType, testAccRepositoryConfigRepoConfigCreate(packageType, template, validVersion, version, checkFunc))
 	}
 }
 
-func testAccRepositoryConfigRepoConfigCreate(t *testing.T, packageType, template, validVersion, xrayVersion string, checkFunc func(fqrn string, testData map[string]string) resource.TestCheckFunc) func(t *testing.T) {
+func testAccRepositoryConfigRepoConfigCreate(packageType, template, validVersion, xrayVersion string, checkFunc func(fqrn string, testData map[string]string) resource.TestCheckFunc) func(t *testing.T) {
 	return func(t *testing.T) {
 		_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
+		_, _, repoName := testutil.MkNames("test-local", fmt.Sprintf("artifactory_local_%s_repository", packageType))
 		var testData = map[string]string{
 			"resource_name":            resourceName,
-			"repo_name":                "repo-config-test-repo",
+			"repo_name":                repoName,
 			"retention_in_days":        "90",
 			"vuln_contextual_analysis": "false",
 			"services_scan":            "true",
@@ -407,9 +411,10 @@ func TestAccRepositoryConfig_RepoConfigCreate_InvalidExposures(t *testing.T) {
 	}
 
 	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
+	_, _, repoName := testutil.MkNames("local-docker-v2", "artifactory_local_docker_v2_repository")
 	var testData = map[string]string{
 		"resource_name":     resourceName,
-		"repo_name":         "repo-config-test-repo",
+		"repo_name":         repoName,
 		"retention_in_days": "90",
 		"package_type":      "docker_v2",
 	}
@@ -434,9 +439,11 @@ func TestAccRepositoryConfig_RepoConfigCreate_InvalidExposures(t *testing.T) {
 
 func TestAccRepositoryConfig_RepoPathsCreate(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
+	_, _, repoName := testutil.MkNames("generic-local", "artifactory_local_generic_repository")
+
 	var testData = map[string]string{
 		"resource_name":                resourceName,
-		"repo_name":                    "repo-config-test-repo",
+		"repo_name":                    repoName,
 		"jas_enabled":                  "false",
 		"pattern0_include":             "core/**",
 		"pattern0_exclude":             "core/external/**",
@@ -477,9 +484,11 @@ func TestAccRepositoryConfig_RepoPathsCreate(t *testing.T) {
 
 func TestAccRepositoryConfig_RepoPathsUpdate(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
+	_, _, repoName := testutil.MkNames("generic-local", "artifactory_local_generic_repository")
+
 	var testData = map[string]string{
 		"resource_name":                resourceName,
-		"repo_name":                    "repo-config-test-repo",
+		"repo_name":                    repoName,
 		"jas_enabled":                  "false",
 		"pattern0_include":             "core/**",
 		"pattern0_exclude":             "core/external/**",
@@ -495,7 +504,7 @@ func TestAccRepositoryConfig_RepoPathsUpdate(t *testing.T) {
 	}
 	var testDataUpdated = map[string]string{
 		"resource_name":                resourceName,
-		"repo_name":                    "repo-config-test-repo",
+		"repo_name":                    repoName,
 		"jas_enabled":                  "false",
 		"pattern0_include":             "core1/**",
 		"pattern0_exclude":             "core1/external/**",
