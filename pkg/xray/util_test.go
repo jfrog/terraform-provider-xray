@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/go-resty/resty/v2"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	tf "github.com/hashicorp/terraform-plugin-testing/terraform"
+	tf "github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/jfrog/terraform-provider-shared/client"
 	"github.com/jfrog/terraform-provider-shared/testutil"
 	"github.com/jfrog/terraform-provider-shared/util"
@@ -32,14 +32,14 @@ func testCheckPolicyDeleted(id string, t *testing.T, request *resty.Request) *re
 
 type CheckFun func(id string, request *resty.Request) (*resty.Response, error)
 
-func verifyDeleted(id string, check CheckFun) func(*tf.State) error {
-	return func(s *tf.State) error {
+func verifyDeleted(id string, check CheckFun) func(*terraform.State) error {
+	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[id]
 		if !ok {
 			return fmt.Errorf("error: Resource id [%s] not found", id)
 		}
 		provider, _ := testAccProviders()["xray"]()
-		provider.Configure(context.Background(), terraform.NewResourceConfigRaw(nil))
+		provider.Configure(context.Background(), tf.NewResourceConfigRaw(nil))
 		c := provider.Meta().(util.ProvderMetadata).Client
 		resp, err := check(rs.Primary.ID, c.R())
 		if err != nil {

@@ -189,11 +189,11 @@ func TestAccRepositoryConfig_RepoConfig_Create_VulnContextualAnalysis(t *testing
 	}
 
 	for _, tc := range testCase {
-		t.Run(tc.packageType, testAccRepositoryConfigRepoConfigCreate_VulnContextualAnalysis(t, tc.packageType, tc.template, tc.validVersion, version))
+		t.Run(tc.packageType, testAccRepositoryConfigRepoConfigCreate_VulnContextualAnalysis(tc.packageType, tc.template, tc.validVersion, version))
 	}
 }
 
-func testAccRepositoryConfigRepoConfigCreate_VulnContextualAnalysis(t *testing.T, packageType, template, validVersion, xrayVersion string) func(t *testing.T) {
+func testAccRepositoryConfigRepoConfigCreate_VulnContextualAnalysis(packageType, template, validVersion, xrayVersion string) func(t *testing.T) {
 	return func(t *testing.T) {
 		_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
 		_, _, repoName := testutil.MkNames("local-docker-v2", fmt.Sprintf("artifactory_local_%s_repository", packageType))
