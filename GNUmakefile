@@ -65,6 +65,7 @@ fmt:
 	@go fmt ./...
 
 doc:
+	rm docs/debug.md
 	go generate
 
 .PHONY: build fmt

@@ -2,12 +2,10 @@ package xray
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"regexp"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -301,8 +299,10 @@ func resourceXrayIgnoreRule() *schema.Resource {
 		if err := d.Set("author", ignoreRule.Author); err != nil {
 			return diag.FromErr(err)
 		}
-		if err := d.Set("created", ignoreRule.Created.Format(time.RFC3339)); err != nil {
-			return diag.FromErr(err)
+		if ignoreRule.Created != nil {
+			if err := d.Set("created", ignoreRule.Created.Format(time.RFC3339)); err != nil {
+				return diag.FromErr(err)
+			}
 		}
 		if ignoreRule.ExpiresAt != nil {
 			if err := d.Set("expiration_date", ignoreRule.ExpiresAt.Format("2006-01-02")); err != nil {
@@ -373,7 +373,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 
 	var unpackFilterNameVersion = func(attributeName string, d *schema.ResourceData) []IgnoreFilterNameVersion {
 		var filters []IgnoreFilterNameVersion
-		if v, ok := d.GetOkExists(attributeName); ok {
+		if v, ok := d.GetOk(attributeName); ok {
 			for _, f := range v.(*schema.Set).List() {
 				fMap := f.(map[string]interface{})
 				filter := IgnoreFilterNameVersion{
@@ -389,7 +389,7 @@ func resourceXrayIgnoreRule() *schema.Resource {
 
 	var unpackFilterNameVersionPath = func(attributeName string, d *schema.ResourceData) []IgnoreFilterNameVersionPath {
 		var filters []IgnoreFilterNameVersionPath
-		if v, ok := d.GetOkExists(attributeName); ok {
+		if v, ok := d.GetOk(attributeName); ok {
 			for _, f := range v.(*schema.Set).List() {
 				fMap := f.(map[string]interface{})
 				filter := IgnoreFilterNameVersionPath{
@@ -485,11 +485,14 @@ func resourceXrayIgnoreRule() *schema.Resource {
 			SetPathParam("id", d.Id()).
 			Get("xray/api/v1/ignore_rules/{id}")
 		if err != nil {
-			if resp != nil && resp.StatusCode() == http.StatusNotFound {
-				tflog.Warn(ctx, fmt.Sprintf("Xray ignore rule (%s) not found, removing from state", d.Id()))
-				d.SetId("")
-			}
 			return diag.FromErr(err)
+		}
+		if resp.StatusCode() == http.StatusNotFound {
+			d.SetId("")
+			return diag.Errorf("ignore rule (%s) not found, removing from state", d.Id())
+		}
+		if resp.IsError() {
+			return diag.Errorf("%s", resp.String())
 		}
 
 		return packIgnoreRule(ignoreRule, d)
@@ -512,12 +515,15 @@ func resourceXrayIgnoreRule() *schema.Resource {
 
 		var response IgnoreRuleCreateResponse
 
-		_, err = req.
+		resp, err := req.
 			SetBody(ignoreRule).
 			SetResult(&response).
 			Post("xray/api/v1/ignore_rules")
 		if err != nil {
 			return diag.FromErr(err)
+		}
+		if resp.IsError() {
+			return diag.Errorf("%s", resp.String())
 		}
 
 		// response is in this json structure:
@@ -548,10 +554,14 @@ func resourceXrayIgnoreRule() *schema.Resource {
 		resp, err := req.
 			SetPathParam("id", d.Id()).
 			Delete("xray/api/v1/ignore_rules/{id}")
-		if err != nil && resp.StatusCode() == http.StatusInternalServerError {
-			d.SetId("")
+		if err != nil {
 			return diag.FromErr(err)
 		}
+		if resp.IsError() {
+			return diag.Errorf("%s", resp.String())
+		}
+
+		d.SetId("")
 
 		return nil
 	}

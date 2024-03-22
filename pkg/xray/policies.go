@@ -2,10 +2,8 @@ package xray
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/jfrog/terraform-provider-shared/util"
@@ -348,7 +346,7 @@ func unpackLicenseCriteria(tfCriteria map[string]interface{}) *PolicyRuleCriteri
 }
 
 func unpackOperationalRiskCustomCriteria(tfCriteria map[string]interface{}) *OperationalRiskCriteria {
-	criteria := new(OperationalRiskCriteria)
+	criteria := OperationalRiskCriteria{}
 	if v, ok := tfCriteria["use_and_condition"]; ok {
 		criteria.UseAndCondition = v.(bool)
 	}
@@ -374,7 +372,7 @@ func unpackOperationalRiskCustomCriteria(tfCriteria map[string]interface{}) *Ope
 		criteria.Risk = v.(string)
 	}
 
-	return criteria
+	return &criteria
 }
 
 func unpackOperationalRiskCriteria(tfCriteria map[string]interface{}) *PolicyRuleCriteria {
@@ -652,7 +650,6 @@ func packExposures(exposures *PolicyExposures) []interface{} {
 }
 
 func packActions(actions PolicyRuleActions, license bool) []interface{} {
-
 	m := map[string]interface{}{
 		"block_download":                     packBlockDownload(actions.BlockDownload),
 		"webhooks":                           actions.Webhooks,
@@ -673,7 +670,6 @@ func packActions(actions PolicyRuleActions, license bool) []interface{} {
 }
 
 func packBlockDownload(bd BlockDownloadSettings) []interface{} {
-
 	m := map[string]interface{}{}
 	m["unscanned"] = bd.Unscanned
 	m["active"] = bd.Active
@@ -701,8 +697,10 @@ func packPolicy(policy Policy, d *schema.ResourceData) diag.Diagnostics {
 	if err := d.Set("modified", policy.Modified); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("rule", packRules(*policy.Rules, policy.Type)); err != nil {
-		return diag.FromErr(err)
+	if policy.Rules != nil {
+		if err := d.Set("rule", packRules(*policy.Rules, policy.Type)); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	return nil
@@ -720,9 +718,12 @@ func resourceXrayPolicyCreate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	_, err = req.SetBody(policy).Post("xray/api/v2/policies")
+	resp, err := req.SetBody(policy).Post("xray/api/v2/policies")
 	if err != nil {
 		return diag.FromErr(err)
+	}
+	if resp.IsError() {
+		return diag.Errorf("%s", resp.String())
 	}
 
 	d.SetId(policy.Name)
@@ -730,7 +731,7 @@ func resourceXrayPolicyCreate(ctx context.Context, d *schema.ResourceData, m int
 }
 
 func resourceXrayPolicyRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	policy := Policy{}
+	var policy Policy
 
 	projectKey := d.Get("project_key").(string)
 	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, projectKey)
@@ -740,17 +741,19 @@ func resourceXrayPolicyRead(ctx context.Context, d *schema.ResourceData, m inter
 
 	resp, err := req.
 		SetResult(&policy).
-		SetPathParams(map[string]string{
-			"name": d.Id(),
-		}).
+		SetPathParam("name", d.Id()).
 		Get("xray/api/v2/policies/{name}")
 	if err != nil {
-		if resp != nil && resp.StatusCode() == http.StatusNotFound {
-			tflog.Warn(ctx, fmt.Sprintf("Xray policy (%s) not found, removing from state", d.Id()))
-			d.SetId("")
-		}
 		return diag.FromErr(err)
 	}
+	if resp.StatusCode() == http.StatusNotFound {
+		d.SetId("")
+		return diag.Errorf("policy (%s) not found, removing from state", d.Id())
+	}
+	if resp.IsError() {
+		return diag.Errorf("%s", resp.String())
+	}
+
 	return packPolicy(policy, d)
 }
 
@@ -765,7 +768,7 @@ func resourceXrayPolicyUpdate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	_, err = req.
+	resp, err := req.
 		SetBody(policy).
 		SetPathParams(map[string]string{
 			"name": d.Id(),
@@ -773,6 +776,9 @@ func resourceXrayPolicyUpdate(ctx context.Context, d *schema.ResourceData, m int
 		Put("xray/api/v2/policies/{name}")
 	if err != nil {
 		return diag.FromErr(err)
+	}
+	if resp.IsError() {
+		return diag.Errorf("%s", resp.String())
 	}
 
 	d.SetId(policy.Name)
@@ -796,9 +802,17 @@ func resourceXrayPolicyDelete(ctx context.Context, d *schema.ResourceData, m int
 			"name": d.Id(),
 		}).
 		Delete("xray/api/v2/policies/{name}")
-	if err != nil && resp.StatusCode() == http.StatusInternalServerError {
-		d.SetId("")
+	if err != nil {
 		return diag.FromErr(err)
 	}
+	if resp.StatusCode() == http.StatusInternalServerError {
+		d.SetId("")
+	}
+	if resp.IsError() {
+		return diag.Errorf("%s", resp.String())
+	}
+
+	d.SetId("")
+
 	return nil
 }

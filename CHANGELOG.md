@@ -1,3 +1,9 @@
+## 2.4.0 (March 22, 2024). Tested on Artifactory 7.77.7 and Xray 3.91.3
+
+IMPROVEMENTS:
+
+* resource/xray_settings: Add attributes to support [Xray Basic settings](https://jfrog.com/help/r/jfrog-security-documentation/advanced-xray-settings). PR: [#169](https://github.com/jfrog/terraform-provider-xray/pull/169) Issue: [#78](https://github.com/jfrog/terraform-provider-xray/issues/78)
+
 ## 2.3.0 (Feburary 15, 2024). Tested on Artifactory 7.77.7 and Xray 3.91.3
 
 IMPROVEMENTS:

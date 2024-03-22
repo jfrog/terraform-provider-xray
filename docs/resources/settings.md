@@ -6,16 +6,22 @@ subcategory: "Settings"
 
 # xray_settings (Resource)
 
-Provides an Xray DB Sync Time resource.
+Provides an Xray resource for managing basic settings and DB Sync Time.
 
-[API documentation](https://www.jfrog.com/confluence/display/JFROG/Xray+REST+API#XrayRESTAPI-UpdateDBSyncDailyUpdateTime).
+[Settings API documentation](https://jfrog.com/help/r/xray-rest-apis/get-xray-integration-configuration).
 
+[DB Sync Time API documentation](https://jfrog.com/help/r/xray-rest-apis/update-db-sync-daily-update-time).
 
 ## Example Usage
 
 ```terraform
 resource "xray_settings" "db_sync" {
-  db_sync_updates_time = "18:40"
+  enabled                        = true
+  allow_blocked                  = true
+  allow_when_unavailable         = true
+  block_unscanned_timeout        = 120
+  block_unfinished_scans_timeout = 3600
+  db_sync_updates_time           = "18:40"
 }
 ```
 
@@ -24,7 +30,15 @@ resource "xray_settings" "db_sync" {
 
 ### Required
 
-- `db_sync_updates_time` (String) The time of the Xray DB sync daily update job. Format HH:mm
+- `db_sync_updates_time` (String) The time of the Xray DB sync daily update job. Format `HH:mm`
+
+### Optional
+
+- `allow_blocked` (Boolean) Determines whether to allow artifacts blocked by Xray to be downloaded. This setting cannot override the blocking of unscanned artifacts. Should only be set to `true` when `enabled` is set. Default value: `false`.
+- `allow_when_unavailable` (Boolean) Determines whether to block certain operations (for example, downloading artifacts) when the connected Xray instance is unavailable. Should only be set to `true` when `enabled` is set. Default value: `false`.
+- `block_unfinished_scans_timeout` (Number) Defines the amount of time to wait for Xray to _finish_ scanning an artifact before blocking operations on that artifact automatically if the scan is still unfinished. Default value: 1800 seconds (30 minutes)
+- `block_unscanned_timeout` (Number) Defines the amount of time to wait for Xray to _start_ scanning an artifact before blocking operations on that artifact automatically if the scan has still not started. Default value: 60 seconds (1 minute)
+- `enabled` (Boolean) Determines whether Xray is currently enabled. Default value: `true`.
 
 ### Read-Only
 
@@ -32,7 +46,7 @@ resource "xray_settings" "db_sync" {
 
 ## Import
 
-Settings (currently only DB sync time) can be imported using their names, e.g.
+Settings can be imported using the DB sync time as the ID, e.g.
 ```
-$ terraform import xray_settings.db_sync db-time
+$ terraform import xray_settings.my-settings 00:00
 ```

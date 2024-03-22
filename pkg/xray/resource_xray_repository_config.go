@@ -3,7 +3,6 @@ package xray
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"strconv"
 	"strings"
 
@@ -489,11 +488,11 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 			Get("xray/api/v1/repos_config/{repo_name}")
 
 		if err != nil {
-			if resp != nil && resp.StatusCode() != http.StatusOK {
-				tflog.Error(ctx, fmt.Sprintf("Repo (%s) is either not indexed or does not exist", repoName))
-				d.SetId("")
-			}
 			return diag.FromErr(err)
+		}
+		if resp.IsError() {
+			d.SetId("")
+			return diag.Errorf("repo (%s) is either not indexed or does not exist", repoName)
 		}
 
 		packageType, err := getPackageType(metadata.Client, repoName)
@@ -513,9 +512,12 @@ func resourceXrayRepositoryConfig() *schema.Resource {
 
 		repositoryConfig := unpackRepositoryConfig(ctx, d, metadata.XrayVersion, packageType)
 
-		_, err = metadata.Client.R().SetBody(&repositoryConfig).Put("xray/api/v1/repos_config")
+		resp, err := metadata.Client.R().SetBody(&repositoryConfig).Put("xray/api/v1/repos_config")
 		if err != nil {
 			return diag.FromErr(err)
+		}
+		if resp.IsError() {
+			return diag.Errorf("%s", resp.String())
 		}
 
 		d.SetId(repositoryConfig.RepoName)

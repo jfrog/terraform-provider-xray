@@ -6,10 +6,11 @@ subcategory: "Settings"
 
 # xray_settings (Resource)
 
-Provides an Xray DB Sync Time resource.
+Provides an Xray resource for managing basic settings and DB Sync Time.
 
-[API documentation](https://www.jfrog.com/confluence/display/JFROG/Xray+REST+API#XrayRESTAPI-UpdateDBSyncDailyUpdateTime).
+[Basic settings documentation](https://jfrog.com/help/r/jfrog-security-documentation/advanced-xray-settings).
 
+[DB Sync Time API documentation](https://jfrog.com/help/r/xray-rest-apis/update-db-sync-daily-update-time).
 
 ## Example Usage
 
@@ -19,7 +20,7 @@ Provides an Xray DB Sync Time resource.
 
 ## Import
 
-Settings (currently only DB sync time) can be imported using their names, e.g.
+Settings can be imported using the DB sync time as the ID, e.g.
 ```
-$ terraform import xray_settings.db_sync db-time
+$ terraform import xray_settings.my-settings 00:00
 ```

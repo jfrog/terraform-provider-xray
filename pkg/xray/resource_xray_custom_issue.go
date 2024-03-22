@@ -7,7 +7,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -471,11 +470,14 @@ func resourceXrayCustomIssue() *schema.Resource {
 			SetPathParam("id", d.Id()).
 			Get("xray/api/v2/events/{id}")
 		if err != nil {
-			if resp != nil && resp.StatusCode() == http.StatusNotFound {
-				tflog.Warn(ctx, fmt.Sprintf("Xray custom issue (%s) not found, removing from state", d.Id()))
-				d.SetId("")
-			}
 			return diag.FromErr(err)
+		}
+		if resp.StatusCode() == http.StatusNotFound {
+			d.SetId("")
+			return diag.Errorf("custom issue (%s) not found, removing from state", d.Id())
+		}
+		if resp.IsError() {
+			return diag.Errorf("%s", resp.String())
 		}
 
 		return packCustomIssue(customIssue, d)
@@ -492,11 +494,14 @@ func resourceXrayCustomIssue() *schema.Resource {
 			return diag.FromErr(err)
 		}
 
-		_, err = req.
+		resp, err := req.
 			SetBody(customIssue).
 			Post("xray/api/v1/events")
 		if err != nil {
 			return diag.FromErr(err)
+		}
+		if resp.IsError() {
+			return diag.Errorf("%s", resp.String())
 		}
 
 		d.SetId(customIssue.Id)
@@ -515,12 +520,15 @@ func resourceXrayCustomIssue() *schema.Resource {
 			return diag.FromErr(err)
 		}
 
-		_, err = req.
+		resp, err := req.
 			SetPathParam("id", d.Id()).
 			SetBody(customIssue).
 			Put("xray/api/v1/events/{id}")
 		if err != nil {
 			return diag.FromErr(err)
+		}
+		if resp.IsError() {
+			return diag.Errorf("%s", resp.String())
 		}
 
 		d.SetId(customIssue.Id)
@@ -537,10 +545,17 @@ func resourceXrayCustomIssue() *schema.Resource {
 		resp, err := req.
 			SetPathParam("id", d.Id()).
 			Delete("xray/api/v1/events/{id}")
-		if err != nil && resp.StatusCode() == http.StatusInternalServerError {
-			d.SetId("")
+		if err != nil {
 			return diag.FromErr(err)
 		}
+		if resp.StatusCode() == http.StatusInternalServerError {
+			d.SetId("")
+		}
+		if resp.IsError() {
+			return diag.Errorf("%s", resp.String())
+		}
+
+		d.SetId("")
 
 		return nil
 	}

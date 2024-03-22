@@ -2,11 +2,9 @@ package xray
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"regexp"
 
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -120,11 +118,14 @@ func resourceXrayWebhook() *schema.Resource {
 			SetPathParam("name", d.Id()).
 			Get("xray/api/v1/webhooks/{name}")
 		if err != nil {
-			if resp != nil && resp.StatusCode() == http.StatusNotFound {
-				tflog.Warn(ctx, fmt.Sprintf("Xray webhook (%s) not found, removing from state", d.Id()))
-				d.SetId("")
-			}
 			return diag.FromErr(err)
+		}
+		if resp.StatusCode() == http.StatusNotFound {
+			d.SetId("")
+			return diag.Errorf("webhook (%s) not found, removing from state", d.Id())
+		}
+		if resp.IsError() {
+			return diag.Errorf("%s", resp.String())
 		}
 
 		return packWebhook(webhook, d)
@@ -176,11 +177,14 @@ func resourceXrayWebhook() *schema.Resource {
 			return diag.FromErr(err)
 		}
 
-		_, err = req.
+		resp, err := req.
 			SetBody(webhook).
 			Post("xray/api/v1/webhooks")
 		if err != nil {
 			return diag.FromErr(err)
+		}
+		if resp.IsError() {
+			return diag.Errorf("%s", resp.String())
 		}
 
 		d.SetId(webhook.Name)
@@ -204,11 +208,11 @@ func resourceXrayWebhook() *schema.Resource {
 			SetBody(webhook).
 			Put("xray/api/v1/webhooks/{name}")
 		if err != nil {
-			if resp != nil && resp.StatusCode() == http.StatusNotFound {
-				tflog.Warn(ctx, fmt.Sprintf("Xray webhook (%s) not found, removing from state", d.Id()))
-				d.SetId("")
-			}
 			return diag.FromErr(err)
+		}
+		if resp.IsError() {
+			d.SetId("")
+			return diag.Errorf("%s", resp.String())
 		}
 
 		d.SetId(webhook.Name)
@@ -225,10 +229,17 @@ func resourceXrayWebhook() *schema.Resource {
 		resp, err := req.
 			SetPathParam("name", d.Id()).
 			Delete("xray/api/v1/webhooks/{name}")
-		if err != nil && resp.StatusCode() == http.StatusNotFound {
-			d.SetId("")
+		if err != nil {
 			return diag.FromErr(err)
 		}
+		if resp.StatusCode() == http.StatusNotFound {
+			d.SetId("")
+		}
+		if resp.IsError() {
+			return diag.Errorf("%s", resp.String())
+		}
+
+		d.SetId("")
 
 		return nil
 	}
