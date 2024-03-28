@@ -8,7 +8,7 @@ subcategory: "Settings"
 
 Provides an Xray resource for managing basic settings and DB Sync Time.
 
-[Settings API documentation](https://jfrog.com/help/r/xray-rest-apis/get-xray-integration-configuration).
+[Basic settings documentation](https://jfrog.com/help/r/jfrog-security-documentation/advanced-xray-settings).
 
 [DB Sync Time API documentation](https://jfrog.com/help/r/xray-rest-apis/update-db-sync-daily-update-time).
 

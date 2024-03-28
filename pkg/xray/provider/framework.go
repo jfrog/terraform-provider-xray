@@ -16,7 +16,7 @@ import (
 	"github.com/jfrog/terraform-provider-shared/util"
 	utilfw "github.com/jfrog/terraform-provider-shared/util/fw"
 	validatorfw_string "github.com/jfrog/terraform-provider-shared/validator/fw/string"
-	// xray_datasource "github.com/jfrog/terraform-provider-xray/pkg/xray/datasource"
+	xray_datasource "github.com/jfrog/terraform-provider-xray/pkg/xray/datasource"
 )
 
 // Ensure the implementation satisfies the provider.Provider interface.
@@ -163,7 +163,7 @@ func (p *XrayProvider) Resources(ctx context.Context) []func() resource.Resource
 // DataSources satisfies the provider.Provider interface for ArtifactoryProvider.
 func (p *XrayProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
-		// xray_datasource.NewScanArtifactsDataSource,
+		xray_datasource.NewArtifactsScanDataSource,
 	}
 }
 
