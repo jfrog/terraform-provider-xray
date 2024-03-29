@@ -16,7 +16,7 @@ func TestAccWorkersCount_create(t *testing.T) {
 	params := map[string]interface{}{
 		"workersCountName": resourceName,
 	}
-	workersCountConfig := util.ExecuteTemplate("TestAccWorkersCount_create", `
+	config := util.ExecuteTemplate("TestAccWorkersCount_create", `
 		resource "xray_workers_count" "{{ .workersCountName }}" {
 		  index {
 		    new_content      = 4
@@ -48,7 +48,7 @@ func TestAccWorkersCount_create(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:      workersCountConfig,
+				Config:      config,
 				ExpectError: regexp.MustCompile(`Workers Count resource does not support create`),
 			},
 		},

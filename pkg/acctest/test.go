@@ -91,10 +91,6 @@ func PreCheck(t *testing.T) {
 	})
 }
 
-func GetArtifactoryUrl(t *testing.T) string {
-	return testutil.GetEnvVarWithFallback(t, "JFROG_URL", "ARTIFACTORY_URL")
-}
-
 type CheckFun func(id string, request *resty.Request) (*resty.Response, error)
 
 func VerifyDeleted(id string, check CheckFun) func(*terraform.State) error {
@@ -137,10 +133,6 @@ func GetTestResty(t *testing.T) *resty.Client {
 		t.Fatal(err)
 	}
 	return restyClient
-}
-
-func checkPolicy(id string, request *resty.Request) (*resty.Response, error) {
-	return request.Get("xray/api/v2/policies/" + id)
 }
 
 func CreateProject(t *testing.T, projectKey string) {
@@ -296,13 +288,17 @@ func CreateBuilds(t *testing.T, builds []string, projectKey string) {
 	}
 }
 
+func checkPolicy(id string, request *resty.Request) (*resty.Response, error) {
+	return request.Get("xray/api/v2/policies/" + id)
+}
+
 func CheckPolicy(id string, request *resty.Request) (*resty.Response, error) {
 	return checkPolicy(id, request.AddRetryCondition(client.NeverRetry))
 }
 
 func CheckPolicyDeleted(id string, t *testing.T, request *resty.Request) *resty.Response {
-	_, err := checkPolicy(id, request.AddRetryCondition(client.NeverRetry))
-	if err == nil {
+	resp, err := checkPolicy(id, request.AddRetryCondition(client.NeverRetry))
+	if err == nil || resp.IsSuccess() {
 		t.Logf("Policy %s still exists!", id)
 	}
 	return nil
