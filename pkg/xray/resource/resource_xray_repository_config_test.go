@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/jfrog/terraform-provider-shared/testutil"
 	"github.com/jfrog/terraform-provider-shared/util"
 	"github.com/jfrog/terraform-provider-xray/pkg/acctest"
@@ -450,7 +451,7 @@ func TestAccRepositoryConfig_RepoConfigCreate_InvalidExposures(t *testing.T) {
 	})
 }
 
-func TestAccRepositoryConfig_RepoPathsCreate(t *testing.T) {
+func TestAccRepositoryConfig_UpgradeFromSDKv2(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
 	_, _, repoName := testutil.MkNames("generic-local", "artifactory_local_generic_repository")
 
@@ -471,25 +472,43 @@ func TestAccRepositoryConfig_RepoPathsCreate(t *testing.T) {
 		"package_type":                 "generic",
 	}
 
+	config := util.ExecuteTemplate(fqrn, TestDataRepoPathsConfigTemplate, testData)
+
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
-		ExternalProviders: map[string]resource.ExternalProvider{
-			"artifactory": {
-				Source:            "jfrog/artifactory",
-				VersionConstraint: "10.1.2",
-			},
-		},
 		Steps: []resource.TestStep{
 			{
-				Config: util.ExecuteTemplate(fqrn, TestDataRepoPathsConfigTemplate, testData),
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"artifactory": {
+						Source:            "jfrog/artifactory",
+						VersionConstraint: "10.1.2",
+					},
+					"xray": {
+						Source:            "jfrog/xray",
+						VersionConstraint: "2.4.0",
+					},
+				},
+				Config: config,
 				Check:  resource.ComposeTestCheckFunc(verifyRepositoryConfig(fqrn, testData)),
 			},
 			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateId:     fmt.Sprintf("%s:false", testData["repo_name"]),
-				ImportStateVerify: true,
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"artifactory": {
+						Source:            "jfrog/artifactory",
+						VersionConstraint: "10.1.2",
+					},
+				},
+				ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+				Config:                   config,
+				// ConfigPlanChecks is a terraform-plugin-testing feature.
+				// If acceptance testing is still using terraform-plugin-sdk/v2,
+				// use `PlanOnly: true` instead. When migrating to
+				// terraform-plugin-testing, switch to `ConfigPlanChecks` or you
+				// will likely experience test failures.
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
 			},
 		},
 	})

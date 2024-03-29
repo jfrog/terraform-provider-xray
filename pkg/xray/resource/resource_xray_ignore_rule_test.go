@@ -9,11 +9,73 @@ import (
 
 	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/jfrog/terraform-provider-shared/client"
 	"github.com/jfrog/terraform-provider-shared/testutil"
 	"github.com/jfrog/terraform-provider-shared/util"
 	"github.com/jfrog/terraform-provider-xray/pkg/acctest"
 )
+
+func TestAccIgnoreRule_UpgradeFromSDKv2(t *testing.T) {
+	_, fqrn, name := testutil.MkNames("ignore-rule-", "xray_ignore_rule")
+	expirationDate := time.Now().Add(time.Hour * 48)
+
+	config := util.ExecuteTemplate("TestAccIgnoreRule", `
+		resource "xray_ignore_rule" "{{ .name }}" {
+		  notes            = "fake notes"
+		  expiration_date  = "{{ .expirationDate }}"
+		  vulnerabilities  = ["any"]
+		  cves             = ["any"]
+
+		  artifact {
+			  name    = "fake-name"
+			  version = "fake-version"
+			  path    = "fake-path/"
+		  }
+		}
+	`, map[string]interface{}{
+		"name":           name,
+		"expirationDate": expirationDate.Format("2006-01-02"),
+	})
+
+	resource.Test(t, resource.TestCase{
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"xray": {
+						VersionConstraint: "2.4.0",
+						Source:            "jfrog/xray",
+					},
+				},
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet(fqrn, "id"),
+					resource.TestCheckResourceAttr(fqrn, "notes", "fake notes"),
+					resource.TestCheckResourceAttr(fqrn, "expiration_date", expirationDate.Format("2006-01-02")),
+					resource.TestCheckResourceAttr(fqrn, "is_expired", "false"),
+					resource.TestCheckResourceAttr(fqrn, "artifact.#", "1"),
+					resource.TestCheckResourceAttr(fqrn, "artifact.0.name", "fake-name"),
+					resource.TestCheckResourceAttr(fqrn, "artifact.0.version", "fake-version"),
+					resource.TestCheckResourceAttr(fqrn, "artifact.0.path", "fake-path/"),
+				),
+			},
+			{
+				ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+				Config:                   config,
+				// ConfigPlanChecks is a terraform-plugin-testing feature.
+				// If acceptance testing is still using terraform-plugin-sdk/v2,
+				// use `PlanOnly: true` instead. When migrating to
+				// terraform-plugin-testing, switch to `ConfigPlanChecks` or you
+				// will likely experience test failures.
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+		},
+	})
+}
 
 func TestAccIgnoreRule_objectives(t *testing.T) {
 	for _, objective := range []string{"vulnerabilities", "cves", "licenses"} {

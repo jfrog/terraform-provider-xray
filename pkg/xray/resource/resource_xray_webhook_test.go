@@ -7,10 +7,85 @@ import (
 
 	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/jfrog/terraform-provider-shared/testutil"
 	"github.com/jfrog/terraform-provider-shared/util"
 	"github.com/jfrog/terraform-provider-xray/pkg/acctest"
 )
+
+func TestAccWebhook_UpgradeFromSDKv2(t *testing.T) {
+	_, fqrn, resourceName := testutil.MkNames("webhook", "xray_webhook")
+	url := fmt.Sprintf("https://tempurl%d.org", testutil.RandomInt())
+
+	const template = `
+		resource "xray_webhook" "{{ .name }}" {
+			name        = "{{ .name }}"
+			description = "{{ .description }}"
+			url         = "{{ .url }}"
+			use_proxy   = "{{ .use_proxy }}"
+			user_name   = "{{ .user_name }}"
+			password    = "{{ .password }}"
+
+			headers = {
+				{{ .header1_name }} = "{{ .header1_value }}"
+				{{ .header2_name }} = "{{ .header2_value }}"
+			}
+		}
+	`
+	testData := map[string]string{
+		"name":          resourceName,
+		"description":   "test description ",
+		"url":           url,
+		"use_proxy":     "true",
+		"user_name":     "test_user_1",
+		"password":      "test_password_1",
+		"header1_name":  "header1_name",
+		"header1_value": "header1_value",
+		"header2_name":  "header2_name",
+		"header2_value": "header2_value",
+	}
+
+	config := util.ExecuteTemplate("TestAccWebhook_full", template, testData)
+
+	resource.Test(t, resource.TestCase{
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"xray": {
+						VersionConstraint: "2.4.0",
+						Source:            "jfrog/xray",
+					},
+				},
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "name", testData["name"]),
+					resource.TestCheckResourceAttr(fqrn, "description", testData["description"]),
+					resource.TestCheckResourceAttr(fqrn, "url", testData["url"]),
+					resource.TestCheckResourceAttr(fqrn, "use_proxy", testData["use_proxy"]),
+					resource.TestCheckResourceAttr(fqrn, "user_name", testData["user_name"]),
+					resource.TestCheckResourceAttr(fqrn, "password", testData["password"]),
+					resource.TestCheckResourceAttr(fqrn, "headers.%", "2"),
+					resource.TestCheckResourceAttr(fqrn, "headers.header1_name", testData["header1_value"]),
+					resource.TestCheckResourceAttr(fqrn, "headers.header2_name", testData["header2_value"]),
+				),
+			},
+			{
+				ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+				Config:                   config,
+				// ConfigPlanChecks is a terraform-plugin-testing feature.
+				// If acceptance testing is still using terraform-plugin-sdk/v2,
+				// use `PlanOnly: true` instead. When migrating to
+				// terraform-plugin-testing, switch to `ConfigPlanChecks` or you
+				// will likely experience test failures.
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+		},
+	})
+}
 
 func TestAccWebhook_full(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("webhook", "xray_webhook")

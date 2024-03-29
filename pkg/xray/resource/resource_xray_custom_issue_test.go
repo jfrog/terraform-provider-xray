@@ -6,11 +6,115 @@ import (
 
 	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/jfrog/terraform-provider-shared/testutil"
 	"github.com/jfrog/terraform-provider-shared/util"
 	"github.com/jfrog/terraform-provider-shared/util/sdk"
 	"github.com/jfrog/terraform-provider-xray/pkg/acctest"
 )
+
+func TestAccCustomIssue_UpgradeFromSDKv2(t *testing.T) {
+	_, fqrn, resourceName := testutil.MkNames("custom-issue-", "xray_custom_issue")
+
+	const template = `
+		resource "xray_custom_issue" "{{ .name }}" {
+			name          = "{{ .name }}"
+			description   = "{{ .description }}"
+			summary       = "{{ .summary }}"
+			type          = "{{ .type }}"
+			provider_name = "{{ .provider_name }}"
+			package_type  = "{{ .package_type }}"
+			severity      = "{{ .severity }}"
+
+			component {
+				id                  = "{{ .component_id }}"
+				vulnerable_versions = ["{{ .component_vulnerable_versions }}"]
+				vulnerable_ranges {
+					vulnerable_versions = ["{{ .component_vulnerable_ranges_vulnerable_versions }}"]
+				}
+			}
+
+			cve {
+				cve     = "{{ .cve }}"
+				cvss_v2 = "{{ .cve_cvss_v2 }}"
+			}
+
+			source {
+				id = "{{ .source_id }}"
+			}
+		}
+	`
+
+	testData := map[string]string{
+		"name":                          resourceName,
+		"description":                   "test description",
+		"summary":                       "test summary",
+		"type":                          "security",
+		"provider_name":                 "test",
+		"package_type":                  "generic",
+		"severity":                      "Medium",
+		"component_id":                  "aero:aero",
+		"component_vulnerable_versions": "[0.2.3]",
+		"component_vulnerable_ranges_vulnerable_versions": "[0.2.3]",
+		"cve":         "CVE-2017-1000386",
+		"cve_cvss_v2": "2.4",
+		"source_id":   "CVE-2017-1000386",
+	}
+
+	config := util.ExecuteTemplate("TestAccCustomIssue_full", template, testData)
+
+	resource.Test(t, resource.TestCase{
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"xray": {
+						VersionConstraint: "2.4.0",
+						Source:            "jfrog/xray",
+					},
+				},
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "id", testData["name"]),
+					resource.TestCheckResourceAttr(fqrn, "name", testData["name"]),
+					resource.TestCheckResourceAttr(fqrn, "description", testData["description"]),
+					resource.TestCheckResourceAttr(fqrn, "summary", testData["summary"]),
+					resource.TestCheckResourceAttr(fqrn, "type", testData["type"]),
+					resource.TestCheckResourceAttr(fqrn, "provider_name", testData["provider_name"]),
+					resource.TestCheckResourceAttr(fqrn, "package_type", testData["package_type"]),
+					resource.TestCheckResourceAttr(fqrn, "severity", testData["severity"]),
+					resource.TestCheckResourceAttr(fqrn, "component.#", "1"),
+					resource.TestCheckResourceAttr(fqrn, "component.0.id", testData["component_id"]),
+					resource.TestCheckResourceAttr(fqrn, "component.0.vulnerable_versions.0", testData["component_vulnerable_versions"]),
+					resource.TestCheckResourceAttr(fqrn, "component.0.fixed_versions.#", "0"),
+					resource.TestCheckResourceAttr(fqrn, "component.0.vulnerable_ranges.#", "1"),
+					resource.TestCheckResourceAttr(fqrn, "component.0.vulnerable_ranges.0.vulnerable_versions.0", testData["component_vulnerable_ranges_vulnerable_versions"]),
+					resource.TestCheckResourceAttr(fqrn, "cve.#", "1"),
+					resource.TestCheckResourceAttr(fqrn, "cve.0.cve", testData["cve"]),
+					resource.TestCheckResourceAttr(fqrn, "cve.0.cvss_v2", testData["cve_cvss_v2"]),
+					resource.TestCheckResourceAttr(fqrn, "cve.0.cvss_v3.#", "0"),
+					resource.TestCheckResourceAttr(fqrn, "source.#", "1"),
+					resource.TestCheckResourceAttr(fqrn, "source.0.id", testData["source_id"]),
+					resource.TestCheckResourceAttr(fqrn, "source.0.name.#", "0"),
+					resource.TestCheckResourceAttr(fqrn, "source.0.url.#", "0"),
+				),
+			},
+			{
+				ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+				Config:                   config,
+				// ConfigPlanChecks is a terraform-plugin-testing feature.
+				// If acceptance testing is still using terraform-plugin-sdk/v2,
+				// use `PlanOnly: true` instead. When migrating to
+				// terraform-plugin-testing, switch to `ConfigPlanChecks` or you
+				// will likely experience test failures.
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+		},
+	})
+}
 
 func TestAccCustomIssue_full(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("custom-issue-", "xray_custom_issue")
