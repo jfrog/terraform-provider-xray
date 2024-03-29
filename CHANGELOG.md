@@ -1,3 +1,12 @@
+## 2.5.0 (March 29, 2024). Tested on Artifactory 7.77.8 and Xray 3.91.3
+
+FEATURES:
+
+* data/xray_artifacts_scan: Add a new data source to retrieve a list of artifacts scanned by Xray.
+
+PR: [#170](https://github.com/jfrog/terraform-provider-xray/pull/170)
+Issue: [#168](https://github.com/jfrog/terraform-provider-xray/issues/168)
+
 ## 2.4.0 (March 22, 2024). Tested on Artifactory 7.77.8 and Xray 3.91.3
 
 IMPROVEMENTS:
