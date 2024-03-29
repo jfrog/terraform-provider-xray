@@ -116,7 +116,6 @@ Optional:
 - `cvss_score` (Block Set, Max: 1) CVSS score. (see [below for nested schema](#nestedblock--filters--security_filters--cvss_score))
 - `has_remediation` (Boolean) Whether the issue has a fix or not.
 - `issue_id` (String) Issue ID.
-- `published` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--filters--security_filters--published))
 - `summary_contains` (String) Vulnerability Summary.
 
 <a id="nestedblock--filters--security_filters--cvss_score"></a>
@@ -126,15 +125,6 @@ Optional:
 
 - `max_score` (Number) Maximum CVSS score.
 - `min_score` (Number) Minimum CVSS score.
-
-
-<a id="nestedblock--filters--security_filters--published"></a>
-### Nested Schema for `filters.security_filters.published`
-
-Optional:
-
-- `end` (String) Published to date.
-- `start` (String) Published from date.
 
 
 

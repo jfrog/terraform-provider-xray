@@ -29,12 +29,6 @@ install: clean build
 clean:
 	rm -fR dist terraform.d/ .terraform terraform.tfstate* .terraform.lock.hcl
 
-release:
-	@git tag ${NEXT_VERSION} && git push --mirror
-	@echo "Pushed ${NEXT_VERSION}"
-	GOPROXY=https://proxy.golang.org GO111MODULE=on go get github.com/jfrog/terraform-provider-${PRODUCT}@v${NEXT_VERSION}
-	@echo "Updated pkg cache"
-
 update_pkg_cache:
 	GOPROXY=https://proxy.golang.org GO111MODULE=on go get github.com/jfrog/terraform-provider-${PRODUCT}@v${VERSION}
 
