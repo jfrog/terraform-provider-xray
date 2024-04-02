@@ -22,7 +22,7 @@ func TestAccWebhook_UpgradeFromSDKv2(t *testing.T) {
 			name        = "{{ .name }}"
 			description = "{{ .description }}"
 			url         = "{{ .url }}"
-			use_proxy   = "{{ .use_proxy }}"
+			use_proxy   = {{ .use_proxy }}
 			user_name   = "{{ .user_name }}"
 			password    = "{{ .password }}"
 
@@ -96,7 +96,7 @@ func TestAccWebhook_full(t *testing.T) {
 			name        = "{{ .name }}"
 			description = "{{ .description }}"
 			url         = "{{ .url }}"
-			use_proxy   = "{{ .use_proxy }}"
+			use_proxy   = {{ .use_proxy }}
 			user_name   = "{{ .user_name }}"
 			password    = "{{ .password }}"
 
@@ -108,7 +108,7 @@ func TestAccWebhook_full(t *testing.T) {
 	`
 	testData := map[string]string{
 		"name":          resourceName,
-		"description":   "test description ",
+		"description":   "test description",
 		"url":           url,
 		"use_proxy":     "true",
 		"user_name":     "test_user_1",
