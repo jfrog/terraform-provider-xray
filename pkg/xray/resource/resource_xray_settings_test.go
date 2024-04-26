@@ -12,7 +12,7 @@ import (
 	"github.com/jfrog/terraform-provider-xray/pkg/acctest"
 )
 
-func TestSettings_UpgradeFromSDKv2(t *testing.T) {
+func TestAccSettings_UpgradeFromSDKv2(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("test-settings", "xray_settings")
 
 	tmpl := `
@@ -51,16 +51,12 @@ func TestSettings_UpgradeFromSDKv2(t *testing.T) {
 					resource.TestCheckResourceAttr(fqrn, "allow_when_unavailable", fmt.Sprintf("%t", testData["allowWhenUnavailable"])),
 					resource.TestCheckResourceAttr(fqrn, "block_unscanned_timeout", fmt.Sprintf("%d", testData["blockUnscannedTimeout"])),
 					resource.TestCheckResourceAttr(fqrn, "block_unfinished_scans_timeout", fmt.Sprintf("%d", testData["blockUnfinishedScansTimeout"])),
+					resource.TestCheckResourceAttr(fqrn, "db_sync_updates_time", "00:00"),
 				),
 			},
 			{
-				ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+				ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 				Config:                   config,
-				// ConfigPlanChecks is a terraform-plugin-testing feature.
-				// If acceptance testing is still using terraform-plugin-sdk/v2,
-				// use `PlanOnly: true` instead. When migrating to
-				// terraform-plugin-testing, switch to `ConfigPlanChecks` or you
-				// will likely experience test failures.
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectEmptyPlan(),
@@ -71,7 +67,7 @@ func TestSettings_UpgradeFromSDKv2(t *testing.T) {
 	})
 }
 
-func TestSettings_basic(t *testing.T) {
+func TestAccSettings_basic(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("test-settings", "xray_settings")
 
 	tmpl := `
@@ -96,7 +92,7 @@ func TestSettings_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: config,
@@ -106,6 +102,7 @@ func TestSettings_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(fqrn, "allow_when_unavailable", fmt.Sprintf("%t", testData["allowWhenUnavailable"])),
 					resource.TestCheckResourceAttr(fqrn, "block_unscanned_timeout", fmt.Sprintf("%d", testData["blockUnscannedTimeout"])),
 					resource.TestCheckResourceAttr(fqrn, "block_unfinished_scans_timeout", fmt.Sprintf("%d", testData["blockUnfinishedScansTimeout"])),
+					resource.TestCheckResourceAttr(fqrn, "db_sync_updates_time", "00:00"),
 				),
 			},
 			{
@@ -117,13 +114,13 @@ func TestSettings_basic(t *testing.T) {
 	})
 }
 
-func TestSettings_DbSyncTime(t *testing.T) {
+func TestAccSettings_DbSyncTime(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("db_sync-", "xray_settings")
 	time := "18:45"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: dbSyncTimeConfig(resourceName, time),
@@ -133,17 +130,17 @@ func TestSettings_DbSyncTime(t *testing.T) {
 	})
 }
 
-func TestSettings_DbSyncTimeNegative(t *testing.T) {
+func TestAccSettings_DbSyncTime_Invalid(t *testing.T) {
 	_, _, resourceName := testutil.MkNames("db_sync-", "xray_settings")
 	var invalidTime = []string{"24:00", "24:55", "", "12:0", "string", "12pm", "9:00"}
 	for _, time := range invalidTime {
 		resource.Test(t, resource.TestCase{
 			PreCheck:                 func() { acctest.PreCheck(t) },
-			ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+			ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 			Steps: []resource.TestStep{
 				{
 					Config:      dbSyncTimeConfig(resourceName, time),
-					ExpectError: regexp.MustCompile(`Wrong format input, expected valid hour:minutes \(HH:mm\) form`),
+					ExpectError: regexp.MustCompile(`.*Wrong format input, expected valid\n.*hour:minutes \(HH:mm\) form.*`),
 				},
 			},
 		})

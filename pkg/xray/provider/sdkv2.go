@@ -54,7 +54,6 @@ func SdkV2() *schema.Provider {
 				"xray_operational_risk_policy":  xray.ResourceXrayOperationalRiskPolicy(),
 				"xray_watch":                    xray.ResourceXrayWatch(),
 				"xray_ignore_rule":              xray.ResourceXrayIgnoreRule(),
-				"xray_settings":                 xray.ResourceXraySettings(),
 				"xray_workers_count":            xray.ResourceXrayWorkersCount(),
 				"xray_repository_config":        xray.ResourceXrayRepositoryConfig(),
 				"xray_vulnerabilities_report":   xray.ResourceXrayVulnerabilitiesReport(),
