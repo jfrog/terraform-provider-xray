@@ -713,7 +713,7 @@ func resourceXrayPolicyCreate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, policy.ProjectKey)
+	req, err := getRestyRequest(m.(util.ProviderMetadata).Client, policy.ProjectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -734,7 +734,7 @@ func resourceXrayPolicyRead(ctx context.Context, d *schema.ResourceData, m inter
 	var policy Policy
 
 	projectKey := d.Get("project_key").(string)
-	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, projectKey)
+	req, err := getRestyRequest(m.(util.ProviderMetadata).Client, projectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -763,7 +763,7 @@ func resourceXrayPolicyUpdate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, policy.ProjectKey)
+	req, err := getRestyRequest(m.(util.ProviderMetadata).Client, policy.ProjectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -791,7 +791,7 @@ func resourceXrayPolicyDelete(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, policy.ProjectKey)
+	req, err := getRestyRequest(m.(util.ProviderMetadata).Client, policy.ProjectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}

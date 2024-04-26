@@ -104,7 +104,7 @@ func VerifyDeleted(id string, check CheckFun) func(*terraform.State) error {
 			return fmt.Errorf("provider is not initialized. Please PreCheck() is included in your acceptance test")
 		}
 
-		providerMeta := Provider.Meta().(util.ProvderMetadata)
+		providerMeta := Provider.Meta().(util.ProviderMetadata)
 
 		resp, err := check(rs.Primary.ID, providerMeta.Client.R())
 		if err != nil {

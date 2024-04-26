@@ -124,8 +124,11 @@ func (p *XrayProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 	}
 
 	if config.CheckLicense.IsNull() || config.CheckLicense.ValueBool() {
-		if licenseDs := utilfw.CheckArtifactoryLicense(restyBase, "Enterprise", "Commercial", "Edge"); licenseDs != nil {
-			resp.Diagnostics.Append(licenseDs...)
+		if licenseDs := util.CheckArtifactoryLicense(restyBase, "Enterprise", "Commercial", "Edge"); licenseDs != nil {
+			resp.Diagnostics.AddError(
+				"Error checking license",
+				licenseDs.Error(),
+			)
 			return
 		}
 	}
@@ -142,13 +145,13 @@ func (p *XrayProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 	featureUsage := fmt.Sprintf("Terraform/%s", req.TerraformVersion)
 	go util.SendUsage(ctx, restyBase, productId, featureUsage)
 
-	resp.DataSourceData = util.ProvderMetadata{
+	resp.DataSourceData = util.ProviderMetadata{
 		Client:      restyBase,
 		ProductId:   productId,
 		XrayVersion: version,
 	}
 
-	resp.ResourceData = util.ProvderMetadata{
+	resp.ResourceData = util.ProviderMetadata{
 		Client:      restyBase,
 		ProductId:   productId,
 		XrayVersion: version,

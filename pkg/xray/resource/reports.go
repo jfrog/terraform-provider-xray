@@ -619,7 +619,7 @@ func resourceXrayReportRead(ctx context.Context, d *schema.ResourceData, m inter
 	report := Report{}
 
 	projectKey := d.Get("project_key").(string)
-	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, projectKey)
+	req, err := getRestyRequest(m.(util.ProviderMetadata).Client, projectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -644,7 +644,7 @@ func resourceXrayReportRead(ctx context.Context, d *schema.ResourceData, m inter
 
 func resourceXrayReportDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	projectKey := d.Get("project_key").(string)
-	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, projectKey)
+	req, err := getRestyRequest(m.(util.ProviderMetadata).Client, projectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -666,7 +666,7 @@ func resourceXrayReportDelete(_ context.Context, d *schema.ResourceData, m inter
 
 func createReport(reportType string, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	report := unpackReport(d, reportType)
-	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, report.ProjectKey)
+	req, err := getRestyRequest(m.(util.ProviderMetadata).Client, report.ProjectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}

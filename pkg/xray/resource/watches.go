@@ -402,7 +402,7 @@ func packWatch(ctx context.Context, watch Watch, d *schema.ResourceData) diag.Di
 func resourceXrayWatchCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	watch := unpackWatch(d)
 
-	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, watch.ProjectKey)
+	req, err := getRestyRequest(m.(util.ProviderMetadata).Client, watch.ProjectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -435,7 +435,7 @@ func resourceXrayWatchRead(ctx context.Context, d *schema.ResourceData, m interf
 	watch := Watch{}
 
 	projectKey := d.Get("project_key").(string)
-	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, projectKey)
+	req, err := getRestyRequest(m.(util.ProviderMetadata).Client, projectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -463,7 +463,7 @@ func resourceXrayWatchRead(ctx context.Context, d *schema.ResourceData, m interf
 func resourceXrayWatchUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	watch := unpackWatch(d)
 
-	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, watch.ProjectKey)
+	req, err := getRestyRequest(m.(util.ProviderMetadata).Client, watch.ProjectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -492,7 +492,7 @@ func resourceXrayWatchUpdate(ctx context.Context, d *schema.ResourceData, m inte
 func resourceXrayWatchDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	watch := unpackWatch(d)
 
-	req, err := getRestyRequest(m.(util.ProvderMetadata).Client, watch.ProjectKey)
+	req, err := getRestyRequest(m.(util.ProviderMetadata).Client, watch.ProjectKey)
 	if err != nil {
 		return diag.FromErr(err)
 	}
