@@ -162,6 +162,7 @@ func (p *XrayProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 func (p *XrayProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		xray_resource.NewSettingsResource,
+		xray_resource.NewWorkersCountResource,
 	}
 }
 
