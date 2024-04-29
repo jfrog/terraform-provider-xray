@@ -14,9 +14,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/jfrog/terraform-provider-shared/client"
 	"github.com/jfrog/terraform-provider-shared/util"
-	utilfw "github.com/jfrog/terraform-provider-shared/util/fw"
 	validatorfw_string "github.com/jfrog/terraform-provider-shared/validator/fw/string"
 	xray_datasource "github.com/jfrog/terraform-provider-xray/pkg/xray/datasource"
+	xray_resource "github.com/jfrog/terraform-provider-xray/pkg/xray/resource"
 )
 
 // Ensure the implementation satisfies the provider.Provider interface.
@@ -124,8 +124,11 @@ func (p *XrayProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 	}
 
 	if config.CheckLicense.IsNull() || config.CheckLicense.ValueBool() {
-		if licenseDs := utilfw.CheckArtifactoryLicense(restyBase, "Enterprise", "Commercial", "Edge"); licenseDs != nil {
-			resp.Diagnostics.Append(licenseDs...)
+		if licenseDs := util.CheckArtifactoryLicense(restyBase, "Enterprise", "Commercial", "Edge"); licenseDs != nil {
+			resp.Diagnostics.AddError(
+				"Error checking license",
+				licenseDs.Error(),
+			)
 			return
 		}
 	}
@@ -142,13 +145,13 @@ func (p *XrayProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 	featureUsage := fmt.Sprintf("Terraform/%s", req.TerraformVersion)
 	go util.SendUsage(ctx, restyBase, productId, featureUsage)
 
-	resp.DataSourceData = util.ProvderMetadata{
+	resp.DataSourceData = util.ProviderMetadata{
 		Client:      restyBase,
 		ProductId:   productId,
 		XrayVersion: version,
 	}
 
-	resp.ResourceData = util.ProvderMetadata{
+	resp.ResourceData = util.ProviderMetadata{
 		Client:      restyBase,
 		ProductId:   productId,
 		XrayVersion: version,
@@ -157,7 +160,9 @@ func (p *XrayProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 
 // Resources satisfies the provider.Provider interface for ArtifactoryProvider.
 func (p *XrayProvider) Resources(ctx context.Context) []func() resource.Resource {
-	return []func() resource.Resource{}
+	return []func() resource.Resource{
+		xray_resource.NewSettingsResource,
+	}
 }
 
 // DataSources satisfies the provider.Provider interface for ArtifactoryProvider.

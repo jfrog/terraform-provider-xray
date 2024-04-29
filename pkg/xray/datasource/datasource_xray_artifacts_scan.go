@@ -21,7 +21,7 @@ func NewArtifactsScanDataSource() datasource.DataSource {
 }
 
 type XrayArtifactsScanDataSource struct {
-	ProviderData util.ProvderMetadata
+	ProviderData util.ProviderMetadata
 }
 
 type XrayArtifactsScanDataSourceModel struct {
@@ -232,7 +232,7 @@ func (d *XrayArtifactsScanDataSource) Configure(ctx context.Context, req datasou
 		return
 	}
 
-	d.ProviderData = req.ProviderData.(util.ProvderMetadata)
+	d.ProviderData = req.ProviderData.(util.ProviderMetadata)
 }
 
 var severitySchemaAttributes = map[string]schema.Attribute{

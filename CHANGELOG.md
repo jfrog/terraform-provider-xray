@@ -1,3 +1,7 @@
+## 2.5.1 (April 29, 2024). Tested on Artifactory 7.77.10 and Xray 3.94.5
+
+* resource/xray_settings: Migrate from SDKv2 to Plugin Framework. PR: [#174](https://github.com/jfrog/terraform-provider-xray/pull/174)
+
 ## 2.5.0 (March 29, 2024). Tested on Artifactory 7.77.8 and Xray 3.91.3
 
 FEATURES:

@@ -220,7 +220,7 @@ func ResourceXrayWorkersCount() *schema.Resource {
 
 	var resourceXrayWorkersCountRead = func(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 		workersCount := WorkersCount{}
-		resp, err := m.(util.ProvderMetadata).Client.R().
+		resp, err := m.(util.ProviderMetadata).Client.R().
 			SetResult(&workersCount).
 			Get("xray/api/v1/configuration/workersCount")
 		if err != nil {
@@ -238,7 +238,7 @@ func ResourceXrayWorkersCount() *schema.Resource {
 
 	var resourceXrayWorkersCountUpdate = func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 		workersCount := unpackWorkersCount(d)
-		resp, err := m.(util.ProvderMetadata).Client.R().
+		resp, err := m.(util.ProviderMetadata).Client.R().
 			SetBody(workersCount).
 			Put("xray/api/v1/configuration/workersCount")
 		if err != nil {
