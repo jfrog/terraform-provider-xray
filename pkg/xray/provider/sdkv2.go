@@ -60,7 +60,6 @@ func SdkV2() *schema.Provider {
 				"xray_violations_report":        xray.ResourceXrayViolationsReport(),
 				"xray_operational_risks_report": xray.ResourceXrayOperationalRisksReport(),
 				"xray_custom_issue":             xray.ResourceXrayCustomIssue(),
-				"xray_webhook":                  xray.ResourceXrayWebhook(),
 			},
 		),
 	}

@@ -93,7 +93,7 @@ func PreCheck(t *testing.T) {
 
 type CheckFun func(id string, request *resty.Request) (*resty.Response, error)
 
-func VerifyDeleted(id string, check CheckFun) func(*terraform.State) error {
+func VerifyDeleted(id, identifierAttribute string, check CheckFun) func(*terraform.State) error {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[id]
 		if !ok {
@@ -106,7 +106,12 @@ func VerifyDeleted(id string, check CheckFun) func(*terraform.State) error {
 
 		providerMeta := Provider.Meta().(util.ProviderMetadata)
 
-		resp, err := check(rs.Primary.ID, providerMeta.Client.R())
+		identifier := rs.Primary.ID
+		if identifierAttribute != "" {
+			identifier = rs.Primary.Attributes[identifierAttribute]
+		}
+
+		resp, err := check(identifier, providerMeta.Client.R())
 		if err != nil {
 			return err
 		}
