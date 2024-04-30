@@ -2,6 +2,7 @@
 
 * resource/xray_settings: Migrate from SDKv2 to Plugin Framework. PR: [#174](https://github.com/jfrog/terraform-provider-xray/pull/174)
 * resource/xray_workers_count: Migrate from SDKv2 to Plugin Framework. PR: [#175](https://github.com/jfrog/terraform-provider-xray/pull/175)
+* resource/xray_webhook: Migrate from SDKv2 to Plugin Framework. PR: [#176](https://github.com/jfrog/terraform-provider-xray/pull/176)
 
 ## 2.5.0 (March 29, 2024). Tested on Artifactory 7.77.8 and Xray 3.91.3
 
