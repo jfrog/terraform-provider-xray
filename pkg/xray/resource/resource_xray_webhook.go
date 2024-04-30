@@ -111,7 +111,7 @@ func (r *WebhookResource) Schema(ctx context.Context, req resource.SchemaRequest
 			"headers": schema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
-				Description: "Any custom headers that may need to be added to invoke the webhook.. Name/value pairs.",
+				Description: "Any custom headers that may need to be added to invoke the webhook. Name/value pairs.",
 			},
 		},
 		Description: "Provides an Xray webhoook resource. See [Xray Webhooks](https://jfrog.com/help/r/jfrog-security-documentation/configure-webhooks-for-working-with-xray) " +
