@@ -42,7 +42,7 @@ pipelines:
               auto:
                 language: java
                 versions:
-                  - "11"
+                  - "17"
           requiresApproval:
             approvers:
               - alexh
