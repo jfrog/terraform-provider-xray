@@ -49,7 +49,7 @@ func TestAccLicensePolicy_badLicenseCriteria(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -73,7 +73,7 @@ func TestAccLicensePolicy_badGracePeriod(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -139,7 +139,7 @@ func TestAccLicensePolicy_withProjectKey(t *testing.T) {
 			acctest.PreCheck(t)
 			acctest.CreateProject(t, projectKey)
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.DeleteProject(t, projectKey)
 			return acctest.CheckPolicy(id, request)
 		}),
@@ -178,7 +178,7 @@ func TestAccLicensePolicy_createAllowedLic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -207,7 +207,7 @@ func TestAccLicensePolicy_createAllowedLicCustom(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -234,7 +234,7 @@ func TestAccLicensePolicy_createBannedLic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -263,7 +263,7 @@ func TestAccLicensePolicy_createBannedLicCustom(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -291,7 +291,7 @@ func TestAccLicensePolicy_createMultiLicensePermissiveFalse(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -321,7 +321,7 @@ func TestAccLicensePolicy_createBlockFalse(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{

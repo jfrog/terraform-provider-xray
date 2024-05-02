@@ -44,7 +44,7 @@ func TestAccWatch_allReposSinglePolicy(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.PreCheck(t) },
-		CheckDestroy: acctest.VerifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.CheckPolicyDeleted(testData["policy_name_0"], t, request)
 			resp, err := testCheckWatch(id, request)
 			return resp, err
@@ -76,7 +76,7 @@ func TestAccWatch_allReposPathAntFilter(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.PreCheck(t) },
-		CheckDestroy: acctest.VerifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.CheckPolicyDeleted(testData["policy_name_0"], t, request)
 			resp, err := testCheckWatch(id, request)
 			return resp, err
@@ -108,7 +108,7 @@ func TestAccWatch_allReposKvFilter(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.PreCheck(t) },
-		CheckDestroy: acctest.VerifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.CheckPolicyDeleted(testData["policy_name_0"], t, request)
 			resp, err := testCheckWatch(id, request)
 			return resp, err
@@ -197,7 +197,7 @@ func TestAccWatch_allReposWithProjectKey(t *testing.T) {
 			acctest.PreCheck(t)
 			acctest.CreateProject(t, projectKey)
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.DeleteProject(t, projectKey)
 			resp, err := testCheckWatch(id, request)
 			return resp, err
@@ -237,7 +237,7 @@ func TestAccWatch_allReposMultiplePolicies(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.PreCheck(t) },
-		CheckDestroy: acctest.VerifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.CheckPolicyDeleted(testData["policy_name_0"], t, request)
 			acctest.CheckPolicyDeleted(testData["policy_name_1"], t, request)
 			acctest.CheckPolicyDeleted(testData["policy_name_2"], t, request)
@@ -298,7 +298,7 @@ func makeSingleRepositoryTestCase(repoType string, t *testing.T) (*testing.T, re
 			acctest.PreCheck(t)
 			acctest.CreateRepos(t, testData["repo0"], repoType, "", "")
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.DeleteRepo(t, testData["repo0"])
 			acctest.CheckPolicyDeleted(testData["policy_name_0"], t, request)
 			resp, err := testCheckWatch(id, request)
@@ -405,7 +405,7 @@ func TestAccWatch_singleRepositoryWithProjectKey(t *testing.T) {
 			acctest.CreateProject(t, projectKey)
 			acctest.CreateRepos(t, repoKey, "local", projectKey, "")
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.DeleteRepo(t, repoKey)
 			acctest.DeleteProject(t, projectKey)
 			resp, err := testCheckWatch(id, request)
@@ -451,7 +451,7 @@ func TestAccWatch_singleRepoMimeTypeFilter(t *testing.T) {
 			acctest.PreCheck(t)
 			acctest.CreateRepos(t, testData["repo0"], repoType, "", "")
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.DeleteRepo(t, testData["repo0"])
 			acctest.CheckPolicyDeleted(testData["policy_name_0"], t, request)
 			resp, err := testCheckWatch(id, request)
@@ -496,7 +496,7 @@ func TestAccWatch_singleRepoKvFilter(t *testing.T) {
 			acctest.PreCheck(t)
 			acctest.CreateRepos(t, testData["repo0"], repoType, "", "")
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.DeleteRepo(t, testData["repo0"])
 			acctest.CheckPolicyDeleted(testData["policy_name_0"], t, request)
 			return testCheckWatch(id, request)
@@ -538,7 +538,7 @@ func TestAccWatch_repositoryMissingRepoType(t *testing.T) {
 			acctest.PreCheck(t)
 			acctest.CreateRepos(t, testData["repo0"], "local", "", "")
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.DeleteRepo(t, testData["repo0"])
 			acctest.CheckPolicyDeleted(testData["policy_name_0"], t, request)
 			resp, err := testCheckWatch(id, request)
@@ -573,7 +573,7 @@ func TestAccWatch_multipleRepositories(t *testing.T) {
 			acctest.CreateRepos(t, testData["repo0"], "local", "", "")
 			acctest.CreateRepos(t, testData["repo1"], "local", "", "")
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.DeleteRepo(t, testData["repo0"])
 			acctest.DeleteRepo(t, testData["repo1"])
 			acctest.CheckPolicyDeleted(testData["policy_name_0"], t, request)
@@ -619,7 +619,7 @@ func TestAccWatch_multipleRepositoriesPathAntPatterns(t *testing.T) {
 			acctest.CreateRepos(t, testData["repo1"], "local", "", "")
 			acctest.CreateRepos(t, testData["repo2"], "local", "", "")
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.DeleteRepo(t, testData["repo0"])
 			acctest.DeleteRepo(t, testData["repo1"])
 			acctest.DeleteRepo(t, testData["repo2"])
@@ -673,7 +673,7 @@ func TestAccWatch_PathAntPatternsError(t *testing.T) {
 			acctest.CreateRepos(t, testData["repo0"], "local", "", "")
 			acctest.CreateRepos(t, testData["repo1"], "local", "", "")
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.DeleteRepo(t, testData["repo0"])
 			acctest.DeleteRepo(t, testData["repo1"])
 			acctest.CheckPolicyDeleted(testData["policy_name_0"], t, request)
@@ -713,7 +713,7 @@ func TestAccWatch_multipleRepositoriesKvFilter(t *testing.T) {
 			acctest.CreateRepos(t, testData["repo0"], "local", "", "")
 			acctest.CreateRepos(t, testData["repo1"], "local", "", "")
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.DeleteRepo(t, testData["repo0"])
 			acctest.DeleteRepo(t, testData["repo1"])
 			acctest.CheckPolicyDeleted(testData["policy_name_0"], t, request)
@@ -769,7 +769,7 @@ func TestAccWatch_KvFilterError(t *testing.T) {
 			acctest.PreCheck(t)
 			acctest.CreateRepos(t, testData["repo0"], "local", "", "")
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.DeleteRepo(t, testData["repo0"])
 			acctest.CheckPolicyDeleted(testData["policy_name_0"], t, request)
 			resp, err := testCheckWatch(id, request)
@@ -802,7 +802,7 @@ func TestAccWatch_build(t *testing.T) {
 			acctest.PreCheck(t)
 			acctest.CreateBuilds(t, builds, "")
 		},
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, testCheckWatch),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckWatch),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -882,7 +882,7 @@ func TestAccWatch_buildWithProjectKey(t *testing.T) {
 			acctest.CreateProject(t, projectKey)
 			acctest.CreateBuilds(t, []string{testData["build_name0"]}, projectKey)
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.DeleteProject(t, projectKey)
 			resp, err := testCheckWatch(id, request)
 			return resp, err
@@ -980,7 +980,7 @@ func TestAccWatch_allBuildsWithProjectKey(t *testing.T) {
 			acctest.PreCheck(t)
 			acctest.CreateProject(t, projectKey)
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.DeleteProject(t, projectKey)
 			resp, err := testCheckWatch(id, request)
 			return resp, err
@@ -1025,7 +1025,7 @@ func TestAccWatch_multipleBuilds(t *testing.T) {
 			acctest.PreCheck(t)
 			acctest.CreateBuilds(t, builds, "")
 		},
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, testCheckWatch),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckWatch),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -1054,7 +1054,7 @@ func TestAccWatch_allBuilds(t *testing.T) {
 		PreCheck: func() {
 			acctest.PreCheck(t)
 		},
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, testCheckWatch),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckWatch),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -1090,7 +1090,7 @@ func TestAccWatch_invalidBuildFilter(t *testing.T) {
 		PreCheck: func() {
 			acctest.PreCheck(t)
 		},
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, testCheckWatch),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckWatch),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -1114,7 +1114,7 @@ func TestAccWatch_allProjects(t *testing.T) {
 		PreCheck: func() {
 			acctest.PreCheck(t)
 		},
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, testCheckWatch),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckWatch),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -1154,7 +1154,7 @@ func TestAccWatch_singleProject(t *testing.T) {
 			acctest.CreateProject(t, testData["project_key_0"])
 			acctest.CreateProject(t, testData["project_key_1"])
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.DeleteProject(t, testData["project_key_0"])
 			acctest.DeleteProject(t, testData["project_key_1"])
 			//watch created by TF, so it will be automatically deleted by DeleteContext function
@@ -1190,7 +1190,7 @@ func TestAccWatch_invalidProjectFilter(t *testing.T) {
 		PreCheck: func() {
 			acctest.PreCheck(t)
 		},
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, testCheckWatch),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckWatch),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -1223,7 +1223,7 @@ func allReleaseBundleTestCase(watchType string, t *testing.T) (*testing.T, resou
 		PreCheck: func() {
 			acctest.PreCheck(t)
 		},
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, testCheckWatch),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckWatch),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -1258,7 +1258,7 @@ func TestAccWatch_singleReleaseBundle(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, testCheckWatch),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckWatch),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
