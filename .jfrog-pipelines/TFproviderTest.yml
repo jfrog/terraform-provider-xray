@@ -77,9 +77,7 @@ pipelines:
             - helm version
             - kubectl version --client
             - echo "Install gcloud cli"
-            - sudo apt-get update && sudo apt-get install apt-transport-https ca-certificates gnupg
-            - curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/cloud.google.asc
-            - sudo apt-get update && sudo apt-get install -y google-cloud-cli google-cloud-cli-gke-gcloud-auth-plugin
+            - sudo apt-get update && sudo apt-get install -y apt-transport-https ca-certificates google-cloud-cli google-cloud-cli-gke-gcloud-auth-plugin
             - gke-gcloud-auth-plugin --version
             - echo "Renaming GKE_CLUSTER variable, so k8s cluster name will be unique."
             - add_run_variables GKE_CLUSTER=tf-provider-xray-$(date +%s)
