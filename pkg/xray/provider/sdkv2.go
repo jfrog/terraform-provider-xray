@@ -31,12 +31,18 @@ func SdkV2() *schema.Provider {
 				Description:  "URL of Xray. This can also be sourced from the `XRAY_URL` or `JFROG_URL` environment variable. Default to 'http://localhost:8081' if not set.",
 			},
 			"access_token": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Sensitive:   true,
+				DefaultFunc: schema.MultiEnvDefaultFunc([]string{"XRAY_ACCESS_TOKEN", "JFROG_ACCESS_TOKEN"}, ""),
+				// ValidateDiagFunc: validator.StringIsNotEmpty,
+				Description: "This is a bearer token that can be given to you by your admin under `Identity and Access`",
+			},
+			"oidc_provider_name": {
 				Type:             schema.TypeString,
 				Optional:         true,
-				Sensitive:        true,
-				DefaultFunc:      schema.MultiEnvDefaultFunc([]string{"XRAY_ACCESS_TOKEN", "JFROG_ACCESS_TOKEN"}, ""),
 				ValidateDiagFunc: validator.StringIsNotEmpty,
-				Description:      "This is a bearer token that can be given to you by your admin under `Identity and Access`",
+				Description:      "OIDC provider name. See [Configure an OIDC Integration](https://jfrog.com/help/r/jfrog-platform-administration-documentation/configure-an-oidc-integration) for more details.",
 			},
 			"check_license": {
 				Type:        schema.TypeBool,
@@ -83,40 +89,55 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 		return nil, diag.Errorf("you must supply a URL")
 	}
 
-	restyBase, err := client.Build(URL.(string), productId)
-	if err != nil {
-		return nil, diag.FromErr(err)
-	}
-	accessToken := d.Get("access_token").(string)
-
-	restyBase, err = client.AddAuth(restyBase, "", accessToken)
+	restyClient, err := client.Build(URL.(string), productId)
 	if err != nil {
 		return nil, diag.FromErr(err)
 	}
 
-	checkLicense := d.Get("check_license").(bool)
-	if checkLicense {
-		licenseErr := util.CheckArtifactoryLicense(restyBase, "Enterprise", "Commercial")
+	var accessToken string
+
+	if v, ok := d.GetOk("oidc_provider_name"); ok {
+		oidcAccessToken, err := util.OIDCTokenExchange(ctx, restyClient, v.(string))
+		if err != nil {
+			return nil, diag.FromErr(err)
+		}
+
+		if oidcAccessToken != "" {
+			accessToken = oidcAccessToken
+		}
+	}
+
+	if v, ok := d.GetOk("access_token"); ok && v != "" {
+		accessToken = v.(string)
+	}
+
+	restyClient, err = client.AddAuth(restyClient, "", accessToken)
+	if err != nil {
+		return nil, diag.FromErr(err)
+	}
+
+	if checkLicense := d.Get("check_license").(bool); checkLicense {
+		licenseErr := util.CheckArtifactoryLicense(restyClient, "Enterprise", "Commercial")
 		if licenseErr != nil {
 			return nil, diag.FromErr(licenseErr)
 		}
 	}
 
-	artifactoryVersion, err := util.GetArtifactoryVersion(restyBase)
+	artifactoryVersion, err := util.GetArtifactoryVersion(restyClient)
 	if err != nil {
 		return nil, diag.FromErr(err)
 	}
 
-	xrayVersion, err := util.GetXrayVersion(restyBase)
+	xrayVersion, err := util.GetXrayVersion(restyClient)
 	if err != nil {
 		return nil, diag.FromErr(err)
 	}
 
 	featureUsage := fmt.Sprintf("Terraform/%s", terraformVersion)
-	go util.SendUsage(ctx, restyBase.R(), productId, featureUsage)
+	go util.SendUsage(ctx, restyClient.R(), productId, featureUsage)
 
 	return util.ProviderMetadata{
-		Client:             restyBase,
+		Client:             restyClient,
 		ArtifactoryVersion: artifactoryVersion,
 		XrayVersion:        xrayVersion,
 	}, nil
