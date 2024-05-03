@@ -113,7 +113,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 	}
 
 	featureUsage := fmt.Sprintf("Terraform/%s", terraformVersion)
-	go util.SendUsage(ctx, restyBase, productId, featureUsage)
+	go util.SendUsage(ctx, restyBase.R(), productId, featureUsage)
 
 	return util.ProviderMetadata{
 		Client:             restyBase,

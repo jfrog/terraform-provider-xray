@@ -143,7 +143,7 @@ func (p *XrayProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 	}
 
 	featureUsage := fmt.Sprintf("Terraform/%s", req.TerraformVersion)
-	go util.SendUsage(ctx, restyBase, productId, featureUsage)
+	go util.SendUsage(ctx, restyBase.R(), productId, featureUsage)
 
 	resp.DataSourceData = util.ProviderMetadata{
 		Client:      restyBase,
