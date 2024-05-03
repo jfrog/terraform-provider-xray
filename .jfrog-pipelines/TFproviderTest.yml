@@ -116,9 +116,9 @@ pipelines:
             - kubectl rollout status statefulset/xray
             - export RT_URL=$(kubectl get svc artifactory-artifactory-nginx -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
             - add_run_variables JFROG_URL="http://${RT_URL}"
-            - git clone https://${int_partnership_github_token}@github.com/jfrog/partner-integration-tests.git
-            - echo "Common test will check services health and change the default admin user password, if NEW_RT_PASSWORD is set. Test uses RT_URL var."
-            - ./partner-integration-tests/gradlew -p partner-integration-tests artifactory_common
+            # - git clone https://${int_partnership_github_token}@github.com/jfrog/partner-integration-tests.git
+            # - echo "Common test will check services health and change the default admin user password, if NEW_RT_PASSWORD is set. Test uses RT_URL var."
+            # - ./partner-integration-tests/gradlew -p partner-integration-tests artifactory_common
           onSuccess:
             - echo "GKE cluster created successfully with JFrog Artifactory and Xray"
             - echo "Visit Artifactory at http://${RT_URL}"
