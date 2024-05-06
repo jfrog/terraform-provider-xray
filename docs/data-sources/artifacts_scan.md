@@ -82,7 +82,7 @@ Read-Only:
 - `services` (Attributes) (see [below for nested schema](#nestedatt--results--exposures_issues--categories--services))
 
 <a id="nestedatt--results--exposures_issues--categories--applications"></a>
-### Nested Schema for `results.exposures_issues.categories.services`
+### Nested Schema for `results.exposures_issues.categories.applications`
 
 Read-Only:
 
@@ -96,7 +96,7 @@ Read-Only:
 
 
 <a id="nestedatt--results--exposures_issues--categories--iac"></a>
-### Nested Schema for `results.exposures_issues.categories.services`
+### Nested Schema for `results.exposures_issues.categories.iac`
 
 Read-Only:
 
@@ -110,7 +110,7 @@ Read-Only:
 
 
 <a id="nestedatt--results--exposures_issues--categories--secrets"></a>
-### Nested Schema for `results.exposures_issues.categories.services`
+### Nested Schema for `results.exposures_issues.categories.secrets`
 
 Read-Only:
 

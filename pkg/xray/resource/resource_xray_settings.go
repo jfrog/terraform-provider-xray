@@ -135,7 +135,7 @@ func (r *SettingsResource) Configure(ctx context.Context, req resource.Configure
 }
 
 func (r *SettingsResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	go util.SendUsageResourceCreate(ctx, r.ProviderData.Client, r.ProviderData.ProductId, r.TypeName)
+	go util.SendUsageResourceCreate(ctx, r.ProviderData.Client.R(), r.ProviderData.ProductId, r.TypeName)
 
 	var plan SettingsResourceModel
 
@@ -190,7 +190,7 @@ func (r *SettingsResource) Create(ctx context.Context, req resource.CreateReques
 }
 
 func (r *SettingsResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	go util.SendUsageResourceRead(ctx, r.ProviderData.Client, r.ProviderData.ProductId, r.TypeName)
+	go util.SendUsageResourceRead(ctx, r.ProviderData.Client.R(), r.ProviderData.ProductId, r.TypeName)
 
 	var state SettingsResourceModel
 	// Read Terraform prior state data into the model
@@ -242,7 +242,7 @@ func (r *SettingsResource) Read(ctx context.Context, req resource.ReadRequest, r
 }
 
 func (r *SettingsResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	go util.SendUsageResourceUpdate(ctx, r.ProviderData.Client, r.ProviderData.ProductId, r.TypeName)
+	go util.SendUsageResourceUpdate(ctx, r.ProviderData.Client.R(), r.ProviderData.ProductId, r.TypeName)
 
 	var plan SettingsResourceModel
 
@@ -297,7 +297,7 @@ func (r *SettingsResource) Update(ctx context.Context, req resource.UpdateReques
 // Delete No delete functionality provided by API for the settings or DB sync call.
 // This function will remove the object from the Terraform state
 func (r *SettingsResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	go util.SendUsageResourceDelete(ctx, r.ProviderData.Client, r.ProviderData.ProductId, r.TypeName)
+	go util.SendUsageResourceDelete(ctx, r.ProviderData.Client.R(), r.ProviderData.ProductId, r.TypeName)
 
 	// If the logic reaches here, it implicitly succeeded and will remove
 	// the resource from state if there are no other errors.

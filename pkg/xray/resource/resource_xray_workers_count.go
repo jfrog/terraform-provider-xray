@@ -310,7 +310,7 @@ func (r *WorkersCountResource) Configure(ctx context.Context, req resource.Confi
 }
 
 func (r *WorkersCountResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	go util.SendUsageResourceCreate(ctx, r.ProviderData.Client, r.ProviderData.ProductId, r.TypeName)
+	go util.SendUsageResourceCreate(ctx, r.ProviderData.Client.R(), r.ProviderData.ProductId, r.TypeName)
 
 	var plan WorkersCountResourceModel
 
@@ -358,7 +358,7 @@ func (r *WorkersCountResource) Create(ctx context.Context, req resource.CreateRe
 }
 
 func (r *WorkersCountResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	go util.SendUsageResourceRead(ctx, r.ProviderData.Client, r.ProviderData.ProductId, r.TypeName)
+	go util.SendUsageResourceRead(ctx, r.ProviderData.Client.R(), r.ProviderData.ProductId, r.TypeName)
 
 	var state WorkersCountResourceModel
 	// Read Terraform prior state data into the model
@@ -393,7 +393,7 @@ func (r *WorkersCountResource) Read(ctx context.Context, req resource.ReadReques
 }
 
 func (r *WorkersCountResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	go util.SendUsageResourceUpdate(ctx, r.ProviderData.Client, r.ProviderData.ProductId, r.TypeName)
+	go util.SendUsageResourceUpdate(ctx, r.ProviderData.Client.R(), r.ProviderData.ProductId, r.TypeName)
 
 	var plan WorkersCountResourceModel
 
@@ -430,7 +430,7 @@ func (r *WorkersCountResource) Update(ctx context.Context, req resource.UpdateRe
 // Delete No delete functionality provided by API for the settings or DB sync call.
 // This function will remove the object from the Terraform state
 func (r *WorkersCountResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	go util.SendUsageResourceDelete(ctx, r.ProviderData.Client, r.ProviderData.ProductId, r.TypeName)
+	go util.SendUsageResourceDelete(ctx, r.ProviderData.Client.R(), r.ProviderData.ProductId, r.TypeName)
 
 	resp.Diagnostics.AddWarning(
 		"Workers Count resource does not support delete",

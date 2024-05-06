@@ -34,13 +34,19 @@ The following 3 license types (`jq .type`) do **NOT** support APIs:
 - JCR Edition
 - OSS
 
+## Terraform CLI version support
+
+Current version support [Terraform Protocol v6](https://developer.hashicorp.com/terraform/plugin/terraform-plugin-protocol#protocol-version-6) which mean Terraform CLI version 1.0 and later. 
+
 ## Example Usage
 
 {{tffile "examples/sample.tf"}}
 
 ## Authentication
 
-The Xray provider supports one type of authentication using Bearer token.
+The Xray provider supports supports two ways of authentication. The following methods are supported:
+* Bearer Token
+* Terraform Cloud OIDC provider
 
 ### Bearer Token
 Artifactory access tokens may be used via the Authorization header by providing the `access_token` field to the provider
@@ -56,5 +62,57 @@ provider "xray" {
   access_token = "abc...xy"
 }
 ```
+
+### Terraform Cloud OIDC Provider
+
+If you are using this provider on Terraform Cloud and wish to use dynamic credentials instead of static access token for authentication with JFrog platform, you can leverage Terraform as the OIDC provider.
+
+To setup dynamic credentials, follow these steps:
+1. Configure Terraform Cloud as a generic OIDC provider
+2. Set environment variable in your Terraform Workspace
+3. Setup Terraform Cloud in your configuration
+
+During the provider start up, if it finds env var `TFC_WORKLOAD_IDENTITY_TOKEN` it will use this token with your JFrog instance to exchange for a short-live access token. If that is successful, the provider will the access token for all subsequent API requests with the JFrog instance.
+
+#### Configure Terraform Cloud as generic OIDC provider
+
+Follow [confgure an OIDC integration](https://jfrog.com/help/r/jfrog-platform-administration-documentation/configure-an-oidc-integration). Enter a name for the provider, e.g. `terraform-cloud`. Use `https://app.terraform.io` for "Provider URL". Choose your own value for "Audience", e.g. `jfrog-terraform-cloud`.
+
+Then [configure an identity mapping](https://jfrog.com/help/r/jfrog-platform-administration-documentation/configure-identity-mappings) with an empty "Claims JSON" (`{}`), and select the "Token scope", "User", and "Service" as desired.
+
+#### Set environment variable in your Terraform Workspace
+
+In your workspace, add an environment variable `TFC_WORKLOAD_IDENTITY_AUDIENCE` with audience value (e.g. `jfrog-terraform-cloud`) from JFrog OIDC integration above. See [Manually Generating Workload Identity Tokens](https://developer.hashicorp.com/terraform/cloud-docs/workspaces/dynamic-provider-credentials/manual-generation) for more details.
+
+When a run starts on Terraform Cloud, it will create a workload identity token with the specified audience and assigns it to the environment variable `TFC_WORKLOAD_IDENTITY_TOKEN` for the provider to consume.
+
+#### Setup Terraform Cloud in your configuration
+
+Add `cloud` block to `terraform` block, and add `oidc_provider_name` attribute (from JFrog OIDC integration) to provider block:
+
+```terraform
+terraform {
+  cloud {
+    organization = "my-org"
+    workspaces {
+      name = "my-workspace"
+    }
+  }
+
+  required_providers {
+    xray = {
+      source  = "jfrog/xray"
+      version = "2.5.1"
+    }
+  }
+}
+
+provider "xray" {
+  url = "https://myinstance.jfrog.io"
+  oidc_provider_name = "terraform-cloud"
+}
+```
+
+**Note:** Ensure `access_token` attribute and `JFROG_ACCESS_TOKEN` env var are not set
 
 {{ .SchemaMarkdown | trimspace }}
