@@ -20,6 +20,7 @@ const criteriaTypeSeverity = "severity"
 const criteriaTypeMaliciousPkg = "malicious_package"
 const criteriaTypeVulnerabilityIds = "vulnerability_ids"
 const criteriaTypeExposures = "exposures"
+const criteriaTypePackageName = "package_name"
 
 var testDataSecurity = map[string]string{
 	"resource_name":                     "",
@@ -760,6 +761,69 @@ func TestAccSecurityPolicy_exposures(t *testing.T) {
 	})
 }
 
+func TestAccSecurityPolicy_Packages(t *testing.T) {
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
+
+	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-10-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-10-%d", testutil.RandomInt())
+	testData["block_unscanned"] = "false"
+	testData["block_active"] = "false"
+	testData["package_name"] = "nuget:RazorEngine"
+	testData["package_type"] = "NuGet"
+	testData["package_version_1"] = "(1.2.3,3.10.2)"
+	testData["package_version_2"] = "[3.11,)"
+	testData["package_version_3"] = "[4.0.0]"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: util.ExecuteTemplate(fqrn, securityPolicyPackages, testData),
+				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypePackageName),
+			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func TestAccSecurityPolicy_PackagesIncorrectVersionRangeFails(t *testing.T) {
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
+
+	for _, invalidVersionRange := range []string{"3.10.0", "[3,,4]", "(1,latest)", "[1.0.0.0]"} {
+		testData["resource_name"] = resourceName
+		testData["policy_name"] = fmt.Sprintf("terraform-security-policy-10-%d", testutil.RandomInt())
+		testData["rule_name"] = fmt.Sprintf("test-security-rule-10-%d", testutil.RandomInt())
+		testData["block_unscanned"] = "false"
+		testData["block_active"] = "false"
+		testData["package_name"] = "nuget://RazorEngine"
+		testData["package_type"] = "nuget"
+		testData["package_version_1"] = invalidVersionRange
+		testData["package_version_2"] = "(3.2.1,)"
+		testData["package_version_3"] = "[3.2.1,]"
+
+		resource.Test(t, resource.TestCase{
+			PreCheck:                 func() { acctest.PreCheck(t) },
+			CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+			ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+			Steps: []resource.TestStep{
+				{
+					Config:      util.ExecuteTemplate(fqrn, securityPolicyPackages, testData),
+					ExpectError: regexp.MustCompile("invalid value for package_versions"),
+				},
+			},
+		})
+	}
+}
+
 func testAccXraySecurityPolicy_badSecurityType(name, description, ruleName string, rangeTo int) string {
 	return fmt.Sprintf(`
 resource "xray_security_policy" "test" {
@@ -857,6 +921,14 @@ func verifySecurityPolicy(fqrn string, testData map[string]string, criteriaType 
 			resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.exposures.0.applications", testData["exposures_applications"]),
 			resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.exposures.0.services", testData["exposures_services"]),
 			resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.exposures.0.iac", testData["exposures_iac"]),
+		)
+	}
+	if criteriaType == criteriaTypePackageName {
+		return resource.ComposeTestCheckFunc(
+			commonCheckList,
+			resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.package_name", testData["package_name"]),
+			resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.package_type", testData["package_type"]),
+			resource.TestCheckTypeSetElemAttr(fqrn, "rule.0.criteria.0.package_versions.*", testData["package_version_1"]),
 		)
 	}
 	return nil
@@ -1153,6 +1225,33 @@ const securityPolicyMaliciousPkgFixVersionDep = `resource "xray_security_policy"
 		criteria {
             malicious_package	  = "{{ .malicious_package }}"
 			fix_version_dependant = {{ .fix_version_dependant }}
+		}
+		actions {
+			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			fail_build = {{ .fail_build }}
+			notify_watch_recipients = {{ .notify_watch_recipients }}
+			notify_deployer = {{ .notify_deployer }}
+			create_ticket_enabled = {{ .create_ticket_enabled }}
+			build_failure_grace_period_in_days = {{ .grace_period_days }}
+			block_download {
+				unscanned = {{ .block_unscanned }}
+				active = {{ .block_active }}
+			}
+		}
+	}
+}`
+
+const securityPolicyPackages = `resource "xray_security_policy" "{{ .resource_name }}" {
+	name = "{{ .policy_name }}"
+	description = "{{ .policy_description }}"
+	type = "security"
+	rule {
+		name = "{{ .rule_name }}"
+		priority = 1
+		criteria {
+			package_name = "{{ .package_name }}"
+			package_type = "{{ .package_type }}"
+			package_versions = ["{{ .package_version_1 }}", "{{ .package_version_2 }}", "{{ .package_version_3 }}"]
 		}
 		actions {
 			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
