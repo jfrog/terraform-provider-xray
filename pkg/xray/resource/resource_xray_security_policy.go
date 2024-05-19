@@ -106,6 +106,28 @@ func ResourceXraySecurityPolicyV2() *schema.Resource {
 				},
 			},
 		},
+		"package_name": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "The package name to create a rule for",
+		},
+		"package_type": {
+			Type:             schema.TypeString,
+			Optional:         true,
+			Description:      "The package type to create a rule for",
+			ValidateDiagFunc: validator.StringInSlice(true, validPackageTypes...),
+		},
+		"package_versions": {
+			Type:        schema.TypeSet,
+			Optional:    true,
+			Description: "package versions to apply the rule on can be (,) for any version or a open range (1,4) or closed [1,4] or one version [1]",
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+				ValidateDiagFunc: validation.ToDiagFunc(
+					validation.StringMatch(regexp.MustCompile(`((^(\(|\[)((\d+\.)?(\d+\.)?(\*|\d+)|(\s*))\,((\d+\.)?(\d+\.)?(\*|\d+)|(\s*))(\)|\])$|^\[(\d+\.)?(\d+\.)?(\*|\d+)\]$))`), "invalid Range, must be one of the follows: Any Version: (,) or Speciific Version: [1.2], [3] or Range: (1,), [,1.2.3], (4.5.0,6.5.2]"),
+				),
+			},
+		},
 	}
 
 	return &schema.Resource{
@@ -144,6 +166,10 @@ var criteriaMaliciousPkgDiff = func(ctx context.Context, diff *schema.ResourceDi
 	vulnerabilityIDs := criterion["vulnerability_ids"].(*schema.Set).List()
 	maliciousPackage := criterion["malicious_package"].(bool)
 	exposures := criterion["exposures"].([]interface{})
+	package_name := criterion["package_name"].(string)
+	package_type := criterion["package_type"].(string)
+	package_versions := criterion["package_versions"].(*schema.Set).List()
+	isPackageSet := len(package_name) > 0 || len(package_type) > 0 || len(package_versions) > 0 //if one of them is not defined the API will return an error guiding which one is missing
 
 	if len(exposures) > 0 && maliciousPackage || (len(exposures) > 0 && len(cvssRange) > 0) ||
 		(len(exposures) > 0 && len(minSeverity) > 0) || (len(exposures) > 0 && len(vulnerabilityIDs) > 0) {
@@ -163,6 +189,16 @@ var criteriaMaliciousPkgDiff = func(ctx context.Context, diff *schema.ResourceDi
 	if (len(vulnerabilityIDs) > 0 && maliciousPackage) || (len(vulnerabilityIDs) > 0 && len(minSeverity) > 0) ||
 		(len(vulnerabilityIDs) > 0 && len(cvssRange) > 0) || (len(vulnerabilityIDs) > 0 && len(exposures) > 0) {
 		return fmt.Errorf("vulnerability_ids can't be set together with with malicious_package, min_severity, cvss_range and exposures")
+	}
+
+	if (isPackageSet && len(vulnerabilityIDs) > 0) || (isPackageSet && maliciousPackage) ||
+		(isPackageSet && len(cvssRange) > 0) || (isPackageSet && len(minSeverity) > 0) ||
+		(isPackageSet && len(exposures) > 0) {
+		return fmt.Errorf("package_name, package_type and package versions can't be set together with with vulnerability_ids, malicious_package, min_severity, cvss_range and exposures")
+	}
+
+	if isPackageSet && fixVersionDependant {
+		return fmt.Errorf("package type policy must be set to false if malicious_package is true")
 	}
 
 	return nil
