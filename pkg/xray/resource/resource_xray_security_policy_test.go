@@ -665,6 +665,7 @@ func TestAccSecurityPolicy_conflictingAttributesFail(t *testing.T) {
 		"malicious_package = true",
 		"min_severity = \"High\"",
 		"exposures {\nmin_severity = \"High\" \nsecrets = true \n applications = true \n services = true \n iac = true\n}",
+		"package_name = \"nuget://RazorEngine\"",
 	}
 
 	for _, testAttribute := range testAttributes {
@@ -822,6 +823,33 @@ func TestAccSecurityPolicy_PackagesIncorrectVersionRangeFails(t *testing.T) {
 			},
 		})
 	}
+}
+
+func TestAccSecurityPolicy_createPackagesFail(t *testing.T) {
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
+
+	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-6-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-6-%d", testutil.RandomInt())
+	testData["package_name"] = "nuget:RazorEngine"
+	testData["package_type"] = "NuGet"
+	testData["package_version_1"] = "(1.2.3,3.10.2)"
+	testData["package_version_2"] = "[3.11,)"
+	testData["package_version_3"] = "[4.0.0]"
+	testData["fix_version_dependant"] = "true"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      util.ExecuteTemplate(fqrn, securityPolicyPackagesFixVersionDep, testData),
+				ExpectError: regexp.MustCompile("fix_version_dependant must be set to false if package type policy is used"),
+			},
+		},
+	})
 }
 
 func testAccXraySecurityPolicy_badSecurityType(name, description, ruleName string, rangeTo int) string {
@@ -1224,6 +1252,34 @@ const securityPolicyMaliciousPkgFixVersionDep = `resource "xray_security_policy"
 		priority = 1
 		criteria {
             malicious_package	  = "{{ .malicious_package }}"
+			fix_version_dependant = {{ .fix_version_dependant }}
+		}
+		actions {
+			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			fail_build = {{ .fail_build }}
+			notify_watch_recipients = {{ .notify_watch_recipients }}
+			notify_deployer = {{ .notify_deployer }}
+			create_ticket_enabled = {{ .create_ticket_enabled }}
+			build_failure_grace_period_in_days = {{ .grace_period_days }}
+			block_download {
+				unscanned = {{ .block_unscanned }}
+				active = {{ .block_active }}
+			}
+		}
+	}
+}`
+
+const securityPolicyPackagesFixVersionDep = `resource "xray_security_policy" "{{ .resource_name }}" {
+	name = "{{ .policy_name }}"
+	description = "{{ .policy_description }}"
+	type = "security"
+	rule {
+		name = "{{ .rule_name }}"
+		priority = 1
+		criteria {
+			package_name = "{{ .package_name }}"
+			package_type = "{{ .package_type }}"
+			package_versions = ["{{ .package_version_1 }}", "{{ .package_version_2 }}", "{{ .package_version_3 }}"]
 			fix_version_dependant = {{ .fix_version_dependant }}
 		}
 		actions {
