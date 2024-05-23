@@ -11,6 +11,27 @@ import (
 	"github.com/jfrog/terraform-provider-shared/validator"
 )
 
+var validPackageTypesSupportedXraySecPolicies = []string{
+	"alpine",
+	"cargo",
+	"composer",
+	"conan",
+	"conda",
+	"cran",
+	"debian",
+	"docker",
+	"generic",
+	"go",
+	"huggingface",
+	"maven",
+	"npm",
+	"nuget",
+	"oci",
+	"pypi",
+	"rpm",
+	"rubygems",
+}
+
 var commonActionsSchema = map[string]*schema.Schema{
 	"webhooks": {
 		Type:        schema.TypeSet,

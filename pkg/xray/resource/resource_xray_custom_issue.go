@@ -17,7 +17,7 @@ import (
 
 var validPackageTypes = []string{
 	"alpine",
-	//"bower",
+	"bower",
 	"cargo",
 	"composer",
 	"conan",
@@ -27,9 +27,9 @@ var validPackageTypes = []string{
 	"docker",
 	"generic",
 	"go",
-	//"gradle",
+	"gradle",
 	"huggingface",
-	//"ivy",
+	"ivy",
 	"maven",
 	"npm",
 	"nuget",
@@ -37,8 +37,8 @@ var validPackageTypes = []string{
 	"pypi",
 	"rpm",
 	"rubygems",
-	//"sbt",
-	//"terraformbe",
+	"sbt",
+	"terraformbe",
 }
 
 type VulnerableRange struct {

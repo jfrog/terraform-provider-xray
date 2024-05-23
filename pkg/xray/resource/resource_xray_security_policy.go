@@ -115,7 +115,7 @@ func ResourceXraySecurityPolicyV2() *schema.Resource {
 			Type:             schema.TypeString,
 			Optional:         true,
 			Description:      "The package type to create a rule for",
-			ValidateDiagFunc: validator.StringInSlice(true, validPackageTypes...),
+			ValidateDiagFunc: validator.StringInSlice(true, validPackageTypesSupportedXraySecPolicies...),
 		},
 		"package_versions": {
 			Type:        schema.TypeSet,
@@ -198,7 +198,7 @@ var criteriaMaliciousPkgDiff = func(ctx context.Context, diff *schema.ResourceDi
 	}
 
 	if isPackageSet && fixVersionDependant {
-		return fmt.Errorf("package type policy must be set to false if malicious_package is true")
+		return fmt.Errorf("fix_version_dependant must be set to false if package type policy is used")
 	}
 
 	return nil
