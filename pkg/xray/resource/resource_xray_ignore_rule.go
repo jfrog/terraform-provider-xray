@@ -475,7 +475,7 @@ func ResourceXrayIgnoreRule() *schema.Resource {
 		var ignoreRule IgnoreRule
 
 		projectKey := d.Get("project_key").(string)
-		req, err := getRestyRequest(m.(util.ProvderMetadata).Client, projectKey)
+		req, err := getRestyRequest(m.(util.ProviderMetadata).Client, projectKey)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -504,7 +504,7 @@ func ResourceXrayIgnoreRule() *schema.Resource {
 			return diag.FromErr(err)
 		}
 
-		req, err := getRestyRequest(m.(util.ProvderMetadata).Client, ignoreRule.ProjectKey)
+		req, err := getRestyRequest(m.(util.ProviderMetadata).Client, ignoreRule.ProjectKey)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -546,7 +546,7 @@ func ResourceXrayIgnoreRule() *schema.Resource {
 			return diag.FromErr(err)
 		}
 
-		req, err := getRestyRequest(m.(util.ProvderMetadata).Client, ignoreRule.ProjectKey)
+		req, err := getRestyRequest(m.(util.ProviderMetadata).Client, ignoreRule.ProjectKey)
 		if err != nil {
 			return diag.FromErr(err)
 		}

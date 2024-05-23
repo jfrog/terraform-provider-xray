@@ -7,7 +7,6 @@ import (
 
 	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/jfrog/terraform-provider-shared/testutil"
 	"github.com/jfrog/terraform-provider-shared/util"
 	"github.com/jfrog/terraform-provider-xray/pkg/acctest"
@@ -34,7 +33,7 @@ func TestAccWebhook_UpgradeFromSDKv2(t *testing.T) {
 	`
 	testData := map[string]string{
 		"name":          resourceName,
-		"description":   "test description ",
+		"description":   "test description",
 		"url":           url,
 		"use_proxy":     "true",
 		"user_name":     "test_user_1",
@@ -45,7 +44,7 @@ func TestAccWebhook_UpgradeFromSDKv2(t *testing.T) {
 		"header2_value": "header2_value",
 	}
 
-	config := util.ExecuteTemplate("TestAccWebhook_full", template, testData)
+	config := util.ExecuteTemplate("TestAccWebhook_UpgradeFromSDKv2", template, testData)
 
 	resource.Test(t, resource.TestCase{
 		Steps: []resource.TestStep{
@@ -70,18 +69,9 @@ func TestAccWebhook_UpgradeFromSDKv2(t *testing.T) {
 				),
 			},
 			{
-				ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+				ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 				Config:                   config,
-				// ConfigPlanChecks is a terraform-plugin-testing feature.
-				// If acceptance testing is still using terraform-plugin-sdk/v2,
-				// use `PlanOnly: true` instead. When migrating to
-				// terraform-plugin-testing, switch to `ConfigPlanChecks` or you
-				// will likely experience test failures.
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectEmptyPlan(),
-					},
-				},
+				ConfigPlanChecks:         testutil.ConfigPlanChecks(""),
 			},
 		},
 	})
@@ -139,8 +129,8 @@ func TestAccWebhook_full(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, testCheckWebhook),
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "name", testCheckWebhook),
 		Steps: []resource.TestStep{
 			{
 				Config: config,
@@ -163,29 +153,32 @@ func TestAccWebhook_full(t *testing.T) {
 					resource.TestCheckResourceAttr(fqrn, "description", updatedTestData["description"]),
 					resource.TestCheckResourceAttr(fqrn, "url", updatedTestData["url"]),
 					resource.TestCheckResourceAttr(fqrn, "use_proxy", updatedTestData["use_proxy"]),
-					resource.TestCheckResourceAttr(fqrn, "user_name", ""),
-					resource.TestCheckResourceAttr(fqrn, "password", ""),
-					resource.TestCheckResourceAttr(fqrn, "headers.%", "0"),
+					resource.TestCheckNoResourceAttr(fqrn, "user_name"),
+					resource.TestCheckNoResourceAttr(fqrn, "password"),
+					resource.TestCheckNoResourceAttr(fqrn, "headers.%"),
 				),
+				ConfigPlanChecks: testutil.ConfigPlanChecks(""),
 			},
 			{
-				ResourceName:            fqrn,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"password"},
+				ResourceName:                         fqrn,
+				ImportState:                          true,
+				ImportStateId:                        resourceName,
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "name",
+				ImportStateVerifyIgnore:              []string{"password"},
 			},
 		},
 	})
 }
 
 func TestAccWebhook_invalid_name(t *testing.T) {
-	_, fqrn, resourceName := testutil.MkNames("webhook-", "xray_webhook")
+	_, _, resourceName := testutil.MkNames("test-webhook", "xray_webhook")
 	url := fmt.Sprintf("https://tempurl%d.org", testutil.RandomInt())
 
 	const template = `
 		resource "xray_webhook" "{{ .name }}" {
-			name        = "{{ .name }}"
-			url         = "{{ .url }}"
+			name = "{{ .name }}"
+			url  = "{{ .url }}"
 		}
 	`
 	testData := map[string]string{
@@ -197,8 +190,7 @@ func TestAccWebhook_invalid_name(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, testCheckWebhook),
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config:      config,
@@ -209,12 +201,12 @@ func TestAccWebhook_invalid_name(t *testing.T) {
 }
 
 func TestAccWebhook_invalid_url(t *testing.T) {
-	_, fqrn, resourceName := testutil.MkNames("webhook", "xray_webhook")
+	_, _, resourceName := testutil.MkNames("webhook", "xray_webhook")
 
 	const template = `
 		resource "xray_webhook" "{{ .name }}" {
-			name        = "{{ .name }}"
-			url         = "tempurl.org"
+			name = "{{ .name }}"
+			url  = "tempurl.org"
 		}
 	`
 	testData := map[string]string{
@@ -225,12 +217,11 @@ func TestAccWebhook_invalid_url(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, testCheckWebhook),
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config:      config,
-				ExpectError: regexp.MustCompile(`.*expected "url" to have a host, got tempurl\.org.*`),
+				ExpectError: regexp.MustCompile(`.*Attribute url value must be a valid URL with host and http or https scheme.*`),
 			},
 		},
 	})
@@ -239,5 +230,5 @@ func TestAccWebhook_invalid_url(t *testing.T) {
 func testCheckWebhook(id string, request *resty.Request) (*resty.Response, error) {
 	return request.
 		SetPathParam("id", id).
-		Get("xray/api/v1/webhook/{id}")
+		Get("xray/api/v1/webhooks/{id}")
 }

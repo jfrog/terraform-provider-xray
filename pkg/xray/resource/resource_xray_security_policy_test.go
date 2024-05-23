@@ -52,7 +52,7 @@ func TestAccSecurityPolicy_multipleRules(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -117,7 +117,7 @@ func TestAccSecurityPolicy_unknownMinSeveritySecurityPolicy_beforeVersion3602(t 
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -140,7 +140,7 @@ func TestAccSecurityPolicy_badTypeInSecurityPolicy(t *testing.T) {
 	fqrn := "xray_security_policy." + resourceName
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -162,7 +162,7 @@ func TestAccSecurityPolicy_badSecurityCriteria(t *testing.T) {
 	fqrn := "xray_security_policy." + resourceName
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -187,7 +187,7 @@ func TestAccSecurityPolicy_badGracePeriod(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -249,7 +249,7 @@ func TestAccSecurityPolicy_withProjectKey(t *testing.T) {
 			acctest.PreCheck(t)
 			acctest.CreateProject(t, projectKey)
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.DeleteProject(t, projectKey)
 			return acctest.CheckPolicy(id, request)
 		}),
@@ -287,7 +287,7 @@ func TestAccSecurityPolicy_createBlockDownloadTrueCVSS(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -316,7 +316,7 @@ func TestAccSecurityPolicy_createBlockDownloadFalseCVSS(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -343,7 +343,7 @@ func TestAccSecurityPolicy_createBlockDownloadTrueMinSeverity(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -372,7 +372,7 @@ func TestAccSecurityPolicy_createFixVersionDepMinSeverity(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -402,7 +402,7 @@ func TestAccSecurityPolicy_createMaliciousPackage(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -431,7 +431,7 @@ func TestAccSecurityPolicy_createMaliciousPackageFail(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -454,7 +454,7 @@ func TestAccSecurityPolicy_createMaliciousPackageCvssMinSeverityFail(t *testing.
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -477,7 +477,7 @@ func TestAccSecurityPolicy_createCvssMinSeverityFail(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -501,7 +501,7 @@ func TestAccSecurityPolicy_createBlockDownloadFalseMinSeverity(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -530,7 +530,7 @@ func TestAccSecurityPolicy_createCVSSFloat(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -559,7 +559,7 @@ func TestAccSecurityPolicy_blockMismatchCVSS(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -585,7 +585,7 @@ func TestAccSecurityPolicy_noActions(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -611,7 +611,7 @@ func TestAccSecurityPolicy_vulnerabilityIds(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -643,7 +643,7 @@ func TestAccSecurityPolicy_vulnerabilityIdsIncorrectCVEFails(t *testing.T) {
 
 		resource.Test(t, resource.TestCase{
 			PreCheck:                 func() { acctest.PreCheck(t) },
-			CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+			CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 			ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 			Steps: []resource.TestStep{
 				{
@@ -684,7 +684,7 @@ func TestAccSecurityPolicy_conflictingAttributesFail(t *testing.T) {
 
 			resource.Test(t, resource.TestCase{
 				PreCheck:                 func() { acctest.PreCheck(t) },
-				CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+				CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 				ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 				Steps: []resource.TestStep{
 					{
@@ -720,7 +720,7 @@ func TestAccSecurityPolicy_vulnerabilityIdsLimitFail(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -746,7 +746,7 @@ func TestAccSecurityPolicy_exposures(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{

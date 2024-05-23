@@ -104,7 +104,7 @@ func objectiveTestCase(objective string, t *testing.T) (*testing.T, resource.Tes
 	return t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, testCheckIgnoreRule),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckIgnoreRule),
 		Steps: []resource.TestStep{
 			{
 				Config: config,
@@ -148,7 +148,7 @@ func TestAccIgnoreRule_operational_risk(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, testCheckIgnoreRule),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckIgnoreRule),
 		Steps: []resource.TestStep{
 			{
 				Config: config,
@@ -247,7 +247,7 @@ func TestAccIgnoreRule_scopes_policies(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, testCheckIgnoreRule),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckIgnoreRule),
 		Steps: []resource.TestStep{
 			{
 				Config: config,
@@ -332,7 +332,7 @@ func TestAccIgnoreRule_scopes_watches_policies(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, testCheckIgnoreRule),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckIgnoreRule),
 		Steps: []resource.TestStep{
 			{
 				Config: config,
@@ -399,7 +399,7 @@ func TestAccIgnoreRule_scopes_no_expiration_policies(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, testCheckIgnoreRule),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckIgnoreRule),
 		Steps: []resource.TestStep{
 			{
 				Config: config,
@@ -476,7 +476,7 @@ func TestAccIgnoreRule_scopes_no_expiration_watches(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, testCheckIgnoreRule),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckIgnoreRule),
 		Steps: []resource.TestStep{
 			{
 				Config: config,
@@ -517,7 +517,7 @@ func TestAccIgnoreRule_docker_layers(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, testCheckIgnoreRule),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckIgnoreRule),
 		Steps: []resource.TestStep{
 			{
 				Config: config,
@@ -654,7 +654,7 @@ func TestAccIgnoreRule_artifact(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, testCheckIgnoreRule),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckIgnoreRule),
 		Steps: []resource.TestStep{
 			{
 				Config: config,
@@ -757,7 +757,7 @@ func TestAccIgnoreRule_with_project_key(t *testing.T) {
 				VersionConstraint: "1.5.1",
 			},
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, testCheckIgnoreRule),
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "", testCheckIgnoreRule),
 		Steps: []resource.TestStep{
 			{
 				Config: config,

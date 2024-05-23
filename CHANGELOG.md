@@ -1,3 +1,15 @@
+## 2.6.0 (May 6, 2024). Tested on Artifactory 7.84.11 and Xray 3.95.7
+
+FEATURES:
+
+* provider: Add support for Terraform Cloud Workload Identity Token. PR: [#183](https://github.com/jfrog/terraform-provider-xray/pull/183)
+
+## 2.5.1 (April 30, 2024). Tested on Artifactory 7.77.10 and Xray 3.94.5
+
+* resource/xray_settings: Migrate from SDKv2 to Plugin Framework. PR: [#174](https://github.com/jfrog/terraform-provider-xray/pull/174)
+* resource/xray_workers_count: Migrate from SDKv2 to Plugin Framework. PR: [#175](https://github.com/jfrog/terraform-provider-xray/pull/175)
+* resource/xray_webhook: Migrate from SDKv2 to Plugin Framework. PR: [#176](https://github.com/jfrog/terraform-provider-xray/pull/176)
+
 ## 2.5.0 (March 29, 2024). Tested on Artifactory 7.77.8 and Xray 3.91.3
 
 FEATURES:

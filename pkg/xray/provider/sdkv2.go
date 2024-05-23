@@ -31,12 +31,18 @@ func SdkV2() *schema.Provider {
 				Description:  "URL of Xray. This can also be sourced from the `XRAY_URL` or `JFROG_URL` environment variable. Default to 'http://localhost:8081' if not set.",
 			},
 			"access_token": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Sensitive:   true,
+				DefaultFunc: schema.MultiEnvDefaultFunc([]string{"XRAY_ACCESS_TOKEN", "JFROG_ACCESS_TOKEN"}, ""),
+				// ValidateDiagFunc: validator.StringIsNotEmpty,
+				Description: "This is a bearer token that can be given to you by your admin under `Identity and Access`",
+			},
+			"oidc_provider_name": {
 				Type:             schema.TypeString,
 				Optional:         true,
-				Sensitive:        true,
-				DefaultFunc:      schema.MultiEnvDefaultFunc([]string{"XRAY_ACCESS_TOKEN", "JFROG_ACCESS_TOKEN"}, ""),
 				ValidateDiagFunc: validator.StringIsNotEmpty,
-				Description:      "This is a bearer token that can be given to you by your admin under `Identity and Access`",
+				Description:      "OIDC provider name. See [Configure an OIDC Integration](https://jfrog.com/help/r/jfrog-platform-administration-documentation/configure-an-oidc-integration) for more details.",
 			},
 			"check_license": {
 				Type:        schema.TypeBool,
@@ -54,15 +60,12 @@ func SdkV2() *schema.Provider {
 				"xray_operational_risk_policy":  xray.ResourceXrayOperationalRiskPolicy(),
 				"xray_watch":                    xray.ResourceXrayWatch(),
 				"xray_ignore_rule":              xray.ResourceXrayIgnoreRule(),
-				"xray_settings":                 xray.ResourceXraySettings(),
-				"xray_workers_count":            xray.ResourceXrayWorkersCount(),
 				"xray_repository_config":        xray.ResourceXrayRepositoryConfig(),
 				"xray_vulnerabilities_report":   xray.ResourceXrayVulnerabilitiesReport(),
 				"xray_licenses_report":          xray.ResourceXrayLicensesReport(),
 				"xray_violations_report":        xray.ResourceXrayViolationsReport(),
 				"xray_operational_risks_report": xray.ResourceXrayOperationalRisksReport(),
 				"xray_custom_issue":             xray.ResourceXrayCustomIssue(),
-				"xray_webhook":                  xray.ResourceXrayWebhook(),
 			},
 		),
 	}
@@ -86,40 +89,55 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 		return nil, diag.Errorf("you must supply a URL")
 	}
 
-	restyBase, err := client.Build(URL.(string), productId)
-	if err != nil {
-		return nil, diag.FromErr(err)
-	}
-	accessToken := d.Get("access_token").(string)
-
-	restyBase, err = client.AddAuth(restyBase, "", accessToken)
+	restyClient, err := client.Build(URL.(string), productId)
 	if err != nil {
 		return nil, diag.FromErr(err)
 	}
 
-	checkLicense := d.Get("check_license").(bool)
-	if checkLicense {
-		licenseErr := sdk.CheckArtifactoryLicense(restyBase, "Enterprise", "Commercial")
-		if licenseErr != nil {
-			return nil, licenseErr
+	var accessToken string
+
+	if v, ok := d.GetOk("oidc_provider_name"); ok {
+		oidcAccessToken, err := util.OIDCTokenExchange(ctx, restyClient, v.(string))
+		if err != nil {
+			return nil, diag.FromErr(err)
+		}
+
+		if oidcAccessToken != "" {
+			accessToken = oidcAccessToken
 		}
 	}
 
-	artifactoryVersion, err := util.GetArtifactoryVersion(restyBase)
+	if v, ok := d.GetOk("access_token"); ok && v != "" {
+		accessToken = v.(string)
+	}
+
+	restyClient, err = client.AddAuth(restyClient, "", accessToken)
 	if err != nil {
 		return nil, diag.FromErr(err)
 	}
 
-	xrayVersion, err := util.GetXrayVersion(restyBase)
+	if checkLicense := d.Get("check_license").(bool); checkLicense {
+		licenseErr := util.CheckArtifactoryLicense(restyClient, "Enterprise", "Commercial")
+		if licenseErr != nil {
+			return nil, diag.FromErr(licenseErr)
+		}
+	}
+
+	artifactoryVersion, err := util.GetArtifactoryVersion(restyClient)
+	if err != nil {
+		return nil, diag.FromErr(err)
+	}
+
+	xrayVersion, err := util.GetXrayVersion(restyClient)
 	if err != nil {
 		return nil, diag.FromErr(err)
 	}
 
 	featureUsage := fmt.Sprintf("Terraform/%s", terraformVersion)
-	go util.SendUsage(ctx, restyBase, productId, featureUsage)
+	go util.SendUsage(ctx, restyClient.R(), productId, featureUsage)
 
-	return util.ProvderMetadata{
-		Client:             restyBase,
+	return util.ProviderMetadata{
+		Client:             restyClient,
 		ArtifactoryVersion: artifactoryVersion,
 		XrayVersion:        xrayVersion,
 	}, nil

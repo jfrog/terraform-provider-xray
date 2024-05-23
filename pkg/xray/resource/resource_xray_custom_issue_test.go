@@ -225,7 +225,7 @@ func TestAccCustomIssue_full(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, testCheckCustomIssue),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckCustomIssue),
 		Steps: []resource.TestStep{
 			{
 				Config: config,

@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -14,9 +13,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/jfrog/terraform-provider-shared/client"
 	"github.com/jfrog/terraform-provider-shared/util"
-	utilfw "github.com/jfrog/terraform-provider-shared/util/fw"
 	validatorfw_string "github.com/jfrog/terraform-provider-shared/validator/fw/string"
 	xray_datasource "github.com/jfrog/terraform-provider-xray/pkg/xray/datasource"
+	xray_resource "github.com/jfrog/terraform-provider-xray/pkg/xray/resource"
 )
 
 // Ensure the implementation satisfies the provider.Provider interface.
@@ -26,9 +25,10 @@ type XrayProvider struct{}
 
 // XrayProviderModel describes the provider data model.
 type XrayProviderModel struct {
-	Url          types.String `tfsdk:"url"`
-	AccessToken  types.String `tfsdk:"access_token"`
-	CheckLicense types.Bool   `tfsdk:"check_license"`
+	Url              types.String `tfsdk:"url"`
+	AccessToken      types.String `tfsdk:"access_token"`
+	OIDCProviderName types.String `tfsdk:"oidc_provider_name"`
+	CheckLicense     types.Bool   `tfsdk:"check_license"`
 }
 
 // Metadata satisfies the provider.Provider interface for ArtifactoryProvider
@@ -56,6 +56,13 @@ func (p *XrayProvider) Schema(ctx context.Context, req provider.SchemaRequest, r
 				},
 				Description: "This is a bearer token that can be given to you by your admin under `Identity and Access`",
 			},
+			"oidc_provider_name": schema.StringAttribute{
+				Optional: true,
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
+				Description: "OIDC provider name. See [Configure an OIDC Integration](https://jfrog.com/help/r/jfrog-platform-administration-documentation/configure-an-oidc-integration) for more details.",
+			},
 			"check_license": schema.BoolAttribute{
 				Optional:    true,
 				Description: "Toggle for pre-flight checking of Artifactory Pro and Enterprise license. Default to `true`.",
@@ -66,8 +73,8 @@ func (p *XrayProvider) Schema(ctx context.Context, req provider.SchemaRequest, r
 
 func (p *XrayProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	// Check environment variables, first available OS variable will be assigned to the var
-	url := CheckEnvVars([]string{"JFROG_URL", "XRAY_URL"}, "")
-	accessToken := CheckEnvVars([]string{"JFROG_ACCESS_TOKEN", "XRAY_ACCESS_TOKEN"}, "")
+	url := util.CheckEnvVars([]string{"JFROG_URL", "XRAY_URL"}, "http://localhost:8081")
+	accessToken := util.CheckEnvVars([]string{"JFROG_ACCESS_TOKEN", "XRAY_ACCESS_TOKEN"}, "")
 
 	var config XrayProviderModel
 
@@ -75,6 +82,44 @@ func (p *XrayProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+
+	if config.Url.ValueString() != "" {
+		url = config.Url.ValueString()
+	}
+
+	if url == "" {
+		resp.Diagnostics.AddError(
+			"Missing URL Configuration",
+			"While configuring the provider, the url was not found in "+
+				"the JFROG_URL/ARTIFACTORY_URL environment variable or provider "+
+				"configuration block url attribute.",
+		)
+		return
+	}
+
+	restyClient, err := client.Build(url, productId)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error creating Resty client",
+			err.Error(),
+		)
+		return
+	}
+
+	oidcAccessToken, err := util.OIDCTokenExchange(ctx, restyClient, config.OIDCProviderName.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Failed OIDC ID token exchange",
+			err.Error(),
+		)
+		return
+	}
+
+	// use token from OIDC provider, which should take precedence over
+	// environment variable data, if found.
+	if oidcAccessToken != "" {
+		accessToken = oidcAccessToken
 	}
 
 	// Check configuration data, which should take precedence over
@@ -87,35 +132,13 @@ func (p *XrayProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 		resp.Diagnostics.AddError(
 			"Missing JFrog Access Token",
 			"While configuring the provider, the Access Token was not found in "+
-				"the JFROG_ACCESS_TOKEN/XRAY_ACCESS_TOKEN environment variable or provider "+
-				"configuration block access_token attribute.",
+				"the JFROG_ACCESS_TOKEN/XRAY_ACCESS_TOKEN environment variable, or provider "+
+				"configuration block access_token attribute, or from Terraform Cloud Workload Identity token.",
 		)
 		return
 	}
 
-	if config.Url.ValueString() != "" {
-		url = config.Url.ValueString()
-	}
-
-	if url == "" {
-		resp.Diagnostics.AddError(
-			"Missing URL Configuration",
-			"While configuring the provider, the url was not found in "+
-				"the JFROG_URL/XRAY_URL environment variable or provider "+
-				"configuration block url attribute.",
-		)
-		return
-	}
-
-	restyBase, err := client.Build(url, productId)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error creating Resty client",
-			err.Error(),
-		)
-	}
-
-	restyBase, err = client.AddAuth(restyBase, "", accessToken)
+	restyClient, err = client.AddAuth(restyClient, "", accessToken)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error adding Auth to Resty client",
@@ -124,13 +147,16 @@ func (p *XrayProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 	}
 
 	if config.CheckLicense.IsNull() || config.CheckLicense.ValueBool() {
-		if licenseDs := utilfw.CheckArtifactoryLicense(restyBase, "Enterprise", "Commercial", "Edge"); licenseDs != nil {
-			resp.Diagnostics.Append(licenseDs...)
+		if licenseDs := util.CheckArtifactoryLicense(restyClient, "Enterprise", "Commercial", "Edge"); licenseDs != nil {
+			resp.Diagnostics.AddError(
+				"Error checking license",
+				licenseDs.Error(),
+			)
 			return
 		}
 	}
 
-	version, err := util.GetXrayVersion(restyBase)
+	version, err := util.GetXrayVersion(restyClient)
 	if err != nil {
 		resp.Diagnostics.AddWarning(
 			"Error getting Xray version",
@@ -140,16 +166,16 @@ func (p *XrayProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 	}
 
 	featureUsage := fmt.Sprintf("Terraform/%s", req.TerraformVersion)
-	go util.SendUsage(ctx, restyBase, productId, featureUsage)
+	go util.SendUsage(ctx, restyClient.R(), productId, featureUsage)
 
-	resp.DataSourceData = util.ProvderMetadata{
-		Client:      restyBase,
+	resp.DataSourceData = util.ProviderMetadata{
+		Client:      restyClient,
 		ProductId:   productId,
 		XrayVersion: version,
 	}
 
-	resp.ResourceData = util.ProvderMetadata{
-		Client:      restyBase,
+	resp.ResourceData = util.ProviderMetadata{
+		Client:      restyClient,
 		ProductId:   productId,
 		XrayVersion: version,
 	}
@@ -157,7 +183,11 @@ func (p *XrayProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 
 // Resources satisfies the provider.Provider interface for ArtifactoryProvider.
 func (p *XrayProvider) Resources(ctx context.Context) []func() resource.Resource {
-	return []func() resource.Resource{}
+	return []func() resource.Resource{
+		xray_resource.NewSettingsResource,
+		xray_resource.NewWebhookResource,
+		xray_resource.NewWorkersCountResource,
+	}
 }
 
 // DataSources satisfies the provider.Provider interface for ArtifactoryProvider.
@@ -171,13 +201,4 @@ func Framework() func() provider.Provider {
 	return func() provider.Provider {
 		return &XrayProvider{}
 	}
-}
-
-func CheckEnvVars(vars []string, dv string) string {
-	for _, k := range vars {
-		if v := os.Getenv(k); v != "" {
-			return v
-		}
-	}
-	return dv
 }

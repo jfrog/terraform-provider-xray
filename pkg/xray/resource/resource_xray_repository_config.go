@@ -480,7 +480,7 @@ func ResourceXrayRepositoryConfig() *schema.Resource {
 		repositoryConfig := RepositoryConfiguration{}
 		repoName := d.Id()
 
-		metadata := m.(util.ProvderMetadata)
+		metadata := m.(util.ProviderMetadata)
 
 		resp, err := metadata.Client.R().
 			SetResult(&repositoryConfig).
@@ -504,7 +504,7 @@ func ResourceXrayRepositoryConfig() *schema.Resource {
 	}
 
 	var resourceXrayRepositoryConfigCreate = func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-		metadata := m.(util.ProvderMetadata)
+		metadata := m.(util.ProviderMetadata)
 		packageType, err := getPackageType(metadata.Client, d.Get("repo_name").(string))
 		if err != nil {
 			return diag.FromErr(err)

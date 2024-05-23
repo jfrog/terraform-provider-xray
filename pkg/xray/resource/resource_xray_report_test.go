@@ -472,7 +472,7 @@ func mkFilterTestCase(t *testing.T, resourceFields map[string]interface{}, filte
 
 	return t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, testCheckReport), // how to get ID?
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckReport), // how to get ID?
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{

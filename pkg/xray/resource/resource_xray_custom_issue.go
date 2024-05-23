@@ -451,7 +451,7 @@ func ResourceXrayCustomIssue() *schema.Resource {
 	var resourceXrayCustomIssueRead = func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 		customIssue := CustomIssue{}
 
-		req, err := getRestyRequest(m.(util.ProvderMetadata).Client, "")
+		req, err := getRestyRequest(m.(util.ProviderMetadata).Client, "")
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -480,7 +480,7 @@ func ResourceXrayCustomIssue() *schema.Resource {
 			return diag.FromErr(err)
 		}
 
-		req, err := getRestyRequest(m.(util.ProvderMetadata).Client, "")
+		req, err := getRestyRequest(m.(util.ProviderMetadata).Client, "")
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -506,7 +506,7 @@ func ResourceXrayCustomIssue() *schema.Resource {
 			return diag.FromErr(err)
 		}
 
-		req, err := getRestyRequest(m.(util.ProvderMetadata).Client, "")
+		req, err := getRestyRequest(m.(util.ProviderMetadata).Client, "")
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -528,7 +528,7 @@ func ResourceXrayCustomIssue() *schema.Resource {
 	}
 
 	var resourceXrayCustomIssueDelete = func(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-		req, err := getRestyRequest(m.(util.ProvderMetadata).Client, "")
+		req, err := getRestyRequest(m.(util.ProviderMetadata).Client, "")
 		if err != nil {
 			return diag.FromErr(err)
 		}
