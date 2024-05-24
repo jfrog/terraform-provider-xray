@@ -195,7 +195,7 @@ func (r *BinaryManagerReposResource) Schema(ctx context.Context, req resource.Sc
 						},
 					},
 				},
-				Optional:    true,
+				Required:    true,
 				Description: "Repositories to be indexed.",
 			},
 			"non_indexed_repos": schema.SetNestedAttribute{

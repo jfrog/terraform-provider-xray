@@ -185,7 +185,7 @@ func (p *XrayProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 func (p *XrayProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		xray_resource.NewBinaryManagerReposResource,
-		// xray_resource.NewBinaryManagerBuildsResource,
+		xray_resource.NewBinaryManagerBuildsResource,
 		// xray_resource.NewBinaryManagerReleaseBundlesResource,
 		xray_resource.NewSettingsResource,
 		xray_resource.NewWebhookResource,
