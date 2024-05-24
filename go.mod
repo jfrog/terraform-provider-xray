@@ -14,9 +14,10 @@ require (
 	github.com/hashicorp/terraform-plugin-mux v0.16.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.34.0
 	github.com/hashicorp/terraform-plugin-testing v1.5.1
-	github.com/jfrog/terraform-provider-shared v1.25.2
+	github.com/jfrog/terraform-provider-shared v1.25.3
 	github.com/samber/lo v1.39.0
 	golang.org/x/exp v0.0.0-20230809150735-7b3493d9a819
+	golang.org/x/text v0.15.0
 )
 
 require (
@@ -79,7 +80,6 @@ require (
 	golang.org/x/mod v0.16.0 // indirect
 	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/sys v0.20.0 // indirect
-	golang.org/x/text v0.15.0 // indirect
 	golang.org/x/tools v0.13.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240227224415-6ceb2ff114de // indirect
