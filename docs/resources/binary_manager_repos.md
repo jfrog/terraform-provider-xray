@@ -18,10 +18,10 @@ Provides an Xray Binary Manager Repository Indexing configuration resource. See 
 ### Required
 
 - `id` (String) ID of the binary manager, e.g. 'default'
+- `indexed_repos` (Attributes Set) Repositories to be indexed. (see [below for nested schema](#nestedatt--indexed_repos))
 
 ### Optional
 
-- `indexed_repos` (Attributes Set) Repositories to be indexed. (see [below for nested schema](#nestedatt--indexed_repos))
 - `project_key` (String) For Xray version 3.21.2 and above with Projects, a Project Admin with Index Resources privilege can maintain the indexed and not indexed repositories in a given binary manger using this resource in the scope of a project.
 
 ### Read-Only
