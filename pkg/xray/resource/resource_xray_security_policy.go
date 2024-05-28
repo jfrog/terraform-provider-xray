@@ -120,11 +120,11 @@ func ResourceXraySecurityPolicyV2() *schema.Resource {
 		"package_versions": {
 			Type:        schema.TypeSet,
 			Optional:    true,
-			Description: "package versions to apply the rule on can be (,) for any version or a open range (1,4) or closed [1,4] or one version [1]",
+			Description: "package versions to apply the rule on can be (,) for any version or an open range (1,4) or closed [1,4] or one version [1]",
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 				ValidateDiagFunc: validation.ToDiagFunc(
-					validation.StringMatch(regexp.MustCompile(`((^(\(|\[)((\d+\.)?(\d+\.)?(\*|\d+)|(\s*))\,((\d+\.)?(\d+\.)?(\*|\d+)|(\s*))(\)|\])$|^\[(\d+\.)?(\d+\.)?(\*|\d+)\]$))`), "invalid Range, must be one of the follows: Any Version: (,) or Speciific Version: [1.2], [3] or Range: (1,), [,1.2.3], (4.5.0,6.5.2]"),
+					validation.StringMatch(regexp.MustCompile(`((^(\(|\[)((\d+\.)?(\d+\.)?(\*|\d+)|(\s*))\,((\d+\.)?(\d+\.)?(\*|\d+)|(\s*))(\)|\])$|^\[(\d+\.)?(\d+\.)?(\*|\d+)\]$))`), "invalid Range, must be one of the follows: Any Version: (,) or Specific Version: [1.2], [3] or Range: (1,), [,1.2.3], (4.5.0,6.5.2]"),
 				),
 			},
 		},
