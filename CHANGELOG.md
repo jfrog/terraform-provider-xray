@@ -1,4 +1,4 @@
-## 2.7.0 (May 29, 2024)
+## 2.7.0 (May 29, 2024). Tested on Artifactory 7.84.12 and Xray 3.96.1
 
 FEATURES:
 
