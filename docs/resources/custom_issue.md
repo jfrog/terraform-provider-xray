@@ -53,7 +53,7 @@ resource "xray_custom_issue" "my-issue-1" {
 - `cve` (Block Set, Min: 1) CVE of the custom issue (see [below for nested schema](#nestedblock--cve))
 - `description` (String) Description of custom issue
 - `name` (String) Name of the custom issue. It must not begin with 'xray' (case insensitive)
-- `package_type` (String) Package Type of custom issue. Valid values are: alpine, bower, cargo, chef, cocoapods, composer, conan, conda, cran, debian, docker, gems, generic, gitlfs, go, gradle, helm, ivy, maven, npm, nuget, opkg, p2, puppet, pypi, rpm, sbt, swift, terraform, terraformbackend, vagrant, vcs
+- `package_type` (String) Package Type of custom issue. Valid values are: alpine, bower, cargo, composer, conan, conda, cran, debian, docker, generic, go, gradle, huggingface, ivy, maven, npm, nuget, oci, pypi, rpm, rubygems, sbt, terraformbe
 - `provider_name` (String) Provider of custom issue. It must not be 'jfrog' (case insensitive)
 - `severity` (String) Severity of custom issue. Valid values: Critical, High, Medium, Low, Information
 - `source` (Block Set, Min: 1) List of sources (see [below for nested schema](#nestedblock--source))

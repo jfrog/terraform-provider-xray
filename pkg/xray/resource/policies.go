@@ -11,6 +11,27 @@ import (
 	"github.com/jfrog/terraform-provider-shared/validator"
 )
 
+var validPackageTypesSupportedXraySecPolicies = []string{
+	"alpine",
+	"cargo",
+	"composer",
+	"conan",
+	"conda",
+	"cran",
+	"debian",
+	"docker",
+	"generic",
+	"go",
+	"huggingface",
+	"maven",
+	"npm",
+	"nuget",
+	"oci",
+	"pypi",
+	"rpm",
+	"rubygems",
+}
+
 var commonActionsSchema = map[string]*schema.Schema{
 	"webhooks": {
 		Type:        schema.TypeSet,
@@ -203,6 +224,9 @@ type PolicyRuleCriteria struct {
 	MaliciousPackage    bool             `json:"malicious_package,omitempty"`
 	VulnerabilityIds    []string         `json:"vulnerability_ids,omitempty"`
 	Exposures           *PolicyExposures `json:"exposures,omitempty"`
+	PackageName         string           `json:"package_name,omitempty"`
+	PackageType         string           `json:"package_type,omitempty"`
+	PackageVersions     []string         `json:"package_versions,omitempty"`
 	// We use pointer for CVSSRange to address nil-verification for non-primitive types.
 	// Unlike primitive types, when the non-primitive type in the struct is set
 	// to nil, the empty key will be created in the JSON body anyway.
@@ -315,6 +339,15 @@ func unpackSecurityCriteria(tfCriteria map[string]interface{}) *PolicyRuleCriter
 	}
 	if _, ok := tfCriteria["exposures"]; ok {
 		criteria.Exposures = unpackExposures(tfCriteria["exposures"].([]interface{}))
+	}
+	if v, ok := tfCriteria["package_name"]; ok {
+		criteria.PackageName = v.(string)
+	}
+	if v, ok := tfCriteria["package_type"]; ok {
+		criteria.PackageType = v.(string)
+	}
+	if v, ok := tfCriteria["package_versions"]; ok {
+		criteria.PackageVersions = sdk.CastToStringArr(v.(*schema.Set).List())
 	}
 	// This is also picky about not allowing empty values to be set
 	cvss := unpackCVSSRange(tfCriteria["cvss_range"].([]interface{}))
@@ -620,6 +653,9 @@ func packSecurityCriteria(criteria *PolicyRuleCriteria) []interface{} {
 	m["fix_version_dependant"] = criteria.FixVersionDependant
 	m["malicious_package"] = criteria.MaliciousPackage
 	m["exposures"] = packExposures(criteria.Exposures)
+	m["package_name"] = criteria.PackageName
+	m["package_type"] = criteria.PackageType
+	m["package_versions"] = criteria.PackageVersions
 
 	return []interface{}{m}
 }
