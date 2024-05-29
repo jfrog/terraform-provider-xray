@@ -122,7 +122,7 @@ func TestAccBinaryManagerRepos_full(t *testing.T) {
 						"package_type": "Docker",
 					}),
 				),
-				ConfigPlanChecks: testutil.ConfigPlanChecks(""),
+				ConfigPlanChecks: testutil.ConfigPlanChecks("xray_binary_manager_repos"),
 			},
 			{
 				ResourceName:                         fqrn,
@@ -321,7 +321,7 @@ func TestAccBinaryManagerRepos_project_full(t *testing.T) {
 						"package_type": "Docker",
 					}),
 				),
-				ConfigPlanChecks: testutil.ConfigPlanChecks(""),
+				ConfigPlanChecks: testutil.ConfigPlanChecks("xray_binary_manager_repos"),
 			},
 			{
 				ResourceName:                         fqrn,

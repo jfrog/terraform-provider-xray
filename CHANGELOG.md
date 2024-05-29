@@ -1,3 +1,9 @@
+## 2.8.0 (May 30, 2024)
+
+IMPROVEMENTS:
+
+* resource/xray_security_policy: Add `package_name`, `package_type`, and `package_versions` attributes to support package security policy. PR: [#189](https://github.com/jfrog/terraform-provider-xray/pull/189)
+
 ## 2.7.1 (May 29, 2024). Tested on Artifactory 7.84.12 and Xray 3.96.1
 
 IMPROVEMENTS:

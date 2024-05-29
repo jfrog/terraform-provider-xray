@@ -51,7 +51,7 @@ func uploadBuild(t *testing.T, name, number, projectKey string) error {
 	return nil
 }
 
-func deleteBuild(t *testing.T, name, number, projectKey string) error {
+func deleteBuild(t *testing.T, name, projectKey string) error {
 	type Build struct {
 		Name      string `json:"buildName"`
 		BuildRepo string `json:"buildRepo"`
@@ -137,11 +137,11 @@ func TestAccBinaryManagerBuilds_full(t *testing.T) {
 			},
 		},
 		CheckDestroy: func(*terraform.State) error {
-			if err := deleteBuild(t, build1Name, "1", ""); err != nil {
+			if err := deleteBuild(t, build1Name, ""); err != nil {
 				return err
 			}
 
-			if err := deleteBuild(t, build2Name, "1", ""); err != nil {
+			if err := deleteBuild(t, build2Name, ""); err != nil {
 				return nil
 			}
 
@@ -238,11 +238,11 @@ func TestAccBinaryManagerBuilds_project_full(t *testing.T) {
 			},
 		},
 		CheckDestroy: func(*terraform.State) error {
-			if err := deleteBuild(t, build1Name, "1", projectKey); err != nil {
+			if err := deleteBuild(t, build1Name, projectKey); err != nil {
 				return err
 			}
 
-			if err := deleteBuild(t, build2Name, "1", projectKey); err != nil {
+			if err := deleteBuild(t, build2Name, projectKey); err != nil {
 				return nil
 			}
 
