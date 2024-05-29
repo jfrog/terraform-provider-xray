@@ -779,7 +779,7 @@ func TestAccSecurityPolicy_Packages(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -813,7 +813,7 @@ func TestAccSecurityPolicy_PackagesIncorrectVersionRangeFails(t *testing.T) {
 
 		resource.Test(t, resource.TestCase{
 			PreCheck:                 func() { acctest.PreCheck(t) },
-			CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+			CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 			ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 			Steps: []resource.TestStep{
 				{
@@ -841,7 +841,7 @@ func TestAccSecurityPolicy_createPackagesFail(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, acctest.CheckPolicy),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
