@@ -1,3 +1,9 @@
+## 2.7.1 (May 29, 2024). Tested on Artifactory 7.84.12 and Xray 3.96.1
+
+IMPROVEMENTS:
+
+* resource/xray_binary_manager_repos and resource/xray_binary_manager_builds: Add missing usage and import examples to documentation. PR: [#194](https://github.com/jfrog/terraform-provider-xray/pull/194) Issue: [#129](https://github.com/jfrog/terraform-provider-xray/issues/129)
+
 ## 2.7.0 (May 29, 2024). Tested on Artifactory 7.84.12 and Xray 3.96.1
 
 FEATURES:
