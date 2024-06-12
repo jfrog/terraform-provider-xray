@@ -26,13 +26,14 @@ jobs:
         uses: azure/setup-helm@v4.2.0
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
       - name: Checkout
         uses: actions/checkout@v4
         with:
           repository: jfrog/terraform-provider-shared
       - name: Setup k8s cluster
         id: create_cluster
-        uses: azure/setup-kubectl@v4
         env:
           GKE_ZONE: ${{ env.GKE_ZONE }}
           GKE_PROJECT: ${{ env.GKE_PROJECT }}
@@ -62,7 +63,6 @@ jobs:
           XRAY_VERSION=$(helm search repo | grep "/xray" | awk '{$1=$1};1' |  cut -f3 -d " ")
           echo "xray_version=$XRAY_VERSION" >> "$GITHUB_OUTPUT"
       - name: Install Artifactory
-        uses: azure/setup-kubectl@v4
         env:
           ARTIFACTORY_LICENSE: ${{ secrets.ARTIFACTORY_LICENSE }}
           ZSCALER_CIDR1: ${{ secrets.ZSCALER_CIDR1 }}
@@ -83,7 +83,6 @@ jobs:
           kubectl rollout status statefulset/artifactory
       - name: Install Xray
         id: install_xray
-        uses: azure/setup-kubectl@v4
         run: |
           helm upgrade --install xray jfrog/xray --set postgresql.persistence.size=200Gi --set xray.jfrogUrl=http://artifactory-artifactory-nginx --set xray.masterKey=$MASTER_KEY --set xray.joinKey=$JOIN_KEY --set xray.serviceAccount.create=true --set xray.rbac.create=true
           kubectl rollout status statefulset/xray-postgresql
@@ -136,6 +135,8 @@ jobs:
         id: install_terraform_cli
         uses: hashicorp/setup-terraform@v3
         if: ${{ matrix.cli == 'terraform' }}
+      - name: Get Terraform CLI version
+        if: ${{ matrix.cli == 'terraform' }}
         run: |
           TF_VERSION=$(terraform -v -json | jq -r .terraform_version)
           echo $TF_VERSION
@@ -143,6 +144,8 @@ jobs:
       - name: Install OpenTofu CLI
         id: install_opentofu_cli
         uses: opentofu/setup-opentofu@v1
+        if: ${{ matrix.cli == 'tofu' }}
+      - name: Get OpenTofu CLI version
         if: ${{ matrix.cli == 'tofu' }}
         run: |
           echo "TF_ACC_TERRAFORM_PATH=$(which tofu)" >> "$GITHUB_ENV"
