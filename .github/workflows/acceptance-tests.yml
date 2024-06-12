@@ -35,10 +35,10 @@ jobs:
       - name: Setup k8s cluster
         id: create_cluster
         env:
-          GKE_ZONE: ${{ env.GKE_ZONE }}
-          GKE_PROJECT: ${{ env.GKE_PROJECT }}
-          MACHINE_TYPE: ${{ env.GKE_MACHINE_TYPE }}
-          NUM_NODES: ${{ env.GKE_NUM_NODES }} # default is 3
+          GKE_ZONE: ${{ vars.GKE_ZONE }}
+          GKE_PROJECT: ${{ vars.GKE_PROJECT }}
+          MACHINE_TYPE: ${{ vars.GKE_MACHINE_TYPE }}
+          NUM_NODES: ${{ vars.GKE_NUM_NODES }} # default is 3
           SERVICE_ACCOUNT_JSON: ${{ secrets.GKE_SERVICE_ACCOUNT_JSON }}
           ZSCALER_CIDR1: ${{ secrets.ZSCALER_CIDR1 }}
           ZSCALER_CIDR2: ${{ secrets.ZSCALER_CIDR2 }}
