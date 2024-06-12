@@ -94,7 +94,7 @@ jobs:
       - name: Get URL
         id: get_jfrog_url
         run: |
-          SERVICE_IP=$(kubectl get svc --namespace default artifactory-artifactory-nginx -o jsonpath='***.status.loadBalancer.ingress[0].ip***')
+          SERVICE_IP=$(kubectl get svc --namespace default artifactory-artifactory-nginx -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
           JFROG_URL=http://$SERVICE_IP
           echo "JFROG_URL=$JFROG_URL" >> "$GITHUB_ENV"
           echo $JFROG_URL
