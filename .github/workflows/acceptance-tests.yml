@@ -46,7 +46,7 @@ jobs:
           echo "GKE_CLUSTER=$GKE_CLUSTER" >> "$GITHUB_ENV"
           echo "gke_cluster=$GKE_CLUSTER" >> "$GITHUB_OUTPUT"
           echo "Whitelist Pipelines Node CIDR to be able to run Artifactory and Xray tests. Same variable is used in gke/create_cluster step to restrict access to the control plane."
-          export WHITELIST_CIDR=$(curl ifconfig.me)/32
+          export WHITELIST_CIDR=$(curl -s ifconfig.me)/32
           echo "WHITELIST_CIDR=$WHITELIST_CIDR" >> "$GITHUB_ENV"
           echo "Creating GKE service account JSON file"
           export SERVICE_ACCOUNT_JSON=${{ runner.temp }}/jfrog-partnership-team.json
