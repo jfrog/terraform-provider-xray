@@ -196,7 +196,7 @@ jobs:
   cleanup-gke-cluster:
     runs-on: ubuntu-latest
     needs: [create-gke-cluster, acceptance-tests-matrix]
-    if: always()
+    if: always() && needs.create-gke-cluster.result == 'success'
     steps:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
