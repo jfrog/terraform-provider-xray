@@ -151,6 +151,8 @@ jobs:
           install-only: true
       - name: Get access token
         id: get_access_token
+        env:
+          JFROG_URL: ${{ needs.create-gke-cluster.outputs.jfrog_url }}
         run: |
           echo "Get cookie to generate Access token"
           COOKIES=$(curl -s -c - "${JFROG_URL}/ui/api/v1/ui/auth/login?_spring_security_remember_me=false" \
