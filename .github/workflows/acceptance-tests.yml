@@ -95,7 +95,7 @@ jobs:
         id: get_jfrog_url
         run: |
           JFROG_URL=$(kubectl get svc artifactory-artifactory-nginx -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-          echo "JFROG_URL=$JFROG_URL" >> "$GITHUB_ENV"
+          echo "JFROG_URL=http://$JFROG_URL" >> "$GITHUB_ENV"
           echo "url=http://$JFROG_URL" >> "$GITHUB_OUTPUT"
       - name: Get access token
         id: get_access_token
@@ -120,7 +120,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: create-gke-cluster
     continue-on-error: false
-    environment: development
     outputs:
       tf_version: ${{ steps.get_terraform_cli_version.outputs.version }}
       tofu_version: ${{ steps.get_opentofu_cli_version.outputs.version }}
