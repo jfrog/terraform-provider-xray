@@ -150,6 +150,8 @@ jobs:
       - name: Install OpenTofu CLI
         uses: opentofu/setup-opentofu@v1
         if: ${{ matrix.cli == 'tofu' }}
+        with:
+          tofu_wrapper: false
       - name: Get OpenTofu CLI version
         id: get_opentofu_cli_version
         if: ${{ matrix.cli == 'tofu' }}
@@ -209,8 +211,8 @@ jobs:
           repository: jfrog/terraform-provider-shared
       - name: Delete GKE cluster
         env:
-          GKE_ZONE: ${{ secrets.GKE_ZONE }}
-          GKE_PROJECT: ${{ secrets.GKE_PROJECT }}
+          GKE_ZONE: ${{ vars.GKE_ZONE }}
+          GKE_PROJECT: ${{ vars.GKE_PROJECT }}
           GKE_CLUSTER: ${{ needs.create-gke-cluster.outputs.gke_cluster }}
           SERVICE_ACCOUNT_JSON: ${{ secrets.GKE_SERVICE_ACCOUNT_JSON }}
         run: |
