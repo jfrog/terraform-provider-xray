@@ -14,11 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     environment: development
     outputs:
-      tf_version: ${{ steps.install_terraform_cli.outputs.version }}
-      tofu_version: ${{ steps.install_opentofu_cli.outputs.version }}
+      gke_cluster: ${{ steps.create_cluster.outputs.gke_cluster }}
       artifactory_version: ${{ steps.get_versions.outputs.rt_version }}
       xray_version: ${{ steps.get_versions.outputs.xray_version }}
-      gke_cluster: ${{ steps.create_cluster.outputs.gke_cluster }}
       jfrog_url: ${{ steps.get_jfrog_url.outputs.url }}
       jfrog_access_token: ${{ steps.get_access_token.outputs.access_token }}
     steps:
@@ -26,6 +24,8 @@ jobs:
         uses: azure/setup-helm@v4.2.0
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
+        with:
+          install_components: gke-gcloud-auth-plugin
       - name: Setup kubectl
         uses: azure/setup-kubectl@v4
       - name: Checkout
@@ -121,6 +121,9 @@ jobs:
     needs: create-gke-cluster
     continue-on-error: false
     environment: development
+    outputs:
+      tf_version: ${{ steps.get_terraform_cli_version.outputs.version }}
+      tofu_version: ${{ steps.get_opentofu_cli_version.outputs.version }}
     strategy:
       fail-fast: true
       matrix:
@@ -135,20 +138,20 @@ jobs:
         with:
           go-version: 1.21
       - name: Install Terraform CLI
-        id: install_terraform_cli
         uses: hashicorp/setup-terraform@v3
         if: ${{ matrix.cli == 'terraform' }}
       - name: Get Terraform CLI version
+        id: get_terraform_cli_version
         if: ${{ matrix.cli == 'terraform' }}
         run: |
           TF_VERSION=$(terraform -v -json | jq -r .terraform_version)
           echo $TF_VERSION
           echo "version=$TF_VERSION" >> "$GITHUB_OUTPUT"
       - name: Install OpenTofu CLI
-        id: install_opentofu_cli
         uses: opentofu/setup-opentofu@v1
         if: ${{ matrix.cli == 'tofu' }}
       - name: Get OpenTofu CLI version
+        id: get_opentofu_cli_version
         if: ${{ matrix.cli == 'tofu' }}
         run: |
           echo "TF_ACC_TERRAFORM_PATH=$(which tofu)" >> "$GITHUB_ENV"
@@ -216,7 +219,7 @@ jobs:
 
   update-changelog:
     runs-on: ubuntu-latest
-    needs: acceptance-tests-matrix
+    needs: [create-gke-cluster, acceptance-tests-matrix]
     if: |
       always() &&
       (github.event_name == 'pull_request' && needs.acceptance-tests-matrix.result == 'success')
@@ -229,7 +232,8 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref }}
       - name: Update CHANGELOG and push commit
         env:
-          ARTIFACTORY_VERSION: ${{ needs.acceptance-tests-matrix.outputs.artifactory_version }}
+          ARTIFACTORY_VERSION: ${{ needs.create-gke-cluster.outputs.artifactory_version }}
+          XRAY_VERSION: ${{ needs.create-gke-cluster.outputs.xray_version }}
           TERRAFORM_VERSION: ${{ needs.acceptance-tests-matrix.outputs.tf_version }}
           OPENTOFU_VERSION: ${{ needs.acceptance-tests-matrix.outputs.tofu_version }}
         run: |
