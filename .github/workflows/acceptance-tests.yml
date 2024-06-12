@@ -16,11 +16,11 @@ jobs:
     outputs:
       tf_version: ${{ steps.install_terraform_cli.outputs.version }}
       tofu_version: ${{ steps.install_opentofu_cli.outputs.version }}
-      artifactory_version: ${{ steps.create_cluster.outputs.rt_version }}
-      xray_version: ${{ steps.create_cluster.outputs.xray_version }}
+      artifactory_version: ${{ steps.get_versions.outputs.rt_version }}
+      xray_version: ${{ steps.get_versions.outputs.xray_version }}
       gke_cluster: ${{ steps.create_cluster.outputs.gke_cluster }}
-      jfrog_url: ${{ steps.install_xray.outputs.jfrog_url }}
-      jfrog_access_token: ${{ steps.get_access_token.outputs.jfrog_access_token }}
+      jfrog_url: ${{ steps.get_jfrog_url.outputs.url }}
+      jfrog_access_token: ${{ steps.get_access_token.outputs.access_token }}
     steps:
       - name: Install Helm
         uses: azure/setup-helm@v4.2.0
@@ -34,11 +34,10 @@ jobs:
         id: create_cluster
         uses: azure/setup-kubectl@v4
         env:
-          ARTIFACTORY_LICENSE: ${{ secrets.ARTIFACTORY_LICENSE }}
-          GKE_ZONE: ${{ secrets.GKE_ZONE }}
-          GKE_PROJECT: ${{ secrets.GKE_PROJECT }}
-          MACHINE_TYPE: "e2-standard-4"
-          NUM_NODES: ${{ secrets.GKE_NUM_NODES }} # default is 3
+          GKE_ZONE: ${{ env.GKE_ZONE }}
+          GKE_PROJECT: ${{ env.GKE_PROJECT }}
+          MACHINE_TYPE: ${{ env.GKE_MACHINE_TYPE }}
+          NUM_NODES: ${{ env.GKE_NUM_NODES }} # default is 3
           SERVICE_ACCOUNT_JSON: ${{ secrets.GKE_SERVICE_ACCOUNT_JSON }}
           ZSCALER_CIDR1: ${{ secrets.ZSCALER_CIDR1 }}
           ZSCALER_CIDR2: ${{ secrets.ZSCALER_CIDR2 }}
@@ -51,9 +50,9 @@ jobs:
           echo "WHITELIST_CIDR=$WHITELIST_CIDR" >> "$GITHUB_ENV"
           chmod +x ./scripts/create_gke_cluster.sh
           ./scripts/create_gke_cluster.sh
-          echo "Creating Artifactory License Secret"
-          echo $ARTIFACTORY_LICENSE > ${{ runner.temp }}/artifactory.cluster.license
-          kubectl create secret generic artifactory-license --from-file=${{ runner.temp }}/artifactory.cluster.license
+      - name: Get Artifactory and Xray versions
+        id: get_versions
+        run: |
           helm repo add jfrog https://charts.jfrog.io/
           helm repo update
           RT_HELM_CHART_VERSION=$(helm search repo | grep "artifactory " | awk '{$1=$1};1' |  cut -f2 -d " ")
@@ -65,9 +64,13 @@ jobs:
       - name: Install Artifactory
         uses: azure/setup-kubectl@v4
         env:
+          ARTIFACTORY_LICENSE: ${{ secrets.ARTIFACTORY_LICENSE }}
           ZSCALER_CIDR1: ${{ secrets.ZSCALER_CIDR1 }}
           ZSCALER_CIDR2: ${{ secrets.ZSCALER_CIDR2 }}
         run: |
+          echo "Creating Artifactory License Secret"
+          echo $ARTIFACTORY_LICENSE > ${{ runner.temp }}/artifactory.cluster.license
+          kubectl create secret generic artifactory-license --from-file=${{ runner.temp }}/artifactory.cluster.license
           MASTER_KEY=$(openssl rand -hex 32)
           echo "::add-mask::$MASTER_KEY"
           echo "MASTER_KEY=$MASTER_KEY" >> "$GITHUB_ENV"
@@ -86,10 +89,14 @@ jobs:
           kubectl rollout status statefulset/xray-postgresql
           kubectl rollout status statefulset/xray-rabbitmq
           kubectl rollout status statefulset/xray
+      - name: Get URL
+        id: get_jfrog_url
+        run: |
           JFROG_URL=$(kubectl get svc artifactory-artifactory-nginx -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
           echo "JFROG_URL=$JFROG_URL" >> "$GITHUB_ENV"
-          echo "jfrog_url=http://$JFROG_URL" >> "$GITHUB_OUTPUT"
+          echo "url=http://$JFROG_URL" >> "$GITHUB_OUTPUT"
       - name: Get access token
+        id: get_access_token
         run: |
           echo "Get cookie to generate Access token"
           export COOKIES=$(curl -s -c - "${JFROG_URL}/ui/api/v1/ui/auth/login?_spring_security_remember_me=false" \
@@ -104,7 +111,7 @@ jobs:
             --header "x-requested-with: XMLHttpRequest" \
             --header "cookie: ACCESSTOKEN=${ACCESSTOKEN}; REFRESHTOKEN=${REFRESHTOKEN}")
           echo "::add-mask::$JFROG_ACCESS_TOKEN"
-          echo "jfrog_access_token=$JFROG_ACCESS_TOKEN" >> "$GITHUB_OUTPUT"
+          echo "access_token=$JFROG_ACCESS_TOKEN" >> "$GITHUB_OUTPUT"
 
   acceptance-tests-matrix:
     name: ${{ matrix.cli }}
@@ -185,8 +192,8 @@ jobs:
     needs: [create-gke-cluster, acceptance-tests-matrix]
     if: always()
     steps:
-      - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v2'
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -204,7 +211,9 @@ jobs:
   update-changelog:
     runs-on: ubuntu-latest
     needs: acceptance-tests-matrix
-    if: ${{ github.event_name == 'pull_request' }} && ${{ needs.acceptance-tests-matrix.result == 'success' }}
+    if: |
+      always() &&
+      (github.event_name == 'pull_request' && needs.acceptance-tests-matrix.result == 'success')
     permissions:
       contents: write
     steps:
