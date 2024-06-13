@@ -55,7 +55,7 @@ jobs:
           gcloud auth activate-service-account --key-file="$SERVICE_ACCOUNT_JSON"
           echo "Creating GKE cluster ${GKE_CLUSTER} using default authentication"
           gcloud container clusters create "$GKE_CLUSTER" --zone "$GKE_ZONE" \
-            --cluster-version 1.28.9-gke.1289000 \
+            --cluster-version 1.27.13-gke.1000000 \
             --node-locations "$GKE_ZONE" --num-nodes "${NUM_NODES:-5}" --enable-autoscaling \
             --machine-type "$MACHINE_TYPE" \
             --disk-size 50Gi \
