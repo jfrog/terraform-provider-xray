@@ -79,14 +79,28 @@ jobs:
           JOIN_KEY=$(openssl rand -hex 32)
           echo "::add-mask::$JOIN_KEY"
           echo "JOIN_KEY=$JOIN_KEY" >> "$GITHUB_ENV"
-          helm upgrade --install artifactory jfrog/artifactory --set nginx.service.ssloffload=true --set artifactory.masterKey=$MASTER_KEY --set artifactory.joinKey=$JOIN_KEY --set artifactory.license.secret=artifactory-license --set artifactory.license.dataKey=artifactory.cluster.license --set postgresql.persistence.size=50Gi --set artifactory.persistence.size=50Gi --set nginx.service.loadBalancerSourceRanges="{$ZSCALER_CIDR1,$ZSCALER_CIDR2,$WHITELIST_CIDR}"
+          helm upgrade --install artifactory jfrog/artifactory \
+            --set shared.database.allowNonPostgresql=true \
+            --set artifactory.masterKey=$MASTER_KEY \
+            --set artifactory.joinKey=$JOIN_KEY \
+            --set artifactory.license.secret=artifactory-license \
+            --set artifactory.license.dataKey=artifactory.cluster.license \
+            --set artifactory.persistence.size=50Gi \
+            --set nginx.service.ssloffload=true \
+            --set nginx.service.loadBalancerSourceRanges="{$ZSCALER_CIDR1,$ZSCALER_CIDR2,$WHITELIST_CIDR}"
           echo "Waiting for Artifactory roll out"
           kubectl rollout status deployment/artifactory-artifactory-nginx
           kubectl rollout status statefulset/artifactory
       - name: Install Xray
         id: install_xray
         run: |
-          helm upgrade --install xray jfrog/xray --set postgresql.persistence.size=200Gi --set xray.jfrogUrl=http://artifactory-artifactory-nginx --set xray.masterKey=$MASTER_KEY --set xray.joinKey=$JOIN_KEY --set xray.serviceAccount.create=true --set xray.rbac.create=true
+          helm upgrade --install xray jfrog/xray \
+            --set postgresql.persistence.size=200Gi \
+            --set xray.jfrogUrl=http://artifactory-artifactory-nginx \
+            --set xray.masterKey=$MASTER_KEY \
+            --set xray.joinKey=$JOIN_KEY \
+            --set xray.serviceAccount.create=true \
+            --set xray.rbac.create=true
           kubectl rollout status statefulset/xray-postgresql
           kubectl rollout status statefulset/xray-rabbitmq
           kubectl rollout status statefulset/xray
