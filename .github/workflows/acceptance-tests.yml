@@ -55,7 +55,6 @@ jobs:
           gcloud auth activate-service-account --key-file="$SERVICE_ACCOUNT_JSON"
           echo "Creating GKE cluster ${GKE_CLUSTER} using default authentication"
           gcloud container clusters create "$GKE_CLUSTER" --zone "$GKE_ZONE" \
-            --cluster-version 1.27.13-gke.1201000 \
             --node-locations "$GKE_ZONE" --num-nodes "${NUM_NODES:-5}" --enable-autoscaling \
             --machine-type "$MACHINE_TYPE" \
             --disk-size 50Gi \
@@ -198,7 +197,7 @@ jobs:
       - name: Execute acceptance tests
         env:
           JFROG_URL: ${{ needs.create-gke-cluster.outputs.jfrog_url }}
-        run: make acceptance -e TARGET_ARCH=linux_amd64
+        run: make acceptance -e TARGET_ARCH=linux_amd64 -e JFROG_JAS_DISABLED=true
       - name: Install provider
         run: |
           export PROVIDER_VERSION=$(git describe --tags --abbrev=0 | sed  -n 's/v\([0-9]*\).\([0-9]*\).\([0-9]*\)/\1.\2.\3/p')
