@@ -1,10 +1,10 @@
 on:
-  pull_request:
-    branches:
-      - main
-    types: [opened,synchronize]
-    paths:
-      - '**.go'
+  # pull_request:
+  #   branches:
+  #     - main
+  #   types: [opened,synchronize]
+  #   paths:
+  #     - '**.go'
   workflow_dispatch:
 
 name: Terraform & OpenTofu Acceptance Tests
