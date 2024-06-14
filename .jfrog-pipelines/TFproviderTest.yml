@@ -205,7 +205,7 @@ pipelines:
             - unset ARTIFACTORY_USERNAME && unset ARTIFACTORY_PASSWORD
             - printenv
             - export TF_ACC=1
-            - make acceptance
+            - JFROG_JAS_DISABLED=true make acceptance
             - make install -e TARGET_ARCH=linux_amd64
           onSuccess:
             - >-
