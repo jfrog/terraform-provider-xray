@@ -1,3 +1,9 @@
+## 2.8.1 (June 14, 2024)
+
+BUG FIXES:
+
+* resource/xray_\*\_policy: Fix incorrect error handling when deleting a policy that is still attached to a watch. This leads to the resource being deleted even though the policy can't be deleted. PR: [#205](https://github.com/jfrog/terraform-provider-xray/pull/205)
+
 ## 2.8.0 (May 30, 2024)
 
 IMPROVEMENTS:
