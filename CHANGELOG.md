@@ -1,4 +1,4 @@
-## 2.8.1 (June 14, 2024)
+## 2.8.1 (June 14, 2024). Tested on Artifactory 7.84.14 and Xray 3.96.1
 
 BUG FIXES:
 
