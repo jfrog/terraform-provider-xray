@@ -58,13 +58,11 @@ jobs:
             --node-locations "$GKE_ZONE" --num-nodes "${NUM_NODES:-5}" --enable-autoscaling \
             --machine-type "$MACHINE_TYPE" \
             --disk-size 50Gi \
-            --min-nodes 1 --max-nodes 5 --project "$GKE_PROJECT" \
-            --enable-master-authorized-networks \
-            --master-authorized-networks "$ZSCALER_CIDR1","$ZSCALER_CIDR2","$WHITELIST_CIDR"
+            --min-nodes 1 --max-nodes 5 --project "$GKE_PROJECT"
+            # --enable-master-authorized-networks \
+            # --master-authorized-networks "$ZSCALER_CIDR1","$ZSCALER_CIDR2","$WHITELIST_CIDR"
             # add your NAT CIDR to whitelist local or CI/CD NAT IP. Set WHITELIST_CIDR in CI/CD to add CIDR to the list automatically.
           gcloud container clusters get-credentials "$GKE_CLUSTER" --zone "$GKE_ZONE" --project "$GKE_PROJECT"
-          # chmod +x ./scripts/create_gke_cluster.sh
-          # ./scripts/create_gke_cluster.sh
       - name: Get Artifactory and Xray versions
         id: get_versions
         run: |
@@ -98,8 +96,8 @@ jobs:
             --set artifactory.license.dataKey=artifactory.cluster.license \
             --set artifactory.persistence.size=50Gi \
             --set nginx.service.ssloffload=true \
-            --set nginx.service.loadBalancerSourceRanges="{$ZSCALER_CIDR1,$ZSCALER_CIDR2,$WHITELIST_CIDR}" \
-             --set postgresql.persistence.size=50Gi
+            --set postgresql.persistence.size=50Gi
+            # --set nginx.service.loadBalancerSourceRanges="{$ZSCALER_CIDR1,$ZSCALER_CIDR2,$WHITELIST_CIDR}" \
           echo "Waiting for Artifactory roll out"
           kubectl rollout status deployment/artifactory-artifactory-nginx
           kubectl rollout status statefulset/artifactory
