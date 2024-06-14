@@ -284,6 +284,10 @@ type Policy struct {
 	Modified    string        `json:"modified,omitempty"` // Omitempty is used because the field is computed
 }
 
+type PolicyError struct {
+	Error string `json:"error"`
+}
+
 func unpackPolicy(d *schema.ResourceData) (*Policy, error) {
 	policy := new(Policy)
 
@@ -754,12 +758,16 @@ func resourceXrayPolicyCreate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	resp, err := req.SetBody(policy).Post("xray/api/v2/policies")
+	var policyError PolicyError
+	resp, err := req.
+		SetBody(policy).
+		SetError(&policyError).
+		Post("xray/api/v2/policies")
 	if err != nil {
 		return diag.FromErr(err)
 	}
 	if resp.IsError() {
-		return diag.Errorf("%s", resp.String())
+		return diag.Errorf("%s", policyError.Error)
 	}
 
 	d.SetId(policy.Name)
@@ -775,9 +783,11 @@ func resourceXrayPolicyRead(ctx context.Context, d *schema.ResourceData, m inter
 		return diag.FromErr(err)
 	}
 
+	var policyError PolicyError
 	resp, err := req.
 		SetResult(&policy).
 		SetPathParam("name", d.Id()).
+		SetError(&policyError).
 		Get("xray/api/v2/policies/{name}")
 	if err != nil {
 		return diag.FromErr(err)
@@ -787,7 +797,7 @@ func resourceXrayPolicyRead(ctx context.Context, d *schema.ResourceData, m inter
 		return diag.Errorf("policy (%s) not found, removing from state", d.Id())
 	}
 	if resp.IsError() {
-		return diag.Errorf("%s", resp.String())
+		return diag.Errorf("%s", policyError.Error)
 	}
 
 	return packPolicy(policy, d)
@@ -804,17 +814,19 @@ func resourceXrayPolicyUpdate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
+	var policyError PolicyError
 	resp, err := req.
 		SetBody(policy).
 		SetPathParams(map[string]string{
 			"name": d.Id(),
 		}).
+		SetError(&policyError).
 		Put("xray/api/v2/policies/{name}")
 	if err != nil {
 		return diag.FromErr(err)
 	}
 	if resp.IsError() {
-		return diag.Errorf("%s", resp.String())
+		return diag.Errorf("%s", policyError.Error)
 	}
 
 	d.SetId(policy.Name)
@@ -832,20 +844,18 @@ func resourceXrayPolicyDelete(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	// Warning or errors can be collected in a slice type
+	var policyError PolicyError
 	resp, err := req.
 		SetPathParams(map[string]string{
 			"name": d.Id(),
 		}).
+		SetError(&policyError).
 		Delete("xray/api/v2/policies/{name}")
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	if resp.StatusCode() == http.StatusInternalServerError {
-		d.SetId("")
-	}
 	if resp.IsError() {
-		return diag.Errorf("%s", resp.String())
+		return diag.Errorf("%s", policyError.Error)
 	}
 
 	d.SetId("")

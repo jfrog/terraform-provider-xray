@@ -1169,7 +1169,7 @@ const securityPolicyMinSeverity = `resource "xray_security_policy" "{{ .resource
 		name = "{{ .rule_name }}"
 		priority = 1
 		criteria {
-            min_severity = "{{ .min_severity }}"
+			min_severity = "{{ .min_severity }}"
 		}
 		actions {
 			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
@@ -1194,7 +1194,7 @@ const securityPolicyExposures = `resource "xray_security_policy" "{{ .resource_n
 		name = "{{ .rule_name }}"
 		priority = 1
 		criteria {
-            exposures {
+			exposures {
 				min_severity 	= "{{ .exposures_min_severity }}"
 				secrets 		= {{ .exposures_secrets }}
 				applications 	= {{ .exposures_applications }}
@@ -1225,7 +1225,7 @@ const securityPolicyFixVersionDep = `resource "xray_security_policy" "{{ .resour
 		name = "{{ .rule_name }}"
 		priority = 1
 		criteria {
-            min_severity		  = "{{ .min_severity }}"
+			min_severity		  = "{{ .min_severity }}"
 			fix_version_dependant = {{ .fix_version_dependant }}
 		}
 		actions {
