@@ -26,16 +26,23 @@ jobs:
     steps:
       - name: Install Helm
         uses: azure/setup-helm@v4.2.0
+      - name: Get Artifactory and Xray versions
+        id: get_versions
+        run: |
+          helm repo add jfrog https://charts.jfrog.io/
+          helm repo update
+          RT_HELM_CHART_VERSION=$(helm search repo | grep "artifactory " | awk '{$1=$1};1' |  cut -f2 -d " ")
+          ARTIFACTORY_VERSION=$(helm search repo | grep "artifactory " | awk '{$1=$1};1' |  cut -f3 -d " ")
+          echo "rt_version=$ARTIFACTORY_VERSION" >> "$GITHUB_OUTPUT"
+          XRAY_HELM_CHART_VERSION=$(helm search repo | grep "/xray" | awk '{$1=$1};1' |  cut -f2 -d " ")
+          XRAY_VERSION=$(helm search repo | grep "/xray" | awk '{$1=$1};1' |  cut -f3 -d " ")
+          echo "xray_version=$XRAY_VERSION" >> "$GITHUB_OUTPUT"
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
         with:
           install_components: gke-gcloud-auth-plugin
       - name: Setup kubectl
         uses: azure/setup-kubectl@v4
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          repository: jfrog/terraform-provider-shared
       - name: Setup k8s cluster
         id: create_cluster
         env:
@@ -67,18 +74,8 @@ jobs:
             # --master-authorized-networks "$ZSCALER_CIDR1","$ZSCALER_CIDR2","$WHITELIST_CIDR"
             # add your NAT CIDR to whitelist local or CI/CD NAT IP. Set WHITELIST_CIDR in CI/CD to add CIDR to the list automatically.
           gcloud container clusters get-credentials "$GKE_CLUSTER" --zone "$GKE_ZONE" --project "$GKE_PROJECT"
-      - name: Get Artifactory and Xray versions
-        id: get_versions
-        run: |
-          helm repo add jfrog https://charts.jfrog.io/
-          helm repo update
-          RT_HELM_CHART_VERSION=$(helm search repo | grep "artifactory " | awk '{$1=$1};1' |  cut -f2 -d " ")
-          ARTIFACTORY_VERSION=$(helm search repo | grep "artifactory " | awk '{$1=$1};1' |  cut -f3 -d " ")
-          echo "rt_version=$ARTIFACTORY_VERSION" >> "$GITHUB_OUTPUT"
-          XRAY_HELM_CHART_VERSION=$(helm search repo | grep "/xray" | awk '{$1=$1};1' |  cut -f2 -d " ")
-          XRAY_VERSION=$(helm search repo | grep "/xray" | awk '{$1=$1};1' |  cut -f3 -d " ")
-          echo "xray_version=$XRAY_VERSION" >> "$GITHUB_OUTPUT"
       - name: Install Artifactory
+        id: install_artifactory
         env:
           ARTIFACTORY_LICENSE: ${{ secrets.ARTIFACTORY_LICENSE }}
           ZSCALER_CIDR1: ${{ secrets.ZSCALER_CIDR1 }}
@@ -105,6 +102,10 @@ jobs:
           echo "Waiting for Artifactory roll out"
           kubectl rollout status deployment/artifactory-artifactory-nginx
           kubectl rollout status statefulset/artifactory
+          SERVICE_IP=$(kubectl get svc --namespace default artifactory-artifactory-nginx -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+          JFROG_URL=http://$SERVICE_IP
+          echo "JFROG_URL=$JFROG_URL" >> "$GITHUB_ENV"
+          echo "JFrog URL: $JFROG_URL"
       - name: Install Xray
         id: install_xray
         run: |
@@ -118,13 +119,6 @@ jobs:
           kubectl rollout status statefulset/xray-postgresql
           kubectl rollout status statefulset/xray-rabbitmq
           kubectl rollout status statefulset/xray
-      - name: Get URL
-        id: get_jfrog_url
-        run: |
-          SERVICE_IP=$(kubectl get svc --namespace default artifactory-artifactory-nginx -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-          JFROG_URL=http://$SERVICE_IP
-          echo "JFROG_URL=$JFROG_URL" >> "$GITHUB_ENV"
-          echo $JFROG_URL
       - name: Checkout
         uses: actions/checkout@v4
       - name: Unshallow
