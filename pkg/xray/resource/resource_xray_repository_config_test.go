@@ -500,8 +500,7 @@ func TestAccRepositoryConfig_UpgradeFromSDKv2(t *testing.T) {
 			{
 				ExternalProviders: map[string]resource.ExternalProvider{
 					"artifactory": {
-						Source:            "jfrog/artifactory",
-						VersionConstraint: "10.1.2",
+						Source: "jfrog/artifactory",
 					},
 				},
 				ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,

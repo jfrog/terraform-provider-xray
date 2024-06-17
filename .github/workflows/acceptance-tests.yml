@@ -37,10 +37,12 @@ jobs:
           XRAY_HELM_CHART_VERSION=$(helm search repo | grep "/xray" | awk '{$1=$1};1' |  cut -f2 -d " ")
           XRAY_VERSION=$(helm search repo | grep "/xray" | awk '{$1=$1};1' |  cut -f3 -d " ")
           echo "xray_version=$XRAY_VERSION" >> "$GITHUB_OUTPUT"
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GKE_SERVICE_ACCOUNT_JSON }}
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
-        with:
-          install_components: gke-gcloud-auth-plugin
       - name: Setup kubectl
         uses: azure/setup-kubectl@v4
       - name: Setup k8s cluster
@@ -48,7 +50,6 @@ jobs:
         env:
           GKE_ZONE: ${{ vars.GKE_ZONE }}
           GKE_PROJECT: ${{ vars.GKE_PROJECT }}
-          GKE_SERVICE_ACCOUNT_JSON: ${{ secrets.GKE_SERVICE_ACCOUNT_JSON }}
           MACHINE_TYPE: ${{ vars.GKE_MACHINE_TYPE }}
           NUM_NODES: ${{ vars.GKE_NUM_NODES }} # default is 3
         run: |
@@ -57,11 +58,6 @@ jobs:
           echo "Whitelist Pipelines Node CIDR to be able to run Artifactory and Xray tests. Same variable is used in gke/create_cluster step to restrict access to the control plane."
           export WHITELIST_CIDR=$(curl -s ifconfig.me)/32
           echo "WHITELIST_CIDR=$WHITELIST_CIDR" >> "$GITHUB_ENV"
-          echo "Creating GKE service account JSON file"
-          export SERVICE_ACCOUNT_JSON=${{ runner.temp }}/jfrog-partnership-team.json
-          echo $GKE_SERVICE_ACCOUNT_JSON > $SERVICE_ACCOUNT_JSON
-          echo "Authenticating with service account JSON file"
-          gcloud auth activate-service-account --key-file="$SERVICE_ACCOUNT_JSON"
           echo "Creating GKE cluster ${GKE_CLUSTER} using default authentication"
           gcloud container clusters create "$GKE_CLUSTER" --zone "$GKE_ZONE" \
             --node-locations "$GKE_ZONE" --num-nodes "${NUM_NODES:-5}" --enable-autoscaling \
@@ -102,6 +98,23 @@ jobs:
           JFROG_URL=http://$SERVICE_IP
           echo "JFROG_URL=$JFROG_URL" >> "$GITHUB_ENV"
           echo "JFrog URL: $JFROG_URL"
+      - name: Get access token
+        id: get_access_token
+        run: |
+          echo "Get cookie to generate Access token"
+          COOKIES=$(curl -s -c - "${JFROG_URL}/ui/api/v1/ui/auth/login?_spring_security_remember_me=false" \
+            --header "accept: application/json, text/plain, */*" \
+            --header "content-type: application/json;charset=UTF-8" \
+            --header "x-requested-with: XMLHttpRequest" \
+            -d '{"user":"admin","password":"${{ secrets.ARTIFACTORY_PASSWORD }}","type":"login"}' | grep FALSE)
+          REFRESHTOKEN=$(echo $COOKIES | grep REFRESHTOKEN | awk '{print $7}')
+          ACCESSTOKEN=$(echo $COOKIES | grep ACCESSTOKEN | awk '{print $14}')
+          JFROG_ACCESS_TOKEN=$(curl -s -g --request GET "${JFROG_URL}/ui/api/v1/system/security/token?services[]=all" \
+            --header "accept: application/json, text/plain, */*" \
+            --header "x-requested-with: XMLHttpRequest" \
+            --header "cookie: ACCESSTOKEN=${ACCESSTOKEN}; REFRESHTOKEN=${REFRESHTOKEN}")
+          echo "::add-mask::$JFROG_ACCESS_TOKEN"
+          echo "JFROG_ACCESS_TOKEN=$JFROG_ACCESS_TOKEN" >> "$GITHUB_ENV"
       - name: Install Xray
         id: install_xray
         run: |
@@ -152,23 +165,6 @@ jobs:
         uses: goreleaser/goreleaser-action@v6
         with:
           install-only: true
-      - name: Get access token
-        id: get_access_token
-        run: |
-          echo "Get cookie to generate Access token"
-          COOKIES=$(curl -s -c - "${JFROG_URL}/ui/api/v1/ui/auth/login?_spring_security_remember_me=false" \
-            --header "accept: application/json, text/plain, */*" \
-            --header "content-type: application/json;charset=UTF-8" \
-            --header "x-requested-with: XMLHttpRequest" \
-            -d '{"user":"admin","password":"${{ secrets.ARTIFACTORY_PASSWORD }}","type":"login"}' | grep FALSE)
-          REFRESHTOKEN=$(echo $COOKIES | grep REFRESHTOKEN | awk '{print $7}')
-          ACCESSTOKEN=$(echo $COOKIES | grep ACCESSTOKEN | awk '{print $14}')
-          JFROG_ACCESS_TOKEN=$(curl -s -g --request GET "${JFROG_URL}/ui/api/v1/system/security/token?services[]=all" \
-            --header "accept: application/json, text/plain, */*" \
-            --header "x-requested-with: XMLHttpRequest" \
-            --header "cookie: ACCESSTOKEN=${ACCESSTOKEN}; REFRESHTOKEN=${REFRESHTOKEN}")
-          echo "::add-mask::$JFROG_ACCESS_TOKEN"
-          echo "JFROG_ACCESS_TOKEN=$JFROG_ACCESS_TOKEN" >> "$GITHUB_ENV"
       - name: Execute acceptance tests
         env:
           JFROG_JAS_DISABLED: true
@@ -204,13 +200,7 @@ jobs:
         env:
           GKE_ZONE: ${{ vars.GKE_ZONE }}
           GKE_PROJECT: ${{ vars.GKE_PROJECT }}
-          GKE_SERVICE_ACCOUNT_JSON: ${{ secrets.GKE_SERVICE_ACCOUNT_JSON }}
         run: |
-          echo "Creating GKE service account JSON file"
-          export SERVICE_ACCOUNT_JSON=${{ runner.temp }}/jfrog-partnership-team.json
-          echo $GKE_SERVICE_ACCOUNT_JSON > $SERVICE_ACCOUNT_JSON
-          echo "Authenticating with service account JSON file"
-          gcloud auth activate-service-account --key-file="${SERVICE_ACCOUNT_JSON}"
           echo "Deleting GKE cluster ${GKE_CLUSTER} using default authentication"
           gcloud container clusters delete "${GKE_CLUSTER}" --zone "${GKE_ZONE}" --project "${GKE_PROJECT}" --quiet
           echo "GKE cluster ${GKE_CLUSTER} was successfully deleted"
