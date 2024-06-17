@@ -1,10 +1,10 @@
 on:
-  # pull_request:
-  #   branches:
-  #     - main
-  #   types: [opened,synchronize]
-  #   paths:
-  #     - '**.go'
+  pull_request:
+    branches:
+      - main
+    types: [opened,synchronize]
+    paths:
+      - '**.go'
   workflow_dispatch:
 
 name: Terraform & OpenTofu Acceptance Tests
@@ -51,8 +51,6 @@ jobs:
           GKE_SERVICE_ACCOUNT_JSON: ${{ secrets.GKE_SERVICE_ACCOUNT_JSON }}
           MACHINE_TYPE: ${{ vars.GKE_MACHINE_TYPE }}
           NUM_NODES: ${{ vars.GKE_NUM_NODES }} # default is 3
-          ZSCALER_CIDR1: ${{ secrets.ZSCALER_CIDR1 }}
-          ZSCALER_CIDR2: ${{ secrets.ZSCALER_CIDR2 }}
         run: |
           export GKE_CLUSTER=tf-provider-xray-${{ matrix.cli }}-$(date +%s)
           echo "GKE_CLUSTER=$GKE_CLUSTER" >> "$GITHUB_ENV"
@@ -71,15 +69,13 @@ jobs:
             --disk-size 50Gi \
             --min-nodes 1 --max-nodes 5 --project "$GKE_PROJECT"
             # --enable-master-authorized-networks \
-            # --master-authorized-networks "$ZSCALER_CIDR1","$ZSCALER_CIDR2","$WHITELIST_CIDR"
+            # --master-authorized-networks "$WHITELIST_CIDR"
             # add your NAT CIDR to whitelist local or CI/CD NAT IP. Set WHITELIST_CIDR in CI/CD to add CIDR to the list automatically.
           gcloud container clusters get-credentials "$GKE_CLUSTER" --zone "$GKE_ZONE" --project "$GKE_PROJECT"
       - name: Install Artifactory
         id: install_artifactory
         env:
           ARTIFACTORY_LICENSE: ${{ secrets.ARTIFACTORY_LICENSE }}
-          ZSCALER_CIDR1: ${{ secrets.ZSCALER_CIDR1 }}
-          ZSCALER_CIDR2: ${{ secrets.ZSCALER_CIDR2 }}
         run: |
           echo "Creating Artifactory License Secret"
           echo $ARTIFACTORY_LICENSE > ${{ runner.temp }}/artifactory.cluster.license
@@ -98,7 +94,7 @@ jobs:
             --set artifactory.persistence.size=50Gi \
             --set nginx.service.ssloffload=true \
             --set postgresql.persistence.size=50Gi
-            # --set nginx.service.loadBalancerSourceRanges="{$ZSCALER_CIDR1,$ZSCALER_CIDR2,$WHITELIST_CIDR}" \
+            # --set nginx.service.loadBalancerSourceRanges="{$WHITELIST_CIDR}" \
           echo "Waiting for Artifactory roll out"
           kubectl rollout status deployment/artifactory-artifactory-nginx
           kubectl rollout status statefulset/artifactory

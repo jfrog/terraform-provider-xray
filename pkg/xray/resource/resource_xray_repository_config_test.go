@@ -81,8 +81,7 @@ func TestAccRepositoryConfig_JasDisabled(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		ExternalProviders: map[string]resource.ExternalProvider{
 			"artifactory": {
-				Source:            "jfrog/artifactory",
-				VersionConstraint: "10.1.2",
+				Source: "jfrog/artifactory",
 			},
 		},
 		Steps: []resource.TestStep{
@@ -150,8 +149,13 @@ func TestAccRepositoryConfig_JasDisabled_exposures_set(t *testing.T) {
 
 	config := util.ExecuteTemplate(
 		fqrn,
-		`resource "xray_repository_config" "{{ .resource_name }}" {
-			repo_name   = "repo-config-test-repo"
+		`resource "artifactory_local_generic_repository" "repo-config-test-repo" {
+			key        = "repo-config-test-repo"
+			xray_index = true
+		}
+
+		resource "xray_repository_config" "{{ .resource_name }}" {
+			repo_name   = artifactory_local_generic_repository.repo-config-test-repo.key
 			jas_enabled = false
 
 			config {
@@ -171,7 +175,11 @@ func TestAccRepositoryConfig_JasDisabled_exposures_set(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
-
+		ExternalProviders: map[string]resource.ExternalProvider{
+			"artifactory": {
+				Source: "jfrog/artifactory",
+			},
+		},
 		Steps: []resource.TestStep{
 			{
 				Config:      config,
@@ -479,8 +487,7 @@ func TestAccRepositoryConfig_UpgradeFromSDKv2(t *testing.T) {
 			{
 				ExternalProviders: map[string]resource.ExternalProvider{
 					"artifactory": {
-						Source:            "jfrog/artifactory",
-						VersionConstraint: "10.1.2",
+						Source: "jfrog/artifactory",
 					},
 					"xray": {
 						Source:            "jfrog/xray",
@@ -556,8 +563,7 @@ func TestAccRepositoryConfig_RepoPathsUpdate(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		ExternalProviders: map[string]resource.ExternalProvider{
 			"artifactory": {
-				Source:            "jfrog/artifactory",
-				VersionConstraint: "10.1.2",
+				Source: "jfrog/artifactory",
 			},
 		},
 		Steps: []resource.TestStep{
