@@ -1,10 +1,10 @@
 on:
-  # pull_request:
-  #   branches:
-  #     - main
-  #   types: [opened,synchronize]
-  #   paths:
-  #     - '**.go'
+  pull_request:
+    branches:
+      - main
+    types: [opened,synchronize]
+    paths:
+      - '**.go'
   workflow_dispatch:
 
 name: Terraform & OpenTofu Acceptance Tests
@@ -24,6 +24,10 @@ jobs:
       tf_version: ${{ steps.get_terraform_cli_version.outputs.version }}
       tofu_version: ${{ steps.get_opentofu_cli_version.outputs.version }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Unshallow
+        run: git fetch --prune --unshallow
       - name: Install Helm
         uses: azure/setup-helm@v4.2.0
       - name: Get Artifactory and Xray versions
@@ -37,6 +41,10 @@ jobs:
           XRAY_HELM_CHART_VERSION=$(helm search repo | grep "/xray" | awk '{$1=$1};1' |  cut -f2 -d " ")
           XRAY_VERSION=$(helm search repo | grep "/xray" | awk '{$1=$1};1' |  cut -f3 -d " ")
           echo "xray_version=$XRAY_VERSION" >> "$GITHUB_OUTPUT"
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GKE_SERVICE_ACCOUNT_JSON }}
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
         with:
@@ -48,22 +56,14 @@ jobs:
         env:
           GKE_ZONE: ${{ vars.GKE_ZONE }}
           GKE_PROJECT: ${{ vars.GKE_PROJECT }}
-          GKE_SERVICE_ACCOUNT_JSON: ${{ secrets.GKE_SERVICE_ACCOUNT_JSON }}
           MACHINE_TYPE: ${{ vars.GKE_MACHINE_TYPE }}
           NUM_NODES: ${{ vars.GKE_NUM_NODES }} # default is 3
-          ZSCALER_CIDR1: ${{ secrets.ZSCALER_CIDR1 }}
-          ZSCALER_CIDR2: ${{ secrets.ZSCALER_CIDR2 }}
         run: |
           export GKE_CLUSTER=tf-provider-xray-${{ matrix.cli }}-$(date +%s)
           echo "GKE_CLUSTER=$GKE_CLUSTER" >> "$GITHUB_ENV"
           echo "Whitelist Pipelines Node CIDR to be able to run Artifactory and Xray tests. Same variable is used in gke/create_cluster step to restrict access to the control plane."
           export WHITELIST_CIDR=$(curl -s ifconfig.me)/32
           echo "WHITELIST_CIDR=$WHITELIST_CIDR" >> "$GITHUB_ENV"
-          echo "Creating GKE service account JSON file"
-          export SERVICE_ACCOUNT_JSON=${{ runner.temp }}/jfrog-partnership-team.json
-          echo $GKE_SERVICE_ACCOUNT_JSON > $SERVICE_ACCOUNT_JSON
-          echo "Authenticating with service account JSON file"
-          gcloud auth activate-service-account --key-file="$SERVICE_ACCOUNT_JSON"
           echo "Creating GKE cluster ${GKE_CLUSTER} using default authentication"
           gcloud container clusters create "$GKE_CLUSTER" --zone "$GKE_ZONE" \
             --node-locations "$GKE_ZONE" --num-nodes "${NUM_NODES:-5}" --enable-autoscaling \
@@ -71,15 +71,13 @@ jobs:
             --disk-size 50Gi \
             --min-nodes 1 --max-nodes 5 --project "$GKE_PROJECT"
             # --enable-master-authorized-networks \
-            # --master-authorized-networks "$ZSCALER_CIDR1","$ZSCALER_CIDR2","$WHITELIST_CIDR"
+            # --master-authorized-networks "$WHITELIST_CIDR"
             # add your NAT CIDR to whitelist local or CI/CD NAT IP. Set WHITELIST_CIDR in CI/CD to add CIDR to the list automatically.
           gcloud container clusters get-credentials "$GKE_CLUSTER" --zone "$GKE_ZONE" --project "$GKE_PROJECT"
       - name: Install Artifactory
         id: install_artifactory
         env:
           ARTIFACTORY_LICENSE: ${{ secrets.ARTIFACTORY_LICENSE }}
-          ZSCALER_CIDR1: ${{ secrets.ZSCALER_CIDR1 }}
-          ZSCALER_CIDR2: ${{ secrets.ZSCALER_CIDR2 }}
         run: |
           echo "Creating Artifactory License Secret"
           echo $ARTIFACTORY_LICENSE > ${{ runner.temp }}/artifactory.cluster.license
@@ -98,7 +96,7 @@ jobs:
             --set artifactory.persistence.size=50Gi \
             --set nginx.service.ssloffload=true \
             --set postgresql.persistence.size=50Gi
-            # --set nginx.service.loadBalancerSourceRanges="{$ZSCALER_CIDR1,$ZSCALER_CIDR2,$WHITELIST_CIDR}" \
+            # --set nginx.service.loadBalancerSourceRanges="{$WHITELIST_CIDR}" \
           echo "Waiting for Artifactory roll out"
           kubectl rollout status deployment/artifactory-artifactory-nginx
           kubectl rollout status statefulset/artifactory
@@ -106,6 +104,23 @@ jobs:
           JFROG_URL=http://$SERVICE_IP
           echo "JFROG_URL=$JFROG_URL" >> "$GITHUB_ENV"
           echo "JFrog URL: $JFROG_URL"
+      - name: Get access token
+        id: get_access_token
+        run: |
+          echo "Get cookie to generate Access token"
+          COOKIES=$(curl -s -c - "${JFROG_URL}/ui/api/v1/ui/auth/login?_spring_security_remember_me=false" \
+            --header "accept: application/json, text/plain, */*" \
+            --header "content-type: application/json;charset=UTF-8" \
+            --header "x-requested-with: XMLHttpRequest" \
+            -d '{"user":"admin","password":"${{ secrets.ARTIFACTORY_PASSWORD }}","type":"login"}' | grep FALSE)
+          REFRESHTOKEN=$(echo $COOKIES | grep REFRESHTOKEN | awk '{print $7}')
+          ACCESSTOKEN=$(echo $COOKIES | grep ACCESSTOKEN | awk '{print $14}')
+          JFROG_ACCESS_TOKEN=$(curl -s -g --request GET "${JFROG_URL}/ui/api/v1/system/security/token?services[]=all" \
+            --header "accept: application/json, text/plain, */*" \
+            --header "x-requested-with: XMLHttpRequest" \
+            --header "cookie: ACCESSTOKEN=${ACCESSTOKEN}; REFRESHTOKEN=${REFRESHTOKEN}")
+          echo "::add-mask::$JFROG_ACCESS_TOKEN"
+          echo "JFROG_ACCESS_TOKEN=$JFROG_ACCESS_TOKEN" >> "$GITHUB_ENV"
       - name: Install Xray
         id: install_xray
         run: |
@@ -119,10 +134,6 @@ jobs:
           kubectl rollout status statefulset/xray-postgresql
           kubectl rollout status statefulset/xray-rabbitmq
           kubectl rollout status statefulset/xray
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Unshallow
-        run: git fetch --prune --unshallow
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -156,23 +167,6 @@ jobs:
         uses: goreleaser/goreleaser-action@v6
         with:
           install-only: true
-      - name: Get access token
-        id: get_access_token
-        run: |
-          echo "Get cookie to generate Access token"
-          COOKIES=$(curl -s -c - "${JFROG_URL}/ui/api/v1/ui/auth/login?_spring_security_remember_me=false" \
-            --header "accept: application/json, text/plain, */*" \
-            --header "content-type: application/json;charset=UTF-8" \
-            --header "x-requested-with: XMLHttpRequest" \
-            -d '{"user":"admin","password":"${{ secrets.ARTIFACTORY_PASSWORD }}","type":"login"}' | grep FALSE)
-          REFRESHTOKEN=$(echo $COOKIES | grep REFRESHTOKEN | awk '{print $7}')
-          ACCESSTOKEN=$(echo $COOKIES | grep ACCESSTOKEN | awk '{print $14}')
-          JFROG_ACCESS_TOKEN=$(curl -s -g --request GET "${JFROG_URL}/ui/api/v1/system/security/token?services[]=all" \
-            --header "accept: application/json, text/plain, */*" \
-            --header "x-requested-with: XMLHttpRequest" \
-            --header "cookie: ACCESSTOKEN=${ACCESSTOKEN}; REFRESHTOKEN=${REFRESHTOKEN}")
-          echo "::add-mask::$JFROG_ACCESS_TOKEN"
-          echo "JFROG_ACCESS_TOKEN=$JFROG_ACCESS_TOKEN" >> "$GITHUB_ENV"
       - name: Execute acceptance tests
         env:
           JFROG_JAS_DISABLED: true
@@ -208,13 +202,7 @@ jobs:
         env:
           GKE_ZONE: ${{ vars.GKE_ZONE }}
           GKE_PROJECT: ${{ vars.GKE_PROJECT }}
-          GKE_SERVICE_ACCOUNT_JSON: ${{ secrets.GKE_SERVICE_ACCOUNT_JSON }}
         run: |
-          echo "Creating GKE service account JSON file"
-          export SERVICE_ACCOUNT_JSON=${{ runner.temp }}/jfrog-partnership-team.json
-          echo $GKE_SERVICE_ACCOUNT_JSON > $SERVICE_ACCOUNT_JSON
-          echo "Authenticating with service account JSON file"
-          gcloud auth activate-service-account --key-file="${SERVICE_ACCOUNT_JSON}"
           echo "Deleting GKE cluster ${GKE_CLUSTER} using default authentication"
           gcloud container clusters delete "${GKE_CLUSTER}" --zone "${GKE_ZONE}" --project "${GKE_PROJECT}" --quiet
           echo "GKE cluster ${GKE_CLUSTER} was successfully deleted"
@@ -240,7 +228,7 @@ jobs:
           OPENTOFU_VERSION: ${{ needs.acceptance-tests-matrix.outputs.tofu_version }}
         run: |
           echo "Adding Artifactory version to CHANGELOG.md"
-          sed -i -E "0,/(##\s.+\..+\..+\s\(.+\)).*/ s/(##\s.+\..+\..+\s\(.+\)).*/\1. Tested on Artifactory $ARTIFACTORY_VERSION with Terraform $TERRAFORM_VERSION and OpenTofu $OPENTOFU_VERSION/" CHANGELOG.md
+          sed -i -E "0,/(##\s.+\..+\..+\s\(.+\)).*/ s/(##\s.+\..+\..+\s\(.+\)).*/\1. Tested on Artifactory $ARTIFACTORY_VERSION and Xray $XRAY_VERSION with Terraform $TERRAFORM_VERSION and OpenTofu $OPENTOFU_VERSION/" CHANGELOG.md
           head -10 CHANGELOG.md
           git add CHANGELOG.md
           export REGEX="Changes to be committed*"
