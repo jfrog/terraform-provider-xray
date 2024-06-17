@@ -66,7 +66,7 @@ func TestAccRepositoryConfig_JasDisabled(t *testing.T) {
 		}
 
 		resource "xray_repository_config" "{{ .resource_name }}" {
-			repo_name   = "{{ .repo_name }}"
+			repo_name   = artifactory_local_generic_repository.{{ .repo_name }}.key
 			jas_enabled = false
 
 			config {
