@@ -175,7 +175,6 @@ jobs:
           echo "JFROG_ACCESS_TOKEN=$JFROG_ACCESS_TOKEN" >> "$GITHUB_ENV"
       - name: Execute acceptance tests
         env:
-          JFROG_URL: ${{ needs.create-gke-cluster.outputs.jfrog_url }}
           JFROG_JAS_DISABLED: true
         run: make acceptance -e TARGET_ARCH=linux_amd64
       - name: Install provider
