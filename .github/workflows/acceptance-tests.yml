@@ -204,7 +204,7 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_PR_WEBHOOK }}
           SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
       - name: Delete GKE cluster
-        if: always() && job.create_cluster.status == 'success'
+        if: always() && steps.create_cluster.conclusion == 'success'
         env:
           GKE_ZONE: ${{ vars.GKE_ZONE }}
           GKE_PROJECT: ${{ vars.GKE_PROJECT }}
