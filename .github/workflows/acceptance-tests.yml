@@ -24,6 +24,10 @@ jobs:
       tf_version: ${{ steps.get_terraform_cli_version.outputs.version }}
       tofu_version: ${{ steps.get_opentofu_cli_version.outputs.version }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Unshallow
+        run: git fetch --prune --unshallow
       - name: Install Helm
         uses: azure/setup-helm@v4.2.0
       - name: Get Artifactory and Xray versions
@@ -43,6 +47,8 @@ jobs:
           credentials_json: ${{ secrets.GKE_SERVICE_ACCOUNT_JSON }}
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
+        with:
+          install_components: gke-gcloud-auth-plugin
       - name: Setup kubectl
         uses: azure/setup-kubectl@v4
       - name: Setup k8s cluster
@@ -128,10 +134,6 @@ jobs:
           kubectl rollout status statefulset/xray-postgresql
           kubectl rollout status statefulset/xray-rabbitmq
           kubectl rollout status statefulset/xray
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Unshallow
-        run: git fetch --prune --unshallow
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
