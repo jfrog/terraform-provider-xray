@@ -10,14 +10,19 @@ on:
 name: Terraform & OpenTofu Acceptance Tests
 
 jobs:
-  create-gke-cluster:
+  acceptance-tests-matrix:
+    name: ${{ matrix.cli }}
     runs-on: ubuntu-latest
     environment: development
+    strategy:
+      fail-fast: true
+      matrix:
+        cli: [terraform, tofu]
     outputs:
-      gke_cluster: ${{ steps.create_cluster.outputs.gke_cluster }}
       artifactory_version: ${{ steps.get_versions.outputs.rt_version }}
       xray_version: ${{ steps.get_versions.outputs.xray_version }}
-      jfrog_url: ${{ steps.get_jfrog_url.outputs.url }}
+      tf_version: ${{ steps.get_terraform_cli_version.outputs.version }}
+      tofu_version: ${{ steps.get_opentofu_cli_version.outputs.version }}
     steps:
       - name: Install Helm
         uses: azure/setup-helm@v4.2.0
@@ -44,7 +49,6 @@ jobs:
         run: |
           export GKE_CLUSTER=tf-provider-xray-$(date +%s)
           echo "GKE_CLUSTER=$GKE_CLUSTER" >> "$GITHUB_ENV"
-          echo "gke_cluster=$GKE_CLUSTER" >> "$GITHUB_OUTPUT"
           echo "Whitelist Pipelines Node CIDR to be able to run Artifactory and Xray tests. Same variable is used in gke/create_cluster step to restrict access to the control plane."
           export WHITELIST_CIDR=$(curl -s ifconfig.me)/32
           echo "WHITELIST_CIDR=$WHITELIST_CIDR" >> "$GITHUB_ENV"
@@ -121,21 +125,6 @@ jobs:
           JFROG_URL=http://$SERVICE_IP
           echo "JFROG_URL=$JFROG_URL" >> "$GITHUB_ENV"
           echo $JFROG_URL
-          echo "url=$JFROG_URL" >> "$GITHUB_OUTPUT"
-
-  acceptance-tests-matrix:
-    name: ${{ matrix.cli }}
-    runs-on: ubuntu-latest
-    needs: create-gke-cluster
-    continue-on-error: false
-    outputs:
-      tf_version: ${{ steps.get_terraform_cli_version.outputs.version }}
-      tofu_version: ${{ steps.get_opentofu_cli_version.outputs.version }}
-    strategy:
-      fail-fast: true
-      matrix:
-        cli: [terraform, tofu]
-    steps:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Unshallow
@@ -175,8 +164,6 @@ jobs:
           install-only: true
       - name: Get access token
         id: get_access_token
-        env:
-          JFROG_URL: ${{ needs.create-gke-cluster.outputs.jfrog_url }}
         run: |
           echo "Get cookie to generate Access token"
           COOKIES=$(curl -s -c - "${JFROG_URL}/ui/api/v1/ui/auth/login?_spring_security_remember_me=false" \
@@ -195,7 +182,8 @@ jobs:
       - name: Execute acceptance tests
         env:
           JFROG_URL: ${{ needs.create-gke-cluster.outputs.jfrog_url }}
-        run: make acceptance -e TARGET_ARCH=linux_amd64 -e JFROG_JAS_DISABLED=true
+          JFROG_JAS_DISABLED: true
+        run: make acceptance -e TARGET_ARCH=linux_amd64
       - name: Install provider
         run: |
           export PROVIDER_VERSION=$(git describe --tags --abbrev=0 | sed  -n 's/v\([0-9]*\).\([0-9]*\).\([0-9]*\)/\1.\2.\3/p')
@@ -222,35 +210,25 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_PR_WEBHOOK }}
           SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
-
-  cleanup-gke-cluster:
-    runs-on: ubuntu-latest
-    environment: development
-    needs: [create-gke-cluster, acceptance-tests-matrix]
-    if: always() && needs.create-gke-cluster.result == 'success'
-    steps:
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          repository: jfrog/terraform-provider-shared
       - name: Delete GKE cluster
+        if: always() && job.create_cluster.status == 'success'
         env:
           GKE_ZONE: ${{ vars.GKE_ZONE }}
           GKE_PROJECT: ${{ vars.GKE_PROJECT }}
-          GKE_CLUSTER: ${{ needs.create-gke-cluster.outputs.gke_cluster }}
           GKE_SERVICE_ACCOUNT_JSON: ${{ secrets.GKE_SERVICE_ACCOUNT_JSON }}
         run: |
           echo "Creating GKE service account JSON file"
           export SERVICE_ACCOUNT_JSON=${{ runner.temp }}/jfrog-partnership-team.json
           echo $GKE_SERVICE_ACCOUNT_JSON > $SERVICE_ACCOUNT_JSON
-          chmod +x ./scripts/delete_cluster.sh
-          ./scripts/delete_cluster.sh
+          echo "Authenticating with service account JSON file"
+          gcloud auth activate-service-account --key-file="${SERVICE_ACCOUNT_JSON}"
+          echo "Deleting GKE cluster ${GKE_CLUSTER} using default authentication"
+          gcloud container clusters delete "${GKE_CLUSTER}" --zone "${GKE_ZONE}" --project "${GKE_PROJECT}" --quiet
+          echo "GKE cluster ${GKE_CLUSTER} was successfully deleted"
 
   update-changelog:
     runs-on: ubuntu-latest
-    needs: [create-gke-cluster, acceptance-tests-matrix]
+    needs: [acceptance-tests-matrix]
     if: |
       always() &&
       (github.event_name == 'pull_request' && needs.acceptance-tests-matrix.result == 'success')
@@ -263,8 +241,8 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref }}
       - name: Update CHANGELOG and push commit
         env:
-          ARTIFACTORY_VERSION: ${{ needs.create-gke-cluster.outputs.artifactory_version }}
-          XRAY_VERSION: ${{ needs.create-gke-cluster.outputs.xray_version }}
+          ARTIFACTORY_VERSION: ${{ needs.acceptance-tests-matrix.outputs.artifactory_version }}
+          XRAY_VERSION: ${{ needs.acceptance-tests-matrix.outputs.xray_version }}
           TERRAFORM_VERSION: ${{ needs.acceptance-tests-matrix.outputs.tf_version }}
           OPENTOFU_VERSION: ${{ needs.acceptance-tests-matrix.outputs.tofu_version }}
         run: |
