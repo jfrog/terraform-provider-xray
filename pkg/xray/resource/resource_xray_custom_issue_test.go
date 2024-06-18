@@ -6,7 +6,6 @@ import (
 
 	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/jfrog/terraform-provider-shared/testutil"
 	"github.com/jfrog/terraform-provider-shared/util"
 	"github.com/jfrog/terraform-provider-shared/util/sdk"
@@ -99,18 +98,9 @@ func TestAccCustomIssue_UpgradeFromSDKv2(t *testing.T) {
 				),
 			},
 			{
-				ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+				ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 				Config:                   config,
-				// ConfigPlanChecks is a terraform-plugin-testing feature.
-				// If acceptance testing is still using terraform-plugin-sdk/v2,
-				// use `PlanOnly: true` instead. When migrating to
-				// terraform-plugin-testing, switch to `ConfigPlanChecks` or you
-				// will likely experience test failures.
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectEmptyPlan(),
-					},
-				},
+				ConfigPlanChecks:         testutil.ConfigPlanChecks(""),
 			},
 		},
 	})
@@ -224,7 +214,7 @@ func TestAccCustomIssue_full(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckCustomIssue),
 		Steps: []resource.TestStep{
 			{
@@ -283,9 +273,10 @@ func TestAccCustomIssue_full(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:                         fqrn,
+				ImportState:                          true,
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "name",
 			},
 		},
 	})
@@ -327,10 +318,10 @@ func TestAccCustomIssue_invalid(t *testing.T) {
 		errorRegex string
 	}{
 		{name: "name", extras: map[string]string{"name": "xray"}, errorRegex: `.*must not begin with 'xray' \(case insensitive\).*`},
-		{name: "type", extras: map[string]string{"type": "foo"}, errorRegex: ".*Invalid string.*"},
+		{name: "type", extras: map[string]string{"type": "foo"}, errorRegex: `.*Attribute type value must be one of: \["other" "performance" "security".*`},
 		{name: "provider_name", extras: map[string]string{"provider_name": "jfrog"}, errorRegex: `.*must not be 'jfrog' \(case insensitive\).*`},
-		{name: "package_type", extras: map[string]string{"package_type": "foo"}, errorRegex: ".*Invalid string.*"},
-		{name: "severity", extras: map[string]string{"severity": "foo"}, errorRegex: ".*Invalid string.*"},
+		{name: "package_type", extras: map[string]string{"package_type": "foo"}, errorRegex: `.*Attribute package_type value must be one of: \["alpine" "bower" "cargo".*`},
+		{name: "severity", extras: map[string]string{"severity": "foo"}, errorRegex: `.*Attribute severity value must be one of: \["Critical" "High" "Medium" "Low".*`},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -359,7 +350,7 @@ func TestAccCustomIssue_invalid(t *testing.T) {
 
 			resource.Test(t, resource.TestCase{
 				PreCheck:                 func() { acctest.PreCheck(t) },
-				ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+				ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 				Steps: []resource.TestStep{
 					{
 						Config:      config,

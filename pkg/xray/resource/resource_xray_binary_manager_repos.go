@@ -26,7 +26,7 @@ import (
 
 const BinaryManagerReposEndpoint = "xray/api/v1/binMgr/{id}/repos"
 
-var _ resource.Resource = &WebhookResource{}
+var _ resource.Resource = &BinaryManagerReposResource{}
 
 func NewBinaryManagerReposResource() resource.Resource {
 	return &BinaryManagerReposResource{}
