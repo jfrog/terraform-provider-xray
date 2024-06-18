@@ -67,7 +67,7 @@ func TestAccCustomIssue_UpgradeFromSDKv2(t *testing.T) {
 			{
 				ExternalProviders: map[string]resource.ExternalProvider{
 					"xray": {
-						VersionConstraint: "2.4.0",
+						VersionConstraint: "2.8.1",
 						Source:            "jfrog/xray",
 					},
 				},
