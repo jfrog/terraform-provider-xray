@@ -1,4 +1,4 @@
-## 2.8.2 (June 19, 2024)
+## 2.8.2 (June 19, 2024). Tested on Artifactory 7.84.15 and Xray 3.96.1 with Terraform 1.8.5 and OpenTofu 1.7.2
 
 * resource/xray_custom_issue: Migrate from SDKv2 to Plugin Framework. PR: [#207](https://github.com/jfrog/terraform-provider-xray/pull/207)
 * resource/xray_ignore_rule: Migrate from SDKv2 to Plugin Framework. PR: [#209](https://github.com/jfrog/terraform-provider-xray/pull/209)
