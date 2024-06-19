@@ -122,11 +122,6 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 		}
 	}
 
-	artifactoryVersion, err := util.GetArtifactoryVersion(restyClient)
-	if err != nil {
-		return nil, diag.FromErr(err)
-	}
-
 	xrayVersion, err := util.GetXrayVersion(restyClient)
 	if err != nil {
 		return nil, diag.FromErr(err)
@@ -136,9 +131,8 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 	go util.SendUsage(ctx, restyClient.R(), productId, featureUsage)
 
 	return util.ProviderMetadata{
-		Client:             restyClient,
-		ArtifactoryVersion: artifactoryVersion,
-		XrayVersion:        xrayVersion,
+		Client:      restyClient,
+		XrayVersion: xrayVersion,
 	}, nil
 
 }
