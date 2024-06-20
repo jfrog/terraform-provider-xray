@@ -9,7 +9,6 @@ import (
 
 	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/jfrog/terraform-provider-shared/client"
 	"github.com/jfrog/terraform-provider-shared/testutil"
 	"github.com/jfrog/terraform-provider-shared/util"
@@ -43,7 +42,7 @@ func TestAccIgnoreRule_UpgradeFromSDKv2(t *testing.T) {
 			{
 				ExternalProviders: map[string]resource.ExternalProvider{
 					"xray": {
-						VersionConstraint: "2.4.0",
+						VersionConstraint: "2.8.1",
 						Source:            "jfrog/xray",
 					},
 				},
@@ -60,18 +59,9 @@ func TestAccIgnoreRule_UpgradeFromSDKv2(t *testing.T) {
 				),
 			},
 			{
-				ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+				ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 				Config:                   config,
-				// ConfigPlanChecks is a terraform-plugin-testing feature.
-				// If acceptance testing is still using terraform-plugin-sdk/v2,
-				// use `PlanOnly: true` instead. When migrating to
-				// terraform-plugin-testing, switch to `ConfigPlanChecks` or you
-				// will likely experience test failures.
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectEmptyPlan(),
-					},
-				},
+				ConfigPlanChecks:         testutil.ConfigPlanChecks(""),
 			},
 		},
 	})
@@ -103,7 +93,7 @@ func objectiveTestCase(objective string, t *testing.T) (*testing.T, resource.Tes
 
 	return t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckIgnoreRule),
 		Steps: []resource.TestStep{
 			{
@@ -147,7 +137,7 @@ func TestAccIgnoreRule_operational_risk(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckIgnoreRule),
 		Steps: []resource.TestStep{
 			{
@@ -191,11 +181,11 @@ func TestAccIgnoreRule_invalid_operational_risk(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config:      config,
-				ExpectError: regexp.MustCompile(`expected operational_risk to be one of \["any"\], got invalid-risk`),
+				ExpectError: regexp.MustCompile(`.*Attribute operational_risk\[Value\(".+"\)\] value must be one of:.*`),
 			},
 		},
 	})
@@ -516,7 +506,7 @@ func TestAccIgnoreRule_docker_layers(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckIgnoreRule),
 		Steps: []resource.TestStep{
 			{
@@ -606,7 +596,7 @@ func sourceTestCase(source string, t *testing.T) (*testing.T, resource.TestCase)
 
 	return t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: config,
@@ -653,7 +643,7 @@ func TestAccIgnoreRule_artifact(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckIgnoreRule),
 		Steps: []resource.TestStep{
 			{
@@ -701,7 +691,7 @@ func TestAccIgnoreRule_invalid_artifact_path(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config:      config,
@@ -712,8 +702,7 @@ func TestAccIgnoreRule_invalid_artifact_path(t *testing.T) {
 }
 
 func TestAccIgnoreRule_with_project_key(t *testing.T) {
-	// skip for now as we haven't found a combo for ignore rule that works for projectKey query param
-	t.SkipNow()
+	t.Skipf("skip for now as we haven't found a combo for ignore rule that works for projectKey query param")
 
 	_, fqrn, name := testutil.MkNames("ignore-rule-", "xray_ignore_rule")
 	expirationDate := time.Now().Add(time.Hour * 48)
@@ -750,11 +739,10 @@ func TestAccIgnoreRule_with_project_key(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		ExternalProviders: map[string]resource.ExternalProvider{
 			"project": {
-				Source:            "jfrog/project",
-				VersionConstraint: "1.5.1",
+				Source: "jfrog/project",
 			},
 		},
 		CheckDestroy: acctest.VerifyDeleted(fqrn, "", testCheckIgnoreRule),

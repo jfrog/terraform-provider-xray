@@ -59,7 +59,6 @@ func SdkV2() *schema.Provider {
 				"xray_license_policy":           xray.ResourceXrayLicensePolicyV2(),
 				"xray_operational_risk_policy":  xray.ResourceXrayOperationalRiskPolicy(),
 				"xray_watch":                    xray.ResourceXrayWatch(),
-				"xray_ignore_rule":              xray.ResourceXrayIgnoreRule(),
 				"xray_repository_config":        xray.ResourceXrayRepositoryConfig(),
 				"xray_vulnerabilities_report":   xray.ResourceXrayVulnerabilitiesReport(),
 				"xray_licenses_report":          xray.ResourceXrayLicensesReport(),
@@ -122,11 +121,6 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 		}
 	}
 
-	artifactoryVersion, err := util.GetArtifactoryVersion(restyClient)
-	if err != nil {
-		return nil, diag.FromErr(err)
-	}
-
 	xrayVersion, err := util.GetXrayVersion(restyClient)
 	if err != nil {
 		return nil, diag.FromErr(err)
@@ -136,9 +130,8 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 	go util.SendUsage(ctx, restyClient.R(), productId, featureUsage)
 
 	return util.ProviderMetadata{
-		Client:             restyClient,
-		ArtifactoryVersion: artifactoryVersion,
-		XrayVersion:        xrayVersion,
+		Client:      restyClient,
+		XrayVersion: xrayVersion,
 	}, nil
 
 }

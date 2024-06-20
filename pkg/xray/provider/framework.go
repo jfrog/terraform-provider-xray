@@ -158,9 +158,9 @@ func (p *XrayProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 
 	version, err := util.GetXrayVersion(restyClient)
 	if err != nil {
-		resp.Diagnostics.AddWarning(
+		resp.Diagnostics.AddError(
 			"Error getting Xray version",
-			fmt.Sprintf("The provider functionality might be affected by the absence of Xray version in the context. %v", err),
+			err.Error(),
 		)
 		return
 	}
@@ -187,6 +187,7 @@ func (p *XrayProvider) Resources(ctx context.Context) []func() resource.Resource
 		xray_resource.NewBinaryManagerReposResource,
 		xray_resource.NewBinaryManagerBuildsResource,
 		xray_resource.NewCustomIssueResource,
+		xray_resource.NewIgnoreRuleResource,
 		xray_resource.NewSettingsResource,
 		xray_resource.NewWebhookResource,
 		xray_resource.NewWorkersCountResource,
