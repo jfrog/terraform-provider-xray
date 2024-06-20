@@ -3,16 +3,29 @@ package xray
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"regexp"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/jfrog/terraform-provider-shared/util"
-	"github.com/jfrog/terraform-provider-shared/util/sdk"
-	"github.com/jfrog/terraform-provider-shared/validator"
+	utilfw "github.com/jfrog/terraform-provider-shared/util/fw"
+	validatorfw_string "github.com/jfrog/terraform-provider-shared/validator/fw/string"
+	"github.com/samber/lo"
+)
+
+const (
+	CustomIssuesEndpoint  = "xray/api/v1/events"
+	CustomIssueEndpoint   = "xray/api/v1/events/{id}"
+	CustomIssueEndpointV2 = "xray/api/v2/events/{id}"
 )
 
 var validPackageTypes = []string{
@@ -41,531 +54,680 @@ var validPackageTypes = []string{
 	"terraformbe",
 }
 
-type VulnerableRange struct {
+var _ resource.Resource = &CustomIssueResource{}
+
+func NewCustomIssueResource() resource.Resource {
+	return &CustomIssueResource{}
+}
+
+type CustomIssueResource struct {
+	ProviderData util.ProviderMetadata
+	TypeName     string
+}
+
+func (r *CustomIssueResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_custom_issue"
+	r.TypeName = resp.TypeName
+}
+
+type CustomIssueResourceModel struct {
+	ID           types.String `tfsdk:"id"`
+	Name         types.String `tfsdk:"name"`
+	Description  types.String `tfsdk:"description"`
+	Summary      types.String `tfsdk:"summary"`
+	Type         types.String `tfsdk:"type"`
+	ProviderName types.String `tfsdk:"provider_name"`
+	PackageType  types.String `tfsdk:"package_type"`
+	Severity     types.String `tfsdk:"severity"`
+	Component    types.Set    `tfsdk:"component"`
+	CVE          types.Set    `tfsdk:"cve"`
+	Source       types.Set    `tfsdk:"source"`
+}
+
+func (m CustomIssueResourceModel) toAPIModel(ctx context.Context, apiModel *CustomIssueAPIModel) (ds diag.Diagnostics) {
+	components := lo.Map(
+		m.Component.Elements(),
+		func(elem attr.Value, _ int) ComponentAPIModel {
+			attrs := elem.(types.Object).Attributes()
+
+			var vulnerableVersions []string
+			ds.Append(attrs["vulnerable_versions"].(types.Set).ElementsAs(ctx, &vulnerableVersions, false)...)
+
+			var fixedVersions []string
+			ds.Append(attrs["fixed_versions"].(types.Set).ElementsAs(ctx, &fixedVersions, false)...)
+
+			vulnerableRanges := lo.Map(
+				attrs["vulnerable_ranges"].(types.Set).Elements(),
+				func(elem attr.Value, _ int) VulnerableRangeAPIModel {
+					attrs := elem.(types.Object).Attributes()
+
+					var vulnerableVersions []string
+					if v, ok := attrs["vulnerable_versions"]; ok {
+						ds.Append(v.(types.Set).ElementsAs(ctx, &vulnerableVersions, false)...)
+					}
+
+					var fixedVersions []string
+					if v, ok := attrs["fixed_versions"]; ok {
+						ds.Append(v.(types.Set).ElementsAs(ctx, &fixedVersions, false)...)
+					}
+
+					return VulnerableRangeAPIModel{
+						VulnerableVersions: vulnerableVersions,
+						FixedVersions:      fixedVersions,
+					}
+				},
+			)
+
+			return ComponentAPIModel{
+				ID:                 attrs["id"].(types.String).ValueString(),
+				VulnerableVersions: vulnerableVersions,
+				FixedVersions:      fixedVersions,
+				VulnerableRanges:   vulnerableRanges,
+			}
+		},
+	)
+
+	cves := lo.Map(
+		m.CVE.Elements(),
+		func(elem attr.Value, _ int) CVEAPIModel {
+			attrs := elem.(types.Object).Attributes()
+
+			cve := CVEAPIModel{}
+
+			if v, ok := attrs["cve"]; ok {
+				cve.CVE = v.(types.String).ValueString()
+			}
+
+			if v, ok := attrs["cvss_v2"]; ok {
+				cve.CVSSv2 = v.(types.String).ValueString()
+			}
+
+			if v, ok := attrs["cvss_v3"]; ok {
+				cve.CVSSv3 = v.(types.String).ValueString()
+			}
+
+			return cve
+		},
+	)
+
+	sources := lo.Map(
+		m.Source.Elements(),
+		func(elem attr.Value, _ int) SourceAPIModel {
+			attrs := elem.(types.Object).Attributes()
+
+			source := SourceAPIModel{}
+
+			if v, ok := attrs["id"]; ok {
+				source.ID = v.(types.String).ValueString()
+			}
+
+			if v, ok := attrs["name"]; ok {
+				source.Name = v.(types.String).ValueString()
+			}
+
+			if v, ok := attrs["url"]; ok {
+				source.URL = v.(types.String).ValueString()
+			}
+
+			return source
+		},
+	)
+
+	*apiModel = CustomIssueAPIModel{
+		ID:          m.Name.ValueString(),
+		Summary:     m.Summary.ValueString(),
+		Description: m.Description.ValueString(),
+		PackageType: m.PackageType.ValueString(),
+		Type:        m.Type.ValueString(),
+		Provider:    m.ProviderName.ValueString(),
+		Severity:    m.Severity.ValueString(),
+		Components:  components,
+		CVEs:        cves,
+		Sources:     sources,
+	}
+
+	return
+}
+
+var vulnerableRangesResourceModelAttributeTypes map[string]attr.Type = map[string]attr.Type{
+	"vulnerable_versions": types.SetType{ElemType: types.StringType},
+	"fixed_versions":      types.SetType{ElemType: types.StringType},
+}
+
+var vulnerableRangesSetResourceModelAttributeTypes types.ObjectType = types.ObjectType{
+	AttrTypes: vulnerableRangesResourceModelAttributeTypes,
+}
+
+var componentResourceModelAttributeTypes map[string]attr.Type = map[string]attr.Type{
+	"id":                  types.StringType,
+	"vulnerable_versions": types.SetType{ElemType: types.StringType},
+	"fixed_versions":      types.SetType{ElemType: types.StringType},
+	"vulnerable_ranges":   types.SetType{ElemType: vulnerableRangesSetResourceModelAttributeTypes},
+}
+
+var componentSetResourceModelAttributeTypes types.ObjectType = types.ObjectType{
+	AttrTypes: componentResourceModelAttributeTypes,
+}
+
+var cveResourceModelAttributeTypes map[string]attr.Type = map[string]attr.Type{
+	"cve":     types.StringType,
+	"cvss_v2": types.StringType,
+	"cvss_v3": types.StringType,
+}
+
+var cveSetResourceModelAttributeTypes types.ObjectType = types.ObjectType{
+	AttrTypes: cveResourceModelAttributeTypes,
+}
+
+var sourceResourceModelAttributeTypes map[string]attr.Type = map[string]attr.Type{
+	"id":   types.StringType,
+	"name": types.StringType,
+	"url":  types.StringType,
+}
+
+var sourceSetResourceModelAttributeTypes types.ObjectType = types.ObjectType{
+	AttrTypes: sourceResourceModelAttributeTypes,
+}
+
+func (m *CustomIssueResourceModel) fromAPIModel(ctx context.Context, apiModel CustomIssueAPIModel) diag.Diagnostics {
+	diags := diag.Diagnostics{}
+
+	m.ID = types.StringValue(apiModel.ID)
+	m.Name = types.StringValue(apiModel.ID)
+	m.Description = types.StringValue(apiModel.Description)
+	m.Summary = types.StringValue(apiModel.Summary)
+	m.Type = types.StringValue(apiModel.Type)
+	m.ProviderName = types.StringValue(apiModel.Provider)
+	m.PackageType = types.StringValue(apiModel.PackageType)
+	m.Severity = types.StringValue(apiModel.Severity)
+
+	components := lo.Map(
+		apiModel.Components,
+		func(property ComponentAPIModel, _ int) attr.Value {
+			vulnerableVersions, ds := types.SetValueFrom(ctx, types.StringType, property.VulnerableVersions)
+			if ds != nil {
+				diags.Append(ds...)
+			}
+
+			fixedVersions, ds := types.SetValueFrom(ctx, types.StringType, property.FixedVersions)
+			if ds != nil {
+				diags.Append(ds...)
+			}
+
+			vulnerableRanges := lo.Map(
+				property.VulnerableRanges,
+				func(property VulnerableRangeAPIModel, _ int) attr.Value {
+					vulnerableVersions, ds := types.SetValueFrom(ctx, types.StringType, property.VulnerableVersions)
+					if ds != nil {
+						diags.Append(ds...)
+					}
+
+					fixedVersions, ds := types.SetValueFrom(ctx, types.StringType, property.FixedVersions)
+					if ds != nil {
+						diags.Append(ds...)
+					}
+
+					vulnerableRange, ds := types.ObjectValue(
+						vulnerableRangesResourceModelAttributeTypes,
+						map[string]attr.Value{
+							"vulnerable_versions": vulnerableVersions,
+							"fixed_versions":      fixedVersions,
+						},
+					)
+
+					if ds != nil {
+						diags.Append(ds...)
+					}
+
+					return vulnerableRange
+				},
+			)
+			vulnerableRangesSet, ds := types.SetValue(
+				vulnerableRangesSetResourceModelAttributeTypes,
+				vulnerableRanges,
+			)
+			if ds != nil {
+				diags.Append(ds...)
+			}
+
+			component, ds := types.ObjectValue(
+				componentResourceModelAttributeTypes,
+				map[string]attr.Value{
+					"id":                  types.StringValue(property.ID),
+					"vulnerable_versions": vulnerableVersions,
+					"fixed_versions":      fixedVersions,
+					"vulnerable_ranges":   vulnerableRangesSet,
+				},
+			)
+
+			if ds != nil {
+				diags.Append(ds...)
+			}
+
+			return component
+		},
+	)
+	componentsSet, d := types.SetValue(
+		componentSetResourceModelAttributeTypes,
+		components,
+	)
+	if d != nil {
+		diags.Append(d...)
+	}
+	m.Component = componentsSet
+
+	cves := lo.Map(
+		apiModel.CVEs,
+		func(property CVEAPIModel, _ int) attr.Value {
+			cveMap := map[string]attr.Value{
+				"cve":     types.StringNull(),
+				"cvss_v2": types.StringNull(),
+				"cvss_v3": types.StringNull(),
+			}
+
+			if property.CVE != "" {
+				cveMap["cve"] = types.StringValue(property.CVE)
+			}
+
+			if property.CVSSv2 != "" {
+				cveMap["cvss_v2"] = types.StringValue(property.CVSSv2)
+			}
+
+			if property.CVSSv3 != "" {
+				cveMap["cvss_v3"] = types.StringValue(property.CVSSv3)
+			}
+
+			cve, ds := types.ObjectValue(
+				cveResourceModelAttributeTypes,
+				cveMap,
+			)
+
+			if ds != nil {
+				diags.Append(ds...)
+			}
+
+			return cve
+		},
+	)
+	cvesSet, d := types.SetValue(
+		cveSetResourceModelAttributeTypes,
+		cves,
+	)
+	if d != nil {
+		diags.Append(d...)
+	}
+	m.CVE = cvesSet
+
+	sources := lo.Map(
+		apiModel.Sources,
+		func(property SourceAPIModel, _ int) attr.Value {
+			sourceMap := map[string]attr.Value{
+				"id":   types.StringValue(property.ID),
+				"name": types.StringNull(),
+				"url":  types.StringNull(),
+			}
+
+			if property.Name != "" {
+				sourceMap["name"] = types.StringValue(property.Name)
+			}
+
+			if property.URL != "" {
+				sourceMap["url"] = types.StringValue(property.URL)
+			}
+
+			source, ds := types.ObjectValue(
+				sourceResourceModelAttributeTypes,
+				sourceMap,
+			)
+
+			if ds != nil {
+				diags.Append(ds...)
+			}
+
+			return source
+		},
+	)
+	sourceSet, d := types.SetValue(
+		sourceSetResourceModelAttributeTypes,
+		sources,
+	)
+	if d != nil {
+		diags.Append(d...)
+	}
+	m.Source = sourceSet
+
+	return diags
+}
+
+type VulnerableRangeAPIModel struct {
 	VulnerableVersions []string `json:"vulnerable_versions"`
 	FixedVersions      []string `json:"fixed_versions"`
 }
 
-type Component struct {
-	Id                 string            `json:"id"`
-	VulnerableVersions []string          `json:"vulnerable_versions"`
-	FixedVersions      []string          `json:"fixed_versions"`
-	VulnerableRanges   []VulnerableRange `json:"vulnerable_ranges"`
+type ComponentAPIModel struct {
+	ID                 string                    `json:"id"`
+	VulnerableVersions []string                  `json:"vulnerable_versions"`
+	FixedVersions      []string                  `json:"fixed_versions"`
+	VulnerableRanges   []VulnerableRangeAPIModel `json:"vulnerable_ranges"`
 }
 
-type Cve struct {
-	Cve    string `json:"cve"`
-	CvssV2 string `json:"cvss_v2"`
-	CvssV3 string `json:"cvss_v3"`
+type CVEAPIModel struct {
+	CVE    string `json:"cve"`
+	CVSSv2 string `json:"cvss_v2"`
+	CVSSv3 string `json:"cvss_v3"`
 }
 
-type Source struct {
-	Id   string `json:"source_id"`
+type SourceAPIModel struct {
+	ID   string `json:"source_id"`
 	Name string `json:"name,omitempty"`
-	Url  string `json:"url,omitempty"`
+	URL  string `json:"url,omitempty"`
 }
 
-type CustomIssue struct {
-	Id          string      `json:"id"`
-	Description string      `json:"description"`
-	Summary     string      `json:"summary"`
-	Type        string      `json:"type"`
-	Provider    string      `json:"provider"`
-	PackageType string      `json:"package_type"`
-	Severity    string      `json:"severity"`
-	Components  []Component `json:"components"`
-	Cves        []Cve       `json:"cves"`
-	Sources     []Source    `json:"sources"`
+type CustomIssueAPIModel struct {
+	ID          string              `json:"id"`
+	Description string              `json:"description"`
+	Summary     string              `json:"summary"`
+	Type        string              `json:"type"`
+	Provider    string              `json:"provider"`
+	PackageType string              `json:"package_type"`
+	Severity    string              `json:"severity"`
+	Components  []ComponentAPIModel `json:"components"`
+	CVEs        []CVEAPIModel       `json:"cves"`
+	Sources     []SourceAPIModel    `json:"sources"`
 }
 
-func ResourceXrayCustomIssue() *schema.Resource {
-	var customIssueSchema = map[string]*schema.Schema{
-		"name": {
-			Type:        schema.TypeString,
-			Required:    true,
-			Description: "Name of the custom issue. It must not begin with 'xray' (case insensitive)",
-			ValidateDiagFunc: validation.ToDiagFunc(
-				validation.StringDoesNotMatch(
-					regexp.MustCompile(`(?i)^xray`),
-					"must not begin with 'xray' (case insensitive)",
-				),
-			),
+func (r *CustomIssueResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Computed: true,
+			},
+			"name": schema.StringAttribute{
+				Required: true,
+				Validators: []validator.String{
+					validatorfw_string.RegexNotMatches(
+						regexp.MustCompile(`(?i)^xray`),
+						"must not begin with 'xray' (case insensitive)",
+					),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Description: "Name of the custom issue. It must not begin with 'xray' (case insensitive)",
+			},
+			"description": schema.StringAttribute{
+				Required:    true,
+				Description: "Description of custom issue",
+			},
+			"summary": schema.StringAttribute{
+				Required:    true,
+				Description: "Summary of custom issue",
+			},
+			"type": schema.StringAttribute{
+				Required: true,
+				Validators: []validator.String{
+					stringvalidator.OneOf("other", "performance", "security", "versions"),
+				},
+				Description: "Type of custom issue. Valid values: other, performance, security, versions",
+			},
+			"provider_name": schema.StringAttribute{
+				Required: true,
+				Validators: []validator.String{
+					validatorfw_string.RegexNotMatches(
+						regexp.MustCompile(`(?i)^jfrog$`),
+						"must not be 'jfrog' (case insensitive)",
+					),
+				},
+				Description: "Provider of custom issue. It must not be 'jfrog' (case insensitive)",
+			},
+			"package_type": schema.StringAttribute{
+				Required: true,
+				Validators: []validator.String{
+					stringvalidator.OneOf(validPackageTypes...),
+				},
+				Description: fmt.Sprintf("Package Type of custom issue. Valid values are: %s", strings.Join(validPackageTypes, ", ")),
+			},
+			"severity": schema.StringAttribute{
+				Required: true,
+				Validators: []validator.String{
+					stringvalidator.OneOf("Critical", "High", "Medium", "Low", "Information"),
+				},
+				Description: "Severity of custom issue. Valid values: Critical, High, Medium, Low, Information",
+			},
 		},
-		"description": {
-			Type:        schema.TypeString,
-			Required:    true,
-			Description: "Description of custom issue",
-		},
-		"summary": {
-			Type:        schema.TypeString,
-			Required:    true,
-			Description: "Summary of custom issue",
-		},
-		"type": {
-			Type:             schema.TypeString,
-			Required:         true,
-			Description:      "Type of custom issue. Valid values: other, performance, security, versions",
-			ValidateDiagFunc: validator.StringInSlice(false, "other", "performance", "security", "versions"),
-		},
-		"provider_name": {
-			Type:        schema.TypeString,
-			Required:    true,
-			Description: "Provider of custom issue. It must not be 'jfrog' (case insensitive)",
-			ValidateDiagFunc: validation.ToDiagFunc(
-				validation.StringDoesNotMatch(
-					regexp.MustCompile(`(?i)^jfrog$`),
-					"must not be 'jfrog' (case insensitive)",
-				),
-			),
-		},
-		"package_type": {
-			Type:             schema.TypeString,
-			Required:         true,
-			Description:      fmt.Sprintf("Package Type of custom issue. Valid values are: %s", strings.Join(validPackageTypes, ", ")),
-			ValidateDiagFunc: validator.StringInSlice(false, validPackageTypes...),
-		},
-		"severity": {
-			Type:             schema.TypeString,
-			Required:         true,
-			Description:      "Severity of custom issue. Valid values: Critical, High, Medium, Low, Information",
-			ValidateDiagFunc: validator.StringInSlice(false, "Critical", "High", "Medium", "Low", "Information"),
-		},
-		"component": {
-			Type:        schema.TypeSet,
-			Required:    true,
-			Description: "Component of custom issue",
-			Elem: &schema.Resource{
-				Schema: map[string]*schema.Schema{
-					"id": {
-						Type:        schema.TypeString,
-						Required:    true,
-						Description: "ID of the component",
-					},
-					"vulnerable_versions": {
-						Type:        schema.TypeSet,
-						Optional:    true,
-						Description: "List of vulnerable versions",
-						Elem: &schema.Schema{
-							Type: schema.TypeString,
+		Blocks: map[string]schema.Block{
+			"component": schema.SetNestedBlock{
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"id": schema.StringAttribute{
+							Required:    true,
+							Description: "ID of the component",
+						},
+						"vulnerable_versions": schema.SetAttribute{
+							ElementType: types.StringType,
+							Optional:    true,
+							Description: "List of vulnerable versions",
+						},
+						"fixed_versions": schema.SetAttribute{
+							ElementType: types.StringType,
+							Optional:    true,
+							Description: "List of fixed versions",
 						},
 					},
-					"fixed_versions": {
-						Type:        schema.TypeSet,
-						Optional:    true,
-						Description: "List of the fixed versions",
-						Elem: &schema.Schema{
-							Type: schema.TypeString,
-						},
-					},
-					"vulnerable_ranges": {
-						Type:        schema.TypeSet,
-						Optional:    true,
-						Description: "List of the vulnerable ranges",
-						Elem: &schema.Resource{
-							Schema: map[string]*schema.Schema{
-								"vulnerable_versions": {
-									Type:        schema.TypeSet,
-									Optional:    true,
-									Description: "List of vulnerable versions",
-									Elem: &schema.Schema{
-										Type: schema.TypeString,
+					Blocks: map[string]schema.Block{
+						"vulnerable_ranges": schema.SetNestedBlock{
+							NestedObject: schema.NestedBlockObject{
+								Attributes: map[string]schema.Attribute{
+									"vulnerable_versions": schema.SetAttribute{
+										ElementType: types.StringType,
+										Optional:    true,
+										Description: "List of vulnerable versions",
 									},
-								},
-								"fixed_versions": {
-									Type:        schema.TypeSet,
-									Optional:    true,
-									Description: "List of the fixed versions",
-									Elem: &schema.Schema{
-										Type: schema.TypeString,
+									"fixed_versions": schema.SetAttribute{
+										ElementType: types.StringType,
+										Optional:    true,
+										Description: "List of fixed versions",
 									},
 								},
 							},
+							Description: "List of the vulnerable ranges",
 						},
 					},
 				},
+				Description: "Component of custom issue",
 			},
-		},
-		"cve": {
-			Type:        schema.TypeSet,
-			Required:    true,
-			Description: "CVE of the custom issue",
-			Elem: &schema.Resource{
-				Schema: map[string]*schema.Schema{
-					"cve": {
-						Type:        schema.TypeString,
-						Optional:    true,
-						Description: "CVE ID",
-					},
-					"cvss_v2": {
-						Type:        schema.TypeString,
-						Optional:    true,
-						Description: "CVSS v2 score",
-					},
-					"cvss_v3": {
-						Type:        schema.TypeString,
-						Optional:    true,
-						Description: "CVSS v3 score",
+			"cve": schema.SetNestedBlock{
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"cve": schema.StringAttribute{
+							Optional:    true,
+							Description: "CVE ID",
+						},
+						"cvss_v2": schema.StringAttribute{
+							Optional:    true,
+							Description: "CVSS v2 score",
+						},
+						"cvss_v3": schema.StringAttribute{
+							Optional:    true,
+							Description: "CVSS v3 score",
+						},
 					},
 				},
+				Description: "CVE of the custom issue",
 			},
-		},
-		"source": {
-			Type:        schema.TypeSet,
-			Required:    true,
-			Description: "List of sources",
-			Elem: &schema.Resource{
-				Schema: map[string]*schema.Schema{
-					"id": {
-						Type:        schema.TypeString,
-						Required:    true,
-						Description: "ID of the source, e.g. CVE",
-					},
-					"name": {
-						Type:        schema.TypeString,
-						Optional:    true,
-						Description: "Name of the source",
-					},
-					"url": {
-						Type:             schema.TypeString,
-						Optional:         true,
-						Description:      "URL of the source",
-						ValidateDiagFunc: validation.ToDiagFunc(validation.IsURLWithHTTPorHTTPS),
+			"source": schema.SetNestedBlock{
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"id": schema.StringAttribute{
+							Required:    true,
+							Description: "ID of the source, e.g. CVE",
+						},
+						"name": schema.StringAttribute{
+							Optional:    true,
+							Description: "Name of the source",
+						},
+						"url": schema.StringAttribute{
+							Optional: true,
+							Validators: []validator.String{
+								validatorfw_string.IsURLHttpOrHttps(),
+							},
+							Description: "URL of the source",
+						},
 					},
 				},
+				Description: "List of sources",
 			},
 		},
-	}
-
-	var packCves = func(cves []Cve) []interface{} {
-		var cs []interface{}
-
-		for _, cve := range cves {
-			c := map[string]interface{}{
-				"cve":     cve.Cve,
-				"cvss_v2": cve.CvssV2,
-				"cvss_v3": cve.CvssV3,
-			}
-
-			cs = append(cs, c)
-		}
-
-		return cs
-	}
-
-	var packSources = func(sources []Source) []interface{} {
-		var ss []interface{}
-
-		for _, source := range sources {
-			s := map[string]interface{}{
-				"name": source.Name,
-				"id":   source.Id,
-				"url":  source.Url,
-			}
-
-			ss = append(ss, s)
-		}
-
-		return ss
-	}
-
-	var packComponents = func(components []Component) []interface{} {
-		var cs []interface{}
-
-		for _, component := range components {
-			c := map[string]interface{}{
-				"id":                  component.Id,
-				"vulnerable_versions": component.VulnerableVersions,
-				"fixed_versions":      component.FixedVersions,
-			}
-
-			var rs []interface{}
-			for _, vulnerableRange := range component.VulnerableRanges {
-				r := map[string]interface{}{
-					"vulnerable_versions": vulnerableRange.VulnerableVersions,
-					"fixed_versions":      vulnerableRange.FixedVersions,
-				}
-
-				rs = append(rs, r)
-			}
-			c["vulnerable_ranges"] = rs
-
-			cs = append(cs, c)
-		}
-
-		return cs
-	}
-
-	var packCustomIssue = func(customIssue CustomIssue, d *schema.ResourceData) diag.Diagnostics {
-		d.SetId(customIssue.Id)
-		if err := d.Set("name", customIssue.Id); err != nil {
-			return diag.FromErr(err)
-		}
-		if err := d.Set("description", customIssue.Description); err != nil {
-			return diag.FromErr(err)
-		}
-		if err := d.Set("summary", customIssue.Summary); err != nil {
-			return diag.FromErr(err)
-		}
-		if err := d.Set("package_type", customIssue.PackageType); err != nil {
-			return diag.FromErr(err)
-		}
-		if err := d.Set("type", customIssue.Type); err != nil {
-			return diag.FromErr(err)
-		}
-		if err := d.Set("provider_name", customIssue.Provider); err != nil {
-			return diag.FromErr(err)
-		}
-		if err := d.Set("severity", customIssue.Severity); err != nil {
-			return diag.FromErr(err)
-		}
-		if err := d.Set("cve", packCves(customIssue.Cves)); err != nil {
-			return diag.FromErr(err)
-		}
-		if err := d.Set("source", packSources(customIssue.Sources)); err != nil {
-			return diag.FromErr(err)
-		}
-		if err := d.Set("component", packComponents(customIssue.Components)); err != nil {
-			return diag.FromErr(err)
-		}
-
-		return nil
-	}
-
-	var unpackComponents = func(d *schema.ResourceData) []Component {
-		var components []Component
-
-		if v, ok := d.GetOk("component"); ok {
-			var unpackVulnerableRanges = func(vulnerableRanges interface{}) []VulnerableRange {
-				var vs []VulnerableRange
-
-				for _, vr := range vulnerableRanges.(*schema.Set).List() {
-					f := vr.(map[string]interface{})
-
-					vr := VulnerableRange{}
-
-					if v, ok := f["vulnerable_versions"]; ok {
-						vr.VulnerableVersions = sdk.CastToStringArr(v.(*schema.Set).List())
-					}
-
-					if v, ok := f["fixed_versions"]; ok {
-						vr.FixedVersions = sdk.CastToStringArr(v.(*schema.Set).List())
-					}
-
-					vs = append(vs, vr)
-				}
-
-				return vs
-			}
-
-			for _, list := range v.(*schema.Set).List() {
-				listMap := list.(map[string]interface{})
-				component := Component{
-					Id: listMap["id"].(string),
-				}
-
-				if v, ok := listMap["vulnerable_versions"]; ok {
-					component.VulnerableVersions = sdk.CastToStringArr(v.(*schema.Set).List())
-				}
-
-				if v, ok := listMap["fixed_versions"]; ok {
-					component.FixedVersions = sdk.CastToStringArr(v.(*schema.Set).List())
-				}
-
-				if v, ok := listMap["vulnerable_ranges"]; ok {
-					component.VulnerableRanges = unpackVulnerableRanges(v)
-				}
-
-				components = append(components, component)
-			}
-		}
-
-		return components
-	}
-
-	var unpackCves = func(d *schema.ResourceData) []Cve {
-		var cves []Cve
-
-		if v, ok := d.GetOk("cve"); ok {
-			for _, list := range v.(*schema.Set).List() {
-				listMap := list.(map[string]interface{})
-				cve := Cve{
-					Cve:    listMap["cve"].(string),
-					CvssV2: listMap["cvss_v2"].(string),
-					CvssV3: listMap["cvss_v3"].(string),
-				}
-				cves = append(cves, cve)
-			}
-		}
-
-		return cves
-	}
-
-	var unpackSources = func(d *schema.ResourceData) []Source {
-		var sources []Source
-
-		if v, ok := d.GetOk("source"); ok {
-			for _, list := range v.(*schema.Set).List() {
-				listMap := list.(map[string]interface{})
-				source := Source{
-					Id:   listMap["id"].(string),
-					Name: listMap["name"].(string),
-					Url:  listMap["url"].(string),
-				}
-				sources = append(sources, source)
-			}
-		}
-
-		return sources
-	}
-
-	var unpackCustomIssue = func(_ context.Context, d *schema.ResourceData) (CustomIssue, error) {
-		customIssue := CustomIssue{}
-
-		customIssue.Id = d.Get("name").(string)
-		if v, ok := d.GetOk("summary"); ok {
-			customIssue.Summary = v.(string)
-		}
-		if v, ok := d.GetOk("description"); ok {
-			customIssue.Description = v.(string)
-		}
-		if v, ok := d.GetOk("package_type"); ok {
-			customIssue.PackageType = v.(string)
-		}
-		if v, ok := d.GetOk("type"); ok {
-			customIssue.Type = v.(string)
-		}
-		if v, ok := d.GetOk("provider_name"); ok {
-			customIssue.Provider = v.(string)
-		}
-		if v, ok := d.GetOk("severity"); ok {
-			customIssue.Severity = v.(string)
-		}
-
-		customIssue.Components = unpackComponents(d)
-		customIssue.Cves = unpackCves(d)
-		customIssue.Sources = unpackSources(d)
-
-		return customIssue, nil
-	}
-
-	var resourceXrayCustomIssueRead = func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-		customIssue := CustomIssue{}
-
-		req, err := getRestyRequest(m.(util.ProviderMetadata).Client, "")
-		if err != nil {
-			return diag.FromErr(err)
-		}
-
-		resp, err := req.
-			SetResult(&customIssue).
-			SetPathParam("id", d.Id()).
-			Get("xray/api/v2/events/{id}")
-		if err != nil {
-			return diag.FromErr(err)
-		}
-		if resp.StatusCode() == http.StatusNotFound {
-			d.SetId("")
-			return diag.Errorf("custom issue (%s) not found, removing from state", d.Id())
-		}
-		if resp.IsError() {
-			return diag.Errorf("%s", resp.String())
-		}
-
-		return packCustomIssue(customIssue, d)
-	}
-
-	var resourceXrayCustomIssueCreate = func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-		customIssue, err := unpackCustomIssue(ctx, d)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-
-		req, err := getRestyRequest(m.(util.ProviderMetadata).Client, "")
-		if err != nil {
-			return diag.FromErr(err)
-		}
-
-		resp, err := req.
-			SetBody(customIssue).
-			Post("xray/api/v1/events")
-		if err != nil {
-			return diag.FromErr(err)
-		}
-		if resp.IsError() {
-			return diag.Errorf("%s", resp.String())
-		}
-
-		d.SetId(customIssue.Id)
-
-		return resourceXrayCustomIssueRead(ctx, d, m)
-	}
-
-	var resourceXrayCustomIssueUpdate = func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-		customIssue, err := unpackCustomIssue(ctx, d)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-
-		req, err := getRestyRequest(m.(util.ProviderMetadata).Client, "")
-		if err != nil {
-			return diag.FromErr(err)
-		}
-
-		resp, err := req.
-			SetPathParam("id", d.Id()).
-			SetBody(customIssue).
-			Put("xray/api/v1/events/{id}")
-		if err != nil {
-			return diag.FromErr(err)
-		}
-		if resp.IsError() {
-			return diag.Errorf("%s", resp.String())
-		}
-
-		d.SetId(customIssue.Id)
-
-		return resourceXrayCustomIssueRead(ctx, d, m)
-	}
-
-	var resourceXrayCustomIssueDelete = func(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-		req, err := getRestyRequest(m.(util.ProviderMetadata).Client, "")
-		if err != nil {
-			return diag.FromErr(err)
-		}
-
-		resp, err := req.
-			SetPathParam("id", d.Id()).
-			Delete("xray/api/v1/events/{id}")
-		if err != nil {
-			return diag.FromErr(err)
-		}
-		if resp.StatusCode() == http.StatusInternalServerError {
-			d.SetId("")
-		}
-		if resp.IsError() {
-			return diag.Errorf("%s", resp.String())
-		}
-
-		d.SetId("")
-
-		return nil
-	}
-
-	return &schema.Resource{
-		CreateContext: resourceXrayCustomIssueCreate,
-		ReadContext:   resourceXrayCustomIssueRead,
-		UpdateContext: resourceXrayCustomIssueUpdate,
-		DeleteContext: resourceXrayCustomIssueDelete,
-
-		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
-		},
-
-		Schema: customIssueSchema,
 		Description: "Provides an Xray custom issue event resource. See [Xray Custom Issue](https://jfrog.com/help/r/xray-how-to-formally-raise-an-issue-regarding-an-indexed-artifact) " +
 			"and [REST API](https://jfrog.com/help/r/jfrog-rest-apis/issues) for more details.\n\n" +
 			"~>Due to JFrog Xray REST API behavior, when `component.vulnerable_versions` or `component.fixed_versions` are " +
 			"set, their values are mirrored in the `component.vulnerable_ranges` attribute, and vice versa. We recommend " +
 			"setting all the `component` attribute values to match to avoid state drift.",
 	}
+}
+
+func (r *CustomIssueResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	// Prevent panic if the provider has not been configured.
+	if req.ProviderData == nil {
+		return
+	}
+	r.ProviderData = req.ProviderData.(util.ProviderMetadata)
+}
+
+func (r *CustomIssueResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	go util.SendUsageResourceCreate(ctx, r.ProviderData.Client.R(), r.ProviderData.ProductId, r.TypeName)
+
+	var plan CustomIssueResourceModel
+
+	// Read Terraform plan data into the model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var customIssue CustomIssueAPIModel
+	resp.Diagnostics.Append(plan.toAPIModel(ctx, &customIssue)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	response, err := r.ProviderData.Client.R().
+		SetBody(customIssue).
+		Post(CustomIssuesEndpoint)
+	if err != nil {
+		utilfw.UnableToCreateResourceError(resp, err.Error())
+		return
+	}
+	if response.IsError() {
+		utilfw.UnableToCreateResourceError(resp, response.String())
+		return
+	}
+
+	plan.ID = types.StringValue(customIssue.ID)
+
+	// Save data into Terraform state
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+}
+
+func (r *CustomIssueResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	go util.SendUsageResourceRead(ctx, r.ProviderData.Client.R(), r.ProviderData.ProductId, r.TypeName)
+
+	var state CustomIssueResourceModel
+
+	// Read Terraform state data into the model
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var customIssue CustomIssueAPIModel
+
+	response, err := r.ProviderData.Client.R().
+		SetPathParam("id", state.Name.ValueString()).
+		SetResult(&customIssue).
+		Get(CustomIssueEndpointV2)
+	if err != nil {
+		utilfw.UnableToRefreshResourceError(resp, err.Error())
+		return
+	}
+
+	if response.IsError() {
+		utilfw.UnableToRefreshResourceError(resp, response.String())
+		return
+	}
+
+	resp.Diagnostics.Append(state.fromAPIModel(ctx, customIssue)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Save data into Terraform state
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+}
+
+func (r *CustomIssueResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	go util.SendUsageResourceUpdate(ctx, r.ProviderData.Client.R(), r.ProviderData.ProductId, r.TypeName)
+
+	var plan CustomIssueResourceModel
+
+	// Read Terraform plan data into the model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var customIssue CustomIssueAPIModel
+	resp.Diagnostics.Append(plan.toAPIModel(ctx, &customIssue)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	response, err := r.ProviderData.Client.R().
+		SetPathParam("id", plan.Name.ValueString()).
+		SetBody(customIssue).
+		Put(CustomIssueEndpoint)
+	if err != nil {
+		utilfw.UnableToUpdateResourceError(resp, err.Error())
+		return
+	}
+	if response.IsError() {
+		utilfw.UnableToUpdateResourceError(resp, response.String())
+		return
+	}
+
+	plan.ID = types.StringValue(customIssue.ID)
+
+	// Save data into Terraform state
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+}
+
+func (r *CustomIssueResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	go util.SendUsageResourceDelete(ctx, r.ProviderData.Client.R(), r.ProviderData.ProductId, r.TypeName)
+
+	var state CustomIssueResourceModel
+
+	// Read Terraform prior state data into the model
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+
+	response, err := r.ProviderData.Client.R().
+		SetPathParam("id", state.Name.ValueString()).
+		Delete(CustomIssueEndpoint)
+
+	if err != nil {
+		utilfw.UnableToDeleteResourceError(resp, err.Error())
+		return
+	}
+
+	if response.IsError() {
+		utilfw.UnableToDeleteResourceError(resp, response.String())
+		return
+	}
+
+	// If the logic reaches here, it implicitly succeeded and will remove
+	// the resource from state if there are no other errors.
+}
+
+// ImportState imports the resource into the Terraform state.
+func (r *CustomIssueResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("name"), req, resp)
 }

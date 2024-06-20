@@ -186,6 +186,7 @@ func (p *XrayProvider) Resources(ctx context.Context) []func() resource.Resource
 	return []func() resource.Resource{
 		xray_resource.NewBinaryManagerReposResource,
 		xray_resource.NewBinaryManagerBuildsResource,
+		xray_resource.NewCustomIssueResource,
 		xray_resource.NewSettingsResource,
 		xray_resource.NewWebhookResource,
 		xray_resource.NewWorkersCountResource,
