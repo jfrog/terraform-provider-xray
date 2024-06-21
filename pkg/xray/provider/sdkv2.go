@@ -58,7 +58,6 @@ func SdkV2() *schema.Provider {
 				"xray_security_policy":          xray.ResourceXraySecurityPolicyV2(),
 				"xray_license_policy":           xray.ResourceXrayLicensePolicyV2(),
 				"xray_operational_risk_policy":  xray.ResourceXrayOperationalRiskPolicy(),
-				"xray_watch":                    xray.ResourceXrayWatch(),
 				"xray_repository_config":        xray.ResourceXrayRepositoryConfig(),
 				"xray_vulnerabilities_report":   xray.ResourceXrayVulnerabilitiesReport(),
 				"xray_licenses_report":          xray.ResourceXrayLicensesReport(),

@@ -5,7 +5,6 @@ import (
 	"math/rand"
 	"regexp"
 	"testing"
-	"time"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -34,6 +33,39 @@ var testDataWatch = map[string]string{
 	"watch_recipient_1": "test@email.com",
 }
 
+func TestAccWatch_UpgradeFromSDKv2(t *testing.T) {
+	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
+	testData := sdk.MergeMaps(testDataWatch)
+
+	testData["resource_name"] = resourceName
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", testutil.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", testutil.RandomInt())
+
+	config := util.ExecuteTemplate(fqrn, allReposSinglePolicyWatchTemplate, testData)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { acctest.PreCheck(t) },
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "name", testCheckWatch),
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"xray": {
+						VersionConstraint: "2.8.1",
+						Source:            "jfrog/xray",
+					},
+				},
+				Config: config,
+				Check:  verifyXrayWatch(fqrn, testData),
+			},
+			{
+				ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+				Config:                   config,
+				ConfigPlanChecks:         testutil.ConfigPlanChecks(""),
+			},
+		},
+	})
+}
+
 func TestAccWatch_allReposSinglePolicy(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
 	testData := sdk.MergeMaps(testDataWatch)
@@ -44,7 +76,7 @@ func TestAccWatch_allReposSinglePolicy(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.PreCheck(t) },
-		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "name", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.CheckPolicyDeleted(testData["policy_name_0"], t, request)
 			resp, err := testCheckWatch(id, request)
 			return resp, err
@@ -56,9 +88,11 @@ func TestAccWatch_allReposSinglePolicy(t *testing.T) {
 				Check:  verifyXrayWatch(fqrn, testData),
 			},
 			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:                         fqrn,
+				ImportState:                          true,
+				ImportStateId:                        testData["watch_name"],
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "name",
 			},
 		},
 	})
@@ -76,7 +110,7 @@ func TestAccWatch_allReposPathAntFilter(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.PreCheck(t) },
-		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "name", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.CheckPolicyDeleted(testData["policy_name_0"], t, request)
 			resp, err := testCheckWatch(id, request)
 			return resp, err
@@ -88,9 +122,11 @@ func TestAccWatch_allReposPathAntFilter(t *testing.T) {
 				Check:  verifyXrayWatch(fqrn, testData),
 			},
 			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:                         fqrn,
+				ImportState:                          true,
+				ImportStateId:                        testData["watch_name"],
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "name",
 			},
 		},
 	})
@@ -108,7 +144,7 @@ func TestAccWatch_allReposKvFilter(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.PreCheck(t) },
-		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "name", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.CheckPolicyDeleted(testData["policy_name_0"], t, request)
 			resp, err := testCheckWatch(id, request)
 			return resp, err
@@ -120,9 +156,11 @@ func TestAccWatch_allReposKvFilter(t *testing.T) {
 				Check:  verifyXrayWatch(fqrn, testData),
 			},
 			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:                         fqrn,
+				ImportState:                          true,
+				ImportStateId:                        testData["watch_name"],
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "name",
 			},
 		},
 	})
@@ -197,7 +235,7 @@ func TestAccWatch_allReposWithProjectKey(t *testing.T) {
 			acctest.PreCheck(t)
 			acctest.CreateProject(t, projectKey)
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "name", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.DeleteProject(t, projectKey)
 			resp, err := testCheckWatch(id, request)
 			return resp, err
@@ -216,10 +254,11 @@ func TestAccWatch_allReposWithProjectKey(t *testing.T) {
 				Check:  verifyXrayWatch(fqrn, updatedTestData),
 			},
 			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateId:     fmt.Sprintf("%s:%s", testData["watch_name"], projectKey),
-				ImportStateVerify: true,
+				ResourceName:                         fqrn,
+				ImportState:                          true,
+				ImportStateId:                        fmt.Sprintf("%s:%s", testData["watch_name"], projectKey),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "name",
 			},
 		},
 	})
@@ -237,7 +276,7 @@ func TestAccWatch_allReposMultiplePolicies(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.PreCheck(t) },
-		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "name", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.CheckPolicyDeleted(testData["policy_name_0"], t, request)
 			acctest.CheckPolicyDeleted(testData["policy_name_1"], t, request)
 			acctest.CheckPolicyDeleted(testData["policy_name_2"], t, request)
@@ -274,9 +313,11 @@ func TestAccWatch_allReposMultiplePolicies(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:                         fqrn,
+				ImportState:                          true,
+				ImportStateId:                        testData["watch_name"],
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "name",
 			},
 		},
 	})
@@ -298,7 +339,7 @@ func makeSingleRepositoryTestCase(repoType string, t *testing.T) (*testing.T, re
 			acctest.PreCheck(t)
 			acctest.CreateRepos(t, testData["repo0"], repoType, "", "")
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "name", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.DeleteRepo(t, testData["repo0"])
 			acctest.CheckPolicyDeleted(testData["policy_name_0"], t, request)
 			resp, err := testCheckWatch(id, request)
@@ -318,9 +359,11 @@ func makeSingleRepositoryTestCase(repoType string, t *testing.T) (*testing.T, re
 				),
 			},
 			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:                         fqrn,
+				ImportState:                          true,
+				ImportStateId:                        testData["watch_name"],
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "name",
 			},
 		},
 	}
@@ -405,7 +448,7 @@ func TestAccWatch_singleRepositoryWithProjectKey(t *testing.T) {
 			acctest.CreateProject(t, projectKey)
 			acctest.CreateRepos(t, repoKey, "local", projectKey, "")
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "name", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.DeleteRepo(t, repoKey)
 			acctest.DeleteProject(t, projectKey)
 			resp, err := testCheckWatch(id, request)
@@ -422,10 +465,11 @@ func TestAccWatch_singleRepositoryWithProjectKey(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateId:     fmt.Sprintf("%s:%s", testData["watch_name"], projectKey),
-				ImportStateVerify: true,
+				ResourceName:                         fqrn,
+				ImportState:                          true,
+				ImportStateId:                        fmt.Sprintf("%s:%s", testData["watch_name"], projectKey),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "name",
 			},
 		},
 	})
@@ -451,7 +495,7 @@ func TestAccWatch_singleRepoMimeTypeFilter(t *testing.T) {
 			acctest.PreCheck(t)
 			acctest.CreateRepos(t, testData["repo0"], repoType, "", "")
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "name", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.DeleteRepo(t, testData["repo0"])
 			acctest.CheckPolicyDeleted(testData["policy_name_0"], t, request)
 			resp, err := testCheckWatch(id, request)
@@ -496,7 +540,7 @@ func TestAccWatch_singleRepoKvFilter(t *testing.T) {
 			acctest.PreCheck(t)
 			acctest.CreateRepos(t, testData["repo0"], repoType, "", "")
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "name", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.DeleteRepo(t, testData["repo0"])
 			acctest.CheckPolicyDeleted(testData["policy_name_0"], t, request)
 			return testCheckWatch(id, request)
@@ -538,7 +582,7 @@ func TestAccWatch_repositoryMissingRepoType(t *testing.T) {
 			acctest.PreCheck(t)
 			acctest.CreateRepos(t, testData["repo0"], "local", "", "")
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "name", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.DeleteRepo(t, testData["repo0"])
 			acctest.CheckPolicyDeleted(testData["policy_name_0"], t, request)
 			resp, err := testCheckWatch(id, request)
@@ -549,7 +593,7 @@ func TestAccWatch_repositoryMissingRepoType(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      util.ExecuteTemplate(fqrn, singleRepositoryInvalidWatchTemplate, testData),
-				ExpectError: regexp.MustCompile(`attribute 'repo_type' not set when 'watch_resource\.type' is set to 'repository'`),
+				ExpectError: regexp.MustCompile(`.*Attribute 'repo_type' not set when 'watch_resource\.type' is set to.*`),
 			},
 		},
 	})
@@ -573,7 +617,7 @@ func TestAccWatch_multipleRepositories(t *testing.T) {
 			acctest.CreateRepos(t, testData["repo0"], "local", "", "")
 			acctest.CreateRepos(t, testData["repo1"], "local", "", "")
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "name", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.DeleteRepo(t, testData["repo0"])
 			acctest.DeleteRepo(t, testData["repo1"])
 			acctest.CheckPolicyDeleted(testData["policy_name_0"], t, request)
@@ -587,9 +631,11 @@ func TestAccWatch_multipleRepositories(t *testing.T) {
 				Check:  verifyXrayWatch(fqrn, testData),
 			},
 			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:                         fqrn,
+				ImportState:                          true,
+				ImportStateId:                        testData["watch_name"],
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "name",
 			},
 		},
 	})
@@ -619,7 +665,7 @@ func TestAccWatch_multipleRepositoriesPathAntPatterns(t *testing.T) {
 			acctest.CreateRepos(t, testData["repo1"], "local", "", "")
 			acctest.CreateRepos(t, testData["repo2"], "local", "", "")
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "name", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.DeleteRepo(t, testData["repo0"])
 			acctest.DeleteRepo(t, testData["repo1"])
 			acctest.DeleteRepo(t, testData["repo2"])
@@ -643,9 +689,11 @@ func TestAccWatch_multipleRepositoriesPathAntPatterns(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:                         fqrn,
+				ImportState:                          true,
+				ImportStateId:                        testData["watch_name"],
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "name",
 			},
 		},
 	})
@@ -673,7 +721,7 @@ func TestAccWatch_PathAntPatternsError(t *testing.T) {
 			acctest.CreateRepos(t, testData["repo0"], "local", "", "")
 			acctest.CreateRepos(t, testData["repo1"], "local", "", "")
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "name", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.DeleteRepo(t, testData["repo0"])
 			acctest.DeleteRepo(t, testData["repo1"])
 			acctest.CheckPolicyDeleted(testData["policy_name_0"], t, request)
@@ -684,7 +732,7 @@ func TestAccWatch_PathAntPatternsError(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      util.ExecuteTemplate(fqrn, pathAntPatterns, testData),
-				ExpectError: regexp.MustCompile("attribute 'path_ant_filter' is set when 'watch_resource.type' is not set to 'repository' or 'all-repos'"),
+				ExpectError: regexp.MustCompile(".*attribute 'path_ant_filter' is set when 'watch_resource.type' is not set to.*"),
 			},
 		},
 	})
@@ -713,7 +761,7 @@ func TestAccWatch_multipleRepositoriesKvFilter(t *testing.T) {
 			acctest.CreateRepos(t, testData["repo0"], "local", "", "")
 			acctest.CreateRepos(t, testData["repo1"], "local", "", "")
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "name", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.DeleteRepo(t, testData["repo0"])
 			acctest.DeleteRepo(t, testData["repo1"])
 			acctest.CheckPolicyDeleted(testData["policy_name_0"], t, request)
@@ -742,9 +790,11 @@ func TestAccWatch_multipleRepositoriesKvFilter(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:                         fqrn,
+				ImportState:                          true,
+				ImportStateId:                        testData["watch_name"],
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "name",
 			},
 		},
 	})
@@ -769,7 +819,7 @@ func TestAccWatch_KvFilterError(t *testing.T) {
 			acctest.PreCheck(t)
 			acctest.CreateRepos(t, testData["repo0"], "local", "", "")
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "name", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.DeleteRepo(t, testData["repo0"])
 			acctest.CheckPolicyDeleted(testData["policy_name_0"], t, request)
 			resp, err := testCheckWatch(id, request)
@@ -779,7 +829,7 @@ func TestAccWatch_KvFilterError(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      util.ExecuteTemplate(fqrn, kvFilters, testData),
-				ExpectError: regexp.MustCompile("attribute 'kv_filter' is set when 'watch_resource.type' is not set to 'repository' or 'all-repos'"),
+				ExpectError: regexp.MustCompile(".*attribute 'kv_filter' is set when 'watch_resource.type' is not set to.*"),
 			},
 		},
 	})
@@ -802,7 +852,7 @@ func TestAccWatch_build(t *testing.T) {
 			acctest.PreCheck(t)
 			acctest.CreateBuilds(t, builds, "")
 		},
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckWatch),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "name", testCheckWatch),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -810,9 +860,11 @@ func TestAccWatch_build(t *testing.T) {
 				Check:  verifyXrayWatch(fqrn, testData),
 			},
 			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:                         fqrn,
+				ImportState:                          true,
+				ImportStateId:                        testData["watch_name"],
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "name",
 			},
 		},
 	})
@@ -882,7 +934,7 @@ func TestAccWatch_buildWithProjectKey(t *testing.T) {
 			acctest.CreateProject(t, projectKey)
 			acctest.CreateBuilds(t, []string{testData["build_name0"]}, projectKey)
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "name", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.DeleteProject(t, projectKey)
 			resp, err := testCheckWatch(id, request)
 			return resp, err
@@ -897,10 +949,11 @@ func TestAccWatch_buildWithProjectKey(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateId:     fmt.Sprintf("%s:%s", testData["watch_name"], projectKey),
-				ImportStateVerify: true,
+				ResourceName:                         fqrn,
+				ImportState:                          true,
+				ImportStateId:                        fmt.Sprintf("%s:%s", testData["watch_name"], projectKey),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "name",
 			},
 		},
 	})
@@ -980,7 +1033,7 @@ func TestAccWatch_allBuildsWithProjectKey(t *testing.T) {
 			acctest.PreCheck(t)
 			acctest.CreateProject(t, projectKey)
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "name", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.DeleteProject(t, projectKey)
 			resp, err := testCheckWatch(id, request)
 			return resp, err
@@ -999,10 +1052,11 @@ func TestAccWatch_allBuildsWithProjectKey(t *testing.T) {
 				Check:  verifyXrayWatch(fqrn, updatedTestData),
 			},
 			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateId:     fmt.Sprintf("%s:%s", testData["watch_name"], projectKey),
-				ImportStateVerify: true,
+				ResourceName:                         fqrn,
+				ImportState:                          true,
+				ImportStateId:                        fmt.Sprintf("%s:%s", testData["watch_name"], projectKey),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "name",
 			},
 		},
 	})
@@ -1025,7 +1079,7 @@ func TestAccWatch_multipleBuilds(t *testing.T) {
 			acctest.PreCheck(t)
 			acctest.CreateBuilds(t, builds, "")
 		},
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckWatch),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "name", testCheckWatch),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -1033,9 +1087,11 @@ func TestAccWatch_multipleBuilds(t *testing.T) {
 				Check:  verifyXrayWatch(fqrn, testData),
 			},
 			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:                         fqrn,
+				ImportState:                          true,
+				ImportStateId:                        testData["watch_name"],
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "name",
 			},
 		},
 	})
@@ -1054,7 +1110,7 @@ func TestAccWatch_allBuilds(t *testing.T) {
 		PreCheck: func() {
 			acctest.PreCheck(t)
 		},
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckWatch),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "name", testCheckWatch),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -1070,9 +1126,11 @@ func TestAccWatch_allBuilds(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:                         fqrn,
+				ImportState:                          true,
+				ImportStateId:                        testData["watch_name"],
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "name",
 			},
 		},
 	})
@@ -1090,12 +1148,12 @@ func TestAccWatch_invalidBuildFilter(t *testing.T) {
 		PreCheck: func() {
 			acctest.PreCheck(t)
 		},
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckWatch),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "name", testCheckWatch),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config:      util.ExecuteTemplate(fqrn, invalidBuildsWatchFilterTemplate, testData),
-				ExpectError: regexp.MustCompile(`attribute 'ant_filter' is set when 'watch_resource.type' is not set to 'all-builds', 'all-projects', 'all-releaseBundles', or 'all-releaseBundlesV2'`),
+				ExpectError: regexp.MustCompile(`.*attribute 'ant_filter' is set when 'watch_resource.type' is not set to.*`),
 			},
 		},
 	})
@@ -1114,7 +1172,7 @@ func TestAccWatch_allProjects(t *testing.T) {
 		PreCheck: func() {
 			acctest.PreCheck(t)
 		},
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckWatch),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "name", testCheckWatch),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -1127,9 +1185,11 @@ func TestAccWatch_allProjects(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:                         fqrn,
+				ImportState:                          true,
+				ImportStateId:                        testData["watch_name"],
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "name",
 			},
 		},
 	})
@@ -1154,7 +1214,7 @@ func TestAccWatch_singleProject(t *testing.T) {
 			acctest.CreateProject(t, testData["project_key_0"])
 			acctest.CreateProject(t, testData["project_key_1"])
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "name", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.DeleteProject(t, testData["project_key_0"])
 			acctest.DeleteProject(t, testData["project_key_1"])
 			//watch created by TF, so it will be automatically deleted by DeleteContext function
@@ -1169,9 +1229,11 @@ func TestAccWatch_singleProject(t *testing.T) {
 				Check:  verifyXrayWatch(fqrn, testData),
 			},
 			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:                         fqrn,
+				ImportState:                          true,
+				ImportStateId:                        testData["watch_name"],
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "name",
 			},
 		},
 	})
@@ -1190,13 +1252,13 @@ func TestAccWatch_invalidProjectFilter(t *testing.T) {
 		PreCheck: func() {
 			acctest.PreCheck(t)
 		},
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckWatch),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "name", testCheckWatch),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
 
 				Config:      util.ExecuteTemplate(fqrn, invalidProjectWatchFilterTemplate, testData),
-				ExpectError: regexp.MustCompile(`attribute 'ant_filter' is set when 'watch_resource.type' is not set to 'all-builds', 'all-projects', 'all-releaseBundles', or 'all-releaseBundlesV2'`),
+				ExpectError: regexp.MustCompile(`attribute 'ant_filter' is set when 'watch_resource.type' is not set to.*`),
 			},
 		},
 	})
@@ -1223,7 +1285,7 @@ func allReleaseBundleTestCase(watchType string, t *testing.T) (*testing.T, resou
 		PreCheck: func() {
 			acctest.PreCheck(t)
 		},
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckWatch),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "name", testCheckWatch),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -1236,9 +1298,11 @@ func allReleaseBundleTestCase(watchType string, t *testing.T) (*testing.T, resou
 				),
 			},
 			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:                         fqrn,
+				ImportState:                          true,
+				ImportStateId:                        testData["watch_name"],
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "name",
 			},
 		},
 	}
@@ -1258,7 +1322,7 @@ func TestAccWatch_singleReleaseBundle(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckWatch),
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "name", testCheckWatch),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -1266,9 +1330,11 @@ func TestAccWatch_singleReleaseBundle(t *testing.T) {
 				Check:  verifyXrayWatch(fqrn, testData),
 			},
 			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:                         fqrn,
+				ImportState:                          true,
+				ImportStateId:                        testData["watch_name"],
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "name",
 			},
 		},
 	})
@@ -2338,6 +2404,5 @@ func testCheckWatch(id string, request *resty.Request) (*resty.Response, error) 
 }
 
 func RandomProjectName() string {
-	rand.Seed(time.Now().UnixNano())
 	return fmt.Sprintf("testproj%d", rand.Intn(100))
 }
