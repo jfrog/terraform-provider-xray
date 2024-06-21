@@ -374,7 +374,10 @@ func (m *WatchResourceModel) fromAPIModel(ctx context.Context, apiModel WatchAPI
 	diags := diag.Diagnostics{}
 
 	m.Name = types.StringValue(apiModel.GeneralData.Name)
-	m.Description = types.StringValue(apiModel.GeneralData.Description)
+	m.Description = types.StringNull()
+	if len(apiModel.GeneralData.Description) > 0 {
+		m.Description = types.StringValue(apiModel.GeneralData.Description)
+	}
 	m.Active = types.BoolValue(apiModel.GeneralData.Active)
 
 	watchResources := lo.Map(
