@@ -1,3 +1,9 @@
+## 2.9.0 (June 29, 2024)
+
+FEATURES:
+
+* resource/xray_binary_manager_release_bundles_v2: Add new resources to support adding Release Bundles V2 to binary manager indexing configuration. PR: [#222](https://github.com/jfrog/terraform-provider-xray/pull/222) Issue: [#220](https://github.com/jfrog/terraform-provider-xray/issues/220)
+
 ## 2.8.2 (June 21, 2024). Tested on Artifactory 7.84.15 and Xray 3.96.1 with Terraform 1.8.5 and OpenTofu 1.7.2
 
 * resource/xray_custom_issue: Migrate from SDKv2 to Plugin Framework. PR: [#207](https://github.com/jfrog/terraform-provider-xray/pull/207)
