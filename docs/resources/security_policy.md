@@ -190,7 +190,7 @@ Optional:
 - `min_severity` (String) The minimum security vulnerability severity that will be impacted by the policy. Valid values: `All Severities`, `Critical`, `High`, `Medium`, `Low`
 - `package_name` (String) The package name to create a rule for
 - `package_type` (String) The package type to create a rule for
-- `package_versions` (Set of String) package versions to apply the rule on can be (,) for any version or a open range (1,4) or closed [1,4] or one version [1]
+- `package_versions` (Set of String) package versions to apply the rule on can be (,) for any version or an open range (1,4) or closed [1,4] or one version [1]
 - `vulnerability_ids` (Set of String) Creates policy rules for specific vulnerability IDs that you input. You can add multiple vulnerabilities IDs up to 100. CVEs and Xray IDs are supported. Example - CVE-2015-20107, XRAY-2344
 
 <a id="nestedblock--rule--criteria--cvss_range"></a>

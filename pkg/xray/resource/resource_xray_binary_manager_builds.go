@@ -300,8 +300,8 @@ func (r *BinaryManagerBuildsResource) Delete(ctx context.Context, req resource.D
 	go util.SendUsageResourceDelete(ctx, r.ProviderData.Client.R(), r.ProviderData.ProductId, r.TypeName)
 
 	resp.Diagnostics.AddWarning(
-		"Repository indexing configuration cannot be deleted",
-		"The resource is deleted from Terraform but the repository indexing configuration remains unchanged in Xray.",
+		"Build indexing configuration cannot be deleted",
+		"The resource is deleted from Terraform but the build indexing configuration remains unchanged in Xray.",
 	)
 
 	// If the logic reaches here, it implicitly succeeded and will remove
