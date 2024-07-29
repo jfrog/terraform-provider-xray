@@ -131,11 +131,6 @@ func TestAccBinaryManagerBuilds_full(t *testing.T) {
 			}
 		},
 		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
-		ExternalProviders: map[string]resource.ExternalProvider{
-			"artifactory": {
-				Source: "jfrog/artifactory",
-			},
-		},
 		CheckDestroy: func(*terraform.State) error {
 			if err := deleteBuild(t, build1Name, ""); err != nil {
 				return err
@@ -229,14 +224,6 @@ func TestAccBinaryManagerBuilds_project_full(t *testing.T) {
 			}
 		},
 		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
-		ExternalProviders: map[string]resource.ExternalProvider{
-			"artifactory": {
-				Source: "jfrog/artifactory",
-			},
-			"project": {
-				Source: "jfrog/project",
-			},
-		},
 		CheckDestroy: func(*terraform.State) error {
 			if err := deleteBuild(t, build1Name, projectKey); err != nil {
 				return err

@@ -626,7 +626,7 @@ func (r *IgnoreRuleResource) Schema(ctx context.Context, req resource.SchemaRequ
 							PlanModifiers: []planmodifier.String{
 								stringplanmodifier.RequiresReplace(),
 							},
-							Description: "Name of the artifact",
+							Description: "Name of the artifact. Wildcards are not supported.",
 						},
 						"version": schema.StringAttribute{
 							Optional: true,

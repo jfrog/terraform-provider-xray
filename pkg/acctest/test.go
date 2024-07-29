@@ -121,7 +121,7 @@ func VerifyDeleted(id, identifierAttribute string, check CheckFun) func(*terrafo
 			return nil
 		}
 
-		return fmt.Errorf("error: %s still exists", rs.Primary.ID)
+		return fmt.Errorf("error: %s still exists", identifier)
 	}
 }
 

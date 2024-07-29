@@ -52,7 +52,7 @@ resource "xray_binary_manager_repos" "my-indexed-repos" {
 Required:
 
 - `name` (String) Name of the repository
-- `package_type` (String) Artifactory package type. Valid value: Alpine, Bower, Cargo, Chef, Cocoapods, Composer, Conan, Conda, Cran, Debian, Docker, Gems, Generic, Gitlfs, Go, Gradle, Helm, Ivy, Maven, Npm, Nuget, Opkg, P2, Puppet, Pypi, Rpm, Sbt, Swift, Terraform, Terraformbackend, Vagrant, Vcs
+- `package_type` (String) Artifactory package type. Valid value: Alpine, Bower, Cargo, Composer, Conan, Conda, Cran, Debian, Docker, Generic, Go, Gradle, Huggingface, Ivy, Maven, Npm, Nuget, Oci, Pypi, Rpm, Rubygems, Sbt, Terraformbe
 - `type` (String) Repository type. Valid value: local, remote, federated
 
 
