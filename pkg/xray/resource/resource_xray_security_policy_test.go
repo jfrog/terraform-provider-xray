@@ -921,6 +921,7 @@ func verifySecurityPolicy(fqrn string, testData map[string]string, criteriaType 
 			commonCheckList,
 			resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.cvss_range.0.from", testData["cvss_from"]),
 			resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.cvss_range.0.to", testData["cvss_to"]),
+			resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.applicable_cves_only", "true"),
 		)
 	}
 	if criteriaType == criteriaTypeSeverity {
@@ -1063,6 +1064,7 @@ const securityPolicyCVSS = `resource "xray_security_policy" "{{ .resource_name }
 				from = {{ .cvss_from }}
 				to = {{ .cvss_to }}
 			}
+			applicable_cves_only = true
 		}
 		actions {
 			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
