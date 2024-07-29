@@ -1,4 +1,4 @@
-## 2.9.0 (June 30, 2024). Tested on Artifactory 7.90.5 and Xray 3.100.3 with Terraform 1.9.3 and OpenTofu 1.7.3
+## 2.9.0 (June 30, 2024). Tested on Artifactory 7.90.5 and Xray 3.101.5 with Terraform 1.9.3 and OpenTofu 1.8.0
 
 FEATURES:
 
