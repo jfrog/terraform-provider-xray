@@ -702,8 +702,6 @@ func TestAccIgnoreRule_invalid_artifact_path(t *testing.T) {
 }
 
 func TestAccIgnoreRule_with_project_key(t *testing.T) {
-	t.Skipf("skip for now as we haven't found a combo for ignore rule that works for projectKey query param")
-
 	_, fqrn, name := testutil.MkNames("ignore-rule-", "xray_ignore_rule")
 	expirationDate := time.Now().Add(time.Hour * 48)
 	projectKey := fmt.Sprintf("testproj%d", testutil.RandomInt())
@@ -725,10 +723,66 @@ func TestAccIgnoreRule_with_project_key(t *testing.T) {
 			expiration_date  = "{{ .expirationDate }}"
 			project_key      = project.{{ .projectKey }}.key
 
+			licenses = ["unknown"]
+
 			docker_layers = [
 				"2ae0e4835a9a6e22e35dd0fcce7d7354999476b7dad8698d2d7a77c80bfc647b",
 				"a8db0e25d5916e70023114bb2d2497cd85327486bd6e0dc2092b349a1ab3a0a0"
 			]
+		}`,
+		map[string]interface{}{
+			"name":           name,
+			"expirationDate": expirationDate.Format("2006-01-02"),
+			"projectKey":     projectKey,
+		},
+	)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		ExternalProviders: map[string]resource.ExternalProvider{
+			"project": {
+				Source: "jfrog/project",
+			},
+		},
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "", testCheckIgnoreRule),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check:  resource.TestCheckResourceAttr(fqrn, "project_key", projectKey),
+			},
+		},
+	})
+}
+
+func TestAccIgnoreRule_build_with_project_key(t *testing.T) {
+	_, fqrn, name := testutil.MkNames("ignore-rule-", "xray_ignore_rule")
+	expirationDate := time.Now().Add(time.Hour * 48)
+	projectKey := fmt.Sprintf("testproj%d", testutil.RandomInt())
+
+	config := util.ExecuteTemplate(
+		"TestAccIgnoreRule",
+		`resource "project" "{{ .projectKey }}" {
+			key          = "{{ .projectKey }}"
+			display_name = "{{ .projectKey }}"
+			admin_privileges {
+				manage_members   = true
+				manage_resources = true
+				index_resources  = true
+			}
+		}
+
+		resource "xray_ignore_rule" "{{ .name }}" {
+			notes            = "fake notes"
+			expiration_date  = "{{ .expirationDate }}"
+			project_key      = project.{{ .projectKey }}.key
+
+			licenses = ["unknown"]
+
+			build {
+				name    = "fake-name"
+				version = "fake-version"
+			}
 		}`,
 		map[string]interface{}{
 			"name":           name,

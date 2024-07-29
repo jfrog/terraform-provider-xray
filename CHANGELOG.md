@@ -8,6 +8,10 @@ IMPROVEMENTS:
 
 * resource/xray_security_policy: Add `applicable_cves_only` attribute to support JFrog Advanced Security feature. PR: [#223](https://github.com/jfrog/terraform-provider-xray/pull/223) Issue: [#221](https://github.com/jfrog/terraform-provider-xray/issues/221)
 
+BUG FIXES:
+
+* resource/xray_ignore_rule: Fix error when creating project specific ignore rule with build filter. PR: [#224](https://github.com/jfrog/terraform-provider-xray/pull/224) Issue: [#213](https://github.com/jfrog/terraform-provider-xray/issues/213)
+
 ## 2.8.2 (June 21, 2024). Tested on Artifactory 7.84.15 and Xray 3.96.1 with Terraform 1.8.5 and OpenTofu 1.7.2
 
 * resource/xray_custom_issue: Migrate from SDKv2 to Plugin Framework. PR: [#207](https://github.com/jfrog/terraform-provider-xray/pull/207)

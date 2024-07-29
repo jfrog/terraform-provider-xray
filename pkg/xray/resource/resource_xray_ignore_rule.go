@@ -75,6 +75,19 @@ func unpackFilterNameVersion(elem attr.Value, _ int) IgnoreFilterNameVersionAPIM
 	}
 }
 
+func unpackFilterNameVersionProject(projectKey string) func(elem attr.Value, _ int) IgnoreFilterNameVersionProjectAPIModel {
+	return func(elem attr.Value, _ int) IgnoreFilterNameVersionProjectAPIModel {
+		attrs := elem.(types.Object).Attributes()
+		return IgnoreFilterNameVersionProjectAPIModel{
+			IgnoreFilterNameVersionAPIModel: IgnoreFilterNameVersionAPIModel{
+				Name:    attrs["name"].(types.String).ValueString(),
+				Version: attrs["version"].(types.String).ValueString(),
+			},
+			Project: projectKey,
+		}
+	}
+}
+
 func unpackFilterNameVersionPath(elem attr.Value, _ int) IgnoreFilterNameVersionPathAPIModel {
 	attrs := elem.(types.Object).Attributes()
 	return IgnoreFilterNameVersionPathAPIModel{
@@ -139,7 +152,7 @@ func (m IgnoreRuleResourceModel) toAPIModel(ctx context.Context, apiModel *Ignor
 
 	builds := lo.Map(
 		m.Builds.Elements(),
-		unpackFilterNameVersion,
+		unpackFilterNameVersionProject(m.ProjectKey.ValueString()),
 	)
 
 	components := lo.Map(
@@ -204,6 +217,43 @@ func packNameVersion(models []IgnoreFilterNameVersionAPIModel) (basetypes.SetVal
 	nameVersions := lo.Map(
 		models,
 		func(property IgnoreFilterNameVersionAPIModel, _ int) attr.Value {
+			nameVersionMap := map[string]attr.Value{
+				"name":    types.StringNull(),
+				"version": types.StringNull(),
+			}
+
+			if property.Name != "" {
+				nameVersionMap["name"] = types.StringValue(property.Name)
+			}
+
+			if property.Version != "" {
+				nameVersionMap["version"] = types.StringValue(property.Version)
+			}
+
+			return types.ObjectValueMust(
+				nameVersionResourceModelAttributeTypes,
+				nameVersionMap,
+			)
+		},
+	)
+
+	nameVersionSet, d := types.SetValue(
+		nameVersionSetResourceModelAttributeTypes,
+		nameVersions,
+	)
+	if d != nil {
+		diags.Append(d...)
+	}
+
+	return nameVersionSet, diags
+}
+
+func packNameVersionProject(models []IgnoreFilterNameVersionProjectAPIModel) (basetypes.SetValue, diag.Diagnostics) {
+	diags := diag.Diagnostics{}
+
+	nameVersions := lo.Map(
+		models,
+		func(property IgnoreFilterNameVersionProjectAPIModel, _ int) attr.Value {
 			nameVersionMap := map[string]attr.Value{
 				"name":    types.StringNull(),
 				"version": types.StringNull(),
@@ -351,7 +401,7 @@ func (m *IgnoreRuleResourceModel) fromAPIModel(ctx context.Context, apiModel Ign
 	}
 	m.ReleaseBundles = releaseBundles
 
-	builds, d := packNameVersion(apiModel.IgnoreFilters.Builds)
+	builds, d := packNameVersionProject(apiModel.IgnoreFilters.Builds)
 	if d != nil {
 		diags.Append(d...)
 	}
@@ -383,22 +433,27 @@ type IgnoreRuleAPIModel struct {
 }
 
 type IgnoreFiltersAPIModel struct {
-	Vulnerabilities  []string                              `json:"vulnerabilities,omitempty"`
-	Licenses         []string                              `json:"licenses,omitempty"`
-	CVEs             []string                              `json:"cves,omitempty"`
-	Policies         []string                              `json:"policies,omitempty"`
-	Watches          []string                              `json:"watches,omitempty"`
-	DockerLayers     []string                              `json:"docker-layers,omitempty"`
-	OperationalRisks []string                              `json:"operational_risk,omitempty"`
-	ReleaseBundles   []IgnoreFilterNameVersionAPIModel     `json:"release_bundles,omitempty"`
-	Builds           []IgnoreFilterNameVersionAPIModel     `json:"builds,omitempty"`
-	Components       []IgnoreFilterNameVersionAPIModel     `json:"components,omitempty"`
-	Artifacts        []IgnoreFilterNameVersionPathAPIModel `json:"artifacts,omitempty"`
+	Vulnerabilities  []string                                 `json:"vulnerabilities,omitempty"`
+	Licenses         []string                                 `json:"licenses,omitempty"`
+	CVEs             []string                                 `json:"cves,omitempty"`
+	Policies         []string                                 `json:"policies,omitempty"`
+	Watches          []string                                 `json:"watches,omitempty"`
+	DockerLayers     []string                                 `json:"docker-layers,omitempty"`
+	OperationalRisks []string                                 `json:"operational_risk,omitempty"`
+	ReleaseBundles   []IgnoreFilterNameVersionAPIModel        `json:"release_bundles,omitempty"`
+	Builds           []IgnoreFilterNameVersionProjectAPIModel `json:"builds,omitempty"`
+	Components       []IgnoreFilterNameVersionAPIModel        `json:"components,omitempty"`
+	Artifacts        []IgnoreFilterNameVersionPathAPIModel    `json:"artifacts,omitempty"`
 }
 
 type IgnoreFilterNameVersionAPIModel struct {
 	Name    string `json:"name"`
 	Version string `json:"version,omitempty"`
+}
+
+type IgnoreFilterNameVersionProjectAPIModel struct {
+	IgnoreFilterNameVersionAPIModel
+	Project string `json:"project,omitempty"`
 }
 
 type IgnoreFilterNameVersionPathAPIModel struct {
