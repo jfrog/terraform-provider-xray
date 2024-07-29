@@ -1,8 +1,12 @@
-## 2.9.0 (June 29, 2024). Tested on Artifactory 7.90.5 and Xray 3.100.3 with Terraform 1.9.3 and OpenTofu 1.7.3
+## 2.9.0 (June 30, 2024). Tested on Artifactory 7.90.5 and Xray 3.100.3 with Terraform 1.9.3 and OpenTofu 1.7.3
 
 FEATURES:
 
-* resource/xray_binary_manager_release_bundles_v2: Add new resources to support adding Release Bundles V2 to binary manager indexing configuration. PR: [#222](https://github.com/jfrog/terraform-provider-xray/pull/222) Issue: [#220](https://github.com/jfrog/terraform-provider-xray/issues/220)
+* **New Resource:** resource/xray_binary_manager_release_bundles_v2 - New resources to support Release Bundles V2 for binary manager indexing configuration. PR: [#222](https://github.com/jfrog/terraform-provider-xray/pull/222) Issue: [#220](https://github.com/jfrog/terraform-provider-xray/issues/220)
+
+IMPROVEMENTS:
+
+* resource/xray_security_policy: Add `applicable_cves_only` attribute to support JFrog Advanced Security feature. PR: [#223](https://github.com/jfrog/terraform-provider-xray/pull/223) Issue: [#221](https://github.com/jfrog/terraform-provider-xray/issues/221)
 
 ## 2.8.2 (June 21, 2024). Tested on Artifactory 7.84.15 and Xray 3.96.1 with Terraform 1.8.5 and OpenTofu 1.7.2
 
@@ -121,9 +125,9 @@ SECURITY:
 
 ## 2.0.0 (September 27, 2023). Tested on Artifactory 7.68.11 and Xray 3.82.11
 
- BREAKING CHANGES:
+BREAKING CHANGES:
 
- * resource/xray_operational_risk_policy: remove default values for attributes `op_risk_custom.release_date_greater_than_months`, `op_risk_custom.newer_versions_greater_than`, `op_risk_custom.release_cadence_per_year_less_than`, `op_risk_custom.commits_less_than`, and `op_risk_custom.committers_less_than`. They are now require to be defined explicitly if you wish to set any values. There may be state drifts for this policy resource as the provide code can't distinguish between default values vs configuration values so it can't automatically upgrade the TF state.
+* resource/xray_operational_risk_policy: remove default values for attributes `op_risk_custom.release_date_greater_than_months`, `op_risk_custom.newer_versions_greater_than`, `op_risk_custom.release_cadence_per_year_less_than`, `op_risk_custom.commits_less_than`, and `op_risk_custom.committers_less_than`. They are now require to be defined explicitly if you wish to set any values. There may be state drifts for this policy resource as the provide code can't distinguish between default values vs configuration values so it can't automatically upgrade the TF state.
 
 PR: [#140](https://github.com/jfrog/terraform-provider-xray/pull/140)
 Issue: [#138](https://github.com/jfrog/terraform-provider-xray/issues/138)
