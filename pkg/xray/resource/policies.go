@@ -221,6 +221,7 @@ type PolicyRuleCriteria struct {
 	CVSSRange       *PolicyCVSSRange `json:"cvss_range,omitempty"`
 	// Omitempty is used in FixVersionDependant because an empty field throws an error in Xray below 3.44.3
 	FixVersionDependant bool             `json:"fix_version_dependant,omitempty"`
+	ApplicableCVEsOnly  bool             `json:"applicable_cves_only,omitempty"`
 	MaliciousPackage    bool             `json:"malicious_package,omitempty"`
 	VulnerabilityIds    []string         `json:"vulnerability_ids,omitempty"`
 	Exposures           *PolicyExposures `json:"exposures,omitempty"`
@@ -334,6 +335,9 @@ func unpackSecurityCriteria(tfCriteria map[string]interface{}) *PolicyRuleCriter
 
 	if v, ok := tfCriteria["fix_version_dependant"]; ok {
 		criteria.FixVersionDependant = v.(bool)
+	}
+	if v, ok := tfCriteria["applicable_cves_only"]; ok {
+		criteria.ApplicableCVEsOnly = v.(bool)
 	}
 	if v, ok := tfCriteria["malicious_package"]; ok {
 		criteria.MaliciousPackage = v.(bool)
@@ -655,6 +659,7 @@ func packSecurityCriteria(criteria *PolicyRuleCriteria) []interface{} {
 	}
 	m["min_severity"] = minSeverity
 	m["fix_version_dependant"] = criteria.FixVersionDependant
+	m["applicable_cves_only"] = criteria.ApplicableCVEsOnly
 	m["malicious_package"] = criteria.MaliciousPackage
 	m["exposures"] = packExposures(criteria.Exposures)
 	m["package_name"] = criteria.PackageName

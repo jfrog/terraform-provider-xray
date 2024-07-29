@@ -24,6 +24,12 @@ func ResourceXraySecurityPolicyV2() *schema.Resource {
 			Default:     false,
 			Description: "Default value is `false`. Issues that do not have a fixed version are not generated until a fixed version is available. Must be `false` with `malicious_package` enabled.",
 		},
+		"applicable_cves_only": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     false,
+			Description: "Default value is `false`. Mark to skip CVEs that are not applicable in the context of the artifact. The contextual analysis operation might be long and affect build time if the `fail_build` action is set.\n\n~>Only supported by JFrog Advanced Security",
+		},
 		"malicious_package": {
 			Type:        schema.TypeBool,
 			Optional:    true,
@@ -69,7 +75,7 @@ func ResourceXraySecurityPolicyV2() *schema.Resource {
 			Type:        schema.TypeList,
 			Optional:    true,
 			MaxItems:    1,
-			Description: "Works only with JFrog Advanced Security license. Creates policy rules for specific exposures.",
+			Description: "Creates policy rules for specific exposures.\n\n~>Only supported by JFrog Advanced Security",
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					"min_severity": {

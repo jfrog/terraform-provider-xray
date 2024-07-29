@@ -183,8 +183,13 @@ Optional:
 
 Optional:
 
+- `applicable_cves_only` (Boolean) Default value is `false`. Mark to skip CVEs that are not applicable in the context of the artifact. The contextual analysis operation might be long and affect build time if the `fail_build` action is set.
+
+~>Only supported by JFrog Advanced Security
 - `cvss_range` (Block List, Max: 1) The CVSS score range to apply to the rule. This is used for a fine-grained control, rather than using the predefined severities. The score range is based on CVSS v3 scoring, and CVSS v2 score is CVSS v3 score is not available. (see [below for nested schema](#nestedblock--rule--criteria--cvss_range))
-- `exposures` (Block List, Max: 1) Works only with JFrog Advanced Security license. Creates policy rules for specific exposures. (see [below for nested schema](#nestedblock--rule--criteria--exposures))
+- `exposures` (Block List, Max: 1) Creates policy rules for specific exposures.
+
+~>Only supported by JFrog Advanced Security (see [below for nested schema](#nestedblock--rule--criteria--exposures))
 - `fix_version_dependant` (Boolean) Default value is `false`. Issues that do not have a fixed version are not generated until a fixed version is available. Must be `false` with `malicious_package` enabled.
 - `malicious_package` (Boolean) Default value is `false`. Generating a violation on a malicious package.
 - `min_severity` (String) The minimum security vulnerability severity that will be impacted by the policy. Valid values: `All Severities`, `Critical`, `High`, `Medium`, `Low`

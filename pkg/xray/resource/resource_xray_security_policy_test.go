@@ -27,8 +27,9 @@ var testDataSecurity = map[string]string{
 	"policy_name":                       "terraform-security-policy",
 	"policy_description":                "policy created by xray acceptance tests",
 	"rule_name":                         "test-security-rule",
-	"cvss_from":                         "1",    // conflicts with min_severity
-	"cvss_to":                           "5",    // conflicts with min_severity
+	"cvss_from":                         "1", // conflicts with min_severity
+	"cvss_to":                           "5", // conflicts with min_severity
+	"applicable_cves_only":              fmt.Sprintf("%t", testutil.RandBool()),
 	"min_severity":                      "High", // conflicts with cvss_from/cvss_to
 	"block_release_bundle_distribution": "true",
 	"fail_build":                        "true",
@@ -222,6 +223,7 @@ func TestAccSecurityPolicy_withProjectKey(t *testing.T) {
 					from = {{ .cvss_from }}
 					to = {{ .cvss_to }}
 				}
+				applicable_cves_only = {{ .applicable_cves_only }}
 			}
 			actions {
 				block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
@@ -921,6 +923,7 @@ func verifySecurityPolicy(fqrn string, testData map[string]string, criteriaType 
 			commonCheckList,
 			resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.cvss_range.0.from", testData["cvss_from"]),
 			resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.cvss_range.0.to", testData["cvss_to"]),
+			resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.applicable_cves_only", testData["applicable_cves_only"]),
 		)
 	}
 	if criteriaType == criteriaTypeSeverity {
@@ -1063,6 +1066,7 @@ const securityPolicyCVSS = `resource "xray_security_policy" "{{ .resource_name }
 				from = {{ .cvss_from }}
 				to = {{ .cvss_to }}
 			}
+			applicable_cves_only = {{ .applicable_cves_only }}
 		}
 		actions {
 			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
