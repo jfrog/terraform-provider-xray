@@ -3,6 +3,7 @@ package xray_test
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -432,4 +433,41 @@ func TestAccBinaryManagerReleaseBundlesV2_project_full(t *testing.T) {
 			},
 		},
 	})
+}
+
+func TestAccBinaryManagerReleaseBundlesV2_invalid_patterns(t *testing.T) {
+	invalidPatterns := []string{"*", "**", "?"}
+
+	for _, invalidPattern := range invalidPatterns {
+		t.Run(invalidPattern, func(t *testing.T) {
+			_, _, resourceName := testutil.MkNames("test-bin-mgr-release-bundles-v2", "xray_binary_manager_release_bundles_v2")
+
+			const template = `
+				resource "xray_binary_manager_release_bundles_v2" "{{ .name }}" {
+					id = "default"
+					indexed_release_bundle_v2 = ["{{ .pattern }}"]
+				}
+			`
+
+			testData := map[string]string{
+				"name":    resourceName,
+				"pattern": invalidPattern,
+			}
+
+			config := util.ExecuteTemplate("TestAccBinaryManagerReleaseBundlesV2_invalid_patterns", template, testData)
+
+			resource.Test(t, resource.TestCase{
+				PreCheck: func() {
+					acctest.PreCheck(t)
+				},
+				ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+				Steps: []resource.TestStep{
+					{
+						Config:      config,
+						ExpectError: regexp.MustCompile(`.*cannot contain Ant-style\n.*patterns.*`),
+					},
+				},
+			})
+		})
+	}
 }
