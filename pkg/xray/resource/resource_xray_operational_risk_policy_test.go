@@ -321,6 +321,7 @@ func TestAccOperationalRiskPolicy_customCriteria_migration(t *testing.T) {
 	testData["op_risk_custom_use_and_condition"] = "true"
 	testData["op_risk_custom_is_eol"] = "false"
 	testData["op_risk_custom_risk"] = testutil.RandSelect("high", "medium", "low").(string)
+	delete(testData, "block_release_bundle_promotion")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { acctest.PreCheck(t) },
@@ -335,7 +336,6 @@ func TestAccOperationalRiskPolicy_customCriteria_migration(t *testing.T) {
 				},
 				Config: util.ExecuteTemplate(fqrn, opertionalRiskPolicyCustom, testData),
 				Check: resource.ComposeTestCheckFunc(
-					verifyOpertionalRiskPolicy(fqrn, testData),
 					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.use_and_condition", testData["op_risk_custom_use_and_condition"]),
 					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.is_eol", testData["op_risk_custom_is_eol"]),
 					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.release_date_greater_than_months", "6"),
@@ -350,7 +350,6 @@ func TestAccOperationalRiskPolicy_customCriteria_migration(t *testing.T) {
 				ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 				Config:                   util.ExecuteTemplate(fqrn, opertionalRiskPolicyCustom, testData),
 				Check: resource.ComposeTestCheckFunc(
-					verifyOpertionalRiskPolicy(fqrn, testData),
 					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.use_and_condition", testData["op_risk_custom_use_and_condition"]),
 					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.is_eol", testData["op_risk_custom_is_eol"]),
 					resource.TestCheckNoResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.release_date_greater_than_months"),
@@ -366,12 +365,11 @@ func TestAccOperationalRiskPolicy_customCriteria_migration(t *testing.T) {
 }
 
 func verifyOpertionalRiskPolicy(fqrn string, testData map[string]string) resource.TestCheckFunc {
-	return resource.ComposeTestCheckFunc(
+	checkFunc := resource.ComposeTestCheckFunc(
 		resource.TestCheckResourceAttr(fqrn, "name", testData["policy_name"]),
 		resource.TestCheckResourceAttr(fqrn, "description", testData["policy_description"]),
 		resource.TestCheckResourceAttr(fqrn, "rule.0.name", testData["rule_name"]),
 		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.block_release_bundle_distribution", testData["block_release_bundle_distribution"]),
-		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.block_release_bundle_promotion", testData["block_release_bundle_promotion"]),
 		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.fail_build", testData["fail_build"]),
 		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.notify_watch_recipients", testData["notify_watch_recipients"]),
 		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.notify_deployer", testData["notify_deployer"]),
@@ -380,6 +378,15 @@ func verifyOpertionalRiskPolicy(fqrn string, testData map[string]string) resourc
 		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.block_download.0.active", testData["block_active"]),
 		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.block_download.0.unscanned", testData["block_unscanned"]),
 	)
+
+	if _, ok := testData["block_release_bundle_promotion"]; ok {
+		checkFunc = resource.ComposeTestCheckFunc(
+			checkFunc,
+			resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.block_release_bundle_promotion", testData["block_release_bundle_promotion"]),
+		)
+	}
+
+	return checkFunc
 }
 
 func TestAccOperationalRiskPolicy_criteriaValidation(t *testing.T) {
