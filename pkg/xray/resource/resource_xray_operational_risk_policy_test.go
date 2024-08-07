@@ -20,6 +20,7 @@ var testDataOperationalRisk = map[string]string{
 	"rule_name":                         "test-operational-risk-rule",
 	"min_severity":                      "Medium",
 	"block_release_bundle_distribution": "true",
+	"block_release_bundle_promotion":    "true",
 	"fail_build":                        "true",
 	"notify_watch_recipients":           "true",
 	"notify_deployer":                   "true",
@@ -47,6 +48,7 @@ func TestAccOperationalRiskPolicy_withProjectKey(t *testing.T) {
 			}
 			actions {
 				block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+				block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
 				fail_build = {{ .fail_build }}
 				notify_watch_recipients = {{ .notify_watch_recipients }}
 				notify_deployer = {{ .notify_deployer }}
@@ -119,6 +121,7 @@ func TestAccOperationalRiskPolicy_minRiskCriteria(t *testing.T) {
 			}
 			actions {
 				block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+				block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
 				fail_build = {{ .fail_build }}
 				notify_watch_recipients = {{ .notify_watch_recipients }}
 				notify_deployer = {{ .notify_deployer }}
@@ -182,6 +185,7 @@ func TestAccOperationalRiskPolicy_customCriteria(t *testing.T) {
 			}
 			actions {
 				block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+				block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
 				fail_build = {{ .fail_build }}
 				notify_watch_recipients = {{ .notify_watch_recipients }}
 				notify_deployer = {{ .notify_deployer }}
@@ -223,6 +227,7 @@ func TestAccOperationalRiskPolicy_customCriteria(t *testing.T) {
 			}
 			actions {
 				block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+				block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
 				fail_build = {{ .fail_build }}
 				notify_watch_recipients = {{ .notify_watch_recipients }}
 				notify_deployer = {{ .notify_deployer }}
@@ -366,6 +371,7 @@ func verifyOpertionalRiskPolicy(fqrn string, testData map[string]string) resourc
 		resource.TestCheckResourceAttr(fqrn, "description", testData["policy_description"]),
 		resource.TestCheckResourceAttr(fqrn, "rule.0.name", testData["rule_name"]),
 		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.block_release_bundle_distribution", testData["block_release_bundle_distribution"]),
+		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.block_release_bundle_promotion", testData["block_release_bundle_promotion"]),
 		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.fail_build", testData["fail_build"]),
 		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.notify_watch_recipients", testData["notify_watch_recipients"]),
 		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.notify_deployer", testData["notify_deployer"]),
@@ -400,6 +406,7 @@ func TestAccOperationalRiskPolicy_criteriaValidation(t *testing.T) {
 			}
 			actions {
 				block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+				block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
 				fail_build = {{ .fail_build }}
 				notify_watch_recipients = {{ .notify_watch_recipients }}
 				notify_deployer = {{ .notify_deployer }}

@@ -78,6 +78,12 @@ var commonActionsSchema = map[string]*schema.Schema{
 		Default:     false,
 		Description: "Blocks Release Bundle distribution to Edge nodes if a violation is found. Default value is `false`.",
 	},
+	"block_release_bundle_promotion": {
+		Type:        schema.TypeBool,
+		Optional:    true,
+		Default:     false,
+		Description: "Blocks Release Bundle promotion if a violation is found. Default value is `false`.",
+	},
 	"fail_build": {
 		Type:        schema.TypeBool,
 		Optional:    true,
@@ -254,15 +260,16 @@ type BlockDownloadSettings struct {
 }
 
 type PolicyRuleActions struct {
-	Webhooks                []string              `json:"webhooks,omitempty"`
-	Mails                   []string              `json:"mails,omitempty"`
-	FailBuild               bool                  `json:"fail_build"`
-	BlockDownload           BlockDownloadSettings `json:"block_download"`
-	BlockReleaseBundle      bool                  `json:"block_release_bundle_distribution"`
-	NotifyWatchRecipients   bool                  `json:"notify_watch_recipients"`
-	NotifyDeployer          bool                  `json:"notify_deployer"`
-	CreateJiraTicketEnabled bool                  `json:"create_ticket_enabled"`
-	FailureGracePeriodDays  int                   `json:"build_failure_grace_period_in_days,omitempty"`
+	Webhooks                       []string              `json:"webhooks,omitempty"`
+	Mails                          []string              `json:"mails,omitempty"`
+	FailBuild                      bool                  `json:"fail_build"`
+	BlockDownload                  BlockDownloadSettings `json:"block_download"`
+	BlockReleaseBundleDistribution bool                  `json:"block_release_bundle_distribution"`
+	BlockReleaseBundlePromotion    bool                  `json:"block_release_bundle_promotion"`
+	NotifyWatchRecipients          bool                  `json:"notify_watch_recipients"`
+	NotifyDeployer                 bool                  `json:"notify_deployer"`
+	CreateJiraTicketEnabled        bool                  `json:"create_ticket_enabled"`
+	FailureGracePeriodDays         int                   `json:"build_failure_grace_period_in_days,omitempty"`
 	// License Actions
 	CustomSeverity string `json:"custom_severity,omitempty"`
 }
@@ -541,15 +548,15 @@ func unpackActions(l *schema.Set) PolicyRuleActions {
 				// rule.0.actions.0.block_download.0.unscanned: "false" => ""
 			}
 		}
-		if v, ok := m["block_release_bundle_distribution"]; ok {
-			actions.BlockReleaseBundle = v.(bool)
-		}
 
+		if v, ok := m["block_release_bundle_distribution"]; ok {
+			actions.BlockReleaseBundleDistribution = v.(bool)
+		}
+		if v, ok := m["block_release_bundle_promotion"]; ok {
+			actions.BlockReleaseBundlePromotion = v.(bool)
+		}
 		if v, ok := m["notify_watch_recipients"]; ok {
 			actions.NotifyWatchRecipients = v.(bool)
-		}
-		if v, ok := m["block_release_bundle_distribution"]; ok {
-			actions.BlockReleaseBundle = v.(bool)
 		}
 		if v, ok := m["notify_deployer"]; ok {
 			actions.NotifyDeployer = v.(bool)
@@ -700,7 +707,8 @@ func packActions(actions PolicyRuleActions, license bool) []interface{} {
 		"webhooks":                           actions.Webhooks,
 		"mails":                              actions.Mails,
 		"fail_build":                         actions.FailBuild,
-		"block_release_bundle_distribution":  actions.BlockReleaseBundle,
+		"block_release_bundle_distribution":  actions.BlockReleaseBundleDistribution,
+		"block_release_bundle_promotion":     actions.BlockReleaseBundlePromotion,
 		"notify_watch_recipients":            actions.NotifyWatchRecipients,
 		"notify_deployer":                    actions.NotifyDeployer,
 		"create_ticket_enabled":              actions.CreateJiraTicketEnabled,

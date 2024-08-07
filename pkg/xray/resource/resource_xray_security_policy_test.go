@@ -32,6 +32,7 @@ var testDataSecurity = map[string]string{
 	"applicable_cves_only":              fmt.Sprintf("%t", testutil.RandBool()),
 	"min_severity":                      "High", // conflicts with cvss_from/cvss_to
 	"block_release_bundle_distribution": "true",
+	"block_release_bundle_promotion":    "true",
 	"fail_build":                        "true",
 	"notify_watch_recipients":           "true",
 	"notify_deployer":                   "true",
@@ -227,6 +228,7 @@ func TestAccSecurityPolicy_withProjectKey(t *testing.T) {
 			}
 			actions {
 				block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+				block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
 				fail_build = {{ .fail_build }}
 				notify_watch_recipients = {{ .notify_watch_recipients }}
 				notify_deployer = {{ .notify_deployer }}
@@ -910,6 +912,7 @@ func verifySecurityPolicy(fqrn string, testData map[string]string, criteriaType 
 		resource.TestCheckResourceAttr(fqrn, "description", testData["policy_description"]),
 		resource.TestCheckResourceAttr(fqrn, "rule.0.name", testData["rule_name"]),
 		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.block_release_bundle_distribution", testData["block_release_bundle_distribution"]),
+		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.block_release_bundle_promotion", testData["block_release_bundle_promotion"]),
 		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.fail_build", testData["fail_build"]),
 		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.notify_watch_recipients", testData["notify_watch_recipients"]),
 		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.notify_deployer", testData["notify_deployer"]),
@@ -990,6 +993,7 @@ const securityPolicyVulnIds = `resource "xray_security_policy" "{{ .resource_nam
 		}
 		actions {
 			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
 			fail_build = {{ .fail_build }}
 			notify_watch_recipients = {{ .notify_watch_recipients }}
 			notify_deployer = {{ .notify_deployer }}
@@ -1015,6 +1019,7 @@ const securityPolicyVulnIdsLimit = `resource "xray_security_policy" "{{ .resourc
 		}
 		actions {
 			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
 			fail_build = {{ .fail_build }}
 			notify_watch_recipients = {{ .notify_watch_recipients }}
 			notify_deployer = {{ .notify_deployer }}
@@ -1041,6 +1046,7 @@ const securityPolicyVulnIdsConflict = `resource "xray_security_policy" "{{ .reso
 		}
 		actions {
 			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
 			fail_build = {{ .fail_build }}
 			notify_watch_recipients = {{ .notify_watch_recipients }}
 			notify_deployer = {{ .notify_deployer }}
@@ -1070,6 +1076,7 @@ const securityPolicyCVSS = `resource "xray_security_policy" "{{ .resource_name }
 		}
 		actions {
 			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
 			fail_build = {{ .fail_build }}
 			notify_watch_recipients = {{ .notify_watch_recipients }}
 			notify_deployer = {{ .notify_deployer }}
@@ -1099,6 +1106,7 @@ const securityPolicyTwoRules = `resource "xray_security_policy" "{{ .resource_na
 		}
 		actions {
 			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
 			fail_build = {{ .fail_build }}
 			notify_watch_recipients = {{ .notify_watch_recipients }}
 			notify_deployer = {{ .notify_deployer }}
@@ -1122,6 +1130,7 @@ const securityPolicyTwoRules = `resource "xray_security_policy" "{{ .resource_na
 		}
 		actions {
 			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
 			fail_build = {{ .fail_build }}
 			notify_watch_recipients = {{ .notify_watch_recipients }}
 			notify_deployer = {{ .notify_deployer }}
@@ -1152,6 +1161,7 @@ const securityPolicyCVSSMinSeverityMaliciousPkg = `resource "xray_security_polic
 		}
 		actions {
 			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
 			fail_build = {{ .fail_build }}
 			notify_watch_recipients = {{ .notify_watch_recipients }}
 			notify_deployer = {{ .notify_deployer }}
@@ -1177,6 +1187,7 @@ const securityPolicyMinSeverity = `resource "xray_security_policy" "{{ .resource
 		}
 		actions {
 			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
 			fail_build = {{ .fail_build }}
 			notify_watch_recipients = {{ .notify_watch_recipients }}
 			notify_deployer = {{ .notify_deployer }}
@@ -1208,6 +1219,7 @@ const securityPolicyExposures = `resource "xray_security_policy" "{{ .resource_n
 		}
 		actions {
 			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
 			fail_build = {{ .fail_build }}
 			notify_watch_recipients = {{ .notify_watch_recipients }}
 			notify_deployer = {{ .notify_deployer }}
@@ -1234,6 +1246,7 @@ const securityPolicyFixVersionDep = `resource "xray_security_policy" "{{ .resour
 		}
 		actions {
 			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
 			fail_build = {{ .fail_build }}
 			notify_watch_recipients = {{ .notify_watch_recipients }}
 			notify_deployer = {{ .notify_deployer }}
@@ -1260,6 +1273,7 @@ const securityPolicyMaliciousPkgFixVersionDep = `resource "xray_security_policy"
 		}
 		actions {
 			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
 			fail_build = {{ .fail_build }}
 			notify_watch_recipients = {{ .notify_watch_recipients }}
 			notify_deployer = {{ .notify_deployer }}
@@ -1288,6 +1302,7 @@ const securityPolicyPackagesFixVersionDep = `resource "xray_security_policy" "{{
 		}
 		actions {
 			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
 			fail_build = {{ .fail_build }}
 			notify_watch_recipients = {{ .notify_watch_recipients }}
 			notify_deployer = {{ .notify_deployer }}
@@ -1315,6 +1330,7 @@ const securityPolicyPackages = `resource "xray_security_policy" "{{ .resource_na
 		}
 		actions {
 			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
 			fail_build = {{ .fail_build }}
 			notify_watch_recipients = {{ .notify_watch_recipients }}
 			notify_deployer = {{ .notify_deployer }}
