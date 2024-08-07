@@ -2,6 +2,7 @@ package xray_test
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 	"time"
 
@@ -266,4 +267,41 @@ func TestAccBinaryManagerBuilds_project_full(t *testing.T) {
 			},
 		},
 	})
+}
+
+func TestAccBinaryManagerBuilds_invalid_patterns(t *testing.T) {
+	invalidPatterns := []string{"*", "**", "?"}
+
+	for _, invalidPattern := range invalidPatterns {
+		t.Run(invalidPattern, func(t *testing.T) {
+			_, _, resourceName := testutil.MkNames("test-bin-mgr-builds", "xray_binary_manager_builds")
+
+			const template = `
+				resource "xray_binary_manager_builds" "{{ .name }}" {
+					id = "default"
+					indexed_builds = ["{{ .pattern }}"]
+				}
+			`
+
+			testData := map[string]string{
+				"name":    resourceName,
+				"pattern": invalidPattern,
+			}
+
+			config := util.ExecuteTemplate("TestAccBinaryManagerBuilds_invalid_patterns", template, testData)
+
+			resource.Test(t, resource.TestCase{
+				PreCheck: func() {
+					acctest.PreCheck(t)
+				},
+				ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+				Steps: []resource.TestStep{
+					{
+						Config:      config,
+						ExpectError: regexp.MustCompile(`.*cannot contain Ant-style patterns.*`),
+					},
+				},
+			})
+		})
+	}
 }
