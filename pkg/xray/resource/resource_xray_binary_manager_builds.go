@@ -2,8 +2,10 @@ package xray
 
 import (
 	"context"
+	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -102,7 +104,12 @@ func (r *BinaryManagerBuildsResource) Schema(ctx context.Context, req resource.S
 			"indexed_builds": schema.SetAttribute{
 				ElementType: types.StringType,
 				Required:    true,
-				Description: "Builds to be indexed.",
+				Validators: []validator.Set{
+					setvalidator.ValueStringsAre(
+						validatorfw_string.RegexNotMatches(regexp.MustCompile(`[\*|\*\*|\?]+`), "cannot contain Ant-style patterns ('*', '**', or '?')"),
+					),
+				},
+				Description: "Builds to be indexed.\n\n~>Currently does not support Ant-style path patterns (`*`, `**`, or `?`) due to API limitation.",
 			},
 			"non_indexed_builds": schema.SetAttribute{
 				ElementType: types.StringType,

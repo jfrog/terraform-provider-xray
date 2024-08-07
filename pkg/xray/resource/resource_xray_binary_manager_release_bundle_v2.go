@@ -2,8 +2,10 @@ package xray
 
 import (
 	"context"
+	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -103,7 +105,12 @@ func (r *BinaryManagerReleaseBundlesV2Resource) Schema(ctx context.Context, req 
 			"indexed_release_bundle_v2": schema.SetAttribute{
 				ElementType: types.StringType,
 				Required:    true,
-				Description: "Release Bundles V2 to be indexed.",
+				Validators: []validator.Set{
+					setvalidator.ValueStringsAre(
+						validatorfw_string.RegexNotMatches(regexp.MustCompile(`[\*|\*\*|\?]+`), "cannot contain Ant-style patterns ('*', '**', or '?')"),
+					),
+				},
+				MarkdownDescription: "Release Bundles V2 to be indexed.\n\n~>Currently does not support Ant-style path patterns (`*`, `**`, or `?`) due to API limitation.",
 			},
 			"non_indexed_release_bundle_v2": schema.SetAttribute{
 				ElementType: types.StringType,
@@ -111,7 +118,7 @@ func (r *BinaryManagerReleaseBundlesV2Resource) Schema(ctx context.Context, req 
 				Description: "Non-indexed Release Bundles V2 for output.",
 			},
 		},
-		Description: "Provides an Xray Binary Manager Release Bundles V2 Indexing configuration resource. See [Indexing Xray Resources](https://jfrog.com/help/r/jfrog-security-documentation/add-or-remove-resources-from-indexing) " +
+		MarkdownDescription: "Provides an Xray Binary Manager Release Bundles V2 Indexing configuration resource. See [Indexing Xray Resources](https://jfrog.com/help/r/jfrog-security-documentation/add-or-remove-resources-from-indexing) " +
 			"and [REST API](https://jfrog.com/help/r/xray-rest-apis/add-release-bundles-v2-indexing-configuration) for more details.",
 	}
 }

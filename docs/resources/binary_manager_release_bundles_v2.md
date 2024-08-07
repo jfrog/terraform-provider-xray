@@ -27,6 +27,8 @@ resource "xray_binary_manager_release_bundles_v2" "my-indexed-release-bundles" {
 - `id` (String) ID of the binary manager, e.g. 'default'
 - `indexed_release_bundle_v2` (Set of String) Release Bundles V2 to be indexed.
 
+~>Currently does not support Ant-style path patterns (`*`, `**`, or `?`) due to API limitation.
+
 ### Optional
 
 - `project_key` (String) For Xray version 3.21.2 and above with Projects, a Project Admin with Index Resources privilege can maintain the indexed and not indexed repositories in a given binary manger using this resource in the scope of a project.

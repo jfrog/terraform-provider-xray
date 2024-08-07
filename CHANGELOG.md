@@ -1,3 +1,14 @@
+## 2.9.1 (August 7 30, 2024). Tested on Artifactory 7.90.6 and Xray 3.101.5 with Terraform 1.9.4 and OpenTofu 1.8.1
+
+IMPROVEMENTS:
+
+* resource/xray_binary_manager_release_bundles_v2: Add `indexed_release_bundle_v2` attribute validation to prevent the use of Ant-style pattern.
+* resource/xray_binary_manager_build: Add `indexed_builds` attribute validation to prevent the use of Ant-style pattern.
+
+PR: [#227](https://github.com/jfrog/terraform-provider-xray/pull/227)
+
+Issue: [#226](https://github.com/jfrog/terraform-provider-xray/issues/226)
+
 ## 2.9.0 (July 30, 2024). Tested on Artifactory 7.90.5 and Xray 3.101.5 with Terraform 1.9.3 and OpenTofu 1.8.0
 
 FEATURES:

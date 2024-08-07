@@ -49,16 +49,19 @@ resource "xray_custom_issue" "my-issue-1" {
 
 ### Required
 
-- `component` (Block Set, Min: 1) Component of custom issue (see [below for nested schema](#nestedblock--component))
-- `cve` (Block Set, Min: 1) CVE of the custom issue (see [below for nested schema](#nestedblock--cve))
 - `description` (String) Description of custom issue
 - `name` (String) Name of the custom issue. It must not begin with 'xray' (case insensitive)
 - `package_type` (String) Package Type of custom issue. Valid values are: alpine, bower, cargo, composer, conan, conda, cran, debian, docker, generic, go, gradle, huggingface, ivy, maven, npm, nuget, oci, pypi, rpm, rubygems, sbt, terraformbe
 - `provider_name` (String) Provider of custom issue. It must not be 'jfrog' (case insensitive)
 - `severity` (String) Severity of custom issue. Valid values: Critical, High, Medium, Low, Information
-- `source` (Block Set, Min: 1) List of sources (see [below for nested schema](#nestedblock--source))
 - `summary` (String) Summary of custom issue
 - `type` (String) Type of custom issue. Valid values: other, performance, security, versions
+
+### Optional
+
+- `component` (Block Set) Component of custom issue (see [below for nested schema](#nestedblock--component))
+- `cve` (Block Set) CVE of the custom issue (see [below for nested schema](#nestedblock--cve))
+- `source` (Block Set) List of sources (see [below for nested schema](#nestedblock--source))
 
 ### Read-Only
 
@@ -73,7 +76,7 @@ Required:
 
 Optional:
 
-- `fixed_versions` (Set of String) List of the fixed versions
+- `fixed_versions` (Set of String) List of fixed versions
 - `vulnerable_ranges` (Block Set) List of the vulnerable ranges (see [below for nested schema](#nestedblock--component--vulnerable_ranges))
 - `vulnerable_versions` (Set of String) List of vulnerable versions
 
@@ -82,7 +85,7 @@ Optional:
 
 Optional:
 
-- `fixed_versions` (Set of String) List of the fixed versions
+- `fixed_versions` (Set of String) List of fixed versions
 - `vulnerable_versions` (Set of String) List of vulnerable versions
 
 
