@@ -25,6 +25,7 @@ var testDataLicense = map[string]string{
 	"allow_unknown":                     "true",
 	"multi_license_permissive":          "false",
 	"block_release_bundle_distribution": "true",
+	"block_release_bundle_promotion":    "true",
 	"fail_build":                        "true",
 	"notify_watch_recipients":           "true",
 	"notify_deployer":                   "true",
@@ -118,6 +119,7 @@ func TestAccLicensePolicy_withProjectKey(t *testing.T) {
 					active = {{ .block_active }}
 	          }
 	          block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+	          block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
 	          fail_build = {{ .fail_build }}
 	          notify_watch_recipients = {{ .notify_watch_recipients }}
 	          notify_deployer = {{ .notify_deployer }}
@@ -375,6 +377,7 @@ func verifyLicensePolicy(fqrn string, testData map[string]string, allowedOrBanne
 		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.mails.0", testData["mails_0"]),
 		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.mails.1", testData["mails_1"]),
 		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.block_release_bundle_distribution", testData["block_release_bundle_distribution"]),
+		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.block_release_bundle_promotion", testData["block_release_bundle_promotion"]),
 		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.fail_build", testData["fail_build"]),
 		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.notify_watch_recipients", testData["notify_watch_recipients"]),
 		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.notify_deployer", testData["notify_deployer"]),
@@ -406,6 +409,7 @@ const licensePolicyTemplate = `resource "xray_license_policy" "{{ .resource_name
 				active = {{ .block_active }}
           }
           block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+          block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
           fail_build = {{ .fail_build }}
           notify_watch_recipients = {{ .notify_watch_recipients }}
           notify_deployer = {{ .notify_deployer }}

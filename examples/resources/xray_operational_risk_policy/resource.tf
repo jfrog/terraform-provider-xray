@@ -16,6 +16,7 @@ resource "xray_operational_risk_policy" "min_risk" {
       webhooks                           = []
       mails                              = ["test@email.com"]
       block_release_bundle_distribution  = false
+      block_release_bundle_promotion     = false
       fail_build                         = true
       notify_watch_recipients            = true
       notify_deployer                    = true

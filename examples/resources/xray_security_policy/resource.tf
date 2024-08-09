@@ -17,6 +17,7 @@ resource "xray_security_policy" "min_severity" {
       webhooks                           = []
       mails                              = ["test@email.com"]
       block_release_bundle_distribution  = true
+      block_release_bundle_promotion     = true
       fail_build                         = true
       notify_watch_recipients            = true
       notify_deployer                    = true

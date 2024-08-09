@@ -37,6 +37,7 @@ resource "xray_license_policy" "allowed_licenses" {
       webhooks                           = []
       mails                              = ["test@email.com"]
       block_release_bundle_distribution  = false
+      block_release_bundle_promotion     = false
       fail_build                         = true
       notify_watch_recipients            = true
       notify_deployer                    = true
@@ -130,6 +131,7 @@ Required:
 Optional:
 
 - `block_release_bundle_distribution` (Boolean) Blocks Release Bundle distribution to Edge nodes if a violation is found. Default value is `false`.
+- `block_release_bundle_promotion` (Boolean) Blocks Release Bundle promotion if a violation is found. Default value is `false`.
 - `build_failure_grace_period_in_days` (Number) Allow grace period for certain number of days. All violations will be ignored during this time. To be used only if `fail_build` is enabled.
 - `create_ticket_enabled` (Boolean) Create Jira Ticket for this Policy Violation. Requires configured Jira integration. Default value is `false`.
 - `custom_severity` (String) The severity of violation to be triggered if the `criteria` are met.
