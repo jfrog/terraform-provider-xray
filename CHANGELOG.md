@@ -2,7 +2,13 @@
 
 IMPROVEMENTS:
 
-* resource/xray_repository_config: Migrate from SDKv2 to Plugin Framework. PR: [#234](https://github.com/jfrog/terraform-provider-xray/pull/234)
+* resource/xray_repository_config: Migrate from SDKv2 to Plugin Framework.
+
+BUG FIXES:
+
+* resource/xray_\*\_policy: Fix incorrect value being set from API in `exposures` attributes.
+
+PR: [#234](https://github.com/jfrog/terraform-provider-xray/pull/234)
 
 ## 2.10.0 (August 8, 2024). Tested on Artifactory 7.90.6 and Xray 3.101.5 with Terraform 1.9.4 and OpenTofu 1.8.1
 
