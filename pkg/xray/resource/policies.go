@@ -694,9 +694,9 @@ func packExposures(exposures *PolicyExposures) []interface{} {
 	m := map[string]interface{}{
 		"min_severity": *exposures.MinSeverity,
 		"secrets":      *exposures.Secrets,
-		"applications": *exposures.Secrets,
-		"services":     *exposures.Secrets,
-		"iac":          *exposures.Secrets,
+		"applications": *exposures.Applications,
+		"services":     *exposures.Services,
+		"iac":          *exposures.Iac,
 	}
 	return []interface{}{m}
 }
