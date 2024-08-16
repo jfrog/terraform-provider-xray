@@ -189,6 +189,7 @@ func (p *XrayProvider) Resources(ctx context.Context) []func() resource.Resource
 		xray_resource.NewBinaryManagerReleaseBundlesV2Resource,
 		xray_resource.NewCustomIssueResource,
 		xray_resource.NewIgnoreRuleResource,
+		xray_resource.NewRepositoryConfigResource,
 		xray_resource.NewSettingsResource,
 		xray_resource.NewWatchResource,
 		xray_resource.NewWebhookResource,

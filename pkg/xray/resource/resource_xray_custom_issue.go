@@ -57,7 +57,9 @@ var validPackageTypes = []string{
 var _ resource.Resource = &CustomIssueResource{}
 
 func NewCustomIssueResource() resource.Resource {
-	return &CustomIssueResource{}
+	return &CustomIssueResource{
+		TypeName: "xray_custom_issue",
+	}
 }
 
 type CustomIssueResource struct {
@@ -66,8 +68,7 @@ type CustomIssueResource struct {
 }
 
 func (r *CustomIssueResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_custom_issue"
-	r.TypeName = resp.TypeName
+	resp.TypeName = r.TypeName
 }
 
 type CustomIssueResourceModel struct {
