@@ -1,4 +1,10 @@
-## 2.10.0 (August 8 30, 2024). Tested on Artifactory 7.90.6 and Xray 3.101.5 with Terraform 1.9.4 and OpenTofu 1.8.1
+## 2.11.0 (August 19, 2024)
+
+IMPROVEMENTS:
+
+* resource/xray_repository_config: Migrate from SDKv2 to Plugin Framework. PR: [#234](https://github.com/jfrog/terraform-provider-xray/pull/234)
+
+## 2.10.0 (August 8, 2024). Tested on Artifactory 7.90.6 and Xray 3.101.5 with Terraform 1.9.4 and OpenTofu 1.8.1
 
 IMPROVEMENTS:
 
@@ -21,6 +27,8 @@ BUG FIXES:
 * resource/xray_ignore_rule: Fix error when creating project specific ignore rule with build filter. PR: [#224](https://github.com/jfrog/terraform-provider-xray/pull/224) Issue: [#213](https://github.com/jfrog/terraform-provider-xray/issues/213)
 
 ## 2.8.2 (June 21, 2024). Tested on Artifactory 7.84.15 and Xray 3.96.1 with Terraform 1.8.5 and OpenTofu 1.7.2
+
+IMPROVEMENTS:
 
 * resource/xray_custom_issue: Migrate from SDKv2 to Plugin Framework. PR: [#207](https://github.com/jfrog/terraform-provider-xray/pull/207)
 * resource/xray_ignore_rule: Migrate from SDKv2 to Plugin Framework. PR: [#209](https://github.com/jfrog/terraform-provider-xray/pull/209)
