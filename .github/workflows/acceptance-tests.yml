@@ -33,6 +33,7 @@ jobs:
       - name: Get Artifactory and Xray versions
         id: get_versions
         env:
+          XRAY_HELM_CHART_VERSION: ${{ vars.XRAY_HELM_CHART_VERSION }}
           XRAY_VERSION: ${{ vars.XRAY_VERSION }}
         run: |
           helm repo add jfrog https://charts.jfrog.io/
