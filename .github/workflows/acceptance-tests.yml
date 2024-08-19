@@ -128,7 +128,7 @@ jobs:
         id: install_xray
         run: |
           helm upgrade --install xray jfrog/xray \
-            --version $XRAY_HELM_CHART_VERSION
+            --version $XRAY_HELM_CHART_VERSION \
             --set postgresql.persistence.size=200Gi \
             --set xray.jfrogUrl=http://artifactory-artifactory-nginx \
             --set xray.masterKey=$MASTER_KEY \
