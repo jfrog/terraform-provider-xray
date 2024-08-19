@@ -32,14 +32,17 @@ jobs:
         uses: azure/setup-helm@v4.2.0
       - name: Get Artifactory and Xray versions
         id: get_versions
+        env:
+          XRAY_VERSION: ${{ vars.XRAY_VERSION }}
         run: |
           helm repo add jfrog https://charts.jfrog.io/
           helm repo update
-          RT_HELM_CHART_VERSION=$(helm search repo | grep "artifactory " | awk '{$1=$1};1' |  cut -f2 -d " ")
-          ARTIFACTORY_VERSION=$(helm search repo | grep "artifactory " | awk '{$1=$1};1' |  cut -f3 -d " ")
+          RT_HELM_CHART_VERSION=$(helm search repo | grep "jfrog/artifactory " | awk '{$1=$1};1' | cut -f2 -d " ")
+          ARTIFACTORY_VERSION=$(helm search repo | grep "jfrog/artifactory " | awk '{$1=$1};1' | cut -f3 -d " ")
           echo "rt_version=$ARTIFACTORY_VERSION" >> "$GITHUB_OUTPUT"
-          XRAY_HELM_CHART_VERSION=$(helm search repo | grep "/xray" | awk '{$1=$1};1' |  cut -f2 -d " ")
-          XRAY_VERSION=$(helm search repo | grep "/xray" | awk '{$1=$1};1' |  cut -f3 -d " ")
+          XRAY_HELM_CHART_VERSION=$(helm search repo | grep "jfrog/xray" | awk '{$1=$1};1' | cut -f2 -d " ")
+          XRAY_VERSION=${XRAY_VERSION:=$(helm search repo | grep "jfrog/xray" | awk '{$1=$1};1' | cut -f3 -d " ")}
+          echo "XRAY_VERSION=$XRAY_VERSION" >> "$GITHUB_ENV"
           echo "xray_version=$XRAY_VERSION" >> "$GITHUB_OUTPUT"
       - name: Authenticate with Google Cloud
         uses: google-github-actions/auth@v2
@@ -125,6 +128,7 @@ jobs:
         id: install_xray
         run: |
           helm upgrade --install xray jfrog/xray \
+            --version $XRAY_VERSION
             --set postgresql.persistence.size=200Gi \
             --set xray.jfrogUrl=http://artifactory-artifactory-nginx \
             --set xray.masterKey=$MASTER_KEY \
