@@ -56,29 +56,25 @@ resource "xray_repository_config" "xray-repo-config" {
 
 ### Optional
 
-- `config` (Block Set, Max: 1) Single repository configuration. Only one of 'config' or 'paths_config' can be set. (see [below for nested schema](#nestedblock--config))
+- `config` (Block Set) Single repository configuration. Only one of 'config' or 'paths_config' can be set. (see [below for nested schema](#nestedblock--config))
 - `jas_enabled` (Boolean) Specified if JFrog Advanced Security is enabled or not. Default to 'false'
-- `paths_config` (Block Set, Max: 1) Enables you to set a more granular retention period. It enables you to scan future artifacts within the specific path, and set a retention period for the historical data of artifacts after they are scanned (see [below for nested schema](#nestedblock--paths_config))
-
-### Read-Only
-
-- `id` (String) The ID of this resource.
+- `paths_config` (Block Set) Enables you to set a more granular retention period. It enables you to scan future artifacts within the specific path, and set a retention period for the historical data of artifacts after they are scanned (see [below for nested schema](#nestedblock--paths_config))
 
 <a id="nestedblock--config"></a>
 ### Nested Schema for `config`
 
 Optional:
 
-- `exposures` (Block Set, Max: 1) Enables Xray to perform scans for multiple categories that cover security issues in your configurations and the usage of open source libraries in your code. Available only to CLOUD (SaaS)/SELF HOSTED for ENTERPRISE X and ENTERPRISE+ with Advanced DevSecOps. Must be set together with `vuln_contextual_analysis`. Supported for Docker, Maven, NPM, PyPi, and Terraform Backend package type. (see [below for nested schema](#nestedblock--config--exposures))
+- `exposures` (Block Set) Enables Xray to perform scans for multiple categories that cover security issues in your configurations and the usage of open source libraries in your code. Available only to CLOUD (SaaS)/SELF HOSTED for ENTERPRISE X and ENTERPRISE+ with Advanced DevSecOps. Must be set together with `vuln_contextual_analysis`. Supported for Docker, Maven, NPM, PyPi, and Terraform Backend package type. (see [below for nested schema](#nestedblock--config--exposures))
 - `retention_in_days` (Number) The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository.
 - `vuln_contextual_analysis` (Boolean) Only for SaaS instances, will be available after Xray 3.59. Enables vulnerability contextual analysis. Must be set together with `exposures`. Supported for Docker, OCI, and Maven package types.
 
 <a id="nestedblock--config--exposures"></a>
 ### Nested Schema for `config.exposures`
 
-Required:
+Optional:
 
-- `scanners_category` (Block Set, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--config--exposures--scanners_category))
+- `scanners_category` (Block Set) (see [below for nested schema](#nestedblock--config--exposures--scanners_category))
 
 <a id="nestedblock--config--exposures--scanners_category"></a>
 ### Nested Schema for `config.exposures.scanners_category`
@@ -96,10 +92,10 @@ Optional:
 <a id="nestedblock--paths_config"></a>
 ### Nested Schema for `paths_config`
 
-Required:
+Optional:
 
-- `all_other_artifacts` (Block Set, Min: 1, Max: 1) If you select by pattern, you must define a retention period for all other artifacts in the repository in the All Other Artifacts setting. (see [below for nested schema](#nestedblock--paths_config--all_other_artifacts))
-- `pattern` (Block List, Min: 1) Pattern, applied to the repositories. (see [below for nested schema](#nestedblock--paths_config--pattern))
+- `all_other_artifacts` (Block Set) If you select by pattern, you must define a retention period for all other artifacts in the repository in the All Other Artifacts setting. (see [below for nested schema](#nestedblock--paths_config--all_other_artifacts))
+- `pattern` (Block Set) Pattern, applied to the repositories. (see [below for nested schema](#nestedblock--paths_config--pattern))
 
 <a id="nestedblock--paths_config--all_other_artifacts"></a>
 ### Nested Schema for `paths_config.all_other_artifacts`

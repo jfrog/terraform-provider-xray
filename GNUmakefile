@@ -19,6 +19,8 @@ REGISTRY_HOST=registry.terraform.io
 
 ifeq ($(TERRAFORM_CLI), tofu)
 REGISTRY_HOST=registry.opentofu.org
+TF_ACC_TERRAFORM_PATH="$(which tofu)"
+TF_ACC_PROVIDER_HOST="registry.opentofu.org"
 endif
 
 BUILD_PATH=terraform.d/plugins/${REGISTRY_HOST}/jfrog/${PRODUCT}/${NEXT_VERSION}/${TARGET_ARCH}

@@ -14,6 +14,67 @@ import (
 	"github.com/jfrog/terraform-provider-xray/pkg/acctest"
 )
 
+func TestAccRepositoryConfig_UpgradeFromSDKv2(t *testing.T) {
+	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
+	_, _, repoName := testutil.MkNames("generic-local", "artifactory_local_generic_repository")
+
+	var testData = map[string]string{
+		"resource_name":                resourceName,
+		"repo_name":                    repoName,
+		"jas_enabled":                  "false",
+		"pattern0_include":             "core/**",
+		"pattern0_exclude":             "core/external/**",
+		"pattern0_index_new_artifacts": "true",
+		"pattern0_retention_in_days":   "45",
+		"pattern1_include":             "core/**",
+		"pattern1_exclude":             "core/external/**",
+		"pattern1_index_new_artifacts": "true",
+		"pattern1_retention_in_days":   "45",
+		"other_index_new_artifacts":    "true",
+		"other_retention_in_days":      "60",
+		"package_type":                 "generic",
+	}
+
+	config := util.ExecuteTemplate(fqrn, TestDataRepoPathsConfigTemplate, testData)
+
+	resource.Test(t, resource.TestCase{
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"artifactory": {
+						Source: "jfrog/artifactory",
+					},
+					"xray": {
+						Source:            "jfrog/xray",
+						VersionConstraint: "2.10.0",
+					},
+				},
+				Config: config,
+				Check:  resource.ComposeTestCheckFunc(verifyRepositoryConfig(fqrn, testData)),
+			},
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"artifactory": {
+						Source: "jfrog/artifactory",
+					},
+				},
+				ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+				Config:                   config,
+				// ConfigPlanChecks is a terraform-plugin-testing feature.
+				// If acceptance testing is still using terraform-plugin-sdk/v2,
+				// use `PlanOnly: true` instead. When migrating to
+				// terraform-plugin-testing, switch to `ConfigPlanChecks` or you
+				// will likely experience test failures.
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+		},
+	})
+}
+
 func TestAccRepositoryConfig_RepoNoConfig(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
 	_, _, repoName := testutil.MkNames("local-generic", "artifactory_local_generic_repository")
@@ -36,7 +97,7 @@ func TestAccRepositoryConfig_RepoNoConfig(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      config,
-				ExpectError: regexp.MustCompile("Missing required argument"),
+				ExpectError: regexp.MustCompile(".*Invalid Attribute Combination.*"),
 			},
 		},
 	})
@@ -131,7 +192,7 @@ func TestAccRepositoryConfig_JasDisabled_vulnContextualAnalysis_set(t *testing.T
 		Steps: []resource.TestStep{
 			{
 				Config:      config,
-				ExpectError: regexp.MustCompile(`.*config\.vuln_contextual_analysis can not be set when jas_enabled is set to 'true'.*`),
+				ExpectError: regexp.MustCompile(`.*config\.vuln_contextual_analysis can not be set when jas_enabled is set to\n.*'true'.*`),
 			},
 		},
 	})
@@ -255,10 +316,11 @@ func testAccRepositoryConfigRepoConfigCreate_VulnContextualAnalysis(packageType,
 					),
 				},
 				{
-					ResourceName:      fqrn,
-					ImportState:       true,
-					ImportStateId:     fmt.Sprintf("%s:true", testData["repo_name"]),
-					ImportStateVerify: true,
+					ResourceName:                         fqrn,
+					ImportState:                          true,
+					ImportStateId:                        fmt.Sprintf("%s:true", testData["repo_name"]),
+					ImportStateVerify:                    true,
+					ImportStateVerifyIdentifierAttribute: "repo_name",
 				},
 			},
 		})
@@ -416,10 +478,11 @@ func testAccRepositoryConfigRepoConfigCreate(packageType, template, validVersion
 					Check:  checkFunc(fqrn, testData),
 				},
 				{
-					ResourceName:      fqrn,
-					ImportState:       true,
-					ImportStateId:     fmt.Sprintf("%s:true", testData["repo_name"]),
-					ImportStateVerify: true,
+					ResourceName:                         fqrn,
+					ImportState:                          true,
+					ImportStateId:                        fmt.Sprintf("%s:true", testData["repo_name"]),
+					ImportStateVerify:                    true,
+					ImportStateVerifyIdentifierAttribute: "repo_name",
 				},
 			},
 		})
@@ -459,67 +522,6 @@ func TestAccRepositoryConfig_RepoConfigCreate_InvalidExposures(t *testing.T) {
 	})
 }
 
-func TestAccRepositoryConfig_UpgradeFromSDKv2(t *testing.T) {
-	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
-	_, _, repoName := testutil.MkNames("generic-local", "artifactory_local_generic_repository")
-
-	var testData = map[string]string{
-		"resource_name":                resourceName,
-		"repo_name":                    repoName,
-		"jas_enabled":                  "false",
-		"pattern0_include":             "core/**",
-		"pattern0_exclude":             "core/external/**",
-		"pattern0_index_new_artifacts": "true",
-		"pattern0_retention_in_days":   "45",
-		"pattern1_include":             "core/**",
-		"pattern1_exclude":             "core/external/**",
-		"pattern1_index_new_artifacts": "true",
-		"pattern1_retention_in_days":   "45",
-		"other_index_new_artifacts":    "true",
-		"other_retention_in_days":      "60",
-		"package_type":                 "generic",
-	}
-
-	config := util.ExecuteTemplate(fqrn, TestDataRepoPathsConfigTemplate, testData)
-
-	resource.Test(t, resource.TestCase{
-		Steps: []resource.TestStep{
-			{
-				ExternalProviders: map[string]resource.ExternalProvider{
-					"artifactory": {
-						Source: "jfrog/artifactory",
-					},
-					"xray": {
-						Source:            "jfrog/xray",
-						VersionConstraint: "2.4.0",
-					},
-				},
-				Config: config,
-				Check:  resource.ComposeTestCheckFunc(verifyRepositoryConfig(fqrn, testData)),
-			},
-			{
-				ExternalProviders: map[string]resource.ExternalProvider{
-					"artifactory": {
-						Source: "jfrog/artifactory",
-					},
-				},
-				ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
-				Config:                   config,
-				// ConfigPlanChecks is a terraform-plugin-testing feature.
-				// If acceptance testing is still using terraform-plugin-sdk/v2,
-				// use `PlanOnly: true` instead. When migrating to
-				// terraform-plugin-testing, switch to `ConfigPlanChecks` or you
-				// will likely experience test failures.
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectEmptyPlan(),
-					},
-				},
-			},
-		},
-	})
-}
-
 func TestAccRepositoryConfig_RepoPathsUpdate(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
 	_, _, repoName := testutil.MkNames("generic-local", "artifactory_local_generic_repository")
@@ -529,13 +531,13 @@ func TestAccRepositoryConfig_RepoPathsUpdate(t *testing.T) {
 		"repo_name":                    repoName,
 		"jas_enabled":                  "false",
 		"pattern0_include":             "core/**",
-		"pattern0_exclude":             "core/external/**",
+		"pattern0_exclude":             "core/internal/**",
 		"pattern0_index_new_artifacts": "true",
 		"pattern0_retention_in_days":   "45",
 		"pattern1_include":             "core/**",
 		"pattern1_exclude":             "core/external/**",
 		"pattern1_index_new_artifacts": "true",
-		"pattern1_retention_in_days":   "45",
+		"pattern1_retention_in_days":   "55",
 		"other_index_new_artifacts":    "true",
 		"other_retention_in_days":      "60",
 		"package_type":                 "generic",
@@ -545,7 +547,7 @@ func TestAccRepositoryConfig_RepoPathsUpdate(t *testing.T) {
 		"repo_name":                    repoName,
 		"jas_enabled":                  "false",
 		"pattern0_include":             "core1/**",
-		"pattern0_exclude":             "core1/external/**",
+		"pattern0_exclude":             "core1/internal/**",
 		"pattern0_index_new_artifacts": "false",
 		"pattern0_retention_in_days":   "50",
 		"pattern1_include":             "core1/**",
@@ -582,14 +584,21 @@ func verifyRepositoryConfig(fqrn string, testData map[string]string) resource.Te
 	return resource.ComposeTestCheckFunc(
 		resource.TestCheckResourceAttr(fqrn, "repo_name", testData["repo_name"]),
 		resource.TestCheckResourceAttr(fqrn, "jas_enabled", testData["jas_enabled"]),
-		resource.TestCheckResourceAttr(fqrn, "paths_config.0.pattern.0.include", testData["pattern0_include"]),
-		resource.TestCheckResourceAttr(fqrn, "paths_config.0.pattern.0.exclude", testData["pattern0_exclude"]),
-		resource.TestCheckResourceAttr(fqrn, "paths_config.0.pattern.0.index_new_artifacts", testData["pattern0_index_new_artifacts"]),
-		resource.TestCheckResourceAttr(fqrn, "paths_config.0.pattern.0.retention_in_days", testData["pattern0_retention_in_days"]),
-		resource.TestCheckResourceAttr(fqrn, "paths_config.0.pattern.1.include", testData["pattern1_include"]),
-		resource.TestCheckResourceAttr(fqrn, "paths_config.0.pattern.1.exclude", testData["pattern1_exclude"]),
-		resource.TestCheckResourceAttr(fqrn, "paths_config.0.pattern.1.index_new_artifacts", testData["pattern1_index_new_artifacts"]),
-		resource.TestCheckResourceAttr(fqrn, "paths_config.0.pattern.1.retention_in_days", testData["pattern1_retention_in_days"]),
+		resource.TestCheckResourceAttr(fqrn, "paths_config.#", "1"),
+		resource.TestCheckResourceAttr(fqrn, "paths_config.0.pattern.#", "2"),
+		resource.TestCheckTypeSetElemNestedAttrs(fqrn, "paths_config.0.pattern.*", map[string]string{
+			"include":             testData["pattern0_include"],
+			"exclude":             testData["pattern0_exclude"],
+			"index_new_artifacts": testData["pattern0_index_new_artifacts"],
+			"retention_in_days":   testData["pattern0_retention_in_days"],
+		}),
+		resource.TestCheckTypeSetElemNestedAttrs(fqrn, "paths_config.0.pattern.*", map[string]string{
+			"include":             testData["pattern1_include"],
+			"exclude":             testData["pattern1_exclude"],
+			"index_new_artifacts": testData["pattern1_index_new_artifacts"],
+			"retention_in_days":   testData["pattern1_retention_in_days"],
+		}),
+		resource.TestCheckResourceAttr(fqrn, "paths_config.0.all_other_artifacts.#", "1"),
 		resource.TestCheckResourceAttr(fqrn, "paths_config.0.all_other_artifacts.0.index_new_artifacts", testData["other_index_new_artifacts"]),
 		resource.TestCheckResourceAttr(fqrn, "paths_config.0.all_other_artifacts.0.retention_in_days", testData["other_retention_in_days"]),
 	)
