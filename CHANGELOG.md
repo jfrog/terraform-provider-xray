@@ -1,3 +1,9 @@
+## 2.12.0 (August 26, 2024)
+
+NOTES:
+
+* provider: `check_license` attribute is deprecated and provider no longer checks Artifactory license during initialization. It will be removed in the next major version release.
+
 ## 2.11.0 (August 19, 2024). Tested on Artifactory 7.90.8 and Xray 3.101.5 with Terraform 1.9.4 and OpenTofu 1.8.1
 
 IMPROVEMENTS:

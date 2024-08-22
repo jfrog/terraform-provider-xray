@@ -14,7 +14,6 @@ import (
 	xray "github.com/jfrog/terraform-provider-xray/pkg/xray/resource"
 )
 
-// Version for some reason isn't getting updated by the linker
 var Version = "0.0.1"
 var productId = "terraform-provider-xray/" + Version
 
@@ -35,7 +34,6 @@ func SdkV2() *schema.Provider {
 				Optional:    true,
 				Sensitive:   true,
 				DefaultFunc: schema.MultiEnvDefaultFunc([]string{"XRAY_ACCESS_TOKEN", "JFROG_ACCESS_TOKEN"}, ""),
-				// ValidateDiagFunc: validator.StringIsNotEmpty,
 				Description: "This is a bearer token that can be given to you by your admin under `Identity and Access`",
 			},
 			"oidc_provider_name": {
@@ -49,6 +47,7 @@ func SdkV2() *schema.Provider {
 				Optional:    true,
 				Default:     true,
 				Description: "Toggle for pre-flight checking of Artifactory Pro and Enterprise license. Default to `true`.",
+				Deprecated:  "Remove this attribute from your provider configuration as it is no longer used and the attribute will be removed in the next major version of the provider.",
 			},
 		},
 
@@ -110,13 +109,6 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 	restyClient, err = client.AddAuth(restyClient, "", accessToken)
 	if err != nil {
 		return nil, diag.FromErr(err)
-	}
-
-	if checkLicense := d.Get("check_license").(bool); checkLicense {
-		licenseErr := util.CheckArtifactoryLicense(restyClient, "Enterprise", "Commercial")
-		if licenseErr != nil {
-			return nil, diag.FromErr(licenseErr)
-		}
 	}
 
 	xrayVersion, err := util.GetXrayVersion(restyClient)
