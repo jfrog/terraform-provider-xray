@@ -52,11 +52,11 @@ resource "xray_repository_config" "xray-repo-config" {
 
 ### Required
 
-- `repo_name` (String) Repository name.
+- `repo_name` (String) The name of the repository to update configurations for.
 
 ### Optional
 
-- `config` (Block Set) Single repository configuration. Only one of 'config' or 'paths_config' can be set. (see [below for nested schema](#nestedblock--config))
+- `config` (Block Set) Single repository configuration. (see [below for nested schema](#nestedblock--config))
 - `jas_enabled` (Boolean) Specified if JFrog Advanced Security is enabled or not. Default to 'false'
 - `paths_config` (Block Set) Enables you to set a more granular retention period. It enables you to scan future artifacts within the specific path, and set a retention period for the historical data of artifacts after they are scanned (see [below for nested schema](#nestedblock--paths_config))
 
@@ -65,16 +65,16 @@ resource "xray_repository_config" "xray-repo-config" {
 
 Optional:
 
-- `exposures` (Block Set) Enables Xray to perform scans for multiple categories that cover security issues in your configurations and the usage of open source libraries in your code. Available only to CLOUD (SaaS)/SELF HOSTED for ENTERPRISE X and ENTERPRISE+ with Advanced DevSecOps. Must be set together with `vuln_contextual_analysis`. Supported for Docker, Maven, NPM, PyPi, and Terraform Backend package type. (see [below for nested schema](#nestedblock--config--exposures))
-- `retention_in_days` (Number) The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository.
-- `vuln_contextual_analysis` (Boolean) Only for SaaS instances, will be available after Xray 3.59. Enables vulnerability contextual analysis. Must be set together with `exposures`. Supported for Docker, OCI, and Maven package types.
+- `exposures` (Block Set) Enables Xray to perform scans for multiple categories that cover security issues in your configurations and the usage of open source libraries in your code. Available only to CLOUD (SaaS)/SELF HOSTED for ENTERPRISE X and ENTERPRISE+ with Advanced DevSecOps. Must be set for Docker, Maven, NPM, PyPi, and Terraform Backend package type. (see [below for nested schema](#nestedblock--config--exposures))
+- `retention_in_days` (Number) The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository. Can be omitted when `paths_config` is set.
+- `vuln_contextual_analysis` (Boolean) Enables or disables vulnerability contextual analysis. Only for SaaS instances, will be available after Xray 3.59. Must be set for Docker, OCI, and Maven package types.
 
 <a id="nestedblock--config--exposures"></a>
 ### Nested Schema for `config.exposures`
 
 Optional:
 
-- `scanners_category` (Block Set) (see [below for nested schema](#nestedblock--config--exposures--scanners_category))
+- `scanners_category` (Block Set) Exposures' scanners categories configurations. (see [below for nested schema](#nestedblock--config--exposures--scanners_category))
 
 <a id="nestedblock--config--exposures--scanners_category"></a>
 ### Nested Schema for `config.exposures.scanners_category`
@@ -111,11 +111,11 @@ Optional:
 
 Required:
 
-- `include` (String) Include pattern.
+- `include` (String) Paths pattern to include in the set specific configuration.
 
 Optional:
 
-- `exclude` (String) Exclude pattern.
+- `exclude` (String) Paths pattern to exclude from the set specific configuration.
 - `index_new_artifacts` (Boolean) If checked, Xray will scan newly added artifacts in the path. Note that existing artifacts will not be scanned. If the folder contains existing artifacts that have been scanned, and you do not want to index new artifacts in that folder, you can choose not to index that folder.
 - `retention_in_days` (Number) The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository.
 
