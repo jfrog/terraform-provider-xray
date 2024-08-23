@@ -106,6 +106,12 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 		accessToken = v.(string)
 	}
 
+	if accessToken == "" {
+		return nil, diag.Errorf("While configuring the provider, the Access Token was not found in " +
+			"the JFROG_ACCESS_TOKEN/XRAY_ACCESS_TOKEN environment variable, or provider " +
+			"configuration block access_token attribute, or from Terraform Cloud Workload Identity token.")
+	}
+
 	restyClient, err = client.AddAuth(restyClient, "", accessToken)
 	if err != nil {
 		return nil, diag.FromErr(err)
