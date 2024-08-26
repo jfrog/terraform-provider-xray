@@ -173,8 +173,6 @@ jobs:
         with:
           install-only: true
       - name: Execute acceptance tests
-        env:
-          JFROG_JAS_DISABLED: true
         run: make acceptance -e TARGET_ARCH=linux_amd64
       - name: Install provider
         run: |
