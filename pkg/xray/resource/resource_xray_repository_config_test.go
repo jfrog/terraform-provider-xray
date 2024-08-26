@@ -204,7 +204,7 @@ func TestAccRepositoryConfig_JasDisabled_vulnContextualAnalysis_set(t *testing.T
 		Steps: []resource.TestStep{
 			{
 				Config:      config,
-				ExpectError: regexp.MustCompile(`.*can not be set when jas_enabled is set to 'false'.*`),
+				ExpectError: regexp.MustCompile(`.*config\.vuln_contextual_analysis can not be set when jas_enabled is set to\n'false'.*`),
 			},
 		},
 	})
