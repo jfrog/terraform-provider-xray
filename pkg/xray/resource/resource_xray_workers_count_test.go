@@ -1,8 +1,6 @@
 package xray_test
 
 import (
-	"os"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -12,10 +10,10 @@ import (
 )
 
 func TestAccWorkersCount_full(t *testing.T) {
-	jfrogURL := os.Getenv("JFROG_URL")
-	if strings.HasSuffix(jfrogURL, "jfrog.io") {
-		t.Skipf("env var JFROG_URL '%s' is a cloud instance.", jfrogURL)
-	}
+	// jfrogURL := os.Getenv("JFROG_URL")
+	// if strings.HasSuffix(jfrogURL, "jfrog.io") {
+	// 	t.Skipf("env var JFROG_URL '%s' is a cloud instance.", jfrogURL)
+	// }
 
 	_, fqrn, resourceName := testutil.MkNames("test-workers-count-", "xray_workers_count")
 
@@ -33,14 +31,33 @@ func TestAccWorkersCount_full(t *testing.T) {
 			new_content      = {{ .newContent }}
 			existing_content = 4
 		}
-		alert {
+		policy_enforcer {
 			new_content      = {{ .newContent }}
 			existing_content = 8
+		}
+		sbom {
+			new_content      = 0
+			existing_content = 0
+		}
+		user_catalog {
+			new_content      = 0
+			existing_content = 0
+		}
+		sbom_impact_analysis {
+			new_content      = 0
+			existing_content = 0
+		}
+		migration_sbom {
+			new_content      = 0
+			existing_content = 0
 		}
 		impact_analysis {
 			new_content = {{ .newContent }}
 		}
 		notification {
+			new_content = {{ .newContent }}
+		}
+		panoramic {
 			new_content = {{ .newContent }}
 		}
 	}`
@@ -74,13 +91,27 @@ func TestAccWorkersCount_full(t *testing.T) {
 					resource.TestCheckResourceAttr(fqrn, "analysis.#", "1"),
 					resource.TestCheckResourceAttr(fqrn, "analysis.0.new_content", "8"),
 					resource.TestCheckResourceAttr(fqrn, "analysis.0.existing_content", "4"),
-					resource.TestCheckResourceAttr(fqrn, "alert.#", "1"),
-					resource.TestCheckResourceAttr(fqrn, "alert.0.new_content", "8"),
-					resource.TestCheckResourceAttr(fqrn, "alert.0.existing_content", "8"),
+					resource.TestCheckResourceAttr(fqrn, "policy_enforcer.#", "1"),
+					resource.TestCheckResourceAttr(fqrn, "policy_enforcer.0.new_content", "8"),
+					resource.TestCheckResourceAttr(fqrn, "policy_enforcer.0.existing_content", "8"),
+					resource.TestCheckResourceAttr(fqrn, "sbom.#", "1"),
+					resource.TestCheckResourceAttr(fqrn, "sbom.0.new_content", "0"),
+					resource.TestCheckResourceAttr(fqrn, "sbom.0.existing_content", "0"),
+					resource.TestCheckResourceAttr(fqrn, "user_catalog.#", "1"),
+					resource.TestCheckResourceAttr(fqrn, "user_catalog.0.new_content", "0"),
+					resource.TestCheckResourceAttr(fqrn, "user_catalog.0.existing_content", "0"),
+					resource.TestCheckResourceAttr(fqrn, "sbom_impact_analysis.#", "1"),
+					resource.TestCheckResourceAttr(fqrn, "sbom_impact_analysis.0.new_content", "0"),
+					resource.TestCheckResourceAttr(fqrn, "sbom_impact_analysis.0.existing_content", "0"),
+					resource.TestCheckResourceAttr(fqrn, "migration_sbom.#", "1"),
+					resource.TestCheckResourceAttr(fqrn, "migration_sbom.0.new_content", "0"),
+					resource.TestCheckResourceAttr(fqrn, "migration_sbom.0.existing_content", "0"),
 					resource.TestCheckResourceAttr(fqrn, "impact_analysis.#", "1"),
 					resource.TestCheckResourceAttr(fqrn, "impact_analysis.0.new_content", "8"),
 					resource.TestCheckResourceAttr(fqrn, "notification.#", "1"),
 					resource.TestCheckResourceAttr(fqrn, "notification.0.new_content", "8"),
+					resource.TestCheckResourceAttr(fqrn, "panoramic.#", "1"),
+					resource.TestCheckResourceAttr(fqrn, "panoramic.0.new_content", "8"),
 				),
 			},
 			{
@@ -95,13 +126,27 @@ func TestAccWorkersCount_full(t *testing.T) {
 					resource.TestCheckResourceAttr(fqrn, "analysis.#", "1"),
 					resource.TestCheckResourceAttr(fqrn, "analysis.0.new_content", updatedParams["newContent"]),
 					resource.TestCheckResourceAttr(fqrn, "analysis.0.existing_content", "4"),
-					resource.TestCheckResourceAttr(fqrn, "alert.#", "1"),
-					resource.TestCheckResourceAttr(fqrn, "alert.0.new_content", updatedParams["newContent"]),
-					resource.TestCheckResourceAttr(fqrn, "alert.0.existing_content", "8"),
+					resource.TestCheckResourceAttr(fqrn, "policy_enforcer.#", "1"),
+					resource.TestCheckResourceAttr(fqrn, "policy_enforcer.0.new_content", updatedParams["newContent"]),
+					resource.TestCheckResourceAttr(fqrn, "policy_enforcer.0.existing_content", "8"),
+					resource.TestCheckResourceAttr(fqrn, "sbom.#", "1"),
+					resource.TestCheckResourceAttr(fqrn, "sbom.0.new_content", "0"),
+					resource.TestCheckResourceAttr(fqrn, "sbom.0.existing_content", "0"),
+					resource.TestCheckResourceAttr(fqrn, "user_catalog.#", "1"),
+					resource.TestCheckResourceAttr(fqrn, "user_catalog.0.new_content", "0"),
+					resource.TestCheckResourceAttr(fqrn, "user_catalog.0.existing_content", "0"),
+					resource.TestCheckResourceAttr(fqrn, "sbom_impact_analysis.#", "1"),
+					resource.TestCheckResourceAttr(fqrn, "sbom_impact_analysis.0.new_content", "0"),
+					resource.TestCheckResourceAttr(fqrn, "sbom_impact_analysis.0.existing_content", "0"),
+					resource.TestCheckResourceAttr(fqrn, "migration_sbom.#", "1"),
+					resource.TestCheckResourceAttr(fqrn, "migration_sbom.0.new_content", "0"),
+					resource.TestCheckResourceAttr(fqrn, "migration_sbom.0.existing_content", "0"),
 					resource.TestCheckResourceAttr(fqrn, "impact_analysis.#", "1"),
 					resource.TestCheckResourceAttr(fqrn, "impact_analysis.0.new_content", updatedParams["newContent"]),
 					resource.TestCheckResourceAttr(fqrn, "notification.#", "1"),
 					resource.TestCheckResourceAttr(fqrn, "notification.0.new_content", updatedParams["newContent"]),
+					resource.TestCheckResourceAttr(fqrn, "panoramic.#", "1"),
+					resource.TestCheckResourceAttr(fqrn, "panoramic.0.new_content", updatedParams["newContent"]),
 				),
 			},
 			{

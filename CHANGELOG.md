@@ -4,6 +4,7 @@ IMPROVEMENTS:
 
 * resource/xray_repository_config: Migrate from SDKv2 to Plugin Framework. PR: [#234](https://github.com/jfrog/terraform-provider-xray/pull/234)
 * resource/xray_repository_config: Updated schema and validation to work with Xray version 3.102.3. PR: [#235](https://github.com/jfrog/terraform-provider-xray/pull/235)
+* resource/xray_workers_count: Updated schema to work with Xray version 3.102.3. PR: [#235](https://github.com/jfrog/terraform-provider-xray/pull/235)
 
 BUG FIXES:
 
