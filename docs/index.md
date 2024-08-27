@@ -14,26 +14,6 @@ Xray API documentation can be found [here](https://www.jfrog.com/confluence/disp
 
 Links to documentation for specific resources can be found in the table of contents to the left.
 
-This provider requires access to Artifactory and Xray APIs, which are only available in the _licensed_ pro and enterprise editions.
-You can determine which license you have by accessing the following URL
-`${host}/artifactory/api/system/licenses/`
-
-You can either access it via api, or web browser - it does require admin level credentials, but it's one of the few APIs that will work without a license (side node: you can also install your license here with a `POST`)
-
-```bash
-curl -sL ${host}/projects/api/system/licenses/ | jq .
-{
-  "type" : "Enterprise Plus Trial",
-  "validThrough" : "Jan 29, 2022",
-  "licensedTo" : "JFrog Ltd"
-}
-```
-
-The following 3 license types (`jq .type`) do **NOT** support APIs:
-- Community Edition for C/C++
-- JCR Edition
-- OSS
-
 ## Terraform CLI version support
 
 Current version support [Terraform Protocol v6](https://developer.hashicorp.com/terraform/plugin/terraform-plugin-protocol#protocol-version-6) which mean Terraform CLI version 1.0 and later. 
@@ -511,7 +491,7 @@ During the provider start up, if it finds env var `TFC_WORKLOAD_IDENTITY_TOKEN` 
 
 Follow [confgure an OIDC integration](https://jfrog.com/help/r/jfrog-platform-administration-documentation/configure-an-oidc-integration). Enter a name for the provider, e.g. `terraform-cloud`. Use `https://app.terraform.io` for "Provider URL". Choose your own value for "Audience", e.g. `jfrog-terraform-cloud`.
 
-Then [configure an identity mapping](https://jfrog.com/help/r/jfrog-platform-administration-documentation/configure-identity-mappings) with an empty "Claims JSON" (`{}`), and select the "Token scope", "User", and "Service" as desired.
+Then [configure an identity mapping](https://jfrog.com/help/r/jfrog-platform-administration-documentation/configure-identity-mappings) with appropriate "Claims JSON" (e.g. `aud`, `sub` at minimum. See [Terraform Workload Identity - Configuring Trust with your Cloud Platform](https://developer.hashicorp.com/terraform/cloud-docs/workspaces/dynamic-provider-credentials/workload-identity-tokens#configuring-trust-with-your-cloud-platform)), and select the "Token scope", "User", and "Service" as desired.
 
 #### Set environment variable in your Terraform Workspace
 
@@ -554,6 +534,6 @@ provider "xray" {
 ### Optional
 
 - `access_token` (String, Sensitive) This is a bearer token that can be given to you by your admin under `Identity and Access`
-- `check_license` (Boolean) Toggle for pre-flight checking of Artifactory Pro and Enterprise license. Default to `true`.
+- `check_license` (Boolean, Deprecated) Toggle for pre-flight checking of Artifactory Pro and Enterprise license. Default to `true`.
 - `oidc_provider_name` (String) OIDC provider name. See [Configure an OIDC Integration](https://jfrog.com/help/r/jfrog-platform-administration-documentation/configure-an-oidc-integration) for more details.
 - `url` (String) URL of Xray. This can also be sourced from the `XRAY_URL` or `JFROG_URL` environment variable. Default to 'http://localhost:8081' if not set.

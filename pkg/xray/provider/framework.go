@@ -64,8 +64,9 @@ func (p *XrayProvider) Schema(ctx context.Context, req provider.SchemaRequest, r
 				Description: "OIDC provider name. See [Configure an OIDC Integration](https://jfrog.com/help/r/jfrog-platform-administration-documentation/configure-an-oidc-integration) for more details.",
 			},
 			"check_license": schema.BoolAttribute{
-				Optional:    true,
-				Description: "Toggle for pre-flight checking of Artifactory Pro and Enterprise license. Default to `true`.",
+				Optional:           true,
+				Description:        "Toggle for pre-flight checking of Artifactory Pro and Enterprise license. Default to `true`.",
+				DeprecationMessage: "Remove this attribute from your provider configuration as it is no longer used and the attribute will be removed in the next major version of the provider.",
 			},
 		},
 	}
@@ -144,16 +145,6 @@ func (p *XrayProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 			"Error adding Auth to Resty client",
 			err.Error(),
 		)
-	}
-
-	if config.CheckLicense.IsNull() || config.CheckLicense.ValueBool() {
-		if licenseDs := util.CheckArtifactoryLicense(restyClient, "Enterprise", "Commercial", "Edge"); licenseDs != nil {
-			resp.Diagnostics.AddError(
-				"Error checking license",
-				licenseDs.Error(),
-			)
-			return
-		}
 	}
 
 	version, err := util.GetXrayVersion(restyClient)

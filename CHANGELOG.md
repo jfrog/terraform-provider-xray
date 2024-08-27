@@ -1,14 +1,18 @@
-## 2.11.0 (August 19, 2024). Tested on Artifactory 7.90.8 and Xray 3.101.5 with Terraform 1.9.4 and OpenTofu 1.8.1
+## 2.11.0 (August 27, 2024). Tested on Artifactory 7.90.8 and Xray 3.102.5 with Terraform 1.9.5 and OpenTofu 1.8.1
 
 IMPROVEMENTS:
 
-* resource/xray_repository_config: Migrate from SDKv2 to Plugin Framework.
+* resource/xray_repository_config: Migrate from SDKv2 to Plugin Framework. PR: [#234](https://github.com/jfrog/terraform-provider-xray/pull/234)
+* resource/xray_repository_config: Updated schema and validation to work with Xray version 3.102.3. PR: [#235](https://github.com/jfrog/terraform-provider-xray/pull/235)
+* resource/xray_workers_count: Updated schema to work with Xray version 3.102.3. PR: [#235](https://github.com/jfrog/terraform-provider-xray/pull/235)
 
 BUG FIXES:
 
-* resource/xray_\*\_policy: Fix incorrect value being set from API in `exposures` attributes.
+* resource/xray_\*\_policy: Fix incorrect value being set from API in `exposures` attributes. PR: [#234](https://github.com/jfrog/terraform-provider-xray/pull/234)
 
-PR: [#234](https://github.com/jfrog/terraform-provider-xray/pull/234)
+NOTES:
+
+* provider: `check_license` attribute is deprecated and provider no longer checks Artifactory license during initialization. It will be removed in the next major version release.
 
 ## 2.10.0 (August 8, 2024). Tested on Artifactory 7.90.6 and Xray 3.101.5 with Terraform 1.9.4 and OpenTofu 1.8.1
 

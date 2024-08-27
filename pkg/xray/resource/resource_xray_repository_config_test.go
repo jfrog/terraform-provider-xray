@@ -15,13 +15,25 @@ import (
 )
 
 func TestAccRepositoryConfig_UpgradeFromSDKv2(t *testing.T) {
+	version, err := util.GetXrayVersion(acctest.GetTestResty(t))
+	if err != nil {
+		t.Fail()
+		return
+	}
+
+	invalid, _ := util.CheckVersion(version, "3.101.5")
+	if invalid {
+		t.Skipf("SDKv2 upgrade is not valid after xray version %s", version)
+		return
+	}
+
 	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
 	_, _, repoName := testutil.MkNames("generic-local", "artifactory_local_generic_repository")
 
 	var testData = map[string]string{
 		"resource_name":                resourceName,
 		"repo_name":                    repoName,
-		"jas_enabled":                  "false",
+		"jas_enabled":                  "true",
 		"pattern0_include":             "core/**",
 		"pattern0_exclude":             "core/external/**",
 		"pattern0_index_new_artifacts": "true",
@@ -97,7 +109,7 @@ func TestAccRepositoryConfig_RepoNoConfig(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      config,
-				ExpectError: regexp.MustCompile(".*Invalid Attribute Combination.*"),
+				ExpectError: regexp.MustCompile(".*Block config must have a configuration value as the provider has marked it as\n.*required.*"),
 			},
 		},
 	})
@@ -192,7 +204,7 @@ func TestAccRepositoryConfig_JasDisabled_vulnContextualAnalysis_set(t *testing.T
 		Steps: []resource.TestStep{
 			{
 				Config:      config,
-				ExpectError: regexp.MustCompile(`.*config\.vuln_contextual_analysis can not be set when jas_enabled is set to\n.*'true'.*`),
+				ExpectError: regexp.MustCompile(`.*config\.vuln_contextual_analysis can not be set when jas_enabled is set to\n'false'.*`),
 			},
 		},
 	})
@@ -244,7 +256,7 @@ func TestAccRepositoryConfig_JasDisabled_exposures_set(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      config,
-				ExpectError: regexp.MustCompile(`.*config\.exposures can not be set when jas_enabled is set to 'true'.*`),
+				ExpectError: regexp.MustCompile(`.*can not be set when jas_enabled is set to 'false'.*`),
 			},
 		},
 	})
@@ -353,6 +365,21 @@ func TestAccRepositoryConfig_RepoConfigCreate_exposure(t *testing.T) {
 			},
 		},
 		{
+			"generic",
+			TestDataRepoConfigGenericTemplate,
+			"3.102.3",
+			func(fqrn string, testData map[string]string) resource.TestCheckFunc {
+				return resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "jas_enabled", "true"),
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.#", "1"),
+					resource.TestCheckNoResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.services"),
+					resource.TestCheckNoResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.secrets"),
+					resource.TestCheckNoResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.applications"),
+					resource.TestCheckNoResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.iac"),
+				)
+			},
+		},
+		{
 			"maven",
 			TestDataRepoConfigMavenTemplate,
 			"3.78.9",
@@ -403,7 +430,7 @@ func TestAccRepositoryConfig_RepoConfigCreate_no_exposure(t *testing.T) {
 		t.Skipf("Env var JFROG_JAS_DISABLED is set to 'true'")
 	}
 
-	packageTypes := []string{"alpine", "bower", "composer", "conan", "conda", "debian", "gems", "generic", "go", "gradle", "ivy", "nuget", "rpm", "sbt"}
+	packageTypes := []string{"alpine", "bower", "composer", "conan", "conda", "debian", "gems", "go", "gradle", "ivy", "nuget", "rpm", "sbt"}
 	template := `
 	resource "artifactory_local_{{ .package_type }}_repository" "{{ .repo_name }}" {
 		key        = "{{ .repo_name }}"
@@ -498,10 +525,8 @@ func TestAccRepositoryConfig_RepoConfigCreate_InvalidExposures(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
 	_, _, repoName := testutil.MkNames("local-docker-v2", "artifactory_local_docker_v2_repository")
 	var testData = map[string]string{
-		"resource_name":     resourceName,
-		"repo_name":         repoName,
-		"retention_in_days": "90",
-		"package_type":      "docker_v2",
+		"resource_name": resourceName,
+		"repo_name":     repoName,
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -522,6 +547,37 @@ func TestAccRepositoryConfig_RepoConfigCreate_InvalidExposures(t *testing.T) {
 	})
 }
 
+func TestAccRepositoryConfig_Missing_RetentionInDays(t *testing.T) {
+	jasDisabled := os.Getenv("JFROG_JAS_DISABLED")
+	if strings.ToLower(jasDisabled) == "true" {
+		t.Skipf("Env var JFROG_JAS_DISABLED is set to 'true'")
+	}
+
+	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
+	_, _, repoName := testutil.MkNames("local-docker-v2", "artifactory_local_docker_v2_repository")
+	var testData = map[string]string{
+		"resource_name": resourceName,
+		"repo_name":     repoName,
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ExternalProviders: map[string]resource.ExternalProvider{
+			"artifactory": {
+				Source:            "jfrog/artifactory",
+				VersionConstraint: "10.1.2",
+			},
+		},
+		Steps: []resource.TestStep{
+			{
+				Config:      util.ExecuteTemplate(fqrn, TestDataRepoConfigMissingRetentionInDaysTemplate, testData),
+				ExpectError: regexp.MustCompile(`.*config\.retention_in_days must be set when path_config is not set.*`),
+			},
+		},
+	})
+}
+
 func TestAccRepositoryConfig_RepoPathsUpdate(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
 	_, _, repoName := testutil.MkNames("generic-local", "artifactory_local_generic_repository")
@@ -529,7 +585,7 @@ func TestAccRepositoryConfig_RepoPathsUpdate(t *testing.T) {
 	var testData = map[string]string{
 		"resource_name":                resourceName,
 		"repo_name":                    repoName,
-		"jas_enabled":                  "false",
+		"jas_enabled":                  "true",
 		"pattern0_include":             "core/**",
 		"pattern0_exclude":             "core/internal/**",
 		"pattern0_index_new_artifacts": "true",
@@ -545,7 +601,7 @@ func TestAccRepositoryConfig_RepoPathsUpdate(t *testing.T) {
 	var testDataUpdated = map[string]string{
 		"resource_name":                resourceName,
 		"repo_name":                    repoName,
-		"jas_enabled":                  "false",
+		"jas_enabled":                  "true",
 		"pattern0_include":             "core1/**",
 		"pattern0_exclude":             "core1/internal/**",
 		"pattern0_index_new_artifacts": "false",
@@ -628,6 +684,25 @@ resource "xray_repository_config" "{{ .resource_name }}" {
   }
 }`
 
+const TestDataRepoConfigGenericTemplate = `
+resource "artifactory_local_generic_repository" "{{ .repo_name }}" {
+	key        = "{{ .repo_name }}"
+	xray_index = true
+}
+
+resource "xray_repository_config" "{{ .resource_name }}" {
+  repo_name   = artifactory_local_generic_repository.{{ .repo_name }}.key
+  jas_enabled = true
+
+  config {
+    retention_in_days        = {{ .retention_in_days }}
+
+	exposures {
+      scanners_category {}
+	}
+  }
+}`
+
 const TestDataRepoConfigMavenTemplate = `
 resource "artifactory_local_maven_repository" "{{ .repo_name }}" {
 	key        = "{{ .repo_name }}"
@@ -663,7 +738,7 @@ resource "xray_repository_config" "{{ .resource_name }}" {
   config {
     retention_in_days = {{ .retention_in_days }}
 
-	exposures {
+    exposures {
       scanners_category {
         secrets      = true
         applications = true
@@ -673,18 +748,40 @@ resource "xray_repository_config" "{{ .resource_name }}" {
 }`
 
 const TestDataRepoConfigInvalidExposuresTemplate = `
-resource "artifactory_local_{{ .package_type }}_repository" "{{ .repo_name }}" {
+resource "artifactory_local_docker_v2_repository" "{{ .repo_name }}" {
 	key        = "{{ .repo_name }}"
 	xray_index = true
 }
 
 resource "xray_repository_config" "{{ .resource_name }}" {
-  repo_name = artifactory_local_{{ .package_type }}_repository.{{ .repo_name }}.key
+  repo_name = artifactory_local_docker_v2_repository.{{ .repo_name }}.key
   jas_enabled = true
 
   config {
     vuln_contextual_analysis = true
-    retention_in_days = {{ .retention_in_days }}
+    retention_in_days = 90
+
+	exposures {
+      scanners_category {
+        iac = true
+      }
+    }
+  }
+}`
+
+const TestDataRepoConfigMissingRetentionInDaysTemplate = `
+resource "artifactory_local_docker_v2_repository" "{{ .repo_name }}" {
+	key        = "{{ .repo_name }}"
+	xray_index = true
+}
+
+resource "xray_repository_config" "{{ .resource_name }}" {
+  repo_name = artifactory_local_docker_v2_repository.{{ .repo_name }}.key
+  jas_enabled = true
+
+  config {
+    vuln_contextual_analysis = true
+
     exposures {
       scanners_category {
         iac = true
@@ -701,6 +798,13 @@ resource "artifactory_local_{{ .package_type }}_repository" "{{ .repo_name }}" {
 
 resource "xray_repository_config" "{{ .resource_name }}" {
   repo_name = artifactory_local_{{ .package_type }}_repository.{{ .repo_name }}.key
+  jas_enabled = true
+  
+  config {
+    exposures {
+      scanners_category {}
+    }
+  }
 
   paths_config {
     pattern {

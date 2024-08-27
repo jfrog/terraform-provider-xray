@@ -101,7 +101,7 @@ func (m RepoConfigResourceModel) toAPIModel(_ context.Context, xrayVersion, pack
 		}
 
 		repoConfig = &RepoConfigurationAPIModel{
-			RetentionInDays:        configAttrs["retention_in_days"].(types.Int64).ValueInt64(),
+			RetentionInDays:        configAttrs["retention_in_days"].(types.Int64).ValueInt64Pointer(),
 			Exposures:              exposures,
 			VulnContextualAnalysis: vulnContextualAnalysis,
 		}
@@ -221,6 +221,10 @@ var exposuresPackageTypes = func(xrayVersion string) []string {
 		packageTypes = append(packageTypes, "maven", "npm", "pypi")
 	}
 
+	if ok, err := util.CheckVersion(xrayVersion, "3.102.3"); err == nil && ok {
+		packageTypes = append(packageTypes, "generic")
+	}
+
 	return packageTypes
 }
 
@@ -241,6 +245,12 @@ func (m *RepoConfigResourceModel) fromAPIModel(_ context.Context, xrayVersion, p
 	m.Config = types.SetNull(configSetResourceModelElementTypes)
 
 	if apiModel.RepoConfig != nil {
+		retentionInDays := types.Int64PointerValue(nil)
+
+		if apiModel.RepoConfig.RetentionInDays != nil {
+			retentionInDays = types.Int64PointerValue(apiModel.RepoConfig.RetentionInDays)
+		}
+
 		vulnContextualAnalysis := types.BoolNull()
 		exposures := types.SetNull(configExposuresSetResourceModelElementTypes)
 
@@ -312,7 +322,7 @@ func (m *RepoConfigResourceModel) fromAPIModel(_ context.Context, xrayVersion, p
 		config, d := types.ObjectValue(
 			configResourceModelAttributeTypes,
 			map[string]attr.Value{
-				"retention_in_days":        types.Int64Value(apiModel.RepoConfig.RetentionInDays),
+				"retention_in_days":        retentionInDays,
 				"vuln_contextual_analysis": vulnContextualAnalysis,
 				"exposures":                exposures,
 			},
@@ -415,7 +425,7 @@ type RepositoryConfigurationAPIModel struct {
 type RepoConfigurationAPIModel struct {
 	// Omitempty is used because 'vuln_contextual_analysis' is not supported by self-hosted Xray installation.
 	VulnContextualAnalysis *bool              `json:"vuln_contextual_analysis,omitempty"`
-	RetentionInDays        int64              `json:"retention_in_days,omitempty"`
+	RetentionInDays        *int64             `json:"retention_in_days,omitempty"`
 	Exposures              *ExposuresAPIModel `json:"exposures,omitempty"`
 }
 
@@ -440,165 +450,440 @@ type AllOtherArtifactsAPIModel struct {
 	RetentionInDays   int64 `json:"retention_in_days"`
 }
 
-func (r *RepoConfigResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = schema.Schema{
-		Attributes: map[string]schema.Attribute{
-			"repo_name": schema.StringAttribute{
-				Required: true,
-				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
-				},
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Description: "Repository name.",
+var schemaV0 = schema.Schema{
+	Version: 0,
+	Attributes: map[string]schema.Attribute{
+		"repo_name": schema.StringAttribute{
+			Required: true,
+			Validators: []validator.String{
+				stringvalidator.LengthAtLeast(1),
 			},
-			"jas_enabled": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
-				Description: "Specified if JFrog Advanced Security is enabled or not. Default to 'false'",
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.RequiresReplace(),
 			},
+			Description: "Repository name.",
 		},
-		Blocks: map[string]schema.Block{
-			"config": schema.SetNestedBlock{
-				NestedObject: schema.NestedBlockObject{
-					Attributes: map[string]schema.Attribute{
-						"vuln_contextual_analysis": schema.BoolAttribute{
-							Optional:    true,
-							Description: "Only for SaaS instances, will be available after Xray 3.59. Enables vulnerability contextual analysis. Must be set together with `exposures`. Supported for Docker, OCI, and Maven package types.",
-						},
-						"retention_in_days": schema.Int64Attribute{
-							Optional: true,
-							Computed: true,
-							Default:  int64default.StaticInt64(90),
-							Validators: []validator.Int64{
-								int64validator.AtLeast(0),
-							},
-							Description: "The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository.",
-						},
+		"jas_enabled": schema.BoolAttribute{
+			Optional:    true,
+			Computed:    true,
+			Default:     booldefault.StaticBool(false),
+			Description: "Specified if JFrog Advanced Security is enabled or not. Default to 'false'",
+		},
+	},
+	Blocks: map[string]schema.Block{
+		"config": schema.SetNestedBlock{
+			NestedObject: schema.NestedBlockObject{
+				Attributes: map[string]schema.Attribute{
+					"vuln_contextual_analysis": schema.BoolAttribute{
+						Optional:    true,
+						Description: "Only for SaaS instances, will be available after Xray 3.59. Enables vulnerability contextual analysis. Must be set together with `exposures`. Supported for Docker, OCI, and Maven package types.",
 					},
-					Blocks: map[string]schema.Block{
-						"exposures": schema.SetNestedBlock{
-							NestedObject: schema.NestedBlockObject{
-								Blocks: map[string]schema.Block{
-									"scanners_category": schema.SetNestedBlock{
-										NestedObject: schema.NestedBlockObject{
-											Attributes: map[string]schema.Attribute{
-												"services": schema.BoolAttribute{
-													Optional:    true,
-													Description: "Detect whether common OSS libraries and services are configured securely, so application can be easily hardened by default.",
-												},
-												"secrets": schema.BoolAttribute{
-													Optional:    true,
-													Description: "Detect any secret left exposed in any containers stored in Artifactory to stop any accidental leak of internal tokens or credentials.",
-												},
-												"iac": schema.BoolAttribute{
-													Optional:    true,
-													Description: "Scans IaC files stored in Artifactory for early detection of cloud and infrastructure misconfigurations to prevent attacks and data leak. Only supported by Terraform Backend package type.",
-												},
-												"applications": schema.BoolAttribute{
-													Optional:    true,
-													Description: "Detect whether common OSS libraries and services are used securely by the application.",
-												},
+					"retention_in_days": schema.Int64Attribute{
+						Optional: true,
+						Computed: true,
+						Default:  int64default.StaticInt64(90),
+						Validators: []validator.Int64{
+							int64validator.AtLeast(0),
+						},
+						Description: "The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository.",
+					},
+				},
+				Blocks: map[string]schema.Block{
+					"exposures": schema.SetNestedBlock{
+						NestedObject: schema.NestedBlockObject{
+							Blocks: map[string]schema.Block{
+								"scanners_category": schema.SetNestedBlock{
+									NestedObject: schema.NestedBlockObject{
+										Attributes: map[string]schema.Attribute{
+											"services": schema.BoolAttribute{
+												Optional:    true,
+												Description: "Detect whether common OSS libraries and services are configured securely, so application can be easily hardened by default.",
+											},
+											"secrets": schema.BoolAttribute{
+												Optional:    true,
+												Description: "Detect any secret left exposed in any containers stored in Artifactory to stop any accidental leak of internal tokens or credentials.",
+											},
+											"iac": schema.BoolAttribute{
+												Optional:    true,
+												Description: "Scans IaC files stored in Artifactory for early detection of cloud and infrastructure misconfigurations to prevent attacks and data leak. Only supported by Terraform Backend package type.",
+											},
+											"applications": schema.BoolAttribute{
+												Optional:    true,
+												Description: "Detect whether common OSS libraries and services are used securely by the application.",
 											},
 										},
-										Validators: []validator.Set{
-											setvalidator.SizeAtMost(1),
-										},
+									},
+									Validators: []validator.Set{
+										setvalidator.SizeAtMost(1),
 									},
 								},
 							},
-							Validators: []validator.Set{
-								setvalidator.SizeAtMost(1),
-							},
-							Description: "Enables Xray to perform scans for multiple categories that cover security issues in your configurations and the usage of open source libraries in your code. Available only to CLOUD (SaaS)/SELF HOSTED for ENTERPRISE X and ENTERPRISE+ with Advanced DevSecOps. Must be set together with `vuln_contextual_analysis`. Supported for Docker, Maven, NPM, PyPi, and Terraform Backend package type.",
 						},
+						Validators: []validator.Set{
+							setvalidator.SizeAtMost(1),
+						},
+						Description: "Enables Xray to perform scans for multiple categories that cover security issues in your configurations and the usage of open source libraries in your code. Available only to CLOUD (SaaS)/SELF HOSTED for ENTERPRISE X and ENTERPRISE+ with Advanced DevSecOps. Must be set together with `vuln_contextual_analysis`. Supported for Docker, Maven, NPM, PyPi, and Terraform Backend package type.",
 					},
 				},
-				Validators: []validator.Set{
-					setvalidator.SizeAtMost(1),
-					setvalidator.AtLeastOneOf(path.MatchRoot("paths_config")),
-				},
-				Description: "Single repository configuration. Only one of 'config' or 'paths_config' can be set.",
 			},
-			"paths_config": schema.SetNestedBlock{
-				NestedObject: schema.NestedBlockObject{
-					Blocks: map[string]schema.Block{
-						"pattern": schema.SetNestedBlock{
-							NestedObject: schema.NestedBlockObject{
-								Attributes: map[string]schema.Attribute{
-									"include": schema.StringAttribute{
-										Required: true,
-										Validators: []validator.String{
-											stringvalidator.LengthAtLeast(1),
-										},
-										Description: "Include pattern.",
+			Validators: []validator.Set{
+				setvalidator.SizeAtMost(1),
+				setvalidator.AtLeastOneOf(path.MatchRoot("paths_config")),
+			},
+			Description: "Single repository configuration. Only one of 'config' or 'paths_config' can be set.",
+		},
+		"paths_config": schema.SetNestedBlock{
+			NestedObject: schema.NestedBlockObject{
+				Blocks: map[string]schema.Block{
+					"pattern": schema.SetNestedBlock{
+						NestedObject: schema.NestedBlockObject{
+							Attributes: map[string]schema.Attribute{
+								"include": schema.StringAttribute{
+									Required: true,
+									Validators: []validator.String{
+										stringvalidator.LengthAtLeast(1),
 									},
-									"exclude": schema.StringAttribute{
-										Optional: true,
-										Validators: []validator.String{
-											stringvalidator.LengthAtLeast(1),
-										},
-										Description: "Exclude pattern.",
+									Description: "Include pattern.",
+								},
+								"exclude": schema.StringAttribute{
+									Optional: true,
+									Validators: []validator.String{
+										stringvalidator.LengthAtLeast(1),
 									},
-									"index_new_artifacts": schema.BoolAttribute{
-										Optional:    true,
-										Computed:    true,
-										Default:     booldefault.StaticBool(true),
-										Description: "If checked, Xray will scan newly added artifacts in the path. Note that existing artifacts will not be scanned. If the folder contains existing artifacts that have been scanned, and you do not want to index new artifacts in that folder, you can choose not to index that folder.",
+									Description: "Exclude pattern.",
+								},
+								"index_new_artifacts": schema.BoolAttribute{
+									Optional:    true,
+									Computed:    true,
+									Default:     booldefault.StaticBool(true),
+									Description: "If checked, Xray will scan newly added artifacts in the path. Note that existing artifacts will not be scanned. If the folder contains existing artifacts that have been scanned, and you do not want to index new artifacts in that folder, you can choose not to index that folder.",
+								},
+								"retention_in_days": schema.Int64Attribute{
+									Optional: true,
+									Computed: true,
+									Default:  int64default.StaticInt64(90),
+									Validators: []validator.Int64{
+										int64validator.AtLeast(0),
 									},
-									"retention_in_days": schema.Int64Attribute{
-										Optional: true,
-										Computed: true,
-										Default:  int64default.StaticInt64(90),
-										Validators: []validator.Int64{
-											int64validator.AtLeast(0),
-										},
-										Description: "The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository.",
-									},
+									Description: "The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository.",
 								},
 							},
-							Validators: []validator.Set{
-								setvalidator.SizeAtLeast(1),
-							},
-							Description: "Pattern, applied to the repositories.",
 						},
-						"all_other_artifacts": schema.SetNestedBlock{
-							NestedObject: schema.NestedBlockObject{
-								Attributes: map[string]schema.Attribute{
-									"index_new_artifacts": schema.BoolAttribute{
-										Optional:    true,
-										Computed:    true,
-										Default:     booldefault.StaticBool(true),
-										Description: "If checked, Xray will scan newly added artifacts in the path. Note that existing artifacts will not be scanned. If the folder contains existing artifacts that have been scanned, and you do not want to index new artifacts in that folder, you can choose not to index that folder.",
+						Validators: []validator.Set{
+							setvalidator.SizeAtLeast(1),
+						},
+						Description: "Pattern, applied to the repositories.",
+					},
+					"all_other_artifacts": schema.SetNestedBlock{
+						NestedObject: schema.NestedBlockObject{
+							Attributes: map[string]schema.Attribute{
+								"index_new_artifacts": schema.BoolAttribute{
+									Optional:    true,
+									Computed:    true,
+									Default:     booldefault.StaticBool(true),
+									Description: "If checked, Xray will scan newly added artifacts in the path. Note that existing artifacts will not be scanned. If the folder contains existing artifacts that have been scanned, and you do not want to index new artifacts in that folder, you can choose not to index that folder.",
+								},
+								"retention_in_days": schema.Int64Attribute{
+									Optional: true,
+									Computed: true,
+									Default:  int64default.StaticInt64(90),
+									Validators: []validator.Int64{
+										int64validator.AtLeast(0),
 									},
-									"retention_in_days": schema.Int64Attribute{
-										Optional: true,
-										Computed: true,
-										Default:  int64default.StaticInt64(90),
-										Validators: []validator.Int64{
-											int64validator.AtLeast(0),
-										},
-										Description: "The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository.",
-									},
+									Description: "The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository.",
 								},
 							},
-							Validators: []validator.Set{
-								setvalidator.SizeBetween(1, 1),
-							},
-							Description: "If you select by pattern, you must define a retention period for all other artifacts in the repository in the All Other Artifacts setting.",
 						},
+						Validators: []validator.Set{
+							setvalidator.SizeBetween(1, 1),
+						},
+						Description: "If you select by pattern, you must define a retention period for all other artifacts in the repository in the All Other Artifacts setting.",
 					},
 				},
-				Validators: []validator.Set{
-					setvalidator.SizeAtMost(1),
-					setvalidator.AtLeastOneOf(path.MatchRoot("config")),
+			},
+			Validators: []validator.Set{
+				setvalidator.SizeAtMost(1),
+				setvalidator.AtLeastOneOf(path.MatchRoot("config")),
+			},
+			Description: "Enables you to set a more granular retention period. It enables you to scan future artifacts within the specific path, and set a retention period for the historical data of artifacts after they are scanned",
+		},
+	},
+	Description: "Provides an Xray repository config resource. See [Xray Indexing Resources](https://www.jfrog.com/confluence/display/JFROG/Indexing+Xray+Resources#IndexingXrayResources-SetaRetentionPeriod) and [REST API](https://www.jfrog.com/confluence/display/JFROG/Xray+REST+API#XrayRESTAPI-UpdateRepositoriesConfigurations) for more details.",
+}
+
+var schemaV1 = schema.Schema{
+	Version: 1,
+	Attributes: map[string]schema.Attribute{
+		"repo_name": schema.StringAttribute{
+			Required: true,
+			Validators: []validator.String{
+				stringvalidator.LengthAtLeast(1),
+			},
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.RequiresReplace(),
+			},
+			Description: "The name of the repository to update configurations for.",
+		},
+		"jas_enabled": schema.BoolAttribute{
+			Optional:    true,
+			Computed:    true,
+			Default:     booldefault.StaticBool(false),
+			Description: "Specified if JFrog Advanced Security is enabled or not. Default to 'false'",
+		},
+	},
+	Blocks: map[string]schema.Block{
+		"config": schema.SetNestedBlock{
+			NestedObject: schema.NestedBlockObject{
+				Attributes: map[string]schema.Attribute{
+					"vuln_contextual_analysis": schema.BoolAttribute{
+						Optional:    true,
+						Description: "Enables or disables vulnerability contextual analysis. Only for SaaS instances, will be available after Xray 3.59. Must be set for Docker, OCI, and Maven package types.",
+					},
+					"retention_in_days": schema.Int64Attribute{
+						Optional: true,
+						Validators: []validator.Int64{
+							int64validator.AtLeast(0),
+						},
+						Description: "The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository. Can be omitted when `paths_config` is set.",
+					},
 				},
-				Description: "Enables you to set a more granular retention period. It enables you to scan future artifacts within the specific path, and set a retention period for the historical data of artifacts after they are scanned",
+				Blocks: map[string]schema.Block{
+					"exposures": schema.SetNestedBlock{
+						NestedObject: schema.NestedBlockObject{
+							Blocks: map[string]schema.Block{
+								"scanners_category": schema.SetNestedBlock{
+									NestedObject: schema.NestedBlockObject{
+										Attributes: map[string]schema.Attribute{
+											"services": schema.BoolAttribute{
+												Optional:    true,
+												Description: "Detect whether common OSS libraries and services are configured securely, so application can be easily hardened by default.",
+											},
+											"secrets": schema.BoolAttribute{
+												Optional:    true,
+												Description: "Detect any secret left exposed in any containers stored in Artifactory to stop any accidental leak of internal tokens or credentials.",
+											},
+											"iac": schema.BoolAttribute{
+												Optional:    true,
+												Description: "Scans IaC files stored in Artifactory for early detection of cloud and infrastructure misconfigurations to prevent attacks and data leak. Only supported by Terraform Backend package type.",
+											},
+											"applications": schema.BoolAttribute{
+												Optional:    true,
+												Description: "Detect whether common OSS libraries and services are used securely by the application.",
+											},
+										},
+									},
+									Validators: []validator.Set{
+										setvalidator.IsRequired(),
+										setvalidator.SizeAtMost(1),
+									},
+									Description: "Exposures' scanners categories configurations.",
+								},
+							},
+						},
+						Validators: []validator.Set{
+							setvalidator.SizeAtMost(1),
+						},
+						Description: "Enables Xray to perform scans for multiple categories that cover security issues in your configurations and the usage of open source libraries in your code. Available only to CLOUD (SaaS)/SELF HOSTED for ENTERPRISE X and ENTERPRISE+ with Advanced DevSecOps. Must be set for Docker, Maven, NPM, PyPi, and Terraform Backend package type.",
+					},
+				},
+			},
+			Validators: []validator.Set{
+				setvalidator.IsRequired(),
+				setvalidator.SizeBetween(1, 1),
+			},
+			Description: "Single repository configuration.",
+		},
+		"paths_config": schema.SetNestedBlock{
+			NestedObject: schema.NestedBlockObject{
+				Blocks: map[string]schema.Block{
+					"pattern": schema.SetNestedBlock{
+						NestedObject: schema.NestedBlockObject{
+							Attributes: map[string]schema.Attribute{
+								"include": schema.StringAttribute{
+									Required: true,
+									Validators: []validator.String{
+										stringvalidator.LengthAtLeast(1),
+									},
+									Description: "Paths pattern to include in the set specific configuration.",
+								},
+								"exclude": schema.StringAttribute{
+									Optional: true,
+									Validators: []validator.String{
+										stringvalidator.LengthAtLeast(1),
+									},
+									Description: "Paths pattern to exclude from the set specific configuration.",
+								},
+								"index_new_artifacts": schema.BoolAttribute{
+									Optional:    true,
+									Computed:    true,
+									Default:     booldefault.StaticBool(true),
+									Description: "If checked, Xray will scan newly added artifacts in the path. Note that existing artifacts will not be scanned. If the folder contains existing artifacts that have been scanned, and you do not want to index new artifacts in that folder, you can choose not to index that folder.",
+								},
+								"retention_in_days": schema.Int64Attribute{
+									Optional: true,
+									Computed: true,
+									Default:  int64default.StaticInt64(90),
+									Validators: []validator.Int64{
+										int64validator.AtLeast(0),
+									},
+									Description: "The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository.",
+								},
+							},
+						},
+						Validators: []validator.Set{
+							setvalidator.IsRequired(),
+							setvalidator.SizeAtLeast(1),
+						},
+						Description: "Pattern, applied to the repositories.",
+					},
+					"all_other_artifacts": schema.SetNestedBlock{
+						NestedObject: schema.NestedBlockObject{
+							Attributes: map[string]schema.Attribute{
+								"index_new_artifacts": schema.BoolAttribute{
+									Optional:    true,
+									Computed:    true,
+									Default:     booldefault.StaticBool(true),
+									Description: "If checked, Xray will scan newly added artifacts in the path. Note that existing artifacts will not be scanned. If the folder contains existing artifacts that have been scanned, and you do not want to index new artifacts in that folder, you can choose not to index that folder.",
+								},
+								"retention_in_days": schema.Int64Attribute{
+									Optional: true,
+									Computed: true,
+									Default:  int64default.StaticInt64(90),
+									Validators: []validator.Int64{
+										int64validator.AtLeast(0),
+									},
+									Description: "The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository.",
+								},
+							},
+						},
+						Validators: []validator.Set{
+							setvalidator.IsRequired(),
+							setvalidator.SizeBetween(1, 1),
+						},
+						Description: "If you select by pattern, you must define a retention period for all other artifacts in the repository in the All Other Artifacts setting.",
+					},
+				},
+			},
+			Validators: []validator.Set{
+				setvalidator.SizeAtMost(1),
+			},
+			Description: "Enables you to set a more granular retention period. It enables you to scan future artifacts within the specific path, and set a retention period for the historical data of artifacts after they are scanned",
+		},
+	},
+	Description: "Provides an Xray repository config resource. See [Xray Indexing Resources](https://www.jfrog.com/confluence/display/JFROG/Indexing+Xray+Resources#IndexingXrayResources-SetaRetentionPeriod) and [REST API](https://www.jfrog.com/confluence/display/JFROG/Xray+REST+API#XrayRESTAPI-UpdateRepositoriesConfigurations) for more details.",
+}
+
+func (r *RepoConfigResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schemaV1
+}
+
+func (r *RepoConfigResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return map[int64]resource.StateUpgrader{
+		// State upgrade implementation from 0 (prior state version) to 1 (Schema.Version)
+		0: {
+			PriorSchema: &schemaV0,
+			StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
+				var priorStateData RepoConfigResourceModel
+
+				resp.Diagnostics.Append(req.State.Get(ctx, &priorStateData)...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+
+				upgradedStateData := RepoConfigResourceModel{
+					RepoName:    priorStateData.RepoName,
+					JASEnabled:  priorStateData.JASEnabled,
+					PathsConfig: types.SetNull(pathsConfigSetResourceModelElementTypes),
+				}
+
+				if !priorStateData.Config.IsNull() {
+					upgradedStateData.Config = priorStateData.Config
+				} else {
+					retentionInDays := types.Int64Null()
+					if !priorStateData.PathsConfig.IsNull() {
+						retentionInDays = types.Int64Value(90)
+					}
+
+					vulnContextualAnalysis := types.BoolNull()
+					exposures := types.SetNull(configExposuresSetResourceModelElementTypes)
+
+					if upgradedStateData.JASEnabled.ValueBool() {
+						vulnContextualAnalysis = types.BoolValue(false)
+
+						scannersCategoryAttrValues := map[string]attr.Value{
+							"services":     types.BoolValue(false),
+							"secrets":      types.BoolValue(false),
+							"iac":          types.BoolValue(false),
+							"applications": types.BoolValue(false),
+						}
+
+						scannersCategory, d := types.ObjectValue(
+							configExposuresScannersCategoryResourceModelAttributeTypes,
+							scannersCategoryAttrValues,
+						)
+						if d != nil {
+							resp.Diagnostics.Append(d...)
+						}
+
+						scannersCategorySet, d := types.SetValue(
+							configExposuresScannersCategorySetResourceModelElementTypes,
+							[]attr.Value{scannersCategory},
+						)
+						if d != nil {
+							resp.Diagnostics.Append(d...)
+						}
+
+						exposure, d := types.ObjectValue(
+							configExposuresResourceModelAttributeTypes,
+							map[string]attr.Value{
+								"scanners_category": scannersCategorySet,
+							},
+						)
+						if d != nil {
+							resp.Diagnostics.Append(d...)
+						}
+
+						exposuresSet, d := types.SetValue(
+							configExposuresSetResourceModelElementTypes,
+							[]attr.Value{exposure},
+						)
+						if d != nil {
+							resp.Diagnostics.Append(d...)
+						}
+
+						exposures = exposuresSet
+					}
+
+					configSet, d := types.ObjectValue(
+						configResourceModelAttributeTypes,
+						map[string]attr.Value{
+							"retention_in_days":        retentionInDays,
+							"vuln_contextual_analysis": vulnContextualAnalysis,
+							"exposures":                exposures,
+						},
+					)
+					if d != nil {
+						resp.Diagnostics.Append(d...)
+					}
+
+					config, d := types.SetValue(
+						configSetResourceModelElementTypes,
+						[]attr.Value{configSet},
+					)
+					if d != nil {
+						resp.Diagnostics.Append(d...)
+					}
+
+					upgradedStateData.Config = config
+				}
+
+				if !priorStateData.PathsConfig.IsNull() {
+					upgradedStateData.PathsConfig = priorStateData.PathsConfig
+				}
+
+				resp.Diagnostics.Append(resp.State.Set(ctx, upgradedStateData)...)
 			},
 		},
-		Description: "Provides an Xray repository config resource. See [Xray Indexing Resources](https://www.jfrog.com/confluence/display/JFROG/Indexing+Xray+Resources#IndexingXrayResources-SetaRetentionPeriod) and [REST API](https://www.jfrog.com/confluence/display/JFROG/Xray+REST+API#XrayRESTAPI-UpdateRepositoriesConfigurations) for more details.",
 	}
 }
 
@@ -628,33 +913,40 @@ func (r RepoConfigResource) ValidateConfig(ctx context.Context, req resource.Val
 	}
 
 	// If config is not configured, return without warning.
-	if data.Config.IsNull() {
+	if data.Config.IsNull() || data.Config.IsUnknown() {
 		return
 	}
 
+	configs := data.Config.Elements()
+	config := configs[0].(types.Object)
+	attrs := config.Attributes()
+
 	if !data.JASEnabled.ValueBool() {
-		configs := data.Config.Elements()
-		if len(configs) == 0 {
-			return
-		}
-
-		config := configs[0].(types.Object)
-		attrs := config.Attributes()
-
 		if v, ok := attrs["vuln_contextual_analysis"]; ok && !v.IsNull() {
 			resp.Diagnostics.AddAttributeError(
-				path.Root("config").AtListIndex(0).AtName("vuln_contextual_analysis"),
+				path.Root("config").AtSetValue(data.Config).AtName("vuln_contextual_analysis"),
 				"Invalid Attribute Configuration",
-				"config.vuln_contextual_analysis can not be set when jas_enabled is set to 'true'",
+				"config.vuln_contextual_analysis can not be set when jas_enabled is set to 'false'",
 			)
 			return
 		}
 
 		if v, ok := attrs["exposures"]; ok && !v.IsNull() && len(v.(types.Set).Elements()) > 0 {
 			resp.Diagnostics.AddAttributeError(
-				path.Root("config").AtListIndex(0).AtName("exposures"),
+				path.Root("config").AtSetValue(data.Config).AtName("exposures"),
 				"Invalid Attribute Configuration",
-				"config.exposures can not be set when jas_enabled is set to 'true'",
+				"config.exposures can not be set when jas_enabled is set to 'false'",
+			)
+			return
+		}
+	}
+
+	if data.PathsConfig.IsNull() {
+		if v, ok := attrs["retention_in_days"]; ok && v.IsNull() {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("config").AtSetValue(data.Config).AtName("retention_in_days"),
+				"Invalid Attribute Configuration",
+				"config.retention_in_days must be set when path_config is not set",
 			)
 			return
 		}
