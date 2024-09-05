@@ -27,7 +27,9 @@ const WorkersCountEndpoint = "xray/api/v1/configuration/workersCount"
 var _ resource.Resource = &WorkersCountResource{}
 
 func NewWorkersCountResource() resource.Resource {
-	return &WorkersCountResource{}
+	return &WorkersCountResource{
+		TypeName: "xray_workers_count",
+	}
 }
 
 type WorkersCountResource struct {
@@ -36,8 +38,7 @@ type WorkersCountResource struct {
 }
 
 func (r *WorkersCountResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_workers_count"
-	r.TypeName = resp.TypeName
+	resp.TypeName = r.TypeName
 }
 
 type WorkersCountResourceModelV0 struct {

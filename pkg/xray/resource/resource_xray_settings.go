@@ -27,7 +27,9 @@ const (
 var _ resource.Resource = &SettingsResource{}
 
 func NewSettingsResource() resource.Resource {
-	return &SettingsResource{}
+	return &SettingsResource{
+		TypeName: "xray_settings",
+	}
 }
 
 type SettingsResource struct {
@@ -36,8 +38,7 @@ type SettingsResource struct {
 }
 
 func (r *SettingsResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_settings"
-	r.TypeName = resp.TypeName
+	resp.TypeName = r.TypeName
 }
 
 type SettingsResourceModel struct {
