@@ -18,7 +18,7 @@ require (
 	github.com/jfrog/terraform-provider-shared v1.25.5
 	github.com/samber/lo v1.47.0
 	golang.org/x/exp v0.0.0-20230809150735-7b3493d9a819
-	golang.org/x/text v0.17.0
+	golang.org/x/text v0.18.0
 )
 
 require (
