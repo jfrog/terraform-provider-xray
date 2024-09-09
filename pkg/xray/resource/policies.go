@@ -11,8 +11,14 @@ import (
 	"github.com/jfrog/terraform-provider-shared/validator"
 )
 
+const (
+	PoliciesEndpoint = "xray/api/v2/policies"
+	PolicyEndpoint   = "xray/api/v2/policies/{name}"
+)
+
 var validPackageTypesSupportedXraySecPolicies = []string{
 	"alpine",
+	"bower",
 	"cargo",
 	"composer",
 	"conan",
@@ -30,6 +36,7 @@ var validPackageTypesSupportedXraySecPolicies = []string{
 	"pypi",
 	"rpm",
 	"rubygems",
+	"terraformbe",
 }
 
 var commonActionsSchema = map[string]*schema.Schema{
@@ -197,12 +204,12 @@ var getPolicySchema = func(criteriaSchema map[string]*schema.Schema, actionsSche
 	)
 }
 
-type PolicyCVSSRange struct {
+type PolicyCVSSRangeAPIModel struct {
 	To   *float64 `json:"to,omitempty"`
 	From *float64 `json:"from,omitempty"`
 }
 
-type PolicyExposures struct {
+type PolicyExposuresAPIModel struct {
 	MinSeverity  *string `json:"min_severity,omitempty"`
 	Secrets      *bool   `json:"secrets,omitempty"`
 	Applications *bool   `json:"applications,omitempty"`
@@ -210,30 +217,30 @@ type PolicyExposures struct {
 	Iac          *bool   `json:"iac,omitempty"`
 }
 
-type OperationalRiskCriteria struct {
+type OperationalRiskCriteriaAPIModel struct {
 	UseAndCondition               bool   `json:"use_and_condition"`
 	IsEOL                         bool   `json:"is_eol"`
-	ReleaseDateGreaterThanMonths  int    `json:"release_date_greater_than_months,omitempty"`
-	NewerVersionsGreaterThan      int    `json:"newer_versions_greater_than,omitempty"`
-	ReleaseCadencePerYearLessThan int    `json:"release_cadence_per_year_less_than,omitempty"`
-	CommitsLessThan               int    `json:"commits_less_than,omitempty"`
-	CommittersLessThan            int    `json:"committers_less_than,omitempty"`
+	ReleaseDateGreaterThanMonths  int64  `json:"release_date_greater_than_months,omitempty"`
+	NewerVersionsGreaterThan      int64  `json:"newer_versions_greater_than,omitempty"`
+	ReleaseCadencePerYearLessThan int64  `json:"release_cadence_per_year_less_than,omitempty"`
+	CommitsLessThan               int64  `json:"commits_less_than,omitempty"`
+	CommittersLessThan            int64  `json:"committers_less_than,omitempty"`
 	Risk                          string `json:"risk,omitempty"`
 }
 
-type PolicyRuleCriteria struct {
+type PolicyRuleCriteriaAPIModel struct {
 	// Security Criteria
-	MinimumSeverity string           `json:"min_severity,omitempty"` // Omitempty is used because the empty field is conflicting with CVSSRange
-	CVSSRange       *PolicyCVSSRange `json:"cvss_range,omitempty"`
+	MinimumSeverity string                   `json:"min_severity,omitempty"` // Omitempty is used because the empty field is conflicting with CVSSRange
+	CVSSRange       *PolicyCVSSRangeAPIModel `json:"cvss_range,omitempty"`
 	// Omitempty is used in FixVersionDependant because an empty field throws an error in Xray below 3.44.3
-	FixVersionDependant bool             `json:"fix_version_dependant,omitempty"`
-	ApplicableCVEsOnly  bool             `json:"applicable_cves_only,omitempty"`
-	MaliciousPackage    bool             `json:"malicious_package,omitempty"`
-	VulnerabilityIds    []string         `json:"vulnerability_ids,omitempty"`
-	Exposures           *PolicyExposures `json:"exposures,omitempty"`
-	PackageName         string           `json:"package_name,omitempty"`
-	PackageType         string           `json:"package_type,omitempty"`
-	PackageVersions     []string         `json:"package_versions,omitempty"`
+	FixVersionDependant bool                     `json:"fix_version_dependant,omitempty"`
+	ApplicableCVEsOnly  bool                     `json:"applicable_cves_only,omitempty"`
+	MaliciousPackage    bool                     `json:"malicious_package,omitempty"`
+	VulnerabilityIds    []string                 `json:"vulnerability_ids,omitempty"`
+	Exposures           *PolicyExposuresAPIModel `json:"exposures,omitempty"`
+	PackageName         string                   `json:"package_name,omitempty"`
+	PackageType         string                   `json:"package_type,omitempty"`
+	PackageVersions     []string                 `json:"package_versions,omitempty"`
 	// We use pointer for CVSSRange to address nil-verification for non-primitive types.
 	// Unlike primitive types, when the non-primitive type in the struct is set
 	// to nil, the empty key will be created in the JSON body anyway.
@@ -250,54 +257,54 @@ type PolicyRuleCriteria struct {
 	AllowedLicenses        []string `json:"allowed_licenses,omitempty"`
 
 	// Operational Risk custom criteria
-	OperationalRiskCustom  *OperationalRiskCriteria `json:"op_risk_custom,omitempty"`
-	OperationalRiskMinRisk string                   `json:"op_risk_min_risk,omitempty"`
+	OperationalRiskCustom  *OperationalRiskCriteriaAPIModel `json:"op_risk_custom,omitempty"`
+	OperationalRiskMinRisk string                           `json:"op_risk_min_risk,omitempty"`
 }
 
-type BlockDownloadSettings struct {
+type BlockDownloadSettingsAPIModel struct {
 	Unscanned bool `json:"unscanned"`
 	Active    bool `json:"active"`
 }
 
-type PolicyRuleActions struct {
-	Webhooks                       []string              `json:"webhooks,omitempty"`
-	Mails                          []string              `json:"mails,omitempty"`
-	FailBuild                      bool                  `json:"fail_build"`
-	BlockDownload                  BlockDownloadSettings `json:"block_download"`
-	BlockReleaseBundleDistribution bool                  `json:"block_release_bundle_distribution"`
-	BlockReleaseBundlePromotion    bool                  `json:"block_release_bundle_promotion"`
-	NotifyWatchRecipients          bool                  `json:"notify_watch_recipients"`
-	NotifyDeployer                 bool                  `json:"notify_deployer"`
-	CreateJiraTicketEnabled        bool                  `json:"create_ticket_enabled"`
-	FailureGracePeriodDays         int                   `json:"build_failure_grace_period_in_days,omitempty"`
+type PolicyRuleActionsAPIModel struct {
+	Webhooks                       []string                      `json:"webhooks,omitempty"`
+	Mails                          []string                      `json:"mails,omitempty"`
+	FailBuild                      bool                          `json:"fail_build"`
+	BlockDownload                  BlockDownloadSettingsAPIModel `json:"block_download"`
+	BlockReleaseBundleDistribution bool                          `json:"block_release_bundle_distribution"`
+	BlockReleaseBundlePromotion    bool                          `json:"block_release_bundle_promotion"`
+	NotifyWatchRecipients          bool                          `json:"notify_watch_recipients"`
+	NotifyDeployer                 bool                          `json:"notify_deployer"`
+	CreateJiraTicketEnabled        bool                          `json:"create_ticket_enabled"`
+	FailureGracePeriodDays         int64                         `json:"build_failure_grace_period_in_days,omitempty"`
 	// License Actions
 	CustomSeverity string `json:"custom_severity,omitempty"`
 }
 
-type PolicyRule struct {
-	Name     string              `json:"name"`
-	Priority int                 `json:"priority"`
-	Criteria *PolicyRuleCriteria `json:"criteria"`
-	Actions  PolicyRuleActions   `json:"actions"`
+type PolicyRuleAPIModel struct {
+	Name     string                      `json:"name"`
+	Priority int64                       `json:"priority"`
+	Criteria *PolicyRuleCriteriaAPIModel `json:"criteria"`
+	Actions  PolicyRuleActionsAPIModel   `json:"actions"`
 }
 
-type Policy struct {
-	Name        string        `json:"name"`
-	Type        string        `json:"type"`
-	ProjectKey  string        `json:"-"`
-	Author      string        `json:"author,omitempty"` // Omitempty is used because the field is computed
-	Description string        `json:"description"`
-	Rules       *[]PolicyRule `json:"rules"`
-	Created     string        `json:"created,omitempty"`  // Omitempty is used because the field is computed
-	Modified    string        `json:"modified,omitempty"` // Omitempty is used because the field is computed
+type PolicyAPIModel struct {
+	Name        string                `json:"name"`
+	Type        string                `json:"type"`
+	ProjectKey  string                `json:"-"`
+	Author      string                `json:"author,omitempty"` // Omitempty is used because the field is computed
+	Description string                `json:"description"`
+	Rules       *[]PolicyRuleAPIModel `json:"rules"`
+	Created     string                `json:"created,omitempty"`  // Omitempty is used because the field is computed
+	Modified    string                `json:"modified,omitempty"` // Omitempty is used because the field is computed
 }
 
 type PolicyError struct {
 	Error string `json:"error"`
 }
 
-func unpackPolicy(d *schema.ResourceData) (*Policy, error) {
-	policy := new(Policy)
+func unpackPolicy(d *schema.ResourceData) (*PolicyAPIModel, error) {
+	policy := new(PolicyAPIModel)
 
 	policy.Name = d.Get("name").(string)
 	if v, ok := d.GetOk("type"); ok {
@@ -318,14 +325,14 @@ func unpackPolicy(d *schema.ResourceData) (*Policy, error) {
 	return policy, err
 }
 
-func unpackRules(configured *schema.Set, policyType string) (policyRules []PolicyRule, err error) {
-	var rules []PolicyRule
+func unpackRules(configured *schema.Set, policyType string) (policyRules []PolicyRuleAPIModel, err error) {
+	var rules []PolicyRuleAPIModel
 
 	for _, raw := range configured.List() {
-		rule := new(PolicyRule)
+		rule := new(PolicyRuleAPIModel)
 		data := raw.(map[string]interface{})
 		rule.Name = data["name"].(string)
-		rule.Priority = data["priority"].(int)
+		rule.Priority = data["priority"].(int64)
 
 		rule.Criteria, err = unpackCriteria(data["criteria"].(*schema.Set), policyType)
 		if v, ok := data["actions"]; ok {
@@ -337,8 +344,8 @@ func unpackRules(configured *schema.Set, policyType string) (policyRules []Polic
 	return rules, err
 }
 
-func unpackSecurityCriteria(tfCriteria map[string]interface{}) *PolicyRuleCriteria {
-	criteria := new(PolicyRuleCriteria)
+func unpackSecurityCriteria(tfCriteria map[string]interface{}) *PolicyRuleCriteriaAPIModel {
+	criteria := new(PolicyRuleCriteriaAPIModel)
 
 	if v, ok := tfCriteria["fix_version_dependant"]; ok {
 		criteria.FixVersionDependant = v.(bool)
@@ -375,8 +382,8 @@ func unpackSecurityCriteria(tfCriteria map[string]interface{}) *PolicyRuleCriter
 	return criteria
 }
 
-func unpackLicenseCriteria(tfCriteria map[string]interface{}) *PolicyRuleCriteria {
-	criteria := new(PolicyRuleCriteria)
+func unpackLicenseCriteria(tfCriteria map[string]interface{}) *PolicyRuleCriteriaAPIModel {
+	criteria := new(PolicyRuleCriteriaAPIModel)
 	if v, ok := tfCriteria["allow_unknown"]; ok {
 		criteria.AllowUnknown = sdk.BoolPtr(v.(bool))
 	}
@@ -393,8 +400,8 @@ func unpackLicenseCriteria(tfCriteria map[string]interface{}) *PolicyRuleCriteri
 	return criteria
 }
 
-func unpackOperationalRiskCustomCriteria(tfCriteria map[string]interface{}) *OperationalRiskCriteria {
-	criteria := OperationalRiskCriteria{}
+func unpackOperationalRiskCustomCriteria(tfCriteria map[string]interface{}) *OperationalRiskCriteriaAPIModel {
+	criteria := OperationalRiskCriteriaAPIModel{}
 	if v, ok := tfCriteria["use_and_condition"]; ok {
 		criteria.UseAndCondition = v.(bool)
 	}
@@ -402,19 +409,19 @@ func unpackOperationalRiskCustomCriteria(tfCriteria map[string]interface{}) *Ope
 		criteria.IsEOL = v.(bool)
 	}
 	if v, ok := tfCriteria["release_date_greater_than_months"]; ok {
-		criteria.ReleaseDateGreaterThanMonths = v.(int)
+		criteria.ReleaseDateGreaterThanMonths = v.(int64)
 	}
 	if v, ok := tfCriteria["newer_versions_greater_than"]; ok {
-		criteria.NewerVersionsGreaterThan = v.(int)
+		criteria.NewerVersionsGreaterThan = v.(int64)
 	}
 	if v, ok := tfCriteria["release_cadence_per_year_less_than"]; ok {
-		criteria.ReleaseCadencePerYearLessThan = v.(int)
+		criteria.ReleaseCadencePerYearLessThan = v.(int64)
 	}
 	if v, ok := tfCriteria["commits_less_than"]; ok {
-		criteria.CommitsLessThan = v.(int)
+		criteria.CommitsLessThan = v.(int64)
 	}
 	if v, ok := tfCriteria["committers_less_than"]; ok {
-		criteria.CommittersLessThan = v.(int)
+		criteria.CommittersLessThan = v.(int64)
 	}
 	if v, ok := tfCriteria["risk"]; ok {
 		criteria.Risk = v.(string)
@@ -423,8 +430,8 @@ func unpackOperationalRiskCustomCriteria(tfCriteria map[string]interface{}) *Ope
 	return &criteria
 }
 
-func unpackOperationalRiskCriteria(tfCriteria map[string]interface{}) *PolicyRuleCriteria {
-	criteria := new(PolicyRuleCriteria)
+func unpackOperationalRiskCriteria(tfCriteria map[string]interface{}) *PolicyRuleCriteriaAPIModel {
+	criteria := new(PolicyRuleCriteriaAPIModel)
 	if v, ok := tfCriteria["op_risk_custom"]; ok {
 		custom := v.([]interface{})
 		if len(custom) > 0 {
@@ -438,14 +445,14 @@ func unpackOperationalRiskCriteria(tfCriteria map[string]interface{}) *PolicyRul
 	return criteria
 }
 
-func unpackCriteria(d *schema.Set, policyType string) (*PolicyRuleCriteria, error) {
+func unpackCriteria(d *schema.Set, policyType string) (*PolicyRuleCriteriaAPIModel, error) {
 	tfCriteria := d.List()
 	if len(tfCriteria) == 0 {
 		return nil, nil
 	}
 
 	m := tfCriteria[0].(map[string]interface{}) // We made this a list of one to make schema validation easier
-	var criteria *PolicyRuleCriteria
+	var criteria *PolicyRuleCriteriaAPIModel
 	// criteria := new(PolicyRuleCriteria)
 	// The API doesn't allow both severity and license criteria to be _set_, even if they have empty values
 	// So we have to figure out which group is actually empty and not even set it
@@ -464,26 +471,26 @@ func Float64Ptr(v float64) *float64 { return &v }
 
 func StringPtr(v string) *string { return &v }
 
-func unpackCVSSRange(l []interface{}) *PolicyCVSSRange {
+func unpackCVSSRange(l []interface{}) *PolicyCVSSRangeAPIModel {
 	if len(l) == 0 {
 		return nil
 	}
 
 	m := l[0].(map[string]interface{})
-	cvssrange := &PolicyCVSSRange{
+	cvssrange := &PolicyCVSSRangeAPIModel{
 		From: Float64Ptr(m["from"].(float64)),
 		To:   Float64Ptr(m["to"].(float64)),
 	}
 	return cvssrange
 }
 
-func unpackExposures(l []interface{}) *PolicyExposures {
+func unpackExposures(l []interface{}) *PolicyExposuresAPIModel {
 	if len(l) == 0 {
 		return nil
 	}
 
 	m := l[0].(map[string]interface{})
-	exposures := &PolicyExposures{
+	exposures := &PolicyExposuresAPIModel{
 		MinSeverity:  StringPtr(m["min_severity"].(string)),
 		Secrets:      sdk.BoolPtr(m["secrets"].(bool)),
 		Applications: sdk.BoolPtr(m["applications"].(bool)),
@@ -501,8 +508,8 @@ func unpackLicenses(d *schema.Set) []string {
 	return licenses
 }
 
-func unpackActions(l *schema.Set) PolicyRuleActions {
-	actions := PolicyRuleActions{}
+func unpackActions(l *schema.Set) PolicyRuleActionsAPIModel {
+	actions := PolicyRuleActionsAPIModel{}
 	policyActions := l.List()
 
 	if len(policyActions) > 0 {
@@ -532,12 +539,12 @@ func unpackActions(l *schema.Set) PolicyRuleActions {
 				vList := v.(*schema.Set).List()
 				vMap := vList[0].(map[string]interface{})
 
-				actions.BlockDownload = BlockDownloadSettings{
+				actions.BlockDownload = BlockDownloadSettingsAPIModel{
 					Unscanned: vMap["unscanned"].(bool),
 					Active:    vMap["active"].(bool),
 				}
 			} else {
-				actions.BlockDownload = BlockDownloadSettings{
+				actions.BlockDownload = BlockDownloadSettingsAPIModel{
 					Unscanned: false,
 					Active:    false,
 				}
@@ -565,7 +572,7 @@ func unpackActions(l *schema.Set) PolicyRuleActions {
 			actions.CreateJiraTicketEnabled = v.(bool)
 		}
 		if v, ok := m["build_failure_grace_period_in_days"]; ok {
-			actions.FailureGracePeriodDays = v.(int)
+			actions.FailureGracePeriodDays = v.(int64)
 		}
 		if v, ok := m["custom_severity"]; ok {
 			actions.CustomSeverity = v.(string)
@@ -576,7 +583,7 @@ func unpackActions(l *schema.Set) PolicyRuleActions {
 	return actions
 }
 
-func packRules(rules []PolicyRule, policyType string) []interface{} {
+func packRules(rules []PolicyRuleAPIModel, policyType string) []interface{} {
 	var rs []interface{}
 
 	for _, rule := range rules {
@@ -608,7 +615,7 @@ func packRules(rules []PolicyRule, policyType string) []interface{} {
 	return rs
 }
 
-func packOperationalRiskCriteria(criteria *PolicyRuleCriteria) []interface{} {
+func packOperationalRiskCriteria(criteria *PolicyRuleCriteriaAPIModel) []interface{} {
 	m := map[string]interface{}{}
 
 	if len(criteria.OperationalRiskMinRisk) > 0 {
@@ -621,7 +628,7 @@ func packOperationalRiskCriteria(criteria *PolicyRuleCriteria) []interface{} {
 	return []interface{}{m}
 }
 
-func packOperationalRiskCustom(custom *OperationalRiskCriteria) []interface{} {
+func packOperationalRiskCustom(custom *OperationalRiskCriteriaAPIModel) []interface{} {
 	m := map[string]interface{}{
 		"use_and_condition":                  custom.UseAndCondition,
 		"is_eol":                             custom.IsEOL,
@@ -636,7 +643,7 @@ func packOperationalRiskCustom(custom *OperationalRiskCriteria) []interface{} {
 	return []interface{}{m}
 }
 
-func packLicenseCriteria(criteria *PolicyRuleCriteria) []interface{} {
+func packLicenseCriteria(criteria *PolicyRuleCriteriaAPIModel) []interface{} {
 
 	m := map[string]interface{}{}
 
@@ -652,7 +659,7 @@ func packLicenseCriteria(criteria *PolicyRuleCriteria) []interface{} {
 	return []interface{}{m}
 }
 
-func packSecurityCriteria(criteria *PolicyRuleCriteria) []interface{} {
+func packSecurityCriteria(criteria *PolicyRuleCriteriaAPIModel) []interface{} {
 	m := map[string]interface{}{}
 	// cvss_range and min_severity are conflicting, only one can be present in the JSON
 	m["cvss_range"] = packCVSSRange(criteria.CVSSRange)
@@ -676,7 +683,7 @@ func packSecurityCriteria(criteria *PolicyRuleCriteria) []interface{} {
 	return []interface{}{m}
 }
 
-func packCVSSRange(cvss *PolicyCVSSRange) []interface{} {
+func packCVSSRange(cvss *PolicyCVSSRangeAPIModel) []interface{} {
 	if cvss == nil {
 		return []interface{}{}
 	}
@@ -687,7 +694,7 @@ func packCVSSRange(cvss *PolicyCVSSRange) []interface{} {
 	return []interface{}{m}
 }
 
-func packExposures(exposures *PolicyExposures) []interface{} {
+func packExposures(exposures *PolicyExposuresAPIModel) []interface{} {
 	if exposures == nil {
 		return []interface{}{}
 	}
@@ -701,7 +708,7 @@ func packExposures(exposures *PolicyExposures) []interface{} {
 	return []interface{}{m}
 }
 
-func packActions(actions PolicyRuleActions, license bool) []interface{} {
+func packActions(actions PolicyRuleActionsAPIModel, license bool) []interface{} {
 	m := map[string]interface{}{
 		"block_download":                     packBlockDownload(actions.BlockDownload),
 		"webhooks":                           actions.Webhooks,
@@ -722,14 +729,14 @@ func packActions(actions PolicyRuleActions, license bool) []interface{} {
 	return []interface{}{m}
 }
 
-func packBlockDownload(bd BlockDownloadSettings) []interface{} {
+func packBlockDownload(bd BlockDownloadSettingsAPIModel) []interface{} {
 	m := map[string]interface{}{}
 	m["unscanned"] = bd.Unscanned
 	m["active"] = bd.Active
 	return []interface{}{m}
 }
 
-func packPolicy(policy Policy, d *schema.ResourceData) diag.Diagnostics {
+func packPolicy(policy PolicyAPIModel, d *schema.ResourceData) diag.Diagnostics {
 	if err := d.Set("name", policy.Name); err != nil {
 		return diag.FromErr(err)
 	}
@@ -788,7 +795,7 @@ func resourceXrayPolicyCreate(ctx context.Context, d *schema.ResourceData, m int
 }
 
 func resourceXrayPolicyRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	var policy Policy
+	var policy PolicyAPIModel
 
 	projectKey := d.Get("project_key").(string)
 	req, err := getRestyRequest(m.(util.ProviderMetadata).Client, projectKey)

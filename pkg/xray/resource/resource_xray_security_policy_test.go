@@ -299,9 +299,10 @@ func TestAccSecurityPolicy_createBlockDownloadTrueCVSS(t *testing.T) {
 				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeCvss),
 			},
 			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            fqrn,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"author", "created", "modified"},
 			},
 		},
 	})
@@ -440,7 +441,7 @@ func TestAccSecurityPolicy_createMaliciousPackageFail(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      util.ExecuteTemplate(fqrn, securityPolicyMaliciousPkgFixVersionDep, testData),
-				ExpectError: regexp.MustCompile("fix_version_dependant must be set to false if malicious_package is true"),
+				ExpectError: regexp.MustCompile("fix_version_dependant must be set to 'false' if malicious_package is 'true'"),
 			},
 		},
 	})
@@ -463,7 +464,7 @@ func TestAccSecurityPolicy_createMaliciousPackageCvssMinSeverityFail(t *testing.
 		Steps: []resource.TestStep{
 			{
 				Config:      util.ExecuteTemplate(fqrn, securityPolicyCVSSMinSeverityMaliciousPkg, testData),
-				ExpectError: regexp.MustCompile("malicious_package can't be set together with min_severity and/or cvss_range"),
+				ExpectError: regexp.MustCompile("(?s).*Invalid Attribute Combination.*cvss_range.*cannot be specified when.*malicious_package.*is specified.*"),
 			},
 		},
 	})
@@ -486,7 +487,7 @@ func TestAccSecurityPolicy_createCvssMinSeverityFail(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      util.ExecuteTemplate(fqrn, securityPolicyCVSSMinSeverityMaliciousPkg, testData),
-				ExpectError: regexp.MustCompile("min_severity can't be set together with cvss_range"),
+				ExpectError: regexp.MustCompile("(?s).*Invalid Attribute Combination.*cvss_range.*cannot be specified when.*min_severity.*is specified.*"),
 			},
 		},
 	})
@@ -542,9 +543,10 @@ func TestAccSecurityPolicy_createCVSSFloat(t *testing.T) {
 				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeCvss),
 			},
 			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            fqrn,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"author", "created", "modified"},
 			},
 		},
 	})
@@ -594,7 +596,7 @@ func TestAccSecurityPolicy_noActions(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      util.ExecuteTemplate(fqrn, securityPolicyNoActions, testData),
-				ExpectError: regexp.MustCompile("Insufficient actions blocks"),
+				ExpectError: regexp.MustCompile(".*must have a configuration value as the provider has marked it as required.*"),
 			},
 		},
 	})
@@ -652,7 +654,7 @@ func TestAccSecurityPolicy_vulnerabilityIdsIncorrectCVEFails(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:      util.ExecuteTemplate(fqrn, securityPolicyVulnIds, testData),
-					ExpectError: regexp.MustCompile("invalid value for vulnerability_ids"),
+					ExpectError: regexp.MustCompile(".*invalid Vulnerability, must be a valid CVE or Xray ID.*"),
 				},
 			},
 		})
@@ -669,7 +671,6 @@ func TestAccSecurityPolicy_conflictingAttributesFail(t *testing.T) {
 		"malicious_package = true",
 		"min_severity = \"High\"",
 		"exposures {\nmin_severity = \"High\" \nsecrets = true \n applications = true \n services = true \n iac = true\n}",
-		"package_name = \"nuget://RazorEngine\"",
 	}
 
 	for _, testAttribute := range testAttributes {
@@ -693,7 +694,7 @@ func TestAccSecurityPolicy_conflictingAttributesFail(t *testing.T) {
 				Steps: []resource.TestStep{
 					{
 						Config:      util.ExecuteTemplate(fqrn, securityPolicyVulnIdsConflict, testData),
-						ExpectError: regexp.MustCompile("can't be set together"),
+						ExpectError: regexp.MustCompile("(?s).*Invalid Attribute Combination.*cvss_range.*cannot be specified when.*vulnerability_ids.*is specified.*"),
 					},
 				},
 			})
@@ -729,7 +730,7 @@ func TestAccSecurityPolicy_vulnerabilityIdsLimitFail(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      util.ExecuteTemplate(fqrn, securityPolicyVulnIdsLimit, testData),
-				ExpectError: regexp.MustCompile("Too many list items"),
+				ExpectError: regexp.MustCompile(".*set must contain at least 1 elements and at most 100 elements.*"),
 			},
 		},
 	})
@@ -758,9 +759,10 @@ func TestAccSecurityPolicy_exposures(t *testing.T) {
 				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeExposures),
 			},
 			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            fqrn,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"author", "created", "modified"},
 			},
 		},
 	})
@@ -791,9 +793,10 @@ func TestAccSecurityPolicy_Packages(t *testing.T) {
 				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypePackageName),
 			},
 			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            fqrn,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"author", "created", "modified"},
 			},
 		},
 	})
@@ -822,7 +825,7 @@ func TestAccSecurityPolicy_PackagesIncorrectVersionRangeFails(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:      util.ExecuteTemplate(fqrn, securityPolicyPackages, testData),
-					ExpectError: regexp.MustCompile("invalid value for package_versions"),
+					ExpectError: regexp.MustCompile(`.*invalid Range, must be one of the follows: Any Version: \(,\) or Specific\n.*Version: \[1\.2\], \[3\] or Range: \(1,\), \[,1\.2\.3\], \(4\.5\.0,6\.5\.2\].*`),
 				},
 			},
 		})
@@ -850,7 +853,7 @@ func TestAccSecurityPolicy_createPackagesFail(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      util.ExecuteTemplate(fqrn, securityPolicyPackagesFixVersionDep, testData),
-				ExpectError: regexp.MustCompile("fix_version_dependant must be set to false if package type policy is used"),
+				ExpectError: regexp.MustCompile("fix_version_dependant must be set to 'false' if any package attribute is set"),
 			},
 		},
 	})
