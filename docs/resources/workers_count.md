@@ -48,25 +48,21 @@ resource "xray_workers_count" "workers-count" {
 
 ### Optional
 
-- `alert` (Block Set) The number of workers managing alerts. (see [below for nested schema](#nestedblock--alert))
 - `analysis` (Block Set) The number of workers involved in scanning analysis. (see [below for nested schema](#nestedblock--analysis))
 - `impact_analysis` (Block Set) The number of workers involved in Impact Analysis to determine how a component with a reported issue impacts others in the system. (see [below for nested schema](#nestedblock--impact_analysis))
 - `index` (Block Set) The number of workers managing indexing of artifacts. (see [below for nested schema](#nestedblock--index))
+- `migration_sbom` (Block Set) The number of workers managing SBOM migration. (see [below for nested schema](#nestedblock--migration_sbom))
 - `notification` (Block Set) The number of workers managing notifications. (see [below for nested schema](#nestedblock--notification))
+- `panoramic` (Block Set) The number of workers managing panoramic. (see [below for nested schema](#nestedblock--panoramic))
 - `persist` (Block Set) The number of workers managing persistent storage needed to build the artifact relationship graph. (see [below for nested schema](#nestedblock--persist))
+- `policy_enforcer` (Block Set) The number of workers managing policy enforcer. (see [below for nested schema](#nestedblock--policy_enforcer))
+- `sbom` (Block Set) The number of workers managing SBOM. (see [below for nested schema](#nestedblock--sbom))
+- `sbom_impact_analysis` (Block Set) The number of workers managing SBOM impact analysis. (see [below for nested schema](#nestedblock--sbom_impact_analysis))
+- `user_catalog` (Block Set) The number of workers managing user catalog. (see [below for nested schema](#nestedblock--user_catalog))
 
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-
-<a id="nestedblock--alert"></a>
-### Nested Schema for `alert`
-
-Required:
-
-- `existing_content` (Number) Number of workers for existing content
-- `new_content` (Number) Number of workers for new content
-
 
 <a id="nestedblock--analysis"></a>
 ### Nested Schema for `analysis`
@@ -94,6 +90,15 @@ Required:
 - `new_content` (Number) Number of workers for new content
 
 
+<a id="nestedblock--migration_sbom"></a>
+### Nested Schema for `migration_sbom`
+
+Required:
+
+- `existing_content` (Number) Number of workers for existing content
+- `new_content` (Number) Number of workers for new content
+
+
 <a id="nestedblock--notification"></a>
 ### Nested Schema for `notification`
 
@@ -102,8 +107,52 @@ Required:
 - `new_content` (Number) Number of workers for new content
 
 
+<a id="nestedblock--panoramic"></a>
+### Nested Schema for `panoramic`
+
+Required:
+
+- `new_content` (Number) Number of workers for new content
+
+
 <a id="nestedblock--persist"></a>
 ### Nested Schema for `persist`
+
+Required:
+
+- `existing_content` (Number) Number of workers for existing content
+- `new_content` (Number) Number of workers for new content
+
+
+<a id="nestedblock--policy_enforcer"></a>
+### Nested Schema for `policy_enforcer`
+
+Required:
+
+- `existing_content` (Number) Number of workers for existing content
+- `new_content` (Number) Number of workers for new content
+
+
+<a id="nestedblock--sbom"></a>
+### Nested Schema for `sbom`
+
+Required:
+
+- `existing_content` (Number) Number of workers for existing content
+- `new_content` (Number) Number of workers for new content
+
+
+<a id="nestedblock--sbom_impact_analysis"></a>
+### Nested Schema for `sbom_impact_analysis`
+
+Required:
+
+- `existing_content` (Number) Number of workers for existing content
+- `new_content` (Number) Number of workers for new content
+
+
+<a id="nestedblock--user_catalog"></a>
+### Nested Schema for `user_catalog`
 
 Required:
 
