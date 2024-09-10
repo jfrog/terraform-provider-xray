@@ -114,7 +114,7 @@ func (m IgnoreRuleResourceModel) toAPIModel(ctx context.Context, apiModel *Ignor
 
 	var expiresAt *time.Time
 	if m.ExpiredAt.ValueString() != "" {
-		parsedTime, err := time.Parse("2006-01-02", m.ExpiredAt.ValueString())
+		parsedTime, err := time.ParseInLocation("2006-01-02", m.ExpiredAt.ValueString(), time.Local)
 		if err != nil {
 			ds.AddError(
 				"failed to parse date/time string",
