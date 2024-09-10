@@ -72,6 +72,7 @@ jobs:
           gcloud container clusters create "$GKE_CLUSTER" \
             --zone "$GKE_ZONE" \
             --shielded-secure-boot \
+            --shielded-integrity-monitoring \
             --node-locations "$GKE_ZONE" \
             --num-nodes "${NUM_NODES:-5}" \
             --enable-autoscaling \
