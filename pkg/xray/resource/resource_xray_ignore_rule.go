@@ -497,7 +497,7 @@ func (r *IgnoreRuleResource) Schema(ctx context.Context, req resource.SchemaRequ
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
-				Description: "The Ignore Rule will be active until the expiration date. At that date it will automatically get deleted. The rule with the expiration date less than current day, will error out.",
+				Description: "The Ignore Rule will be active until the expiration date. At that date it will automatically get deleted. The rule with the expiration date less than current day, will error out. Vaule assumes to be in local timezone. Ensure client and server time zones match.",
 			},
 			"author": schema.StringAttribute{
 				Computed: true,
