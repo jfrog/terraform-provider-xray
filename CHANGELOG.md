@@ -1,3 +1,9 @@
+## 2.11.1 (September 11, 2024)
+
+IMPROVEMENTS:
+
+* resource/xray_license_policy, resource/xray_operational_risk_policy, resource/xray_security_policy: Migrate from SDKv2 to Plugin Framework. PR: [#239](https://github.com/jfrog/terraform-provider-xray/pull/239)
+
 ## 2.11.0 (August 27, 2024). Tested on Artifactory 7.90.8 and Xray 3.102.5 with Terraform 1.9.5 and OpenTofu 1.8.1
 
 IMPROVEMENTS:
