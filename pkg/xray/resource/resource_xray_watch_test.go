@@ -188,7 +188,6 @@ func TestAccWatch_allReposWithProjectKey(t *testing.T) {
 		  min_severity = "High"
 		}
 		actions {
-		  webhooks = []
 		  mails    = ["test@email.com"]
 		  block_download {
 			unscanned = true
@@ -405,7 +404,6 @@ func TestAccWatch_singleRepositoryWithProjectKey(t *testing.T) {
 	      min_severity = "High"
 	    }
 	    actions {
-	      webhooks = []
 	      mails    = ["test@email.com"]
 	      block_download {
 	        unscanned = true
@@ -893,7 +891,6 @@ func TestAccWatch_buildWithProjectKey(t *testing.T) {
 	      min_severity = "High"
 	    }
 	    actions {
-	      webhooks = []
 	      mails    = ["test@email.com"]
 	      block_download {
 	        unscanned = true
@@ -981,7 +978,6 @@ func TestAccWatch_allBuildsWithProjectKey(t *testing.T) {
 	      min_severity = "High"
 	    }
 	    actions {
-	      webhooks = []
 	      mails    = ["test@email.com"]
 	      block_download {
 	        unscanned = true
@@ -1351,7 +1347,6 @@ const allReposSinglePolicyWatchTemplate = `resource "xray_security_policy" "secu
       min_severity = "High"
     }
     actions {
-      webhooks = []
       mails    = ["test@email.com"]
       block_download {
         unscanned = true
@@ -1398,7 +1393,6 @@ const allReposPathAntFilterWatchTemplate = `resource "xray_security_policy" "sec
       min_severity = "High"
     }
     actions {
-      webhooks = []
       mails    = ["test@email.com"]
       block_download {
         unscanned = true
@@ -1445,7 +1439,6 @@ const allReposKvFilterWatchTemplate = `resource "xray_security_policy" "security
       min_severity = "High"
     }
     actions {
-      webhooks = []
       mails    = ["test@email.com"]
       block_download {
         unscanned = true
@@ -1495,7 +1488,6 @@ const allReposMultiplePoliciesWatchTemplate = `resource "xray_security_policy" "
       min_severity = "High"
     }
     actions {
-      webhooks = []
       mails    = ["test@email.com"]
       block_download {
         unscanned = true
@@ -1524,7 +1516,6 @@ resource "xray_license_policy" "license" {
       multi_license_permissive = true
     }
     actions {
-      webhooks = []
       mails    = ["test@email.com"]
       block_download {
         unscanned = true
@@ -1620,7 +1611,6 @@ const singleRepositoryWatchTemplate = `resource "xray_security_policy" "security
       min_severity = "High"
     }
     actions {
-      webhooks = []
       mails    = ["test@email.com"]
       block_download {
         unscanned = true
@@ -1669,7 +1659,6 @@ const singleRepositoryInvalidWatchTemplate = `resource "xray_security_policy" "s
       min_severity = "High"
     }
     actions {
-      webhooks = []
       mails    = ["test@email.com"]
       block_download {
         unscanned = true
@@ -1717,7 +1706,6 @@ const multipleRepositoriesWatchTemplate = `resource "xray_security_policy" "secu
       min_severity = "High"
     }
     actions {
-      webhooks = []
       mails    = ["test@email.com"]
       block_download {
         unscanned = true
@@ -1776,7 +1764,6 @@ const pathAntPatterns = `resource "xray_security_policy" "security" {
       min_severity = "High"
     }
     actions {
-      webhooks = []
       mails    = ["test@email.com"]
       block_download {
         unscanned = true
@@ -1843,7 +1830,6 @@ const kvFilters = `resource "xray_security_policy" "security" {
       min_severity = "High"
     }
     actions {
-      webhooks = []
       mails    = ["test@email.com"]
       block_download {
         unscanned = true
@@ -1902,7 +1888,6 @@ const multipleRepositoriesKvFilter = `resource "xray_security_policy" "security"
       min_severity = "High"
     }
     actions {
-      webhooks = []
       mails    = ["test@email.com"]
       block_download {
         unscanned = true
@@ -1968,7 +1953,6 @@ const buildWatchTemplate = `resource "xray_security_policy" "security" {
       min_severity = "High"
     }
     actions {
-      webhooks = []
       mails    = ["test@email.com"]
       block_download {
         unscanned = true
@@ -2012,7 +1996,6 @@ const multipleBuildsWatchTemplate = `resource "xray_security_policy" "security" 
       min_severity = "High"
     }
     actions {
-      webhooks = []
       mails    = ["test@email.com"]
       block_download {
         unscanned = true
@@ -2061,7 +2044,6 @@ const allBuildsWatchTemplate = `resource "xray_security_policy" "security" {
       min_severity = "High"
     }
     actions {
-      webhooks = []
       mails    = ["test@email.com"]
       block_download {
         unscanned = true
@@ -2113,7 +2095,6 @@ const invalidBuildsWatchFilterTemplate = `resource "xray_security_policy" "secur
       min_severity = "High"
     }
     actions {
-      webhooks = []
       mails    = ["test@email.com"]
       block_download {
         unscanned = true
@@ -2161,7 +2142,6 @@ const allProjectsWatchTemplate = `resource "xray_security_policy" "security" {
       min_severity = "High"
     }
     actions {
-      webhooks = []
       mails    = ["test@email.com"]
       block_download {
         unscanned = true
@@ -2208,7 +2188,6 @@ const singleProjectWatchTemplate = `resource "xray_security_policy" "security" {
       min_severity = "High"
     }
     actions {
-      webhooks = []
       mails    = ["test@email.com"]
       block_download {
         unscanned = true
@@ -2255,7 +2234,6 @@ const invalidProjectWatchFilterTemplate = `resource "xray_security_policy" "secu
       min_severity = "High"
     }
     actions {
-      webhooks = []
       mails    = ["test@email.com"]
       block_download {
         unscanned = true
@@ -2303,7 +2281,6 @@ const allReleaseBundlesWatchTemplate = `resource "xray_security_policy" "securit
       min_severity = "High"
     }
     actions {
-      webhooks = []
       mails    = ["test@email.com"]
       block_download {
         unscanned = true
@@ -2350,7 +2327,6 @@ const singleReleaseBundleWatchTemplate = `resource "xray_security_policy" "secur
       min_severity = "High"
     }
     actions {
-      webhooks = []
       mails    = ["test@email.com"]
       block_download {
         unscanned = true

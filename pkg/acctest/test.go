@@ -205,7 +205,7 @@ func CreateRepos(t *testing.T, repo, repoType, projectKey, packageType string) {
 	}
 
 	if repoType == "remote" {
-		repository.Url = "http://tempurl.org"
+		repository.Url = "https://google.com"
 	}
 
 	req := restyClient.R()
