@@ -3,12 +3,26 @@ package xray
 import (
 	"context"
 	"net/http"
+	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	sdkv2_diag "github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	sdkv2_schema "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/jfrog/terraform-provider-shared/util"
+	utilfw "github.com/jfrog/terraform-provider-shared/util/fw"
 	"github.com/jfrog/terraform-provider-shared/util/sdk"
-	"github.com/jfrog/terraform-provider-shared/validator"
+	shared_validator "github.com/jfrog/terraform-provider-shared/validator"
+	"github.com/samber/lo"
 )
 
 const (
@@ -39,39 +53,391 @@ var validPackageTypesSupportedXraySecPolicies = []string{
 	"terraformbe",
 }
 
-var commonActionsSchema = map[string]*schema.Schema{
+type PolicyResource struct {
+	ProviderData util.ProviderMetadata
+	TypeName     string
+}
+
+type PolicyResourceModel struct {
+	ID          types.String `tfsdk:"id"`
+	Name        types.String `tfsdk:"name"`
+	Description types.String `tfsdk:"description"`
+	ProjectKey  types.String `tfsdk:"project_key"`
+	Type        types.String `tfsdk:"type"`
+	Rules       types.Set    `tfsdk:"rule"`
+	Author      types.String `tfsdk:"author"`
+	Created     types.String `tfsdk:"created"`
+	Modified    types.String `tfsdk:"modified"`
+}
+
+var toActionsAPIModel = func(ctx context.Context, actionsElems []attr.Value) (PolicyRuleActionsAPIModel, diag.Diagnostics) {
+	diags := diag.Diagnostics{}
+
+	actions := PolicyRuleActionsAPIModel{}
+	if len(actionsElems) > 0 {
+		attrs := actionsElems[0].(types.Object).Attributes()
+
+		var webhooks []string
+		d := attrs["webhooks"].(types.Set).ElementsAs(ctx, &webhooks, false)
+		if d.HasError() {
+			diags.Append(d...)
+		}
+
+		var mails []string
+		d = attrs["mails"].(types.Set).ElementsAs(ctx, &mails, false)
+		if d.HasError() {
+			diags.Append(d...)
+		}
+
+		blockDownload := BlockDownloadSettingsAPIModel{}
+		blockDownloadElems := attrs["block_download"].(types.Set).Elements()
+		if len(blockDownloadElems) > 0 {
+			attrs := blockDownloadElems[0].(types.Object).Attributes()
+
+			blockDownload.Unscanned = attrs["unscanned"].(types.Bool).ValueBool()
+			blockDownload.Active = attrs["active"].(types.Bool).ValueBool()
+		}
+
+		actions.Webhooks = webhooks
+		actions.Mails = mails
+		actions.FailBuild = attrs["fail_build"].(types.Bool).ValueBool()
+		actions.BlockDownload = blockDownload
+		actions.BlockReleaseBundleDistribution = attrs["block_release_bundle_distribution"].(types.Bool).ValueBool()
+		actions.BlockReleaseBundlePromotion = attrs["block_release_bundle_promotion"].(types.Bool).ValueBool()
+		actions.NotifyWatchRecipients = attrs["notify_watch_recipients"].(types.Bool).ValueBool()
+		actions.NotifyDeployer = attrs["notify_deployer"].(types.Bool).ValueBool()
+		actions.CreateJiraTicketEnabled = attrs["create_ticket_enabled"].(types.Bool).ValueBool()
+		actions.FailureGracePeriodDays = attrs["build_failure_grace_period_in_days"].(types.Int64).ValueInt64()
+	}
+
+	return actions, diags
+}
+
+func (m PolicyResourceModel) toAPIModel(
+	ctx context.Context,
+	apiModel *PolicyAPIModel,
+	toCriteriaAPIModel func(ctx context.Context, criteriaElems []attr.Value) (*PolicyRuleCriteriaAPIModel, diag.Diagnostics),
+	toActionsAPIModel func(ctx context.Context, actionsElems []attr.Value) (PolicyRuleActionsAPIModel, diag.Diagnostics),
+) diag.Diagnostics {
+	diags := diag.Diagnostics{}
+
+	rules := lo.Map(
+		m.Rules.Elements(),
+		func(elem attr.Value, _ int) PolicyRuleAPIModel {
+			attrs := elem.(types.Object).Attributes()
+
+			criteria, ds := toCriteriaAPIModel(ctx, attrs["criteria"].(types.Set).Elements())
+			if ds.HasError() {
+				diags.Append(ds...)
+			}
+
+			actions, ds := toActionsAPIModel(ctx, attrs["actions"].(types.Set).Elements())
+			if ds.HasError() {
+				diags.Append(ds...)
+			}
+
+			return PolicyRuleAPIModel{
+				Name:     attrs["name"].(types.String).ValueString(),
+				Priority: attrs["priority"].(types.Int64).ValueInt64(),
+				Criteria: criteria,
+				Actions:  actions,
+			}
+		},
+	)
+
+	*apiModel = PolicyAPIModel{
+		Name:        m.Name.ValueString(),
+		Description: m.Description.ValueString(),
+		Type:        m.Type.ValueString(),
+		Rules:       &rules,
+	}
+
+	return diags
+}
+
+var actionsAttrTypes = map[string]attr.Type{
+	"webhooks":                           types.SetType{ElemType: types.StringType},
+	"mails":                              types.SetType{ElemType: types.StringType},
+	"block_download":                     types.SetType{ElemType: blockDownloadElementType},
+	"block_release_bundle_distribution":  types.BoolType,
+	"block_release_bundle_promotion":     types.BoolType,
+	"fail_build":                         types.BoolType,
+	"notify_deployer":                    types.BoolType,
+	"notify_watch_recipients":            types.BoolType,
+	"create_ticket_enabled":              types.BoolType,
+	"build_failure_grace_period_in_days": types.Int64Type,
+}
+
+var actionsSetElementType = types.ObjectType{
+	AttrTypes: actionsAttrTypes,
+}
+
+func (m *PolicyResourceModel) fromActionsAPIModel(ctx context.Context, actionsAPIModel PolicyRuleActionsAPIModel) (types.Set, diag.Diagnostics) {
+	diags := diag.Diagnostics{}
+
+	webhooks := types.SetNull(types.StringType)
+	if len(actionsAPIModel.Webhooks) > 0 {
+		ws, d := types.SetValueFrom(ctx, types.StringType, actionsAPIModel.Webhooks)
+		if d.HasError() {
+			diags.Append(d...)
+		}
+
+		webhooks = ws
+	}
+
+	mails := types.SetNull(types.StringType)
+	if len(actionsAPIModel.Mails) > 0 {
+		ms, d := types.SetValueFrom(ctx, types.StringType, actionsAPIModel.Mails)
+		if d.HasError() {
+			diags.Append(d...)
+		}
+
+		mails = ms
+	}
+
+	blockDownload, d := types.ObjectValue(
+		blockDownloadAttrTypes,
+		map[string]attr.Value{
+			"unscanned": types.BoolValue(actionsAPIModel.BlockDownload.Unscanned),
+			"active":    types.BoolValue(actionsAPIModel.BlockDownload.Active),
+		},
+	)
+	if d.HasError() {
+		diags.Append(d...)
+	}
+	blockDownloadSet, d := types.SetValue(
+		blockDownloadElementType,
+		[]attr.Value{blockDownload},
+	)
+	if d.HasError() {
+		diags.Append(d...)
+	}
+
+	actions, d := types.ObjectValue(
+		actionsAttrTypes,
+		map[string]attr.Value{
+			"webhooks":                           webhooks,
+			"mails":                              mails,
+			"block_download":                     blockDownloadSet,
+			"block_release_bundle_distribution":  types.BoolValue(actionsAPIModel.BlockReleaseBundleDistribution),
+			"block_release_bundle_promotion":     types.BoolValue(actionsAPIModel.BlockReleaseBundlePromotion),
+			"fail_build":                         types.BoolValue(actionsAPIModel.FailBuild),
+			"notify_deployer":                    types.BoolValue(actionsAPIModel.NotifyDeployer),
+			"notify_watch_recipients":            types.BoolValue(actionsAPIModel.NotifyWatchRecipients),
+			"create_ticket_enabled":              types.BoolValue(actionsAPIModel.CreateJiraTicketEnabled),
+			"build_failure_grace_period_in_days": types.Int64Value(actionsAPIModel.FailureGracePeriodDays),
+		},
+	)
+	if d.HasError() {
+		diags.Append(d...)
+	}
+
+	actionsSet, d := types.SetValue(
+		actionsSetElementType,
+		[]attr.Value{actions},
+	)
+	if d.HasError() {
+		diags.Append(d...)
+	}
+
+	return actionsSet, diags
+}
+
+func (m *PolicyResourceModel) fromAPIModel(
+	ctx context.Context,
+	apiModel PolicyAPIModel,
+	fromCriteriaAPIModel func(ctx context.Context, criteraAPIModel *PolicyRuleCriteriaAPIModel) (types.Set, diag.Diagnostics),
+	fromActionsAPIModel func(ctx context.Context, actionsAPIModel PolicyRuleActionsAPIModel) (types.Set, diag.Diagnostics),
+) diag.Diagnostics {
+	diags := diag.Diagnostics{}
+
+	var ruleAttrTypes map[string]attr.Type
+	var ruleSetElementType types.ObjectType
+
+	switch apiModel.Type {
+	case "license":
+		ruleAttrTypes = licenseRuleAttrTypes
+		ruleSetElementType = licenseRuleSetElementType
+	case "security":
+		ruleAttrTypes = securityRuleAttrTypes
+		ruleSetElementType = securityRuleSetElementType
+		// case "operational_risk":
+		// 	ruleAttrTypes = opRiskRuleAttrTypes
+		// 	ruleSetElementType = opRiskRuleSetElementType
+	}
+
+	rules := lo.Map(
+		*apiModel.Rules,
+		func(rule PolicyRuleAPIModel, _ int) attr.Value {
+			criteriaSet, d := fromCriteriaAPIModel(ctx, rule.Criteria)
+			if d.HasError() {
+				diags.Append(d...)
+			}
+
+			actionsSet, d := fromActionsAPIModel(ctx, rule.Actions)
+			if d.HasError() {
+				diags.Append(d...)
+			}
+
+			r, d := types.ObjectValue(
+				ruleAttrTypes,
+				map[string]attr.Value{
+					"name":     types.StringValue(rule.Name),
+					"priority": types.Int64Value(rule.Priority),
+					"criteria": criteriaSet,
+					"actions":  actionsSet,
+				},
+			)
+			if d.HasError() {
+				diags.Append(d...)
+			}
+
+			return r
+		},
+	)
+
+	rulesSet, d := types.SetValue(
+		ruleSetElementType,
+		rules,
+	)
+	if d.HasError() {
+		diags.Append(d...)
+	}
+
+	m.ID = types.StringValue(apiModel.Name)
+	m.Name = types.StringValue(apiModel.Name)
+	m.Description = types.StringValue(apiModel.Description)
+	m.Type = types.StringValue(apiModel.Type)
+	m.Author = types.StringValue(apiModel.Author)
+	m.Created = types.StringValue(apiModel.Created)
+	m.Modified = types.StringValue(apiModel.Modified)
+
+	m.Rules = rulesSet
+
+	return diags
+}
+
+var commonActionsBlocks = map[string]schema.Block{
+	"block_download": schema.SetNestedBlock{
+		NestedObject: schema.NestedBlockObject{
+			Attributes: map[string]schema.Attribute{
+				"unscanned": schema.BoolAttribute{
+					Optional:    true,
+					Computed:    true,
+					Default:     booldefault.StaticBool(false),
+					Description: "Whether or not to block download of artifacts that meet the artifact `filters` for the associated `xray_watch` resource but have not been scanned yet. Can not be set to `true` if attribute `active` is `false`. Default value is `false`.",
+				},
+				"active": schema.BoolAttribute{
+					Optional:    true,
+					Computed:    true,
+					Default:     booldefault.StaticBool(false),
+					Description: "Whether or not to block download of artifacts that meet the artifact and severity `filters` for the associated `xray_watch` resource. Default value is `false`.",
+				},
+			},
+		},
+		Validators: []validator.Set{
+			setvalidator.IsRequired(),
+			setvalidator.SizeAtMost(1),
+		},
+		Description: "Block download of artifacts that meet the Artifact Filter and Severity Filter specifications for this watch",
+	},
+}
+
+var commonActionsAttrs = map[string]schema.Attribute{
+	"webhooks": schema.SetAttribute{
+		ElementType: types.StringType,
+		Optional:    true,
+		Validators: []validator.Set{
+			setvalidator.SizeAtLeast(1),
+		},
+		Description: "A list of Xray-configured webhook URLs to be invoked if a violation is triggered.",
+	},
+	"mails": schema.SetAttribute{
+		ElementType: types.StringType,
+		Optional:    true,
+		Validators: []validator.Set{
+			setvalidator.SizeAtLeast(1),
+		},
+		Description: "A list of email addressed that will get emailed when a violation is triggered.",
+	},
+	"block_release_bundle_distribution": schema.BoolAttribute{
+		Optional:    true,
+		Computed:    true,
+		Default:     booldefault.StaticBool(false),
+		Description: "Blocks Release Bundle distribution to Edge nodes if a violation is found. Default value is `false`.",
+	},
+	"block_release_bundle_promotion": schema.BoolAttribute{
+		Optional:    true,
+		Computed:    true,
+		Default:     booldefault.StaticBool(false),
+		Description: "Blocks Release Bundle promotion if a violation is found. Default value is `false`.",
+	},
+	"fail_build": schema.BoolAttribute{
+		Optional:    true,
+		Computed:    true,
+		Default:     booldefault.StaticBool(false),
+		Description: "Whether or not the related CI build should be marked as failed if a violation is triggered. This option is only available when the policy is applied to an `xray_watch` resource with a `type` of `builds`. Default value is `false`.",
+	},
+	"notify_deployer": schema.BoolAttribute{
+		Optional:    true,
+		Computed:    true,
+		Default:     booldefault.StaticBool(false),
+		Description: "Sends an email message to component deployer with details about the generated Violations. Default value is `false`.",
+	},
+	"notify_watch_recipients": schema.BoolAttribute{
+		Optional:    true,
+		Computed:    true,
+		Default:     booldefault.StaticBool(false),
+		Description: "Sends an email message to all configured recipients inside a specific watch with details about the generated Violations. Default value is `false`.",
+	},
+	"create_ticket_enabled": schema.BoolAttribute{
+		Optional:    true,
+		Computed:    true,
+		Default:     booldefault.StaticBool(false),
+		Description: "Create Jira Ticket for this Policy Violation. Requires configured Jira integration. Default value is `false`.",
+	},
+	"build_failure_grace_period_in_days": schema.Int64Attribute{
+		Optional: true,
+		Validators: []validator.Int64{
+			int64validator.AtLeast(0),
+		},
+		Description: "Allow grace period for certain number of days. All violations will be ignored during this time. To be used only if `fail_build` is enabled.",
+	},
+}
+
+var commonActionsSchema = map[string]*sdkv2_schema.Schema{
 	"webhooks": {
-		Type:        schema.TypeSet,
+		Type:        sdkv2_schema.TypeSet,
 		Optional:    true,
 		Description: "A list of Xray-configured webhook URLs to be invoked if a violation is triggered.",
-		Elem: &schema.Schema{
-			Type: schema.TypeString,
+		Elem: &sdkv2_schema.Schema{
+			Type: sdkv2_schema.TypeString,
 		},
 	},
 	"mails": {
-		Type:        schema.TypeSet,
+		Type:        sdkv2_schema.TypeSet,
 		Optional:    true,
 		Description: "A list of email addressed that will get emailed when a violation is triggered.",
-		Elem: &schema.Schema{
-			Type:             schema.TypeString,
-			ValidateDiagFunc: validator.IsEmail,
+		Elem: &sdkv2_schema.Schema{
+			Type:             sdkv2_schema.TypeString,
+			ValidateDiagFunc: shared_validator.IsEmail,
 		},
 	},
 	"block_download": {
-		Type:        schema.TypeSet,
+		Type:        sdkv2_schema.TypeSet,
 		Required:    true,
 		MaxItems:    1,
 		Description: "Block download of artifacts that meet the Artifact Filter and Severity Filter specifications for this watch",
-		Elem: &schema.Resource{
-			Schema: map[string]*schema.Schema{
+		Elem: &sdkv2_schema.Resource{
+			Schema: map[string]*sdkv2_schema.Schema{
 				"unscanned": {
-					Type:        schema.TypeBool,
+					Type:        sdkv2_schema.TypeBool,
 					Optional:    true,
 					Default:     false,
 					Description: "Whether or not to block download of artifacts that meet the artifact `filters` for the associated `xray_watch` resource but have not been scanned yet. Can not be set to `true` if attribute `active` is `false`. Default value is `false`.",
 				},
 				"active": {
-					Type:        schema.TypeBool,
+					Type:        sdkv2_schema.TypeBool,
 					Optional:    true,
 					Default:     false,
 					Description: "Whether or not to block download of artifacts that meet the artifact and severity `filters` for the associated `xray_watch` resource. Default value is `false`.",
@@ -80,120 +446,120 @@ var commonActionsSchema = map[string]*schema.Schema{
 		},
 	},
 	"block_release_bundle_distribution": {
-		Type:        schema.TypeBool,
+		Type:        sdkv2_schema.TypeBool,
 		Optional:    true,
 		Default:     false,
 		Description: "Blocks Release Bundle distribution to Edge nodes if a violation is found. Default value is `false`.",
 	},
 	"block_release_bundle_promotion": {
-		Type:        schema.TypeBool,
+		Type:        sdkv2_schema.TypeBool,
 		Optional:    true,
 		Default:     false,
 		Description: "Blocks Release Bundle promotion if a violation is found. Default value is `false`.",
 	},
 	"fail_build": {
-		Type:        schema.TypeBool,
+		Type:        sdkv2_schema.TypeBool,
 		Optional:    true,
 		Default:     false,
 		Description: "Whether or not the related CI build should be marked as failed if a violation is triggered. This option is only available when the policy is applied to an `xray_watch` resource with a `type` of `builds`. Default value is `false`.",
 	},
 	"notify_deployer": {
-		Type:        schema.TypeBool,
+		Type:        sdkv2_schema.TypeBool,
 		Optional:    true,
 		Default:     false,
 		Description: "Sends an email message to component deployer with details about the generated Violations. Default value is `false`.",
 	},
 	"notify_watch_recipients": {
-		Type:        schema.TypeBool,
+		Type:        sdkv2_schema.TypeBool,
 		Optional:    true,
 		Default:     false,
 		Description: "Sends an email message to all configured recipients inside a specific watch with details about the generated Violations. Default value is `false`.",
 	},
 	"create_ticket_enabled": {
-		Type:        schema.TypeBool,
+		Type:        sdkv2_schema.TypeBool,
 		Optional:    true,
 		Default:     false,
 		Description: "Create Jira Ticket for this Policy Violation. Requires configured Jira integration. Default value is `false`.",
 	},
 	"build_failure_grace_period_in_days": {
-		Type:             schema.TypeInt,
+		Type:             sdkv2_schema.TypeInt,
 		Optional:         true,
 		Description:      "Allow grace period for certain number of days. All violations will be ignored during this time. To be used only if `fail_build` is enabled.",
-		ValidateDiagFunc: validator.IntAtLeast(0),
+		ValidateDiagFunc: shared_validator.IntAtLeast(0),
 	},
 }
 
-var getPolicySchema = func(criteriaSchema map[string]*schema.Schema, actionsSchema map[string]*schema.Schema) map[string]*schema.Schema {
+var getPolicySchema = func(criteriaSchema map[string]*sdkv2_schema.Schema, actionsSchema map[string]*sdkv2_schema.Schema) map[string]*sdkv2_schema.Schema {
 	return sdk.MergeMaps(
 		getProjectKeySchema(false, ""),
-		map[string]*schema.Schema{
+		map[string]*sdkv2_schema.Schema{
 			"name": {
-				Type:             schema.TypeString,
+				Type:             sdkv2_schema.TypeString,
 				Required:         true,
 				ForceNew:         true,
 				Description:      "Name of the policy (must be unique)",
-				ValidateDiagFunc: validator.StringIsNotEmpty,
+				ValidateDiagFunc: shared_validator.StringIsNotEmpty,
 			},
 			"description": {
-				Type:        schema.TypeString,
+				Type:        sdkv2_schema.TypeString,
 				Optional:    true,
 				Description: "More verbose description of the policy",
 			},
 			"type": {
-				Type:             schema.TypeString,
+				Type:             sdkv2_schema.TypeString,
 				Required:         true,
 				Description:      "Type of the policy",
-				ValidateDiagFunc: validator.StringInSlice(false, "security", "license", "operational_risk"),
+				ValidateDiagFunc: shared_validator.StringInSlice(false, "security", "license", "operational_risk"),
 			},
 			"author": {
-				Type:        schema.TypeString,
+				Type:        sdkv2_schema.TypeString,
 				Computed:    true,
 				Description: "User, who created the policy",
 			},
 			"created": {
-				Type:        schema.TypeString,
+				Type:        sdkv2_schema.TypeString,
 				Computed:    true,
 				Description: "Creation timestamp",
 			},
 			"modified": {
-				Type:        schema.TypeString,
+				Type:        sdkv2_schema.TypeString,
 				Computed:    true,
 				Description: "Modification timestamp",
 			},
 			"rule": {
-				Type:        schema.TypeSet,
+				Type:        sdkv2_schema.TypeSet,
 				Required:    true,
 				Description: "A list of user-defined rules allowing you to trigger violations for specific vulnerability or license breaches by setting a license or security criteria, with a corresponding set of automatic actions according to your needs. Rules are processed according to the ascending order in which they are placed in the Rules list on the Policy. If a rule is met, the subsequent rules in the list will not be applied.",
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
+				Elem: &sdkv2_schema.Resource{
+					Schema: map[string]*sdkv2_schema.Schema{
 						"name": {
-							Type:             schema.TypeString,
+							Type:             sdkv2_schema.TypeString,
 							Required:         true,
 							Description:      "Name of the rule",
-							ValidateDiagFunc: validator.StringIsNotEmpty,
+							ValidateDiagFunc: shared_validator.StringIsNotEmpty,
 						},
 						"priority": {
-							Type:             schema.TypeInt,
+							Type:             sdkv2_schema.TypeInt,
 							Required:         true,
-							ValidateDiagFunc: validator.IntAtLeast(1),
+							ValidateDiagFunc: shared_validator.IntAtLeast(1),
 							Description:      "Integer describing the rule priority. Must be at least 1",
 						},
 						"criteria": {
-							Type:        schema.TypeSet,
+							Type:        sdkv2_schema.TypeSet,
 							Required:    true,
 							MinItems:    1,
 							MaxItems:    1,
 							Description: "The set of security conditions to examine when an scanned artifact is scanned.",
-							Elem: &schema.Resource{
+							Elem: &sdkv2_schema.Resource{
 								Schema: criteriaSchema,
 							},
 						},
 						"actions": {
-							Type:        schema.TypeSet,
+							Type:        sdkv2_schema.TypeSet,
 							MaxItems:    1,
 							Required:    true,
 							Description: "Specifies the actions to take once a security policy violation has been triggered.",
-							Elem: &schema.Resource{
+							Elem: &sdkv2_schema.Resource{
 								Schema: actionsSchema,
 							},
 						},
@@ -202,6 +568,60 @@ var getPolicySchema = func(criteriaSchema map[string]*schema.Schema, actionsSche
 			},
 		},
 	)
+}
+
+var policyBlocks = func(criteriaAttrs map[string]schema.Attribute, criteriaBlocks map[string]schema.Block, actionsAttrs map[string]schema.Attribute, actionsBlocks map[string]schema.Block) map[string]schema.Block {
+	return map[string]schema.Block{
+		"rule": schema.SetNestedBlock{
+			NestedObject: schema.NestedBlockObject{
+				Attributes: map[string]schema.Attribute{
+					"name": schema.StringAttribute{
+						Required: true,
+						Validators: []validator.String{
+							stringvalidator.LengthAtLeast(1),
+						},
+						Description: "Name of the rule",
+					},
+					"priority": schema.Int64Attribute{
+						Required: true,
+						Validators: []validator.Int64{
+							int64validator.AtLeast(1),
+						},
+						Description: "Integer describing the rule priority. Must be at least 1",
+					},
+				},
+				Blocks: map[string]schema.Block{
+					"criteria": schema.SetNestedBlock{
+						NestedObject: schema.NestedBlockObject{
+							Attributes: criteriaAttrs,
+							Blocks:     criteriaBlocks,
+						},
+						Validators: []validator.Set{
+							setvalidator.IsRequired(),
+							setvalidator.SizeBetween(1, 1),
+						},
+						Description: "The set of security conditions to examine when an scanned artifact is scanned.",
+					},
+					"actions": schema.SetNestedBlock{
+						NestedObject: schema.NestedBlockObject{
+							Attributes: actionsAttrs,
+							Blocks:     actionsBlocks,
+						},
+						Validators: []validator.Set{
+							setvalidator.IsRequired(),
+							setvalidator.SizeBetween(1, 1),
+						},
+						Description: "Specifies the actions to take once a security policy violation has been triggered.",
+					},
+				},
+			},
+			Validators: []validator.Set{
+				setvalidator.IsRequired(),
+				setvalidator.SizeAtLeast(1),
+			},
+			Description: "A list of user-defined rules allowing you to trigger violations for specific vulnerability or license breaches by setting a license or security criteria, with a corresponding set of automatic actions according to your needs. Rules are processed according to the ascending order in which they are placed in the Rules list on the Policy. If a rule is met, the subsequent rules in the list will not be applied.",
+		},
+	}
 }
 
 type PolicyCVSSRangeAPIModel struct {
@@ -303,7 +723,263 @@ type PolicyError struct {
 	Error string `json:"error"`
 }
 
-func unpackPolicy(d *schema.ResourceData) (*PolicyAPIModel, error) {
+func (r *PolicyResource) Create(
+	ctx context.Context,
+	toAPIModel func(context.Context, PolicyResourceModel, *PolicyAPIModel) diag.Diagnostics,
+	fromAPIModel func(context.Context, PolicyAPIModel, *PolicyResourceModel) diag.Diagnostics,
+	req resource.CreateRequest,
+	resp *resource.CreateResponse,
+) {
+	go util.SendUsageResourceCreate(ctx, r.ProviderData.Client.R(), r.ProviderData.ProductId, r.TypeName)
+
+	var plan PolicyResourceModel
+
+	// Read Terraform plan data into the model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	request, err := getRestyRequest(r.ProviderData.Client, plan.ProjectKey.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"failed to get Resty client",
+			err.Error(),
+		)
+		return
+	}
+
+	var policy PolicyAPIModel
+	resp.Diagnostics.Append(toAPIModel(ctx, plan, &policy)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var policyError PolicyError
+	response, err := request.
+		SetBody(policy).
+		SetError(&policyError).
+		Post(PoliciesEndpoint)
+
+	if err != nil {
+		utilfw.UnableToCreateResourceError(resp, err.Error())
+		return
+	}
+
+	if response.IsError() {
+		utilfw.UnableToCreateResourceError(resp, policyError.Error)
+		return
+	}
+
+	response, err = request.
+		SetResult(&policy).
+		SetPathParam("name", plan.Name.ValueString()).
+		SetError(&policyError).
+		Get(PolicyEndpoint)
+
+	if err != nil {
+		utilfw.UnableToCreateResourceError(resp, err.Error())
+		return
+	}
+
+	if response.IsError() {
+		utilfw.UnableToCreateResourceError(resp, policyError.Error)
+		return
+	}
+
+	resp.Diagnostics.Append(fromAPIModel(ctx, policy, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Save data into Terraform state
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+}
+
+func (r *PolicyResource) Read(
+	ctx context.Context,
+	fromAPIModel func(context.Context, PolicyAPIModel, *PolicyResourceModel) diag.Diagnostics,
+	req resource.ReadRequest,
+	resp *resource.ReadResponse,
+) {
+	go util.SendUsageResourceRead(ctx, r.ProviderData.Client.R(), r.ProviderData.ProductId, r.TypeName)
+
+	var state PolicyResourceModel
+
+	// Read Terraform state data into the model
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	request, err := getRestyRequest(r.ProviderData.Client, state.ProjectKey.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"failed to get Resty client",
+			err.Error(),
+		)
+		return
+	}
+
+	var policy PolicyAPIModel
+	var policyError PolicyError
+
+	response, err := request.
+		SetResult(&policy).
+		SetPathParam("name", state.Name.ValueString()).
+		SetError(&policyError).
+		Get(PolicyEndpoint)
+
+	if err != nil {
+		utilfw.UnableToRefreshResourceError(resp, err.Error())
+		return
+	}
+
+	if response.StatusCode() == http.StatusNotFound {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
+	if response.IsError() {
+		utilfw.UnableToRefreshResourceError(resp, policyError.Error)
+		return
+	}
+
+	resp.Diagnostics.Append(fromAPIModel(ctx, policy, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Save data into Terraform state
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+}
+
+func (r *PolicyResource) Update(
+	ctx context.Context,
+	toAPIModel func(context.Context, PolicyResourceModel, *PolicyAPIModel) diag.Diagnostics,
+	fromAPIModel func(context.Context, PolicyAPIModel, *PolicyResourceModel) diag.Diagnostics,
+	req resource.UpdateRequest,
+	resp *resource.UpdateResponse,
+) {
+	go util.SendUsageResourceUpdate(ctx, r.ProviderData.Client.R(), r.ProviderData.ProductId, r.TypeName)
+
+	var plan PolicyResourceModel
+
+	// Read Terraform plan data into the model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	request, err := getRestyRequest(r.ProviderData.Client, plan.ProjectKey.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"failed to get Resty client",
+			err.Error(),
+		)
+		return
+	}
+
+	var policy PolicyAPIModel
+	resp.Diagnostics.Append(toAPIModel(ctx, plan, &policy)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var policyError PolicyError
+
+	response, err := request.
+		SetPathParam("name", plan.Name.ValueString()).
+		SetBody(policy).
+		SetError(&policyError).
+		Put(PolicyEndpoint)
+
+	if err != nil {
+		utilfw.UnableToUpdateResourceError(resp, err.Error())
+		return
+	}
+
+	if response.IsError() {
+		utilfw.UnableToUpdateResourceError(resp, policyError.Error)
+		return
+	}
+
+	response, err = request.
+		SetResult(&policy).
+		SetPathParam("name", plan.Name.ValueString()).
+		SetError(&policyError).
+		Get(PolicyEndpoint)
+
+	if err != nil {
+		utilfw.UnableToUpdateResourceError(resp, err.Error())
+		return
+	}
+
+	if response.IsError() {
+		utilfw.UnableToUpdateResourceError(resp, policyError.Error)
+		return
+	}
+
+	resp.Diagnostics.Append(fromAPIModel(ctx, policy, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Save data into Terraform state
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+}
+
+func (r *PolicyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	go util.SendUsageResourceDelete(ctx, r.ProviderData.Client.R(), r.ProviderData.ProductId, r.TypeName)
+
+	var state PolicyResourceModel
+
+	// Read Terraform prior state data into the model
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+
+	request, err := getRestyRequest(r.ProviderData.Client, state.ProjectKey.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"failed to get Resty client",
+			err.Error(),
+		)
+		return
+	}
+
+	var policyError PolicyError
+	response, err := request.
+		SetPathParam("name", state.Name.ValueString()).
+		SetError(&policyError).
+		Delete(PolicyEndpoint)
+
+	if err != nil {
+		utilfw.UnableToDeleteResourceError(resp, err.Error())
+		return
+	}
+
+	if response.IsError() {
+		utilfw.UnableToDeleteResourceError(resp, policyError.Error)
+		return
+	}
+
+	// If the logic reaches here, it implicitly succeeded and will remove
+	// the resource from state if there are no other errors.
+}
+
+// ImportState imports the resource into the Terraform state.
+func (r *PolicyResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	parts := strings.SplitN(req.ID, ":", 2)
+
+	if len(parts) > 0 && parts[0] != "" {
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), parts[0])...)
+	}
+
+	if len(parts) == 2 && parts[1] != "" {
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_key"), parts[1])...)
+	}
+}
+
+func unpackPolicy(d *sdkv2_schema.ResourceData) (*PolicyAPIModel, error) {
 	policy := new(PolicyAPIModel)
 
 	policy.Name = d.Get("name").(string)
@@ -319,13 +995,13 @@ func unpackPolicy(d *schema.ResourceData) (*PolicyAPIModel, error) {
 	if v, ok := d.GetOk("author"); ok {
 		policy.Author = v.(string)
 	}
-	policyRules, err := unpackRules(d.Get("rule").(*schema.Set), policy.Type)
+	policyRules, err := unpackRules(d.Get("rule").(*sdkv2_schema.Set), policy.Type)
 	policy.Rules = &policyRules
 
 	return policy, err
 }
 
-func unpackRules(configured *schema.Set, policyType string) (policyRules []PolicyRuleAPIModel, err error) {
+func unpackRules(configured *sdkv2_schema.Set, policyType string) (policyRules []PolicyRuleAPIModel, err error) {
 	var rules []PolicyRuleAPIModel
 
 	for _, raw := range configured.List() {
@@ -334,9 +1010,9 @@ func unpackRules(configured *schema.Set, policyType string) (policyRules []Polic
 		rule.Name = data["name"].(string)
 		rule.Priority = data["priority"].(int64)
 
-		rule.Criteria, err = unpackCriteria(data["criteria"].(*schema.Set), policyType)
+		rule.Criteria, err = unpackCriteria(data["criteria"].(*sdkv2_schema.Set), policyType)
 		if v, ok := data["actions"]; ok {
-			rule.Actions = unpackActions(v.(*schema.Set))
+			rule.Actions = unpackActions(v.(*sdkv2_schema.Set))
 		}
 		rules = append(rules, *rule)
 	}
@@ -357,7 +1033,7 @@ func unpackSecurityCriteria(tfCriteria map[string]interface{}) *PolicyRuleCriter
 		criteria.MaliciousPackage = v.(bool)
 	}
 	if v, ok := tfCriteria["vulnerability_ids"]; ok {
-		criteria.VulnerabilityIds = sdk.CastToStringArr(v.(*schema.Set).List())
+		criteria.VulnerabilityIds = sdk.CastToStringArr(v.(*sdkv2_schema.Set).List())
 	}
 	if _, ok := tfCriteria["exposures"]; ok {
 		criteria.Exposures = unpackExposures(tfCriteria["exposures"].([]interface{}))
@@ -369,7 +1045,7 @@ func unpackSecurityCriteria(tfCriteria map[string]interface{}) *PolicyRuleCriter
 		criteria.PackageType = v.(string)
 	}
 	if v, ok := tfCriteria["package_versions"]; ok {
-		criteria.PackageVersions = sdk.CastToStringArr(v.(*schema.Set).List())
+		criteria.PackageVersions = sdk.CastToStringArr(v.(*sdkv2_schema.Set).List())
 	}
 	// This is also picky about not allowing empty values to be set
 	cvss := unpackCVSSRange(tfCriteria["cvss_range"].([]interface{}))
@@ -388,10 +1064,10 @@ func unpackLicenseCriteria(tfCriteria map[string]interface{}) *PolicyRuleCriteri
 		criteria.AllowUnknown = sdk.BoolPtr(v.(bool))
 	}
 	if v, ok := tfCriteria["banned_licenses"]; ok {
-		criteria.BannedLicenses = unpackLicenses(v.(*schema.Set))
+		criteria.BannedLicenses = unpackLicenses(v.(*sdkv2_schema.Set))
 	}
 	if v, ok := tfCriteria["allowed_licenses"]; ok {
-		criteria.AllowedLicenses = unpackLicenses(v.(*schema.Set))
+		criteria.AllowedLicenses = unpackLicenses(v.(*sdkv2_schema.Set))
 	}
 	if v, ok := tfCriteria["multi_license_permissive"]; ok {
 		criteria.MultiLicensePermissive = sdk.BoolPtr(v.(bool))
@@ -445,7 +1121,7 @@ func unpackOperationalRiskCriteria(tfCriteria map[string]interface{}) *PolicyRul
 	return criteria
 }
 
-func unpackCriteria(d *schema.Set, policyType string) (*PolicyRuleCriteriaAPIModel, error) {
+func unpackCriteria(d *sdkv2_schema.Set, policyType string) (*PolicyRuleCriteriaAPIModel, error) {
 	tfCriteria := d.List()
 	if len(tfCriteria) == 0 {
 		return nil, nil
@@ -500,7 +1176,7 @@ func unpackExposures(l []interface{}) *PolicyExposuresAPIModel {
 	return exposures
 }
 
-func unpackLicenses(d *schema.Set) []string {
+func unpackLicenses(d *sdkv2_schema.Set) []string {
 	var licenses []string
 	for _, license := range d.List() {
 		licenses = append(licenses, license.(string))
@@ -508,14 +1184,14 @@ func unpackLicenses(d *schema.Set) []string {
 	return licenses
 }
 
-func unpackActions(l *schema.Set) PolicyRuleActionsAPIModel {
+func unpackActions(l *sdkv2_schema.Set) PolicyRuleActionsAPIModel {
 	actions := PolicyRuleActionsAPIModel{}
 	policyActions := l.List()
 
 	if len(policyActions) > 0 {
 		m := policyActions[0].(map[string]interface{}) // We made this a list of one to make schema validation easier
 		if v, ok := m["webhooks"]; ok {
-			m := v.(*schema.Set).List()
+			m := v.(*sdkv2_schema.Set).List()
 			var webhooks []string
 			for _, hook := range m {
 				webhooks = append(webhooks, hook.(string))
@@ -523,7 +1199,7 @@ func unpackActions(l *schema.Set) PolicyRuleActionsAPIModel {
 			actions.Webhooks = webhooks
 		}
 		if v, ok := m["mails"]; ok {
-			m := v.(*schema.Set).List()
+			m := v.(*sdkv2_schema.Set).List()
 			var mails []string
 			for _, mail := range m {
 				mails = append(mails, mail.(string))
@@ -535,8 +1211,8 @@ func unpackActions(l *schema.Set) PolicyRuleActionsAPIModel {
 		}
 
 		if v, ok := m["block_download"]; ok {
-			if len(v.(*schema.Set).List()) > 0 {
-				vList := v.(*schema.Set).List()
+			if len(v.(*sdkv2_schema.Set).List()) > 0 {
+				vList := v.(*sdkv2_schema.Set).List()
 				vMap := vList[0].(map[string]interface{})
 
 				actions.BlockDownload = BlockDownloadSettingsAPIModel{
@@ -736,46 +1412,46 @@ func packBlockDownload(bd BlockDownloadSettingsAPIModel) []interface{} {
 	return []interface{}{m}
 }
 
-func packPolicy(policy PolicyAPIModel, d *schema.ResourceData) diag.Diagnostics {
+func packPolicy(policy PolicyAPIModel, d *sdkv2_schema.ResourceData) sdkv2_diag.Diagnostics {
 	if err := d.Set("name", policy.Name); err != nil {
-		return diag.FromErr(err)
+		return sdkv2_diag.FromErr(err)
 	}
 	if err := d.Set("type", policy.Type); err != nil {
-		return diag.FromErr(err)
+		return sdkv2_diag.FromErr(err)
 	}
 	if len(policy.Description) > 0 {
 		if err := d.Set("description", policy.Description); err != nil {
-			return diag.FromErr(err)
+			return sdkv2_diag.FromErr(err)
 		}
 	}
 	if err := d.Set("author", policy.Author); err != nil {
-		return diag.FromErr(err)
+		return sdkv2_diag.FromErr(err)
 	}
 	if err := d.Set("created", policy.Created); err != nil {
-		return diag.FromErr(err)
+		return sdkv2_diag.FromErr(err)
 	}
 	if err := d.Set("modified", policy.Modified); err != nil {
-		return diag.FromErr(err)
+		return sdkv2_diag.FromErr(err)
 	}
 	if policy.Rules != nil {
 		if err := d.Set("rule", packRules(*policy.Rules, policy.Type)); err != nil {
-			return diag.FromErr(err)
+			return sdkv2_diag.FromErr(err)
 		}
 	}
 
 	return nil
 }
 
-func resourceXrayPolicyCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceXrayPolicyCreate(ctx context.Context, d *sdkv2_schema.ResourceData, m interface{}) sdkv2_diag.Diagnostics {
 	policy, err := unpackPolicy(d)
 	// Warning or errors can be collected in a slice type
 	if err != nil {
-		return diag.FromErr(err)
+		return sdkv2_diag.FromErr(err)
 	}
 
 	req, err := getRestyRequest(m.(util.ProviderMetadata).Client, policy.ProjectKey)
 	if err != nil {
-		return diag.FromErr(err)
+		return sdkv2_diag.FromErr(err)
 	}
 
 	var policyError PolicyError
@@ -784,23 +1460,23 @@ func resourceXrayPolicyCreate(ctx context.Context, d *schema.ResourceData, m int
 		SetError(&policyError).
 		Post("xray/api/v2/policies")
 	if err != nil {
-		return diag.FromErr(err)
+		return sdkv2_diag.FromErr(err)
 	}
 	if resp.IsError() {
-		return diag.Errorf("%s", policyError.Error)
+		return sdkv2_diag.Errorf("%s", policyError.Error)
 	}
 
 	d.SetId(policy.Name)
 	return resourceXrayPolicyRead(ctx, d, m)
 }
 
-func resourceXrayPolicyRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceXrayPolicyRead(ctx context.Context, d *sdkv2_schema.ResourceData, m interface{}) sdkv2_diag.Diagnostics {
 	var policy PolicyAPIModel
 
 	projectKey := d.Get("project_key").(string)
 	req, err := getRestyRequest(m.(util.ProviderMetadata).Client, projectKey)
 	if err != nil {
-		return diag.FromErr(err)
+		return sdkv2_diag.FromErr(err)
 	}
 
 	var policyError PolicyError
@@ -810,28 +1486,28 @@ func resourceXrayPolicyRead(ctx context.Context, d *schema.ResourceData, m inter
 		SetError(&policyError).
 		Get("xray/api/v2/policies/{name}")
 	if err != nil {
-		return diag.FromErr(err)
+		return sdkv2_diag.FromErr(err)
 	}
 	if resp.StatusCode() == http.StatusNotFound {
 		d.SetId("")
-		return diag.Errorf("policy (%s) not found, removing from state", d.Id())
+		return sdkv2_diag.Errorf("policy (%s) not found, removing from state", d.Id())
 	}
 	if resp.IsError() {
-		return diag.Errorf("%s", policyError.Error)
+		return sdkv2_diag.Errorf("%s", policyError.Error)
 	}
 
 	return packPolicy(policy, d)
 }
 
-func resourceXrayPolicyUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceXrayPolicyUpdate(ctx context.Context, d *sdkv2_schema.ResourceData, m interface{}) sdkv2_diag.Diagnostics {
 	policy, err := unpackPolicy(d)
 	if err != nil {
-		return diag.FromErr(err)
+		return sdkv2_diag.FromErr(err)
 	}
 
 	req, err := getRestyRequest(m.(util.ProviderMetadata).Client, policy.ProjectKey)
 	if err != nil {
-		return diag.FromErr(err)
+		return sdkv2_diag.FromErr(err)
 	}
 
 	var policyError PolicyError
@@ -843,25 +1519,25 @@ func resourceXrayPolicyUpdate(ctx context.Context, d *schema.ResourceData, m int
 		SetError(&policyError).
 		Put("xray/api/v2/policies/{name}")
 	if err != nil {
-		return diag.FromErr(err)
+		return sdkv2_diag.FromErr(err)
 	}
 	if resp.IsError() {
-		return diag.Errorf("%s", policyError.Error)
+		return sdkv2_diag.Errorf("%s", policyError.Error)
 	}
 
 	d.SetId(policy.Name)
 	return resourceXrayPolicyRead(ctx, d, m)
 }
 
-func resourceXrayPolicyDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceXrayPolicyDelete(ctx context.Context, d *sdkv2_schema.ResourceData, m interface{}) sdkv2_diag.Diagnostics {
 	policy, err := unpackPolicy(d)
 	if err != nil {
-		return diag.FromErr(err)
+		return sdkv2_diag.FromErr(err)
 	}
 
 	req, err := getRestyRequest(m.(util.ProviderMetadata).Client, policy.ProjectKey)
 	if err != nil {
-		return diag.FromErr(err)
+		return sdkv2_diag.FromErr(err)
 	}
 
 	var policyError PolicyError
@@ -872,10 +1548,10 @@ func resourceXrayPolicyDelete(ctx context.Context, d *schema.ResourceData, m int
 		SetError(&policyError).
 		Delete("xray/api/v2/policies/{name}")
 	if err != nil {
-		return diag.FromErr(err)
+		return sdkv2_diag.FromErr(err)
 	}
 	if resp.IsError() {
-		return diag.Errorf("%s", policyError.Error)
+		return sdkv2_diag.Errorf("%s", policyError.Error)
 	}
 
 	d.SetId("")

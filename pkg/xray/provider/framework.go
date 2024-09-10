@@ -175,13 +175,14 @@ func (p *XrayProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 // Resources satisfies the provider.Provider interface for ArtifactoryProvider.
 func (p *XrayProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		xray_resource.NewBinaryManagerReposResource,
 		xray_resource.NewBinaryManagerBuildsResource,
+		xray_resource.NewBinaryManagerReposResource,
 		xray_resource.NewBinaryManagerReleaseBundlesV2Resource,
 		xray_resource.NewCustomIssueResource,
 		xray_resource.NewIgnoreRuleResource,
+		xray_resource.NewLicensePolicyResource,
 		xray_resource.NewRepositoryConfigResource,
-		xray_resource.NewSecurityPolicyV2Resource,
+		xray_resource.NewSecurityPolicyResource,
 		xray_resource.NewSettingsResource,
 		xray_resource.NewWatchResource,
 		xray_resource.NewWebhookResource,
