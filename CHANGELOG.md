@@ -4,6 +4,7 @@ IMPROVEMENTS:
 
 * resource/xray_license_policy, resource/xray_operational_risk_policy, resource/xray_security_policy: Migrate from SDKv2 to Plugin Framework. PR: [#239](https://github.com/jfrog/terraform-provider-xray/pull/239)
 * resource/xray_licenses_report, resource/xray_operational_risks_report, resource/xray_violations_report, resource/xray_vulnerabilities_report: Migrate from SDKv2 to Plugin Framework. PR: [#240](https://github.com/jfrog/terraform-provider-xray/pull/240)
+* resource/xray_ignore_rule: Fix date parsing issue with timezone for `expiration_date` attribute. PR: [#238](https://github.com/jfrog/terraform-provider-xray/pull/238), [#240](https://github.com/jfrog/terraform-provider-xray/pull/240)
 
 ## 2.11.0 (August 27, 2024). Tested on Artifactory 7.90.8 and Xray 3.102.5 with Terraform 1.9.5 and OpenTofu 1.8.1
 
