@@ -223,7 +223,7 @@ func (r *SecurityPolicyResource) fromCriteriaAPIModel(ctx context.Context, crite
 }
 
 func (r SecurityPolicyResource) fromAPIModel(ctx context.Context, policy PolicyAPIModel, plan *PolicyResourceModel) diag.Diagnostics {
-	return plan.fromAPIModel(ctx, policy, r.fromCriteriaAPIModel, plan.fromActionsAPIModel)
+	return plan.fromAPIModel(ctx, policy, r.fromCriteriaAPIModel, fromActionsAPIModel)
 }
 
 var cvssRangeAttrType = map[string]attr.Type{

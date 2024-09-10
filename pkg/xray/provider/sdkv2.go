@@ -54,7 +54,6 @@ func SdkV2() *schema.Provider {
 		ResourcesMap: sdk.AddTelemetry(
 			productId,
 			map[string]*schema.Resource{
-				"xray_operational_risk_policy":  xray.ResourceXrayOperationalRiskPolicy(),
 				"xray_vulnerabilities_report":   xray.ResourceXrayVulnerabilitiesReport(),
 				"xray_licenses_report":          xray.ResourceXrayLicensesReport(),
 				"xray_violations_report":        xray.ResourceXrayViolationsReport(),

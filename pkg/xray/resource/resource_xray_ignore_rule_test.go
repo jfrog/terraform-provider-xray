@@ -207,7 +207,6 @@ func TestAccIgnoreRule_scopes_policies(t *testing.T) {
 				min_severity = "High"
 			}
 			actions {
-				webhooks = []
 				mails    = ["test@email.com"]
 				block_download {
 					unscanned = true
@@ -275,7 +274,6 @@ func TestAccIgnoreRule_scopes_watches_policies(t *testing.T) {
 				min_severity = "High"
 			}
 			actions {
-				webhooks = []
 				mails    = ["test@email.com"]
 				block_download {
 					unscanned = true
@@ -361,7 +359,6 @@ func TestAccIgnoreRule_scopes_no_expiration_policies(t *testing.T) {
 					min_severity = "High"
 				}
 				actions {
-					webhooks = []
 					mails    = ["test@email.com"]
 					block_download {
 						unscanned = true
@@ -421,7 +418,6 @@ func TestAccIgnoreRule_scopes_no_expiration_watches(t *testing.T) {
 					min_severity = "High"
 				}
 				actions {
-					webhooks = []
 					mails    = ["test@email.com"]
 					block_download {
 						unscanned = true
