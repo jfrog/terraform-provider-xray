@@ -332,6 +332,19 @@ func TestAccReport_Vulnerabilities(t *testing.T) {
 	}
 }
 
+func TestAccReport_Vulnerabilities_UpgradeFromSDKv2(t *testing.T) {
+	terraformReportName := "terraform-vulnerabilities-report"
+	terraformResourceName := "xray_vulnerabilities_report"
+
+	for _, reportResource := range resourcesList {
+		resourceNameInReport := reportResource["name"].(string)
+		t.Run(resourceNameInReport, func(t *testing.T) {
+			resource.Test(mkFilterTestCase_UpgradeFromSDKv2(t, reportResource, vulnerabilitiesFilterFields, terraformReportName,
+				terraformResourceName))
+		})
+	}
+}
+
 func TestAccReport_BadResource(t *testing.T) {
 	terraformReportName := "terraform-licenses-report"
 	terraformResourceName := "xray_licenses_report"
@@ -478,6 +491,52 @@ func mkFilterTestCase(t *testing.T, resourceFields map[string]interface{}, filte
 			{
 				Config: config,
 				Check:  resource.ComposeTestCheckFunc(checks...),
+			},
+		},
+	}
+}
+
+func mkFilterTestCase_UpgradeFromSDKv2(t *testing.T, resourceFields map[string]interface{}, filterFields map[string]interface{},
+	reportName string, resourceName string) (*testing.T, resource.TestCase) {
+	_, fqrn, name := testutil.MkNames(reportName, resourceName)
+
+	allFields := sdk.MergeMaps(filterFields, resourceFields)
+	allFieldsHcl := sdk.FmtMapToHcl(allFields)
+	const remoteRepoFull = `
+		resource "%s" "%s" {
+%s
+		}
+	`
+	extraChecks := testutil.MapToTestChecks(fqrn, resourceFields)
+	defaultChecks := testutil.MapToTestChecks(fqrn, allFields)
+
+	checks := append(defaultChecks, extraChecks...)
+	config := fmt.Sprintf(remoteRepoFull, resourceName, name, allFieldsHcl)
+
+	return t, resource.TestCase{
+		PreCheck:     func() { acctest.PreCheck(t) },
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "", testCheckReport), // how to get ID?
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"xray": {
+						Source:            "jfrog/xray",
+						VersionConstraint: "2.11.0",
+					},
+				},
+				Check: resource.ComposeTestCheckFunc(checks...),
+			},
+			{
+				Config:                   config,
+				ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+				PlanOnly:                 true,
+				ConfigPlanChecks:         testutil.ConfigPlanChecks(""),
+				// ConfigPlanChecks: resource.ConfigPlanChecks{
+				// 	PreApply: []plancheck.PlanCheck{
+				// 		plancheck.ExpectEmptyPlan(),
+				// 	},
+				// },
 			},
 		},
 	}
