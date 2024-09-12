@@ -283,6 +283,12 @@ var reportsBlocks = func(filtersAttrs map[string]schema.Attribute, filtersBlocks
 									Optional:    true,
 									Computed:    true,
 									Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
+									Validators: []validator.Set{
+										setvalidator.ConflictsWith(
+											path.MatchRelative().AtParent().AtName("include_patterns"),
+											path.MatchRelative().AtParent().AtName("exclude_patterns"),
+										),
+									},
 									Description: "The list of build names. Only one of 'names' or '*_patterns' can be set.",
 								},
 								"include_patterns": schema.SetAttribute{
@@ -290,6 +296,11 @@ var reportsBlocks = func(filtersAttrs map[string]schema.Attribute, filtersBlocks
 									Optional:    true,
 									Computed:    true,
 									Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
+									Validators: []validator.Set{
+										setvalidator.ConflictsWith(
+											path.MatchRelative().AtParent().AtName("names"),
+										),
+									},
 									Description: "The list of include patterns. Only one of 'names' or '*_patterns' can be set.",
 								},
 								"exclude_patterns": schema.SetAttribute{
@@ -297,6 +308,11 @@ var reportsBlocks = func(filtersAttrs map[string]schema.Attribute, filtersBlocks
 									Optional:    true,
 									Computed:    true,
 									Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
+									Validators: []validator.Set{
+										setvalidator.ConflictsWith(
+											path.MatchRelative().AtParent().AtName("names"),
+										),
+									},
 									Description: "The list of exclude patterns. Only one of 'names' or '*_patterns' can be set.",
 								},
 								"number_of_latest_versions": schema.Int64Attribute{
@@ -328,6 +344,12 @@ var reportsBlocks = func(filtersAttrs map[string]schema.Attribute, filtersBlocks
 									Optional:    true,
 									Computed:    true,
 									Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
+									Validators: []validator.Set{
+										setvalidator.ConflictsWith(
+											path.MatchRelative().AtParent().AtName("include_patterns"),
+											path.MatchRelative().AtParent().AtName("exclude_patterns"),
+										),
+									},
 									Description: "The list of release bundles names.",
 								},
 								"include_patterns": schema.SetAttribute{
@@ -335,6 +357,11 @@ var reportsBlocks = func(filtersAttrs map[string]schema.Attribute, filtersBlocks
 									Optional:    true,
 									Computed:    true,
 									Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
+									Validators: []validator.Set{
+										setvalidator.ConflictsWith(
+											path.MatchRelative().AtParent().AtName("names"),
+										),
+									},
 									Description: "The list of include patterns",
 								},
 								"exclude_patterns": schema.SetAttribute{
@@ -342,6 +369,11 @@ var reportsBlocks = func(filtersAttrs map[string]schema.Attribute, filtersBlocks
 									Optional:    true,
 									Computed:    true,
 									Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
+									Validators: []validator.Set{
+										setvalidator.ConflictsWith(
+											path.MatchRelative().AtParent().AtName("names"),
+										),
+									},
 									Description: "The list of exclude patterns",
 								},
 								"number_of_latest_versions": schema.Int64Attribute{
@@ -373,6 +405,11 @@ var reportsBlocks = func(filtersAttrs map[string]schema.Attribute, filtersBlocks
 									Optional:    true,
 									Computed:    true,
 									Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
+									Validators: []validator.Set{
+										setvalidator.ConflictsWith(
+											path.MatchRelative().AtParent().AtName("include_key_patterns"),
+										),
+									},
 									Description: "The list of project names.",
 								},
 								"include_key_patterns": schema.SetAttribute{
@@ -380,6 +417,11 @@ var reportsBlocks = func(filtersAttrs map[string]schema.Attribute, filtersBlocks
 									Optional:    true,
 									Computed:    true,
 									Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
+									Validators: []validator.Set{
+										setvalidator.ConflictsWith(
+											path.MatchRelative().AtParent().AtName("names"),
+										),
+									},
 									Description: "The list of include patterns",
 								},
 								"number_of_latest_versions": schema.Int64Attribute{

@@ -244,6 +244,7 @@ var resourcesListNegative = []map[string]interface{}{
 				"number_of_latest_versions": 2,
 			},
 		},
+		"errorMessage": "(?s).*Invalid Attribute Combination.*names.*cannot be specified when.*include_patterns.*is specified.*",
 	},
 	{
 		"name": "release_bundles_by_names_and_patterns_should_fail",
@@ -255,6 +256,7 @@ var resourcesListNegative = []map[string]interface{}{
 				"number_of_latest_versions": 2,
 			},
 		},
+		"errorMessage": "(?s).*Invalid Attribute Combination.*names.*cannot be specified when.*include_patterns.*is specified.*",
 	},
 	{
 		"name": "projects_by_names_and_patterns_should_fail",
@@ -265,6 +267,7 @@ var resourcesListNegative = []map[string]interface{}{
 				"number_of_latest_versions": 2,
 			},
 		},
+		"errorMessage": "(?s).*Invalid Attribute Combination.*names.*cannot be specified when.*include_key_patterns.*is specified.*",
 	},
 }
 
@@ -320,6 +323,19 @@ func TestAccReport_Violations(t *testing.T) {
 	}
 }
 
+func TestAccReport_Violations_UpgradeFromSDKv2(t *testing.T) {
+	terraformReportName := "terraform-violations-report"
+	terraformResourceName := "xray_violations_report"
+
+	for _, reportResource := range resourcesList {
+		resourceNameInReport := reportResource["name"].(string)
+		t.Run(resourceNameInReport, func(t *testing.T) {
+			resource.Test(mkFilterTestCase_UpgradeFromSDKv2(t, reportResource, violationsFilterFields[0], terraformReportName,
+				terraformResourceName))
+		})
+	}
+}
+
 func TestAccViolationsReportFilters(t *testing.T) {
 	terraformReportName := "terraform-violations-report"
 	terraformResourceName := "xray_violations_report"
@@ -361,13 +377,12 @@ func TestAccReport_Vulnerabilities_UpgradeFromSDKv2(t *testing.T) {
 func TestAccReport_BadResource(t *testing.T) {
 	terraformReportName := "terraform-licenses-report"
 	terraformResourceName := "xray_licenses_report"
-	expectedErrorMessage := "Request payload is invalid as cannot"
 
 	for _, reportResource := range resourcesListNegative {
 		resourceNameInReport := reportResource["name"].(string)
 		t.Run(resourceNameInReport, func(t *testing.T) {
 			resource.Test(mkFilterNegativeTestCase(t, reportResource, licenseFilterFields, terraformReportName,
-				terraformResourceName, expectedErrorMessage))
+				terraformResourceName, reportResource["errorMessage"].(string)))
 		})
 	}
 }
@@ -403,7 +418,7 @@ func TestAccReport_BadLicenseFilter(t *testing.T) {
 func TestAccReport_BadViolationsFilter(t *testing.T) {
 	terraformReportName := "terraform-violations-report"
 	terraformResourceName := "xray_violations_report"
-	expectedErrorMessage := "Only one of"
+	expectedErrorMessage := "(?s).*Invalid Attribute Combination.*watch_patterns.*cannot be specified when.*watch_names.*is specified.*"
 
 	var filterFieldsConflict = map[string]interface{}{
 		"filters": map[string]interface{}{

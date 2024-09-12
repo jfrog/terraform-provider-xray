@@ -186,6 +186,7 @@ func (p *XrayProvider) Resources(ctx context.Context) []func() resource.Resource
 		xray_resource.NewRepositoryConfigResource,
 		xray_resource.NewSecurityPolicyResource,
 		xray_resource.NewSettingsResource,
+		xray_resource.NewViolationsReportResource,
 		xray_resource.NewVulnerabilitiesReportResource,
 		xray_resource.NewWatchResource,
 		xray_resource.NewWebhookResource,
