@@ -310,6 +310,19 @@ func TestAccReport_OperationalRisks(t *testing.T) {
 	}
 }
 
+func TestAccReport_OperationalRisks_UpgradeFromSDKv2(t *testing.T) {
+	terraformReportName := "terraform-operational-risks-report"
+	terraformResourceName := "xray_operational_risks_report"
+
+	for _, reportResource := range resourcesList {
+		resourceNameInReport := reportResource["name"].(string)
+		t.Run(resourceNameInReport, func(t *testing.T) {
+			resource.Test(mkFilterTestCase_UpgradeFromSDKv2(t, reportResource, opRisksFilterFields, terraformReportName,
+				terraformResourceName))
+		})
+	}
+}
+
 func TestAccReport_Violations(t *testing.T) {
 	terraformReportName := "terraform-violations-report"
 	terraformResourceName := "xray_violations_report"
@@ -511,9 +524,8 @@ func mkFilterTestCase(t *testing.T, resourceFields map[string]interface{}, filte
 	config := fmt.Sprintf(remoteRepoFull, resourceName, name, allFieldsHcl)
 
 	return t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckReport), // how to get ID?
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: config,
@@ -541,7 +553,6 @@ func mkFilterTestCase_UpgradeFromSDKv2(t *testing.T, resourceFields map[string]i
 	config := fmt.Sprintf(remoteRepoFull, resourceName, name, allFieldsHcl)
 
 	return t, resource.TestCase{
-		PreCheck:     func() { acctest.PreCheck(t) },
 		CheckDestroy: acctest.VerifyDeleted(fqrn, "", testCheckReport), // how to get ID?
 		Steps: []resource.TestStep{
 			{
@@ -556,14 +567,9 @@ func mkFilterTestCase_UpgradeFromSDKv2(t *testing.T, resourceFields map[string]i
 			},
 			{
 				Config:                   config,
-				ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+				ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 				PlanOnly:                 true,
 				ConfigPlanChecks:         testutil.ConfigPlanChecks(""),
-				// ConfigPlanChecks: resource.ConfigPlanChecks{
-				// 	PreApply: []plancheck.PlanCheck{
-				// 		plancheck.ExpectEmptyPlan(),
-				// 	},
-				// },
 			},
 		},
 	}
@@ -584,8 +590,7 @@ func mkFilterNegativeTestCase(t *testing.T, resourceFields map[string]interface{
 	config := fmt.Sprintf(remoteRepoFull, resourceName, name, allFieldsHcl)
 
 	return t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config:      config,

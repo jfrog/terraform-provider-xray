@@ -91,7 +91,6 @@ func TestAccSettings_basic(t *testing.T) {
 	config := util.ExecuteTemplate(fqrn, tmpl, testData)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -119,7 +118,6 @@ func TestAccSettings_DbSyncTime(t *testing.T) {
 	time := "18:45"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -135,7 +133,6 @@ func TestAccSettings_DbSyncTime_Invalid(t *testing.T) {
 	var invalidTime = []string{"24:00", "24:55", "", "12:0", "string", "12pm", "9:00"}
 	for _, time := range invalidTime {
 		resource.Test(t, resource.TestCase{
-			PreCheck:                 func() { acctest.PreCheck(t) },
 			ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 			Steps: []resource.TestStep{
 				{

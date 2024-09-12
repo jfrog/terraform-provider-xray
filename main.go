@@ -6,11 +6,7 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
-	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
-	"github.com/hashicorp/terraform-plugin-go/tfprotov6/tf6server"
-	"github.com/hashicorp/terraform-plugin-mux/tf5to6server"
-	"github.com/hashicorp/terraform-plugin-mux/tf6muxserver"
-	"github.com/jfrog/terraform-provider-xray/pkg/xray/provider"
+	"github.com/jfrog/terraform-provider-xray/pkg/xray"
 )
 
 // Run the docs generation tool, check its repository for more information on how it works and how docs
@@ -18,48 +14,18 @@ import (
 //go:generate go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
 
 func main() {
-	ctx := context.Background()
-
 	var debug bool
 
 	flag.BoolVar(&debug, "debug", false, "set to true to run the provider with support for debuggers like delve")
 	flag.Parse()
 
-	upgradedSdkServer, err := tf5to6server.UpgradeServer(
-		ctx,
-		provider.SdkV2().GRPCProvider, // Example terraform-plugin-sdk provider
-	)
+	opts := providerserver.ServeOpts{
+		Address: "registry.terraform.io/jfrog/xray",
+		Debug:   debug,
+	}
 
+	err := providerserver.Serve(context.Background(), xray.NewProvider(), opts)
 	if err != nil {
-		log.Fatal(err)
-	}
-
-	providers := []func() tfprotov6.ProviderServer{
-		providerserver.NewProtocol6(provider.Framework()()), // Example terraform-plugin-framework provider
-		func() tfprotov6.ProviderServer {
-			return upgradedSdkServer
-		},
-	}
-
-	muxServer, err := tf6muxserver.NewMuxServer(ctx, providers...)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var serveOpts []tf6server.ServeOpt
-
-	if debug {
-		serveOpts = append(serveOpts, tf6server.WithManagedDebug())
-	}
-
-	err = tf6server.Serve(
-		"registry.terraform.io/jfrog/xray",
-		muxServer.ProviderServer,
-		serveOpts...,
-	)
-
-	if err != nil {
-		log.Fatal(err)
+		log.Fatal(err.Error())
 	}
 }

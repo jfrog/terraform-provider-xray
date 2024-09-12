@@ -10,8 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
-	sdkv2_schema "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	sdkv2_validator "github.com/jfrog/terraform-provider-shared/validator"
 	validatorfw_string "github.com/jfrog/terraform-provider-shared/validator/fw/string"
 )
 
@@ -26,20 +24,6 @@ func getRestyRequest(client *resty.Client, projectKey string) (*resty.Request, e
 	}
 
 	return req, nil
-}
-
-var getProjectKeySchema = func(isForceNew bool, additionalDescription string) map[string]*sdkv2_schema.Schema {
-	description := fmt.Sprintf("Project key for assigning this resource to. Must be 2 - 10 lowercase alphanumeric and hyphen characters. %s", additionalDescription)
-
-	return map[string]*sdkv2_schema.Schema{
-		"project_key": {
-			Type:             sdkv2_schema.TypeString,
-			Optional:         true,
-			ForceNew:         isForceNew,
-			ValidateDiagFunc: sdkv2_validator.ProjectKey,
-			Description:      description,
-		},
-	}
 }
 
 var projectKeySchemaAttrs = func(isForceNew bool, additionalDescription string) map[string]schema.Attribute {
