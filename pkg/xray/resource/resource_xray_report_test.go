@@ -281,6 +281,19 @@ func TestAccReport_Licenses(t *testing.T) {
 	}
 }
 
+func TestAccReport_Licenses_UpgradeFromSDKv2(t *testing.T) {
+	terraformReportName := "terraform-licenses-report"
+	terraformResourceName := "xray_licenses_report"
+
+	for _, reportResource := range resourcesList {
+		resourceNameInReport := reportResource["name"].(string)
+		t.Run(resourceNameInReport, func(t *testing.T) {
+			resource.Test(mkFilterTestCase_UpgradeFromSDKv2(t, reportResource, licenseFilterFields, terraformReportName,
+				terraformResourceName))
+		})
+	}
+}
+
 func TestAccReport_OperationalRisks(t *testing.T) {
 	terraformReportName := "terraform-operational-risks-report"
 	terraformResourceName := "xray_operational_risks_report"
@@ -362,7 +375,7 @@ func TestAccReport_BadResource(t *testing.T) {
 func TestAccReport_BadLicenseFilter(t *testing.T) {
 	terraformReportName := "terraform-licenses-report"
 	terraformResourceName := "xray_licenses_report"
-	expectedErrorMessage := "Only one of"
+	expectedErrorMessage := "(?s).*Invalid Attribute Combination.*license_patterns.*cannot be specified when.*license_names.*is specified.*"
 
 	var filterFieldsConflict = map[string]interface{}{
 		"filters": map[string]interface{}{
@@ -434,7 +447,7 @@ func TestAccReport_BadViolationsFilter(t *testing.T) {
 func TestAccReport_BadVulnerabilitiesFilter(t *testing.T) {
 	terraformReportName := "terraform-vulnerabilities-report"
 	terraformResourceName := "xray_vulnerabilities_report"
-	expectedErrorMessage := "Only one of"
+	expectedErrorMessage := "(?s).*Invalid Attribute Combination.*severities.*cannot be specified when.*cvss_score.*is specified.*"
 
 	var filterFieldsConflict = map[string]interface{}{
 		"filters": map[string]interface{}{
@@ -442,7 +455,6 @@ func TestAccReport_BadVulnerabilitiesFilter(t *testing.T) {
 			"impacted_artifact":    "impacted-artifact",
 			"has_remediation":      false,
 			"cve":                  "CVE-1234-1234",
-			"issue_id":             "XRAY-1234",
 			"severities":           []interface{}{"High", "Medium"}, // conflicts with cvss_score
 			"cvss_score": map[string]interface{}{
 				"min_score": 6.3,

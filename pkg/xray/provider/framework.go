@@ -181,6 +181,7 @@ func (p *XrayProvider) Resources(ctx context.Context) []func() resource.Resource
 		xray_resource.NewCustomIssueResource,
 		xray_resource.NewIgnoreRuleResource,
 		xray_resource.NewLicensePolicyResource,
+		xray_resource.NewLicensesReportResource,
 		xray_resource.NewOperationalRiskPolicyResource,
 		xray_resource.NewRepositoryConfigResource,
 		xray_resource.NewSecurityPolicyResource,

@@ -772,6 +772,7 @@ func (r *ReportResource) Create(
 	}
 
 	plan.ID = types.StringValue(fmt.Sprintf("%d", report.ReportId))
+	plan.ReportID = types.Int64Null()
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
