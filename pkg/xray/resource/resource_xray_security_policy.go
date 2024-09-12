@@ -2,7 +2,6 @@ package xray
 
 import (
 	"context"
-	"fmt"
 	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/boolvalidator"
@@ -16,14 +15,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/jfrog/terraform-provider-shared/util"
-	validatorfw_string "github.com/jfrog/terraform-provider-shared/validator/fw/string"
-	"github.com/samber/lo"
 )
 
 var _ resource.Resource = &SecurityPolicyResource{}
@@ -283,68 +278,6 @@ var securityRuleAttrTypes = map[string]attr.Type{
 var securityRuleSetElementType = types.ObjectType{
 	AttrTypes: securityRuleAttrTypes,
 }
-
-var projectKeySchemaAttrs = func(isForceNew bool, additionalDescription string) map[string]schema.Attribute {
-	description := fmt.Sprintf("Project key for assigning this resource to. Must be 2 - 10 lowercase alphanumeric and hyphen characters. %s", additionalDescription)
-	planModifiers := []planmodifier.String{}
-
-	if isForceNew {
-		planModifiers = append(planModifiers, stringplanmodifier.RequiresReplace())
-	}
-
-	return map[string]schema.Attribute{
-		"project_key": schema.StringAttribute{
-			Optional: true,
-			Validators: []validator.String{
-				validatorfw_string.ProjectKey(),
-			},
-			PlanModifiers: planModifiers,
-			Description:   description,
-		},
-	}
-}
-
-var policySchemaAttrs = lo.Assign(
-	projectKeySchemaAttrs(false, ""),
-	map[string]schema.Attribute{
-		"id": schema.StringAttribute{
-			Computed: true,
-		},
-		"name": schema.StringAttribute{
-			Required: true,
-			Validators: []validator.String{
-				stringvalidator.LengthAtLeast(1),
-			},
-			PlanModifiers: []planmodifier.String{
-				stringplanmodifier.RequiresReplace(),
-			},
-			Description: "Name of the policy (must be unique)",
-		},
-		"description": schema.StringAttribute{
-			Optional:    true,
-			Description: "More verbose description of the policy",
-		},
-		"type": schema.StringAttribute{
-			Required: true,
-			Validators: []validator.String{
-				stringvalidator.OneOf("security", "license", "operational_risk"),
-			},
-			Description: "Type of the policy",
-		},
-		"author": schema.StringAttribute{
-			Computed:    true,
-			Description: "User, who created the policy",
-		},
-		"created": schema.StringAttribute{
-			Computed:    true,
-			Description: "Creation timestamp",
-		},
-		"modified": schema.StringAttribute{
-			Computed:    true,
-			Description: "Modification timestamp",
-		},
-	},
-)
 
 var securityPolicyCriteriaBlocks = map[string]schema.Block{
 	"cvss_range": schema.ListNestedBlock{
