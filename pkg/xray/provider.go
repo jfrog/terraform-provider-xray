@@ -18,7 +18,7 @@ import (
 	xray_resource "github.com/jfrog/terraform-provider-xray/pkg/xray/resource"
 )
 
-var Version = "0.0.1"
+var Version = "2.11.1"
 var productId = "terraform-provider-xray/" + Version
 
 // Ensure the implementation satisfies the provider.Provider interface.
