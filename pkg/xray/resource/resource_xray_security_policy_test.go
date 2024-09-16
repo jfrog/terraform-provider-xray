@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/jfrog/terraform-provider-shared/testutil"
@@ -41,6 +40,75 @@ var testDataSecurity = map[string]string{
 	"block_unscanned":                   "true",
 	"block_active":                      "true",
 	"criteriaType":                      "cvss",
+}
+
+func TestAccSecurityPolicy_UpgradeFromSDKv2(t *testing.T) {
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+
+	testData := sdk.MergeMaps(testDataSecurity)
+	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-4-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-4-%d", testutil.RandomInt())
+
+	template := `
+	resource "xray_security_policy" "{{ .resource_name }}" {
+		name        = "{{ .policy_name }}"
+		description = "{{ .policy_description }}"
+		type        = "security"
+
+		rule {
+			name = "{{ .rule_name }}"
+			priority = 1
+			criteria {
+				cvss_range {
+					from = {{ .cvss_from }}
+					to = {{ .cvss_to }}
+				}
+				applicable_cves_only = {{ .applicable_cves_only }}
+			}
+			actions {
+				block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+				block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
+				fail_build = {{ .fail_build }}
+				notify_watch_recipients = {{ .notify_watch_recipients }}
+				notify_deployer = {{ .notify_deployer }}
+				create_ticket_enabled = {{ .create_ticket_enabled }}
+				build_failure_grace_period_in_days = {{ .grace_period_days }}
+				block_download {
+					unscanned = {{ .block_unscanned }}
+					active = {{ .block_active }}
+				}
+			}
+		}
+	}`
+
+	config := util.ExecuteTemplate(fqrn, template, testData)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { acctest.PreCheck(t) },
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"xray": {
+						Source:            "jfrog/xray",
+						VersionConstraint: "2.11.0",
+					},
+				},
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					verifySecurityPolicy(fqrn, testData, criteriaTypeCvss),
+				),
+			},
+			{
+				ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+				ResourceName:             fqrn,
+				ImportState:              true,
+				ImportStateId:            testData["policy_name"],
+				ImportStateVerify:        true,
+			},
+		},
+	})
 }
 
 func TestAccSecurityPolicy_multipleRules(t *testing.T) {
@@ -210,11 +278,22 @@ func TestAccSecurityPolicy_withProjectKey(t *testing.T) {
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-4-%d", testutil.RandomInt())
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-4-%d", testutil.RandomInt())
 
-	template := `resource "xray_security_policy" "{{ .resource_name }}" {
+	template := `
+	resource "project" "{{ .project_key }}" {
+		key          = "{{ .project_key }}"
+		display_name = "{{ .project_key }}"
+		admin_privileges {
+			manage_members   = true
+			manage_resources = true
+			index_resources  = true
+		}
+	}
+
+	resource "xray_security_policy" "{{ .resource_name }}" {
 		name        = "{{ .policy_name }}"
 		description = "{{ .policy_description }}"
 		type        = "security"
-		project_key = "{{ .project_key }}"
+		project_key = project.{{ .project_key }}.key
 
 		rule {
 			name = "{{ .rule_name }}"
@@ -249,14 +328,13 @@ func TestAccSecurityPolicy_withProjectKey(t *testing.T) {
 	updatedConfig := util.ExecuteTemplate(fqrn, template, updatedTestData)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			acctest.PreCheck(t)
-			acctest.CreateProject(t, projectKey)
+		PreCheck:     func() { acctest.PreCheck(t) },
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
+		ExternalProviders: map[string]resource.ExternalProvider{
+			"project": {
+				Source: "jfrog/project",
+			},
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
-			acctest.DeleteProject(t, projectKey)
-			return acctest.CheckPolicy(id, request)
-		}),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -299,9 +377,10 @@ func TestAccSecurityPolicy_createBlockDownloadTrueCVSS(t *testing.T) {
 				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeCvss),
 			},
 			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            fqrn,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"author", "created", "modified"},
 			},
 		},
 	})
@@ -440,7 +519,7 @@ func TestAccSecurityPolicy_createMaliciousPackageFail(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      util.ExecuteTemplate(fqrn, securityPolicyMaliciousPkgFixVersionDep, testData),
-				ExpectError: regexp.MustCompile("fix_version_dependant must be set to false if malicious_package is true"),
+				ExpectError: regexp.MustCompile("fix_version_dependant must be set to 'false' if malicious_package is 'true'"),
 			},
 		},
 	})
@@ -463,7 +542,7 @@ func TestAccSecurityPolicy_createMaliciousPackageCvssMinSeverityFail(t *testing.
 		Steps: []resource.TestStep{
 			{
 				Config:      util.ExecuteTemplate(fqrn, securityPolicyCVSSMinSeverityMaliciousPkg, testData),
-				ExpectError: regexp.MustCompile("malicious_package can't be set together with min_severity and/or cvss_range"),
+				ExpectError: regexp.MustCompile("(?s).*Invalid Attribute Combination.*cvss_range.*cannot be specified when.*malicious_package.*is specified.*"),
 			},
 		},
 	})
@@ -486,7 +565,7 @@ func TestAccSecurityPolicy_createCvssMinSeverityFail(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      util.ExecuteTemplate(fqrn, securityPolicyCVSSMinSeverityMaliciousPkg, testData),
-				ExpectError: regexp.MustCompile("min_severity can't be set together with cvss_range"),
+				ExpectError: regexp.MustCompile("(?s).*Invalid Attribute Combination.*cvss_range.*cannot be specified when.*min_severity.*is specified.*"),
 			},
 		},
 	})
@@ -542,9 +621,10 @@ func TestAccSecurityPolicy_createCVSSFloat(t *testing.T) {
 				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeCvss),
 			},
 			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            fqrn,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"author", "created", "modified"},
 			},
 		},
 	})
@@ -594,7 +674,7 @@ func TestAccSecurityPolicy_noActions(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      util.ExecuteTemplate(fqrn, securityPolicyNoActions, testData),
-				ExpectError: regexp.MustCompile("Insufficient actions blocks"),
+				ExpectError: regexp.MustCompile(".*must have a configuration value as the provider has marked it as required.*"),
 			},
 		},
 	})
@@ -652,7 +732,7 @@ func TestAccSecurityPolicy_vulnerabilityIdsIncorrectCVEFails(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:      util.ExecuteTemplate(fqrn, securityPolicyVulnIds, testData),
-					ExpectError: regexp.MustCompile("invalid value for vulnerability_ids"),
+					ExpectError: regexp.MustCompile(".*invalid Vulnerability, must be a valid CVE or Xray ID.*"),
 				},
 			},
 		})
@@ -669,7 +749,6 @@ func TestAccSecurityPolicy_conflictingAttributesFail(t *testing.T) {
 		"malicious_package = true",
 		"min_severity = \"High\"",
 		"exposures {\nmin_severity = \"High\" \nsecrets = true \n applications = true \n services = true \n iac = true\n}",
-		"package_name = \"nuget://RazorEngine\"",
 	}
 
 	for _, testAttribute := range testAttributes {
@@ -693,7 +772,7 @@ func TestAccSecurityPolicy_conflictingAttributesFail(t *testing.T) {
 				Steps: []resource.TestStep{
 					{
 						Config:      util.ExecuteTemplate(fqrn, securityPolicyVulnIdsConflict, testData),
-						ExpectError: regexp.MustCompile("can't be set together"),
+						ExpectError: regexp.MustCompile("(?s).*Invalid Attribute Combination.*cvss_range.*cannot be specified when.*vulnerability_ids.*is specified.*"),
 					},
 				},
 			})
@@ -729,7 +808,7 @@ func TestAccSecurityPolicy_vulnerabilityIdsLimitFail(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      util.ExecuteTemplate(fqrn, securityPolicyVulnIdsLimit, testData),
-				ExpectError: regexp.MustCompile("Too many list items"),
+				ExpectError: regexp.MustCompile(".*set must contain at least 1 elements and at most 100 elements.*"),
 			},
 		},
 	})
@@ -758,9 +837,10 @@ func TestAccSecurityPolicy_exposures(t *testing.T) {
 				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeExposures),
 			},
 			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            fqrn,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"author", "created", "modified"},
 			},
 		},
 	})
@@ -791,9 +871,10 @@ func TestAccSecurityPolicy_Packages(t *testing.T) {
 				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypePackageName),
 			},
 			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            fqrn,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"author", "created", "modified"},
 			},
 		},
 	})
@@ -822,7 +903,7 @@ func TestAccSecurityPolicy_PackagesIncorrectVersionRangeFails(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:      util.ExecuteTemplate(fqrn, securityPolicyPackages, testData),
-					ExpectError: regexp.MustCompile("invalid value for package_versions"),
+					ExpectError: regexp.MustCompile(`.*invalid Range, must be one of the follows: Any Version: \(,\) or Specific\n.*Version: \[1\.2\], \[3\] or Range: \(1,\), \[,1\.2\.3\], \(4\.5\.0,6\.5\.2\].*`),
 				},
 			},
 		})
@@ -850,7 +931,7 @@ func TestAccSecurityPolicy_createPackagesFail(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      util.ExecuteTemplate(fqrn, securityPolicyPackagesFixVersionDep, testData),
-				ExpectError: regexp.MustCompile("fix_version_dependant must be set to false if package type policy is used"),
+				ExpectError: regexp.MustCompile("fix_version_dependant must be set to 'false' if any package attribute is set"),
 			},
 		},
 	})

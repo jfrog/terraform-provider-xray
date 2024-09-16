@@ -25,7 +25,9 @@ const BinaryManagerBuildsEndpoint = "xray/api/v1/binMgr/{id}/builds"
 var _ resource.Resource = &BinaryManagerBuildsResource{}
 
 func NewBinaryManagerBuildsResource() resource.Resource {
-	return &BinaryManagerBuildsResource{}
+	return &BinaryManagerBuildsResource{
+		TypeName: "xray_binary_manager_builds",
+	}
 }
 
 type BinaryManagerBuildsResource struct {
@@ -34,8 +36,7 @@ type BinaryManagerBuildsResource struct {
 }
 
 func (r *BinaryManagerBuildsResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_binary_manager_builds"
-	r.TypeName = resp.TypeName
+	resp.TypeName = r.TypeName
 }
 
 type BinaryManagerBuildsResourceModel struct {

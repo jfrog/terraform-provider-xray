@@ -27,7 +27,9 @@ const (
 var _ resource.Resource = &WebhookResource{}
 
 func NewWebhookResource() resource.Resource {
-	return &WebhookResource{}
+	return &WebhookResource{
+		TypeName: "xray_webhook",
+	}
 }
 
 type WebhookResource struct {
@@ -36,8 +38,7 @@ type WebhookResource struct {
 }
 
 func (r *WebhookResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_webhook"
-	r.TypeName = resp.TypeName
+	resp.TypeName = r.TypeName
 }
 
 type WebhookResourceModel struct {

@@ -5,7 +5,6 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/jfrog/terraform-provider-shared/testutil"
 	"github.com/jfrog/terraform-provider-shared/util"
@@ -30,15 +29,91 @@ var testDataOperationalRisk = map[string]string{
 	"block_active":                      "true",
 }
 
+func TestAccOperationalRiskPolicy_UpgradeFromSDKv2(t *testing.T) {
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_operational_risk_policy")
+
+	template := `
+	resource "xray_operational_risk_policy" "{{ .resource_name }}" {
+		name        = "{{ .policy_name }}"
+		description = "{{ .policy_description }}"
+		type        = "operational_risk"
+
+		rule {
+			name = "{{ .rule_name }}"
+			priority = 1
+			criteria {
+				op_risk_min_risk = "{{ .op_risk_min_risk }}"
+			}
+			actions {
+				block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+				block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
+				fail_build = {{ .fail_build }}
+				notify_watch_recipients = {{ .notify_watch_recipients }}
+				notify_deployer = {{ .notify_deployer }}
+				create_ticket_enabled = {{ .create_ticket_enabled }}
+				build_failure_grace_period_in_days = {{ .grace_period_days }}
+				block_download {
+					unscanned = {{ .block_unscanned }}
+					active = {{ .block_active }}
+				}
+			}
+		}
+	}`
+
+	testData := sdk.MergeMaps(testDataOperationalRisk)
+	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-operational-risk-policy-%d", testutil.RandomInt())
+	testData["op_risk_min_risk"] = "Medium"
+
+	config := util.ExecuteTemplate(fqrn, template, testData)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { acctest.PreCheck(t) },
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"xray": {
+						Source:            "jfrog/xray",
+						VersionConstraint: "2.11.0",
+					},
+				},
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					verifyOpertionalRiskPolicy(fqrn, testData),
+				),
+			},
+			{
+				ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+				ResourceName:             fqrn,
+				ImportState:              true,
+				ImportStateId:            testData["policy_name"],
+				ImportStateVerify:        true,
+			},
+		},
+	})
+}
+
 func TestAccOperationalRiskPolicy_withProjectKey(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_operational_risk_policy")
 	projectKey := fmt.Sprintf("testproj%d", testutil.RandSelect(1, 2, 3, 4, 5))
 
-	template := `resource "xray_operational_risk_policy" "{{ .resource_name }}" {
+	template := `
+	resource "project" "{{ .project_key }}" {
+		key          = "{{ .project_key }}"
+		display_name = "{{ .project_key }}"
+		admin_privileges {
+			manage_members   = true
+			manage_resources = true
+			index_resources  = true
+		}
+	}
+
+	resource "xray_operational_risk_policy" "{{ .resource_name }}" {
 		name        = "{{ .policy_name }}"
 		description = "{{ .policy_description }}"
 		type        = "operational_risk"
-		project_key = "{{ .project_key }}"
+		project_key = project.{{ .project_key }}.key
 
 		rule {
 			name = "{{ .rule_name }}"
@@ -75,14 +150,13 @@ func TestAccOperationalRiskPolicy_withProjectKey(t *testing.T) {
 	updatedConfig := util.ExecuteTemplate(fqrn, template, updatedTestData)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			acctest.PreCheck(t)
-			acctest.CreateProject(t, projectKey)
+		PreCheck:     func() { acctest.PreCheck(t) },
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
+		ExternalProviders: map[string]resource.ExternalProvider{
+			"project": {
+				Source: "jfrog/project",
+			},
 		},
-		CheckDestroy: acctest.VerifyDeleted(fqrn, "", func(id string, request *resty.Request) (*resty.Response, error) {
-			acctest.DeleteProject(t, projectKey)
-			return acctest.CheckPolicy(id, request)
-		}),
 		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -286,7 +360,8 @@ func TestAccOperationalRiskPolicy_customCriteria(t *testing.T) {
 func TestAccOperationalRiskPolicy_customCriteria_migration(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_operational_risk_policy")
 
-	const opertionalRiskPolicyCustom = `resource "xray_operational_risk_policy" "{{ .resource_name }}" {
+	const opertionalRiskPolicyCustom = `
+	resource "xray_operational_risk_policy" "{{ .resource_name }}" {
 		name = "{{ .policy_name }}"
 		description = "{{ .policy_description }}"
 		type = "operational_risk"
@@ -295,9 +370,9 @@ func TestAccOperationalRiskPolicy_customCriteria_migration(t *testing.T) {
 			priority = 1
 			criteria {
 				op_risk_custom {
-					use_and_condition                  = {{ .op_risk_custom_use_and_condition }}
-					is_eol                             = {{ .op_risk_custom_is_eol }}
-					risk                               = "{{ .op_risk_custom_risk }}"
+					use_and_condition = {{ .op_risk_custom_use_and_condition }}
+					is_eol            = {{ .op_risk_custom_is_eol }}
+					risk              = "{{ .op_risk_custom_risk }}"
 				}
 			}
 			actions {
@@ -437,7 +512,7 @@ func TestAccOperationalRiskPolicy_criteriaValidation(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      config,
-				ExpectError: regexp.MustCompile("attribute 'op_risk_min_risk' cannot be set together with 'op_risk_custom'"),
+				ExpectError: regexp.MustCompile("(?s).*Invalid Attribute Combination.*op_risk_custom.*cannot be specified when.*op_risk_custom.*is specified.*"),
 			},
 		},
 	})

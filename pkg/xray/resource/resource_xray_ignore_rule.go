@@ -33,7 +33,9 @@ const (
 var _ resource.Resource = &IgnoreRuleResource{}
 
 func NewIgnoreRuleResource() resource.Resource {
-	return &IgnoreRuleResource{}
+	return &IgnoreRuleResource{
+		TypeName: "xray_ignore_rule",
+	}
 }
 
 type IgnoreRuleResource struct {
@@ -42,8 +44,7 @@ type IgnoreRuleResource struct {
 }
 
 func (r *IgnoreRuleResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_ignore_rule"
-	r.TypeName = resp.TypeName
+	resp.TypeName = r.TypeName
 }
 
 type IgnoreRuleResourceModel struct {

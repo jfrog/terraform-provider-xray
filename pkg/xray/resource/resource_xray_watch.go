@@ -48,7 +48,9 @@ var supportedResourceTypes = []string{
 var _ resource.Resource = &WatchResource{}
 
 func NewWatchResource() resource.Resource {
-	return &WatchResource{}
+	return &WatchResource{
+		TypeName: "xray_watch",
+	}
 }
 
 type WatchResource struct {
@@ -57,8 +59,7 @@ type WatchResource struct {
 }
 
 func (r *WatchResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_watch"
-	r.TypeName = resp.TypeName
+	resp.TypeName = r.TypeName
 }
 
 type WatchResourceModel struct {

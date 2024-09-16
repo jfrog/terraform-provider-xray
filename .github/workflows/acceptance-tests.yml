@@ -69,11 +69,18 @@ jobs:
           export WHITELIST_CIDR=$(curl -s ifconfig.me)/32
           echo "WHITELIST_CIDR=$WHITELIST_CIDR" >> "$GITHUB_ENV"
           echo "Creating GKE cluster ${GKE_CLUSTER} using default authentication"
-          gcloud container clusters create "$GKE_CLUSTER" --zone "$GKE_ZONE" \
-            --node-locations "$GKE_ZONE" --num-nodes "${NUM_NODES:-5}" --enable-autoscaling \
+          gcloud container clusters create "$GKE_CLUSTER" \
+            --zone "$GKE_ZONE" \
+            --shielded-secure-boot \
+            --shielded-integrity-monitoring \
+            --node-locations "$GKE_ZONE" \
+            --num-nodes "${NUM_NODES:-5}" \
+            --enable-autoscaling \
             --machine-type "$MACHINE_TYPE" \
             --disk-size 50Gi \
-            --min-nodes 1 --max-nodes 5 --project "$GKE_PROJECT"
+            --min-nodes 1 \
+            --max-nodes 5 \
+            --project "$GKE_PROJECT"
             # --enable-master-authorized-networks \
             # --master-authorized-networks "$WHITELIST_CIDR"
             # add your NAT CIDR to whitelist local or CI/CD NAT IP. Set WHITELIST_CIDR in CI/CD to add CIDR to the list automatically.
