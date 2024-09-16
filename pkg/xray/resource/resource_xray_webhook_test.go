@@ -128,7 +128,6 @@ func TestAccWebhook_full(t *testing.T) {
 	updatedConfig := util.ExecuteTemplate("TestAccWebhook_full", updateTemplate, updatedTestData)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "name", testCheckWebhook),
 		Steps: []resource.TestStep{
@@ -189,7 +188,6 @@ func TestAccWebhook_invalid_name(t *testing.T) {
 	config := util.ExecuteTemplate("TestAccWebhook_invalid_name", template, testData)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -216,7 +214,6 @@ func TestAccWebhook_invalid_url(t *testing.T) {
 	config := util.ExecuteTemplate("TestAccWebhook_invalid_name", template, testData)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{

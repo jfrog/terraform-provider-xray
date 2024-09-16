@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/jfrog/terraform-provider-shared/testutil"
 	"github.com/jfrog/terraform-provider-shared/util"
 	"github.com/jfrog/terraform-provider-shared/util/sdk"
@@ -68,7 +69,6 @@ func TestAccOperationalRiskPolicy_UpgradeFromSDKv2(t *testing.T) {
 	config := util.ExecuteTemplate(fqrn, template, testData)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { acctest.PreCheck(t) },
 		CheckDestroy: acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		Steps: []resource.TestStep{
 			{
@@ -84,11 +84,13 @@ func TestAccOperationalRiskPolicy_UpgradeFromSDKv2(t *testing.T) {
 				),
 			},
 			{
-				ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
-				ResourceName:             fqrn,
-				ImportState:              true,
-				ImportStateId:            testData["policy_name"],
-				ImportStateVerify:        true,
+				Config:                   config,
+				ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
 			},
 		},
 	})
@@ -150,14 +152,13 @@ func TestAccOperationalRiskPolicy_withProjectKey(t *testing.T) {
 	updatedConfig := util.ExecuteTemplate(fqrn, template, updatedTestData)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { acctest.PreCheck(t) },
 		CheckDestroy: acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		ExternalProviders: map[string]resource.ExternalProvider{
 			"project": {
 				Source: "jfrog/project",
 			},
 		},
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: config,
@@ -215,9 +216,8 @@ func TestAccOperationalRiskPolicy_minRiskCriteria(t *testing.T) {
 	testData["op_risk_min_risk"] = "Medium"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, opertionalRiskPolicyMinRisk, testData),
@@ -316,9 +316,8 @@ func TestAccOperationalRiskPolicy_customCriteria(t *testing.T) {
 	}`
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, opertionalRiskPolicyCustomUnset, testData),
@@ -399,7 +398,6 @@ func TestAccOperationalRiskPolicy_customCriteria_migration(t *testing.T) {
 	delete(testData, "block_release_bundle_promotion")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { acctest.PreCheck(t) },
 		CheckDestroy: acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		Steps: []resource.TestStep{
 			{
@@ -422,7 +420,7 @@ func TestAccOperationalRiskPolicy_customCriteria_migration(t *testing.T) {
 				),
 			},
 			{
-				ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+				ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 				Config:                   util.ExecuteTemplate(fqrn, opertionalRiskPolicyCustom, testData),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_custom.0.use_and_condition", testData["op_risk_custom_use_and_condition"]),
@@ -505,9 +503,8 @@ func TestAccOperationalRiskPolicy_criteriaValidation(t *testing.T) {
 	config := util.ExecuteTemplate(fqrn, template, testData)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 
 		Steps: []resource.TestStep{
 			{

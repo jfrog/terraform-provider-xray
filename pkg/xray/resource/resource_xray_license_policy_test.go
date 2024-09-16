@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/jfrog/terraform-provider-shared/testutil"
 	"github.com/jfrog/terraform-provider-shared/util"
 	"github.com/jfrog/terraform-provider-shared/util/sdk"
@@ -81,7 +82,6 @@ func TestAccLicensePolicy_UpgradeFromSDKv2(t *testing.T) {
 	config := util.ExecuteTemplate(fqrn, template, testData)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { acctest.PreCheck(t) },
 		CheckDestroy: acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		Steps: []resource.TestStep{
 			{
@@ -97,11 +97,13 @@ func TestAccLicensePolicy_UpgradeFromSDKv2(t *testing.T) {
 				),
 			},
 			{
-				ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
-				ResourceName:             fqrn,
-				ImportState:              true,
-				ImportStateId:            testData["policy_name"],
-				ImportStateVerify:        true,
+				Config:                   config,
+				ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
 			},
 		},
 	})
@@ -119,9 +121,8 @@ func TestAccLicensePolicy_badLicenseCriteria(t *testing.T) {
 	rangeTo := 5
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccXrayLicensePolicy_badLicense(resourceName, policyName, policyDesc, ruleName, rangeTo),
@@ -143,9 +144,8 @@ func TestAccLicensePolicy_badGracePeriod(t *testing.T) {
 	testData["grace_period_days"] = "5"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config:      util.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),
@@ -217,14 +217,13 @@ func TestAccLicensePolicy_withProjectKey(t *testing.T) {
 	updatedConfig := util.ExecuteTemplate(fqrn, template, updatedTestData)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { acctest.PreCheck(t) },
 		CheckDestroy: acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		ExternalProviders: map[string]resource.ExternalProvider{
 			"project": {
 				Source: "jfrog/project",
 			},
 		},
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: config,
@@ -258,9 +257,8 @@ func TestAccLicensePolicy_createAllowedLic(t *testing.T) {
 	testData["allowedOrBanned"] = "allowed_licenses"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),
@@ -287,9 +285,8 @@ func TestAccLicensePolicy_createAllowedLicCustom(t *testing.T) {
 	testData["license_1"] = "Custom-License"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),
@@ -314,9 +311,8 @@ func TestAccLicensePolicy_createBannedLic(t *testing.T) {
 	testData["allowedOrBanned"] = "banned_licenses"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),
@@ -343,9 +339,8 @@ func TestAccLicensePolicy_createBannedLicCustom(t *testing.T) {
 	testData["license_1"] = "Custom-License"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),
@@ -371,9 +366,8 @@ func TestAccLicensePolicy_createMultiLicensePermissiveFalse(t *testing.T) {
 	testData["allowedOrBanned"] = "banned_licenses"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),
@@ -401,9 +395,8 @@ func TestAccLicensePolicy_createBlockFalse(t *testing.T) {
 	testData["allowedOrBanned"] = "banned_licenses"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, licensePolicyTemplate, testData),

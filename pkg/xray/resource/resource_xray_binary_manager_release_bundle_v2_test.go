@@ -247,8 +247,6 @@ func TestAccBinaryManagerReleaseBundlesV2_full(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctest.PreCheck(t)
-
 			acctest.CreateRepos(t, repoName, "local", "", "maven")
 
 			path, sha256, err := uploadTestFile(t, repoName)
@@ -361,8 +359,6 @@ func TestAccBinaryManagerReleaseBundlesV2_project_full(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctest.PreCheck(t)
-
 			acctest.CreateRepos(t, repoName, "local", "", "maven")
 
 			path, sha256, err := uploadTestFile(t, repoName)
@@ -457,9 +453,6 @@ func TestAccBinaryManagerReleaseBundlesV2_invalid_patterns(t *testing.T) {
 			config := util.ExecuteTemplate("TestAccBinaryManagerReleaseBundlesV2_invalid_patterns", template, testData)
 
 			resource.Test(t, resource.TestCase{
-				PreCheck: func() {
-					acctest.PreCheck(t)
-				},
 				ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 				Steps: []resource.TestStep{
 					{

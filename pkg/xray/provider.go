@@ -1,4 +1,4 @@
-package provider
+package xray
 
 import (
 	"context"
@@ -18,10 +18,15 @@ import (
 	xray_resource "github.com/jfrog/terraform-provider-xray/pkg/xray/resource"
 )
 
+var Version = "2.11.1"
+var productId = "terraform-provider-xray/" + Version
+
 // Ensure the implementation satisfies the provider.Provider interface.
 var _ provider.Provider = &XrayProvider{}
 
-type XrayProvider struct{}
+type XrayProvider struct {
+	Meta util.ProviderMetadata
+}
 
 // XrayProviderModel describes the provider data model.
 type XrayProviderModel struct {
@@ -159,17 +164,16 @@ func (p *XrayProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 	featureUsage := fmt.Sprintf("Terraform/%s", req.TerraformVersion)
 	go util.SendUsage(ctx, restyClient.R(), productId, featureUsage)
 
-	resp.DataSourceData = util.ProviderMetadata{
+	meta := util.ProviderMetadata{
 		Client:      restyClient,
 		ProductId:   productId,
 		XrayVersion: version,
 	}
 
-	resp.ResourceData = util.ProviderMetadata{
-		Client:      restyClient,
-		ProductId:   productId,
-		XrayVersion: version,
-	}
+	p.Meta = meta
+
+	resp.DataSourceData = meta
+	resp.ResourceData = meta
 }
 
 // Resources satisfies the provider.Provider interface for ArtifactoryProvider.
@@ -181,10 +185,14 @@ func (p *XrayProvider) Resources(ctx context.Context) []func() resource.Resource
 		xray_resource.NewCustomIssueResource,
 		xray_resource.NewIgnoreRuleResource,
 		xray_resource.NewLicensePolicyResource,
+		xray_resource.NewLicensesReportResource,
 		xray_resource.NewOperationalRiskPolicyResource,
+		xray_resource.NewOperationalRisksReportResource,
 		xray_resource.NewRepositoryConfigResource,
 		xray_resource.NewSecurityPolicyResource,
 		xray_resource.NewSettingsResource,
+		xray_resource.NewViolationsReportResource,
+		xray_resource.NewVulnerabilitiesReportResource,
 		xray_resource.NewWatchResource,
 		xray_resource.NewWebhookResource,
 		xray_resource.NewWorkersCountResource,
@@ -198,7 +206,7 @@ func (p *XrayProvider) DataSources(_ context.Context) []func() datasource.DataSo
 	}
 }
 
-func Framework() func() provider.Provider {
+func NewProvider() func() provider.Provider {
 	return func() provider.Provider {
 		return &XrayProvider{}
 	}

@@ -244,6 +244,7 @@ var resourcesListNegative = []map[string]interface{}{
 				"number_of_latest_versions": 2,
 			},
 		},
+		"errorMessage": "(?s).*Invalid Attribute Combination.*names.*cannot be specified when.*include_patterns.*is specified.*",
 	},
 	{
 		"name": "release_bundles_by_names_and_patterns_should_fail",
@@ -255,6 +256,7 @@ var resourcesListNegative = []map[string]interface{}{
 				"number_of_latest_versions": 2,
 			},
 		},
+		"errorMessage": "(?s).*Invalid Attribute Combination.*names.*cannot be specified when.*include_patterns.*is specified.*",
 	},
 	{
 		"name": "projects_by_names_and_patterns_should_fail",
@@ -265,6 +267,7 @@ var resourcesListNegative = []map[string]interface{}{
 				"number_of_latest_versions": 2,
 			},
 		},
+		"errorMessage": "(?s).*Invalid Attribute Combination.*names.*cannot be specified when.*include_key_patterns.*is specified.*",
 	},
 }
 
@@ -276,6 +279,19 @@ func TestAccReport_Licenses(t *testing.T) {
 		resourceNameInReport := reportResource["name"].(string)
 		t.Run(resourceNameInReport, func(t *testing.T) {
 			resource.Test(mkFilterTestCase(t, reportResource, licenseFilterFields, terraformReportName,
+				terraformResourceName))
+		})
+	}
+}
+
+func TestAccReport_Licenses_UpgradeFromSDKv2(t *testing.T) {
+	terraformReportName := "terraform-licenses-report"
+	terraformResourceName := "xray_licenses_report"
+
+	for _, reportResource := range resourcesList {
+		resourceNameInReport := reportResource["name"].(string)
+		t.Run(resourceNameInReport, func(t *testing.T) {
+			resource.Test(mkFilterTestCase_UpgradeFromSDKv2(t, reportResource, licenseFilterFields, terraformReportName,
 				terraformResourceName))
 		})
 	}
@@ -294,6 +310,19 @@ func TestAccReport_OperationalRisks(t *testing.T) {
 	}
 }
 
+func TestAccReport_OperationalRisks_UpgradeFromSDKv2(t *testing.T) {
+	terraformReportName := "terraform-operational-risks-report"
+	terraformResourceName := "xray_operational_risks_report"
+
+	for _, reportResource := range resourcesList {
+		resourceNameInReport := reportResource["name"].(string)
+		t.Run(resourceNameInReport, func(t *testing.T) {
+			resource.Test(mkFilterTestCase_UpgradeFromSDKv2(t, reportResource, opRisksFilterFields, terraformReportName,
+				terraformResourceName))
+		})
+	}
+}
+
 func TestAccReport_Violations(t *testing.T) {
 	terraformReportName := "terraform-violations-report"
 	terraformResourceName := "xray_violations_report"
@@ -302,6 +331,19 @@ func TestAccReport_Violations(t *testing.T) {
 		resourceNameInReport := reportResource["name"].(string)
 		t.Run(resourceNameInReport, func(t *testing.T) {
 			resource.Test(mkFilterTestCase(t, reportResource, violationsFilterFields[0], terraformReportName,
+				terraformResourceName))
+		})
+	}
+}
+
+func TestAccReport_Violations_UpgradeFromSDKv2(t *testing.T) {
+	terraformReportName := "terraform-violations-report"
+	terraformResourceName := "xray_violations_report"
+
+	for _, reportResource := range resourcesList {
+		resourceNameInReport := reportResource["name"].(string)
+		t.Run(resourceNameInReport, func(t *testing.T) {
+			resource.Test(mkFilterTestCase_UpgradeFromSDKv2(t, reportResource, violationsFilterFields[0], terraformReportName,
 				terraformResourceName))
 		})
 	}
@@ -332,16 +374,28 @@ func TestAccReport_Vulnerabilities(t *testing.T) {
 	}
 }
 
+func TestAccReport_Vulnerabilities_UpgradeFromSDKv2(t *testing.T) {
+	terraformReportName := "terraform-vulnerabilities-report"
+	terraformResourceName := "xray_vulnerabilities_report"
+
+	for _, reportResource := range resourcesList {
+		resourceNameInReport := reportResource["name"].(string)
+		t.Run(resourceNameInReport, func(t *testing.T) {
+			resource.Test(mkFilterTestCase_UpgradeFromSDKv2(t, reportResource, vulnerabilitiesFilterFields, terraformReportName,
+				terraformResourceName))
+		})
+	}
+}
+
 func TestAccReport_BadResource(t *testing.T) {
 	terraformReportName := "terraform-licenses-report"
 	terraformResourceName := "xray_licenses_report"
-	expectedErrorMessage := "Request payload is invalid as cannot"
 
 	for _, reportResource := range resourcesListNegative {
 		resourceNameInReport := reportResource["name"].(string)
 		t.Run(resourceNameInReport, func(t *testing.T) {
 			resource.Test(mkFilterNegativeTestCase(t, reportResource, licenseFilterFields, terraformReportName,
-				terraformResourceName, expectedErrorMessage))
+				terraformResourceName, reportResource["errorMessage"].(string)))
 		})
 	}
 }
@@ -349,7 +403,7 @@ func TestAccReport_BadResource(t *testing.T) {
 func TestAccReport_BadLicenseFilter(t *testing.T) {
 	terraformReportName := "terraform-licenses-report"
 	terraformResourceName := "xray_licenses_report"
-	expectedErrorMessage := "Only one of"
+	expectedErrorMessage := "(?s).*Invalid Attribute Combination.*license_patterns.*cannot be specified when.*license_names.*is specified.*"
 
 	var filterFieldsConflict = map[string]interface{}{
 		"filters": map[string]interface{}{
@@ -377,7 +431,7 @@ func TestAccReport_BadLicenseFilter(t *testing.T) {
 func TestAccReport_BadViolationsFilter(t *testing.T) {
 	terraformReportName := "terraform-violations-report"
 	terraformResourceName := "xray_violations_report"
-	expectedErrorMessage := "Only one of"
+	expectedErrorMessage := "(?s).*Invalid Attribute Combination.*watch_patterns.*cannot be specified when.*watch_names.*is specified.*"
 
 	var filterFieldsConflict = map[string]interface{}{
 		"filters": map[string]interface{}{
@@ -421,7 +475,7 @@ func TestAccReport_BadViolationsFilter(t *testing.T) {
 func TestAccReport_BadVulnerabilitiesFilter(t *testing.T) {
 	terraformReportName := "terraform-vulnerabilities-report"
 	terraformResourceName := "xray_vulnerabilities_report"
-	expectedErrorMessage := "Only one of"
+	expectedErrorMessage := "(?s).*Invalid Attribute Combination.*severities.*cannot be specified when.*cvss_score.*is specified.*"
 
 	var filterFieldsConflict = map[string]interface{}{
 		"filters": map[string]interface{}{
@@ -429,7 +483,6 @@ func TestAccReport_BadVulnerabilitiesFilter(t *testing.T) {
 			"impacted_artifact":    "impacted-artifact",
 			"has_remediation":      false,
 			"cve":                  "CVE-1234-1234",
-			"issue_id":             "XRAY-1234",
 			"severities":           []interface{}{"High", "Medium"}, // conflicts with cvss_score
 			"cvss_score": map[string]interface{}{
 				"min_score": 6.3,
@@ -471,13 +524,52 @@ func mkFilterTestCase(t *testing.T, resourceFields map[string]interface{}, filte
 	config := fmt.Sprintf(remoteRepoFull, resourceName, name, allFieldsHcl)
 
 	return t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckReport), // how to get ID?
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: config,
 				Check:  resource.ComposeTestCheckFunc(checks...),
+			},
+		},
+	}
+}
+
+func mkFilterTestCase_UpgradeFromSDKv2(t *testing.T, resourceFields map[string]interface{}, filterFields map[string]interface{},
+	reportName string, resourceName string) (*testing.T, resource.TestCase) {
+	_, fqrn, name := testutil.MkNames(reportName, resourceName)
+
+	allFields := sdk.MergeMaps(filterFields, resourceFields)
+	allFieldsHcl := sdk.FmtMapToHcl(allFields)
+	const remoteRepoFull = `
+		resource "%s" "%s" {
+%s
+		}
+	`
+	extraChecks := testutil.MapToTestChecks(fqrn, resourceFields)
+	defaultChecks := testutil.MapToTestChecks(fqrn, allFields)
+
+	checks := append(defaultChecks, extraChecks...)
+	config := fmt.Sprintf(remoteRepoFull, resourceName, name, allFieldsHcl)
+
+	return t, resource.TestCase{
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "", testCheckReport), // how to get ID?
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"xray": {
+						Source:            "jfrog/xray",
+						VersionConstraint: "2.11.0",
+					},
+				},
+				Check: resource.ComposeTestCheckFunc(checks...),
+			},
+			{
+				Config:                   config,
+				ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+				PlanOnly:                 true,
+				ConfigPlanChecks:         testutil.ConfigPlanChecks(""),
 			},
 		},
 	}
@@ -498,8 +590,7 @@ func mkFilterNegativeTestCase(t *testing.T, resourceFields map[string]interface{
 	config := fmt.Sprintf(remoteRepoFull, resourceName, name, allFieldsHcl)
 
 	return t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config:      config,

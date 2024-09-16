@@ -123,7 +123,6 @@ func TestAccBinaryManagerBuilds_full(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctest.PreCheck(t)
 			if err := uploadBuild(t, build1Name, "1", ""); err != nil {
 				t.Fatalf("failed to upload build: %s", err)
 			}
@@ -215,7 +214,6 @@ func TestAccBinaryManagerBuilds_project_full(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctest.PreCheck(t)
 			acctest.CreateProject(t, projectKey)
 			if err := uploadBuild(t, build1Name, "1", projectKey); err != nil {
 				t.Fatalf("failed to upload build: %s", err)
@@ -291,9 +289,6 @@ func TestAccBinaryManagerBuilds_invalid_patterns(t *testing.T) {
 			config := util.ExecuteTemplate("TestAccBinaryManagerBuilds_invalid_patterns", template, testData)
 
 			resource.Test(t, resource.TestCase{
-				PreCheck: func() {
-					acctest.PreCheck(t)
-				},
 				ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 				Steps: []resource.TestStep{
 					{

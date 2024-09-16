@@ -44,7 +44,6 @@ func TestAccWatch_UpgradeFromSDKv2(t *testing.T) {
 	config := util.ExecuteTemplate(fqrn, allReposSinglePolicyWatchTemplate, testData)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { acctest.PreCheck(t) },
 		CheckDestroy: acctest.VerifyDeleted(fqrn, "name", testCheckWatch),
 		Steps: []resource.TestStep{
 			{
@@ -58,7 +57,7 @@ func TestAccWatch_UpgradeFromSDKv2(t *testing.T) {
 				Check:  verifyXrayWatch(fqrn, testData),
 			},
 			{
-				ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+				ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 				Config:                   config,
 				ConfigPlanChecks:         testutil.ConfigPlanChecks(""),
 			},
@@ -75,13 +74,12 @@ func TestAccWatch_allReposSinglePolicy(t *testing.T) {
 	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", testutil.RandomInt())
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.PreCheck(t) },
 		CheckDestroy: acctest.VerifyDeleted(fqrn, "name", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.CheckPolicyDeleted(testData["policy_name_0"], t, request)
 			resp, err := testCheckWatch(id, request)
 			return resp, err
 		}),
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, allReposSinglePolicyWatchTemplate, testData),
@@ -109,13 +107,12 @@ func TestAccWatch_allReposPathAntFilter(t *testing.T) {
 	testData["include_patterns0"] = "**/*.js"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.PreCheck(t) },
 		CheckDestroy: acctest.VerifyDeleted(fqrn, "name", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.CheckPolicyDeleted(testData["policy_name_0"], t, request)
 			resp, err := testCheckWatch(id, request)
 			return resp, err
 		}),
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, allReposPathAntFilterWatchTemplate, testData),
@@ -143,13 +140,12 @@ func TestAccWatch_allReposKvFilter(t *testing.T) {
 	testData["kv_filter_value0"] = "test-property-value"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.PreCheck(t) },
 		CheckDestroy: acctest.VerifyDeleted(fqrn, "name", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.CheckPolicyDeleted(testData["policy_name_0"], t, request)
 			resp, err := testCheckWatch(id, request)
 			return resp, err
 		}),
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, allReposKvFilterWatchTemplate, testData),
@@ -231,7 +227,6 @@ func TestAccWatch_allReposWithProjectKey(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctest.PreCheck(t)
 			acctest.CreateProject(t, projectKey)
 		},
 		CheckDestroy: acctest.VerifyDeleted(fqrn, "name", func(id string, request *resty.Request) (*resty.Response, error) {
@@ -239,7 +234,7 @@ func TestAccWatch_allReposWithProjectKey(t *testing.T) {
 			resp, err := testCheckWatch(id, request)
 			return resp, err
 		}),
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: config,
@@ -274,7 +269,6 @@ func TestAccWatch_allReposMultiplePolicies(t *testing.T) {
 	testData["policy_name_2"] = fmt.Sprintf("xray-policy-3%d", testutil.RandomInt())
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.PreCheck(t) },
 		CheckDestroy: acctest.VerifyDeleted(fqrn, "name", func(id string, request *resty.Request) (*resty.Response, error) {
 			acctest.CheckPolicyDeleted(testData["policy_name_0"], t, request)
 			acctest.CheckPolicyDeleted(testData["policy_name_1"], t, request)
@@ -283,7 +277,7 @@ func TestAccWatch_allReposMultiplePolicies(t *testing.T) {
 			return resp, err
 		}),
 
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, allReposMultiplePoliciesWatchTemplate, testData),
@@ -335,7 +329,6 @@ func makeSingleRepositoryTestCase(repoType string, t *testing.T) (*testing.T, re
 
 	return t, resource.TestCase{
 		PreCheck: func() {
-			acctest.PreCheck(t)
 			acctest.CreateRepos(t, testData["repo0"], repoType, "", "")
 		},
 		CheckDestroy: acctest.VerifyDeleted(fqrn, "name", func(id string, request *resty.Request) (*resty.Response, error) {
@@ -345,7 +338,7 @@ func makeSingleRepositoryTestCase(repoType string, t *testing.T) (*testing.T, re
 			return resp, err
 		}),
 
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, singleRepositoryWatchTemplate, testData),
@@ -442,7 +435,6 @@ func TestAccWatch_singleRepositoryWithProjectKey(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctest.PreCheck(t)
 			acctest.CreateProject(t, projectKey)
 			acctest.CreateRepos(t, repoKey, "local", projectKey, "")
 		},
@@ -453,7 +445,7 @@ func TestAccWatch_singleRepositoryWithProjectKey(t *testing.T) {
 			return resp, err
 		}),
 
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: config,
@@ -490,7 +482,6 @@ func TestAccWatch_singleRepoMimeTypeFilter(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctest.PreCheck(t)
 			acctest.CreateRepos(t, testData["repo0"], repoType, "", "")
 		},
 		CheckDestroy: acctest.VerifyDeleted(fqrn, "name", func(id string, request *resty.Request) (*resty.Response, error) {
@@ -499,7 +490,7 @@ func TestAccWatch_singleRepoMimeTypeFilter(t *testing.T) {
 			resp, err := testCheckWatch(id, request)
 			return resp, err
 		}),
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, singleRepositoryWatchTemplate, testData),
@@ -535,7 +526,6 @@ func TestAccWatch_singleRepoKvFilter(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctest.PreCheck(t)
 			acctest.CreateRepos(t, testData["repo0"], repoType, "", "")
 		},
 		CheckDestroy: acctest.VerifyDeleted(fqrn, "name", func(id string, request *resty.Request) (*resty.Response, error) {
@@ -543,7 +533,7 @@ func TestAccWatch_singleRepoKvFilter(t *testing.T) {
 			acctest.CheckPolicyDeleted(testData["policy_name_0"], t, request)
 			return testCheckWatch(id, request)
 		}),
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, kvFilters, testData),
@@ -577,7 +567,6 @@ func TestAccWatch_repositoryMissingRepoType(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctest.PreCheck(t)
 			acctest.CreateRepos(t, testData["repo0"], "local", "", "")
 		},
 		CheckDestroy: acctest.VerifyDeleted(fqrn, "name", func(id string, request *resty.Request) (*resty.Response, error) {
@@ -587,7 +576,7 @@ func TestAccWatch_repositoryMissingRepoType(t *testing.T) {
 			return resp, err
 		}),
 
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config:      util.ExecuteTemplate(fqrn, singleRepositoryInvalidWatchTemplate, testData),
@@ -611,7 +600,6 @@ func TestAccWatch_multipleRepositories(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctest.PreCheck(t)
 			acctest.CreateRepos(t, testData["repo0"], "local", "", "")
 			acctest.CreateRepos(t, testData["repo1"], "local", "", "")
 		},
@@ -622,7 +610,7 @@ func TestAccWatch_multipleRepositories(t *testing.T) {
 			resp, err := testCheckWatch(id, request)
 			return resp, err
 		}),
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, multipleRepositoriesWatchTemplate, testData),
@@ -658,7 +646,6 @@ func TestAccWatch_multipleRepositoriesPathAntPatterns(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctest.PreCheck(t)
 			acctest.CreateRepos(t, testData["repo0"], "local", "", "")
 			acctest.CreateRepos(t, testData["repo1"], "local", "", "")
 			acctest.CreateRepos(t, testData["repo2"], "local", "", "")
@@ -671,7 +658,7 @@ func TestAccWatch_multipleRepositoriesPathAntPatterns(t *testing.T) {
 			resp, err := testCheckWatch(id, request)
 			return resp, err
 		}),
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, pathAntPatterns, testData),
@@ -715,7 +702,6 @@ func TestAccWatch_PathAntPatternsError(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctest.PreCheck(t)
 			acctest.CreateRepos(t, testData["repo0"], "local", "", "")
 			acctest.CreateRepos(t, testData["repo1"], "local", "", "")
 		},
@@ -726,7 +712,7 @@ func TestAccWatch_PathAntPatternsError(t *testing.T) {
 			resp, err := testCheckWatch(id, request)
 			return resp, err
 		}),
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config:      util.ExecuteTemplate(fqrn, pathAntPatterns, testData),
@@ -755,7 +741,6 @@ func TestAccWatch_multipleRepositoriesKvFilter(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctest.PreCheck(t)
 			acctest.CreateRepos(t, testData["repo0"], "local", "", "")
 			acctest.CreateRepos(t, testData["repo1"], "local", "", "")
 		},
@@ -766,7 +751,7 @@ func TestAccWatch_multipleRepositoriesKvFilter(t *testing.T) {
 			resp, err := testCheckWatch(id, request)
 			return resp, err
 		}),
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, multipleRepositoriesKvFilter, testData),
@@ -814,7 +799,6 @@ func TestAccWatch_KvFilterError(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctest.PreCheck(t)
 			acctest.CreateRepos(t, testData["repo0"], "local", "", "")
 		},
 		CheckDestroy: acctest.VerifyDeleted(fqrn, "name", func(id string, request *resty.Request) (*resty.Response, error) {
@@ -823,7 +807,7 @@ func TestAccWatch_KvFilterError(t *testing.T) {
 			resp, err := testCheckWatch(id, request)
 			return resp, err
 		}),
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config:      util.ExecuteTemplate(fqrn, kvFilters, testData),
@@ -847,11 +831,10 @@ func TestAccWatch_build(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctest.PreCheck(t)
 			acctest.CreateBuilds(t, builds, "")
 		},
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "name", testCheckWatch),
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, buildWatchTemplate, testData),
@@ -927,7 +910,6 @@ func TestAccWatch_buildWithProjectKey(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctest.PreCheck(t)
 			acctest.CreateProject(t, projectKey)
 			acctest.CreateBuilds(t, []string{testData["build_name0"]}, projectKey)
 		},
@@ -936,7 +918,7 @@ func TestAccWatch_buildWithProjectKey(t *testing.T) {
 			resp, err := testCheckWatch(id, request)
 			return resp, err
 		}),
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: config,
@@ -1026,7 +1008,6 @@ func TestAccWatch_allBuildsWithProjectKey(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctest.PreCheck(t)
 			acctest.CreateProject(t, projectKey)
 		},
 		CheckDestroy: acctest.VerifyDeleted(fqrn, "name", func(id string, request *resty.Request) (*resty.Response, error) {
@@ -1034,7 +1015,7 @@ func TestAccWatch_allBuildsWithProjectKey(t *testing.T) {
 			resp, err := testCheckWatch(id, request)
 			return resp, err
 		}),
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: config,
@@ -1072,11 +1053,10 @@ func TestAccWatch_multipleBuilds(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctest.PreCheck(t)
 			acctest.CreateBuilds(t, builds, "")
 		},
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "name", testCheckWatch),
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, multipleBuildsWatchTemplate, testData),
@@ -1103,11 +1083,8 @@ func TestAccWatch_allBuilds(t *testing.T) {
 	testData["watch_type"] = "all-builds"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			acctest.PreCheck(t)
-		},
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "name", testCheckWatch),
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, allBuildsWatchTemplate, testData),
@@ -1141,11 +1118,8 @@ func TestAccWatch_invalidBuildFilter(t *testing.T) {
 	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", testutil.RandomInt())
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			acctest.PreCheck(t)
-		},
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "name", testCheckWatch),
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config:      util.ExecuteTemplate(fqrn, invalidBuildsWatchFilterTemplate, testData),
@@ -1165,11 +1139,8 @@ func TestAccWatch_allProjects(t *testing.T) {
 	testData["watch_type"] = "all-projects"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			acctest.PreCheck(t)
-		},
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "name", testCheckWatch),
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, allProjectsWatchTemplate, testData),
@@ -1206,7 +1177,6 @@ func TestAccWatch_singleProject(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctest.PreCheck(t)
 			acctest.CreateProject(t, testData["project_key_0"])
 			acctest.CreateProject(t, testData["project_key_1"])
 		},
@@ -1218,7 +1188,7 @@ func TestAccWatch_singleProject(t *testing.T) {
 			return testCheckWatch(id, request)
 		}),
 
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, singleProjectWatchTemplate, testData),
@@ -1245,11 +1215,8 @@ func TestAccWatch_invalidProjectFilter(t *testing.T) {
 	testData["watch_type"] = "project"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			acctest.PreCheck(t)
-		},
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "name", testCheckWatch),
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 
@@ -1278,11 +1245,8 @@ func allReleaseBundleTestCase(watchType string, t *testing.T) (*testing.T, resou
 	testData["watch_type"] = watchType
 
 	return t, resource.TestCase{
-		PreCheck: func() {
-			acctest.PreCheck(t)
-		},
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "name", testCheckWatch),
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, allReleaseBundlesWatchTemplate, testData),
@@ -1317,9 +1281,8 @@ func TestAccWatch_singleReleaseBundle(t *testing.T) {
 	testData["release_bundle_name"] = fmt.Sprintf("test-release-bundle-%d", testutil.RandomInt())
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "name", testCheckWatch),
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: util.ExecuteTemplate(fqrn, singleReleaseBundleWatchTemplate, testData),

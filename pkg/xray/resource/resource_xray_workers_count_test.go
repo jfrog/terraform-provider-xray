@@ -76,7 +76,6 @@ func TestAccWorkersCount_full(t *testing.T) {
 	updatedConfig := util.ExecuteTemplate("TestAccWorkersCount_full", temp, updatedParams)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{

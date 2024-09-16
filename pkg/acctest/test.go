@@ -1,94 +1,34 @@
 package acctest
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
-	"github.com/hashicorp/terraform-plugin-mux/tf5to6server"
-	"github.com/hashicorp/terraform-plugin-mux/tf6muxserver"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	terraform2 "github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/jfrog/terraform-provider-shared/client"
 	"github.com/jfrog/terraform-provider-shared/testutil"
-	"github.com/jfrog/terraform-provider-shared/util"
-	"github.com/jfrog/terraform-provider-xray/pkg/xray/provider"
+	"github.com/jfrog/terraform-provider-xray/pkg/xray"
 )
 
 // Provider PreCheck(t) must be called before using this provider instance.
-var Provider *schema.Provider
-var ProviderFactories map[string]func() (*schema.Provider, error)
-
-// testAccProviderConfigure ensures Provider is only configured once
-//
-// The PreCheck(t) function is invoked for every test and this prevents
-// extraneous reconfiguration to the same values each time. However, this does
-// not prevent reconfiguration that may happen should the address of
-// Provider be errantly reused in ProviderFactories.
-var testAccProviderConfigure sync.Once
-
-// ProtoV6MuxProviderFactories is used to instantiate both SDK v2 and Framework providers
-// during acceptance tests. Use it only if you need to combine resources from SDK v2 and the Framework in the same test.
-var ProtoV6MuxProviderFactories map[string]func() (tfprotov6.ProviderServer, error)
+var Provider provider.Provider
 
 var ProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
-	"xray": providerserver.NewProtocol6WithError(provider.Framework()()),
+	"xray": providerserver.NewProtocol6WithError(xray.NewProvider()()),
 }
 
 func init() {
-	Provider = provider.SdkV2()
+	Provider = xray.NewProvider()()
 
-	ProviderFactories = map[string]func() (*schema.Provider, error){
-		"xray": func() (*schema.Provider, error) { return Provider, nil },
+	ProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
+		"xray": providerserver.NewProtocol6WithError(Provider),
 	}
-
-	ProtoV6MuxProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
-		"xray": func() (tfprotov6.ProviderServer, error) {
-			ctx := context.Background()
-
-			upgradedSdkServer, err := tf5to6server.UpgradeServer(
-				ctx,
-				provider.SdkV2().GRPCProvider, // terraform-plugin-sdk provider
-			)
-			if err != nil {
-				return nil, err
-			}
-
-			providers := []func() tfprotov6.ProviderServer{
-				providerserver.NewProtocol6(provider.Framework()()), // terraform-plugin-framework provider
-				func() tfprotov6.ProviderServer {
-					return upgradedSdkServer
-				},
-			}
-
-			muxServer, err := tf6muxserver.NewMuxServer(ctx, providers...)
-
-			if err != nil {
-				return nil, err
-			}
-
-			return muxServer.ProviderServer(), nil
-		},
-	}
-}
-
-// PreCheck This function should be present in every acceptance test.
-func PreCheck(t *testing.T) {
-	// Since we are outside the scope of the Terraform configuration we must
-	// call Configure() to properly initialize the provider configuration.
-	testAccProviderConfigure.Do(func() {
-		configErr := Provider.Configure(context.Background(), (*terraform2.ResourceConfig)(terraform2.NewResourceConfigRaw(nil)))
-		if configErr != nil && configErr.HasError() {
-			t.Fatalf("failed to configure provider %v", configErr)
-		}
-	})
 }
 
 type CheckFun func(id string, request *resty.Request) (*resty.Response, error)
@@ -104,14 +44,13 @@ func VerifyDeleted(id, identifierAttribute string, check CheckFun) func(*terrafo
 			return fmt.Errorf("provider is not initialized. Please PreCheck() is included in your acceptance test")
 		}
 
-		providerMeta := Provider.Meta().(util.ProviderMetadata)
-
 		identifier := rs.Primary.ID
 		if identifierAttribute != "" {
 			identifier = rs.Primary.Attributes[identifierAttribute]
 		}
 
-		resp, err := check(identifier, providerMeta.Client.R())
+		client := Provider.(*xray.XrayProvider).Meta.Client
+		resp, err := check(identifier, client.R())
 		if err != nil {
 			return err
 		}

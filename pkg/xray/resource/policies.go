@@ -14,6 +14,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/jfrog/terraform-provider-shared/util"
@@ -400,6 +402,48 @@ var commonActionsAttrs = map[string]schema.Attribute{
 		Description: "Allow grace period for certain number of days. All violations will be ignored during this time. To be used only if `fail_build` is enabled.",
 	},
 }
+
+var policySchemaAttrs = lo.Assign(
+	projectKeySchemaAttrs(false, ""),
+	map[string]schema.Attribute{
+		"id": schema.StringAttribute{
+			Computed: true,
+		},
+		"name": schema.StringAttribute{
+			Required: true,
+			Validators: []validator.String{
+				stringvalidator.LengthAtLeast(1),
+			},
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.RequiresReplace(),
+			},
+			Description: "Name of the policy (must be unique)",
+		},
+		"description": schema.StringAttribute{
+			Optional:    true,
+			Description: "More verbose description of the policy",
+		},
+		"type": schema.StringAttribute{
+			Required: true,
+			Validators: []validator.String{
+				stringvalidator.OneOf("security", "license", "operational_risk"),
+			},
+			Description: "Type of the policy",
+		},
+		"author": schema.StringAttribute{
+			Computed:    true,
+			Description: "User, who created the policy",
+		},
+		"created": schema.StringAttribute{
+			Computed:    true,
+			Description: "Creation timestamp",
+		},
+		"modified": schema.StringAttribute{
+			Computed:    true,
+			Description: "Modification timestamp",
+		},
+	},
+)
 
 var policyBlocks = func(criteriaAttrs map[string]schema.Attribute, criteriaBlocks map[string]schema.Block, actionsAttrs map[string]schema.Attribute, actionsBlocks map[string]schema.Block) map[string]schema.Block {
 	return map[string]schema.Block{

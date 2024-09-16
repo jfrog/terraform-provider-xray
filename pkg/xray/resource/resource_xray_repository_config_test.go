@@ -70,13 +70,8 @@ func TestAccRepositoryConfig_UpgradeFromSDKv2(t *testing.T) {
 						Source: "jfrog/artifactory",
 					},
 				},
-				ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+				ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 				Config:                   config,
-				// ConfigPlanChecks is a terraform-plugin-testing feature.
-				// If acceptance testing is still using terraform-plugin-sdk/v2,
-				// use `PlanOnly: true` instead. When migrating to
-				// terraform-plugin-testing, switch to `ConfigPlanChecks` or you
-				// will likely experience test failures.
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectEmptyPlan(),
@@ -104,8 +99,7 @@ func TestAccRepositoryConfig_RepoNoConfig(t *testing.T) {
 	)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config:      config,
@@ -150,8 +144,7 @@ func TestAccRepositoryConfig_JasDisabled(t *testing.T) {
 	)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		ExternalProviders: map[string]resource.ExternalProvider{
 			"artifactory": {
 				Source: "jfrog/artifactory",
@@ -198,8 +191,7 @@ func TestAccRepositoryConfig_JasDisabled_vulnContextualAnalysis_set(t *testing.T
 	)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 
 		Steps: []resource.TestStep{
 			{
@@ -246,8 +238,7 @@ func TestAccRepositoryConfig_JasDisabled_exposures_set(t *testing.T) {
 	)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		ExternalProviders: map[string]resource.ExternalProvider{
 			"artifactory": {
 				Source: "jfrog/artifactory",
@@ -310,8 +301,7 @@ func testAccRepositoryConfigRepoConfigCreate_VulnContextualAnalysis(packageType,
 		}
 
 		resource.Test(t, resource.TestCase{
-			PreCheck:                 func() { acctest.PreCheck(t) },
-			ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+			ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 			ExternalProviders: map[string]resource.ExternalProvider{
 				"artifactory": {
 					Source:            "jfrog/artifactory",
@@ -491,8 +481,7 @@ func testAccRepositoryConfigRepoConfigCreate(packageType, template, validVersion
 		}
 
 		resource.Test(t, resource.TestCase{
-			PreCheck:                 func() { acctest.PreCheck(t) },
-			ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+			ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 			ExternalProviders: map[string]resource.ExternalProvider{
 				"artifactory": {
 					Source:            "jfrog/artifactory",
@@ -530,8 +519,7 @@ func TestAccRepositoryConfig_RepoConfigCreate_InvalidExposures(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		ExternalProviders: map[string]resource.ExternalProvider{
 			"artifactory": {
 				Source:            "jfrog/artifactory",
@@ -561,8 +549,7 @@ func TestAccRepositoryConfig_Missing_RetentionInDays(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		ExternalProviders: map[string]resource.ExternalProvider{
 			"artifactory": {
 				Source:            "jfrog/artifactory",
@@ -616,8 +603,7 @@ func TestAccRepositoryConfig_RepoPathsUpdate(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
-		ProtoV6ProviderFactories: acctest.ProtoV6MuxProviderFactories,
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		ExternalProviders: map[string]resource.ExternalProvider{
 			"artifactory": {
 				Source: "jfrog/artifactory",

@@ -213,7 +213,6 @@ func TestAccCustomIssue_full(t *testing.T) {
 	updatedConfig := util.ExecuteTemplate("TestAccCustomIssue_full", fullTemplate, updatedTestData)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckCustomIssue),
 		Steps: []resource.TestStep{
@@ -349,7 +348,6 @@ func TestAccCustomIssue_invalid(t *testing.T) {
 			config := util.ExecuteTemplate("TestAccCustomIssue_invalid", template, testData)
 
 			resource.Test(t, resource.TestCase{
-				PreCheck:                 func() { acctest.PreCheck(t) },
 				ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 				Steps: []resource.TestStep{
 					{
