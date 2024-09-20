@@ -105,7 +105,7 @@ var toActionsAPIModel = func(ctx context.Context, actionsElems []attr.Value) (Po
 		actions.NotifyWatchRecipients = attrs["notify_watch_recipients"].(types.Bool).ValueBool()
 		actions.NotifyDeployer = attrs["notify_deployer"].(types.Bool).ValueBool()
 		actions.CreateJiraTicketEnabled = attrs["create_ticket_enabled"].(types.Bool).ValueBool()
-		actions.FailureGracePeriodDays = attrs["build_failure_grace_period_in_days"].(types.Int64).ValueInt64()
+		actions.FailureGracePeriodDays = attrs["build_failure_grace_period_in_days"].(types.Int64).ValueInt64Pointer()
 	}
 
 	return actions, diags
@@ -223,7 +223,7 @@ var fromActionsAPIModel = func(ctx context.Context, actionsAPIModel PolicyRuleAc
 			"notify_deployer":                    types.BoolValue(actionsAPIModel.NotifyDeployer),
 			"notify_watch_recipients":            types.BoolValue(actionsAPIModel.NotifyWatchRecipients),
 			"create_ticket_enabled":              types.BoolValue(actionsAPIModel.CreateJiraTicketEnabled),
-			"build_failure_grace_period_in_days": types.Int64Value(actionsAPIModel.FailureGracePeriodDays),
+			"build_failure_grace_period_in_days": types.Int64PointerValue(actionsAPIModel.FailureGracePeriodDays),
 		},
 	)
 	if d.HasError() {
@@ -571,7 +571,7 @@ type PolicyRuleActionsAPIModel struct {
 	NotifyWatchRecipients          bool                          `json:"notify_watch_recipients"`
 	NotifyDeployer                 bool                          `json:"notify_deployer"`
 	CreateJiraTicketEnabled        bool                          `json:"create_ticket_enabled"`
-	FailureGracePeriodDays         int64                         `json:"build_failure_grace_period_in_days,omitempty"`
+	FailureGracePeriodDays         *int64                        `json:"build_failure_grace_period_in_days,omitempty"`
 	// License Actions
 	CustomSeverity string `json:"custom_severity,omitempty"`
 }

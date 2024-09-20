@@ -65,7 +65,6 @@ func TestAccSecurityPolicy_UpgradeFromSDKv2(t *testing.T) {
 					from = {{ .cvss_from }}
 					to = {{ .cvss_to }}
 				}
-				applicable_cves_only = {{ .applicable_cves_only }}
 			}
 			actions {
 				block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
@@ -103,6 +102,61 @@ func TestAccSecurityPolicy_UpgradeFromSDKv2(t *testing.T) {
 			{
 				Config:                   config,
 				ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+		},
+	})
+}
+
+func TestAccSecurityPolicy_optional_actions_attribute(t *testing.T) {
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
+
+	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-%d", testutil.RandomInt())
+
+	templ := `
+	resource "xray_security_policy" "{{ .resource_name }}" {
+		name = "{{ .policy_name }}"
+		description = "{{ .policy_description }}"
+		type = "security"
+		rule {
+			name = "{{ .rule_name }}"
+			priority = 1
+			criteria {
+				cvss_range {
+					from = 7.0
+					to   = 10.0
+				}
+			}
+			actions {
+				block_download {
+					unscanned = {{ .block_unscanned }}
+					active = {{ .block_active }}
+				}
+			}
+		}
+	}`
+
+	config := util.ExecuteTemplate(fqrn, templ, testData)
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckNoResourceAttr(fqrn, "build_failure_grace_period_in_days"),
+				),
+			},
+			{
+				Config: config,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectEmptyPlan(),
@@ -274,6 +328,7 @@ func TestAccSecurityPolicy_withProjectKey(t *testing.T) {
 	testData["project_key"] = projectKey
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-4-%d", testutil.RandomInt())
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-4-%d", testutil.RandomInt())
+	testData["applicable_cves_only"] = "false"
 
 	template := `
 	resource "project" "{{ .project_key }}" {
@@ -300,7 +355,6 @@ func TestAccSecurityPolicy_withProjectKey(t *testing.T) {
 					from = {{ .cvss_from }}
 					to = {{ .cvss_to }}
 				}
-				applicable_cves_only = {{ .applicable_cves_only }}
 			}
 			actions {
 				block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
@@ -595,6 +649,7 @@ func TestAccSecurityPolicy_createCVSSFloat(t *testing.T) {
 	testData["resource_name"] = resourceName
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-8-%d", testutil.RandomInt())
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-8-%d", testutil.RandomInt())
+	testData["applicable_cves_only"] = "false"
 	testData["cvss_from"] = "1.5"
 	testData["cvss_to"] = "5.3"
 
@@ -1129,7 +1184,6 @@ const securityPolicyCVSS = `resource "xray_security_policy" "{{ .resource_name }
 				from = {{ .cvss_from }}
 				to = {{ .cvss_to }}
 			}
-			applicable_cves_only = {{ .applicable_cves_only }}
 		}
 		actions {
 			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
