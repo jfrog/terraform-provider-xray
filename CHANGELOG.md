@@ -1,4 +1,4 @@
-## 2.11.2 (September 23, 2024)
+## 2.11.2 (September 23, 2024). Tested on Artifactory 7.90.10 and Xray 3.104.11 with Terraform 1.9.6 and OpenTofu 1.8.2
 
 BUG FIXES:
 
