@@ -50,6 +50,7 @@ func TestAccSecurityPolicy_UpgradeFromSDKv2(t *testing.T) {
 	testData["resource_name"] = resourceName
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-4-%d", testutil.RandomInt())
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-4-%d", testutil.RandomInt())
+	testData["applicable_cves_only"] = "false"
 
 	template := `
 	resource "xray_security_policy" "{{ .resource_name }}" {
@@ -416,6 +417,7 @@ func TestAccSecurityPolicy_createBlockDownloadTrueCVSS(t *testing.T) {
 	testData["resource_name"] = resourceName
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-4-%d", testutil.RandomInt())
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-4-%d", testutil.RandomInt())
+	testData["applicable_cves_only"] = "false"
 
 	resource.Test(t, resource.TestCase{
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
@@ -443,6 +445,7 @@ func TestAccSecurityPolicy_createBlockDownloadFalseCVSS(t *testing.T) {
 	testData["resource_name"] = resourceName
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-5-%d", testutil.RandomInt())
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-5-%d", testutil.RandomInt())
+	testData["applicable_cves_only"] = "false"
 	testData["block_unscanned"] = "false"
 	testData["block_active"] = "false"
 
