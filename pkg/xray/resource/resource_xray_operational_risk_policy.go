@@ -197,41 +197,16 @@ func (r *OperationalRiskPolicyResource) fromCriteriaAPIModel(ctx context.Context
 				risk = types.StringValue(criteraAPIModel.OperationalRiskCustom.Risk)
 			}
 
-			releaseDateGreaterThanMonths := types.Int64Null()
-			if criteraAPIModel.OperationalRiskCustom.ReleaseDateGreaterThanMonths != nil {
-				releaseDateGreaterThanMonths = types.Int64PointerValue(criteraAPIModel.OperationalRiskCustom.ReleaseDateGreaterThanMonths)
-			}
-
-			newerVersionsGreaterThan := types.Int64Null()
-			if criteraAPIModel.OperationalRiskCustom.NewerVersionsGreaterThan != nil {
-				newerVersionsGreaterThan = types.Int64PointerValue(criteraAPIModel.OperationalRiskCustom.NewerVersionsGreaterThan)
-			}
-
-			releaseCadencePerYearLessThan := types.Int64Null()
-			if criteraAPIModel.OperationalRiskCustom.ReleaseCadencePerYearLessThan != nil {
-				releaseCadencePerYearLessThan = types.Int64PointerValue(criteraAPIModel.OperationalRiskCustom.ReleaseCadencePerYearLessThan)
-			}
-
-			commitsLessThan := types.Int64Null()
-			if criteraAPIModel.OperationalRiskCustom.CommitsLessThan != nil {
-				commitsLessThan = types.Int64PointerValue(criteraAPIModel.OperationalRiskCustom.CommitsLessThan)
-			}
-
-			committersLessThan := types.Int64Null()
-			if criteraAPIModel.OperationalRiskCustom.CommittersLessThan != nil {
-				committersLessThan = types.Int64PointerValue(criteraAPIModel.OperationalRiskCustom.CommittersLessThan)
-			}
-
 			custom, d := types.ObjectValue(
 				opRiskCustomAttrType,
 				map[string]attr.Value{
 					"use_and_condition":                  types.BoolValue(criteraAPIModel.OperationalRiskCustom.UseAndCondition),
 					"is_eol":                             types.BoolValue(criteraAPIModel.OperationalRiskCustom.IsEOL),
-					"release_date_greater_than_months":   releaseDateGreaterThanMonths,
-					"newer_versions_greater_than":        newerVersionsGreaterThan,
-					"release_cadence_per_year_less_than": releaseCadencePerYearLessThan,
-					"commits_less_than":                  commitsLessThan,
-					"committers_less_than":               committersLessThan,
+					"release_date_greater_than_months":   types.Int64PointerValue(criteraAPIModel.OperationalRiskCustom.ReleaseDateGreaterThanMonths),
+					"newer_versions_greater_than":        types.Int64PointerValue(criteraAPIModel.OperationalRiskCustom.NewerVersionsGreaterThan),
+					"release_cadence_per_year_less_than": types.Int64PointerValue(criteraAPIModel.OperationalRiskCustom.ReleaseCadencePerYearLessThan),
+					"commits_less_than":                  types.Int64PointerValue(criteraAPIModel.OperationalRiskCustom.CommitsLessThan),
+					"committers_less_than":               types.Int64PointerValue(criteraAPIModel.OperationalRiskCustom.CommittersLessThan),
 					"risk":                               risk,
 				},
 			)

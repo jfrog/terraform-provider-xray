@@ -1,3 +1,9 @@
+## 2.11.2 (September 23, 2024). Tested on Artifactory 7.90.10 and Xray 3.104.11 with Terraform 1.9.6 and OpenTofu 1.8.2
+
+BUG FIXES:
+
+* resource/xray_\*\_policy: Fix "Provider produced inconsistent result after apply" error due to `build_failure_grace_period_in_days` attribute. PR: [#248](https://github.com/jfrog/terraform-provider-xray/pull/248) Issue: [#248](https://github.com/jfrog/terraform-provider-xray/issues/248)
+
 ## 2.11.1 (September 16, 2024). Tested on Artifactory 7.90.10 and Xray 3.104.11 with Terraform 1.9.5 and OpenTofu 1.8.2
 
 IMPROVEMENTS:
