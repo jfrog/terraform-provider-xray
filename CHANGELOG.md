@@ -1,3 +1,14 @@
+## 2.12.0 (October 4, 2024)
+
+BUG FIXES:
+
+* resource/xray_license_policy: Fix case insensitive attribute validations for `actions.custom_severity`.
+* resource/xray_operational_risk_policy: Fix case insensitive attribute validations for `criteria.op_risk_min_risk`, `criteria.op_risk_custom.risk`.
+* resource/xray_security_policy: Fix case insensitive attribute validations for `criteria.min_severity`, `criteria.exposures.min_severity`, and `criteria.package_type`.
+* resource/xray_violations_report: Fix case insensitive attribute validations for `filter.type`.
+
+PR: [#254](https://github.com/jfrog/terraform-provider-xray/pull/254) Issue: [#253](https://github.com/jfrog/terraform-provider-xray/issues/253)
+
 ## 2.11.2 (September 23, 2024). Tested on Artifactory 7.90.10 and Xray 3.104.11 with Terraform 1.9.6 and OpenTofu 1.8.2
 
 BUG FIXES:
