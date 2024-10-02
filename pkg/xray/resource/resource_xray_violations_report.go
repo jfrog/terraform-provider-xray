@@ -155,7 +155,7 @@ var violationsFiltersAttrs = map[string]schema.Attribute{
 		Optional: true,
 		Validators: []validator.String{
 			stringvalidator.LengthAtLeast(1),
-			stringvalidator.OneOfCaseInsensitive("security", "license", "operational_risk"),
+			stringvalidator.OneOf("security", "license", "operational_risk"),
 		},
 		Description: "Violation type.",
 	},

@@ -575,7 +575,7 @@ func (r *WatchResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 						"type": schema.StringAttribute{
 							Required: true,
 							Validators: []validator.String{
-								stringvalidator.OneOfCaseInsensitive(supportedResourceTypes...),
+								stringvalidator.OneOf(supportedResourceTypes...),
 							},
 							Description: fmt.Sprintf("Type of resource to be watched. Options: %s.", strings.Join(supportedResourceTypes, ", ")),
 						},
@@ -592,7 +592,7 @@ func (r *WatchResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 						"repo_type": schema.StringAttribute{
 							Optional: true,
 							Validators: []validator.String{
-								stringvalidator.OneOfCaseInsensitive("local", "remote"),
+								stringvalidator.OneOf("local", "remote"),
 							},
 							Description: "Type of repository. Only applicable when `type` is `repository`. Options: `local` or `remote`.",
 						},
@@ -604,7 +604,7 @@ func (r *WatchResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 									"type": schema.StringAttribute{
 										Required: true,
 										Validators: []validator.String{
-											stringvalidator.OneOfCaseInsensitive("regex", "path-regex", "package-type", "mime-type"),
+											stringvalidator.OneOf("regex", "path-regex", "package-type", "mime-type"),
 										},
 										Description: "The type of filter, such as `regex`, `path-regex`, `package-type`, or `mime-type`",
 									},
@@ -668,7 +668,7 @@ func (r *WatchResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 									"type": schema.StringAttribute{
 										Required: true,
 										Validators: []validator.String{
-											stringvalidator.OneOfCaseInsensitive("property"),
+											stringvalidator.OneOf("property"),
 										},
 										Description: "The type of filter. Currently only support `property`",
 									},
@@ -706,7 +706,7 @@ func (r *WatchResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 						"type": schema.StringAttribute{
 							Required: true,
 							Validators: []validator.String{
-								stringvalidator.OneOfCaseInsensitive("security", "license", "operational_risk"),
+								stringvalidator.OneOf("security", "license", "operational_risk"),
 							},
 
 							Description: "The type of the policy - security, license or operational risk",

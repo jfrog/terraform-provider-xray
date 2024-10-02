@@ -266,7 +266,7 @@ var licensePolicyActionsAttrs = lo.Assign(
 			Computed: true,
 			Default:  stringdefault.StaticString("High"),
 			Validators: []validator.String{
-				stringvalidator.OneOfCaseInsensitive("Critical", "High", "Medium", "Low"),
+				stringvalidator.OneOf("Critical", "High", "Medium", "Low"),
 			},
 			Description: "The severity of violation to be triggered if the `criteria` are met.",
 		},
