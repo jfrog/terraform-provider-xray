@@ -859,7 +859,7 @@ func TestAccSecurityPolicy_exposures(t *testing.T) {
 	testData["resource_name"] = resourceName
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-6-%d", testutil.RandomInt())
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-6-%d", testutil.RandomInt())
-	testData["exposures_min_severity"] = "high"
+	testData["exposures_min_severity"] = "High"
 	testData["exposures_secrets"] = "true"
 	testData["exposures_applications"] = "true"
 	testData["exposures_services"] = "true"

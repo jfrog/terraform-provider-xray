@@ -255,8 +255,8 @@ func TestAccRepositoryConfig_JasDisabled_exposures_set(t *testing.T) {
 
 func TestAccRepositoryConfig_RepoConfig_Create_VulnContextualAnalysis(t *testing.T) {
 	jasDisabled := os.Getenv("JFROG_JAS_DISABLED")
-	if strings.ToLower(jasDisabled) == "true" {
-		t.Skipf("Env var JFROG_JAS_DISABLED is set to 'true'")
+	if strings.ToLower(jasDisabled) != "false" {
+		t.Skipf("Env var JFROG_JAS_DISABLED is not set to 'false'")
 	}
 
 	testCase := []struct {
@@ -331,8 +331,8 @@ func testAccRepositoryConfigRepoConfigCreate_VulnContextualAnalysis(packageType,
 
 func TestAccRepositoryConfig_RepoConfigCreate_exposure(t *testing.T) {
 	jasDisabled := os.Getenv("JFROG_JAS_DISABLED")
-	if strings.ToLower(jasDisabled) == "true" {
-		t.Skipf("Env var JFROG_JAS_DISABLED is set to 'true'")
+	if strings.ToLower(jasDisabled) != "false" {
+		t.Skipf("Env var JFROG_JAS_DISABLED is not set to 'false'")
 	}
 
 	testCase := []struct {
@@ -566,6 +566,11 @@ func TestAccRepositoryConfig_Missing_RetentionInDays(t *testing.T) {
 }
 
 func TestAccRepositoryConfig_RepoPathsUpdate(t *testing.T) {
+	jasDisabled := os.Getenv("JFROG_JAS_DISABLED")
+	if strings.ToLower(jasDisabled) == "true" {
+		t.Skipf("Env var JFROG_JAS_DISABLED is set to 'true'")
+	}
+
 	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
 	_, _, repoName := testutil.MkNames("generic-local", "artifactory_local_generic_repository")
 

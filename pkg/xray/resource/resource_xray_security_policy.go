@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/jfrog/terraform-provider-shared/util"
+	"github.com/samber/lo"
 )
 
 var _ resource.Resource = &SecurityPolicyResource{}
@@ -145,10 +146,16 @@ func (r *SecurityPolicyResource) fromCriteriaAPIModel(ctx context.Context, crite
 
 		exposuresList := types.ListNull(exposuresElementType)
 		if criteraAPIModel.Exposures != nil {
+			var minSeverity *string
+			if criteraAPIModel.Exposures.MinSeverity != nil {
+				s := lo.Capitalize(*criteraAPIModel.Exposures.MinSeverity)
+				minSeverity = &s
+			}
+
 			exposures, d := types.ObjectValue(
 				exposuresAttrType,
 				map[string]attr.Value{
-					"min_severity": types.StringPointerValue(criteraAPIModel.Exposures.MinSeverity),
+					"min_severity": types.StringPointerValue(minSeverity),
 					"secrets":      types.BoolPointerValue(criteraAPIModel.Exposures.Secrets),
 					"applications": types.BoolPointerValue(criteraAPIModel.Exposures.Applications),
 					"services":     types.BoolPointerValue(criteraAPIModel.Exposures.Services),
@@ -310,9 +317,9 @@ var securityPolicyCriteriaBlocks = map[string]schema.Block{
 				"min_severity": schema.StringAttribute{
 					Optional: true,
 					Computed: true,
-					Default:  stringdefault.StaticString("All Severities"),
+					Default:  stringdefault.StaticString("All severities"),
 					Validators: []validator.String{
-						stringvalidator.OneOfCaseInsensitive("All Severities", "Critical", "High", "Medium", "Low"),
+						stringvalidator.OneOf("All severities", "Critical", "High", "Medium", "Low"),
 					},
 					MarkdownDescription: "The minimum security vulnerability severity that will be impacted by the policy. Valid values: `All Severities`, `Critical`, `High`, `Medium`, `Low`",
 				},
@@ -365,7 +372,7 @@ var securityPolicyCriteriaAttrs = map[string]schema.Attribute{
 	"min_severity": schema.StringAttribute{
 		Optional: true,
 		Validators: []validator.String{
-			stringvalidator.OneOfCaseInsensitive("All Severities", "Critical", "High", "Medium", "Low"),
+			stringvalidator.OneOf("All severities", "Critical", "High", "Medium", "Low"),
 			stringvalidator.ConflictsWith(
 				path.MatchRelative().AtParent().AtName("cvss_range"),
 			),
@@ -438,7 +445,7 @@ var securityPolicyCriteriaAttrs = map[string]schema.Attribute{
 	"package_type": schema.StringAttribute{
 		Optional: true,
 		Validators: []validator.String{
-			stringvalidator.OneOfCaseInsensitive(validPackageTypesSupportedXraySecPolicies...),
+			stringvalidator.OneOf(validPackageTypesSupportedXraySecPolicies...),
 			stringvalidator.AlsoRequires(
 				path.MatchRelative().AtParent().AtName("package_name"),
 			),

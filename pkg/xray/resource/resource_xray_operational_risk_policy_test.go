@@ -283,7 +283,7 @@ func TestAccOperationalRiskPolicy_customCriteria(t *testing.T) {
 	testData["op_risk_custom_release_cadence_per_year_less_than"] = testutil.RandSelect("1", "2", "3", "4", "5").(string)
 	testData["op_risk_custom_commits_less_than"] = testutil.RandSelect("10", "25", "50", "100").(string)
 	testData["op_risk_custom_committers_less_than"] = testutil.RandSelect("1", "2", "3", "4", "5").(string)
-	testData["op_risk_custom_risk"] = testutil.RandSelect("high", "medium", "low").(string)
+	testData["op_risk_custom_risk"] = testutil.RandSelect("High", "Medium", "Low").(string)
 
 	const opertionalRiskPolicyCustomUnset = `resource "xray_operational_risk_policy" "{{ .resource_name }}" {
 		name = "{{ .policy_name }}"
@@ -394,7 +394,7 @@ func TestAccOperationalRiskPolicy_customCriteria_migration(t *testing.T) {
 	testData["policy_name"] = fmt.Sprintf("terraform-operational-risk-policy-%d", testutil.RandomInt())
 	testData["op_risk_custom_use_and_condition"] = "true"
 	testData["op_risk_custom_is_eol"] = "false"
-	testData["op_risk_custom_risk"] = testutil.RandSelect("high", "medium", "low").(string)
+	testData["op_risk_custom_risk"] = testutil.RandSelect("High", "Medium", "Low").(string)
 	delete(testData, "block_release_bundle_promotion")
 
 	resource.Test(t, resource.TestCase{

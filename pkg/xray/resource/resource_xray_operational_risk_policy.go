@@ -77,7 +77,7 @@ var opRiskPolicyCriteriaAttrs = map[string]schema.Attribute{
 	"op_risk_min_risk": schema.StringAttribute{
 		Optional: true,
 		Validators: []validator.String{
-			stringvalidator.OneOfCaseInsensitive("High", "Medium", "Low"),
+			stringvalidator.OneOf("High", "Medium", "Low"),
 			stringvalidator.ConflictsWith(
 				path.MatchRelative().AtParent().AtName("op_risk_custom"),
 			),
@@ -138,11 +138,11 @@ var opRiskPolicyCriteriaBlocks = map[string]schema.Block{
 				"risk": schema.StringAttribute{
 					Optional: true,
 					Computed: true,
-					Default:  stringdefault.StaticString("low"),
+					Default:  stringdefault.StaticString("Low"),
 					Validators: []validator.String{
-						stringvalidator.OneOfCaseInsensitive("high", "medium", "low"),
+						stringvalidator.OneOf("High", "Medium", "Low"),
 					},
-					Description: "Risk severity: low, medium, high",
+					Description: "Risk severity: Low, Medium, High",
 				},
 			},
 		},
