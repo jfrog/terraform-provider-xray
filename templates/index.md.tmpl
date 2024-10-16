@@ -66,6 +66,8 @@ In your workspace, add an environment variable `TFC_WORKLOAD_IDENTITY_AUDIENCE` 
 
 When a run starts on Terraform Cloud, it will create a workload identity token with the specified audience and assigns it to the environment variable `TFC_WORKLOAD_IDENTITY_TOKEN` for the provider to consume.
 
+See [Generating Multiple Tokens](https://developer.hashicorp.com/terraform/cloud-docs/workspaces/dynamic-provider-credentials/manual-generation#generating-multiple-tokens) on HCP Terraform for more details on using different tokens.
+
 #### Setup Terraform Cloud in your configuration
 
 Add `cloud` block to `terraform` block, and add `oidc_provider_name` attribute (from JFrog OIDC integration) to provider block:
@@ -90,6 +92,7 @@ terraform {
 provider "xray" {
   url = "https://myinstance.jfrog.io"
   oidc_provider_name = "terraform-cloud"
+  tfc_credential_tag_name = "JFROG"
 }
 ```
 
