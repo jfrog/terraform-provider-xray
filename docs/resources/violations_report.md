@@ -67,18 +67,18 @@ resource "xray_violations_report" "report" {
 
 ### Required
 
-- `filters` (Block Set, Min: 1) Advanced filters. (see [below for nested schema](#nestedblock--filters))
 - `name` (String) Name of the report.
-- `resources` (Block Set, Min: 1, Max: 1) The list of resources to include into the report. (see [below for nested schema](#nestedblock--resources))
 
 ### Optional
 
+- `filters` (Block Set) Advanced filters. (see [below for nested schema](#nestedblock--filters))
 - `project_key` (String) Project key for assigning this resource to. Must be 2 - 10 lowercase alphanumeric and hyphen characters.
-- `report_id` (Number) Report ID
+- `resources` (Block Set) The list of resources to include into the report. (see [below for nested schema](#nestedblock--resources))
 
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+- `report_id` (Number) Report ID
 
 <a id="nestedblock--filters"></a>
 ### Nested Schema for `filters`
@@ -87,14 +87,14 @@ Optional:
 
 - `artifact` (String) Filter by artifact name, you can use (*) at the beginning or end of a substring as a wildcard.
 - `component` (String) Filter by component name, you can use (*) at the beginning or end of a substring as a wildcard.
-- `license_filters` (Block Set, Max: 1) Licenses Filters. (see [below for nested schema](#nestedblock--filters--license_filters))
+- `license_filters` (Block Set) Licenses Filters. (see [below for nested schema](#nestedblock--filters--license_filters))
 - `policy_names` (Set of String) Select Xray policies by name.
-- `security_filters` (Block Set, Max: 1) Security Filters. (see [below for nested schema](#nestedblock--filters--security_filters))
+- `security_filters` (Block Set) Security Filters. (see [below for nested schema](#nestedblock--filters--security_filters))
 - `severities` (Set of String) Risk/severity levels. Allowed values: 'None', 'Low', 'Medium', 'High'.
 - `type` (String) Violation type.
-- `updated` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--filters--updated))
+- `updated` (Block Set) (see [below for nested schema](#nestedblock--filters--updated))
 - `watch_names` (Set of String) Select Xray watch by names. Only one attribute - 'watch_names' or 'watch_patterns' can be set.
-- `watch_patterns` (Set of String) Select Xray watch name by patterns. Only one attribute - 'watch_names' or 'watch_patterns' can be set.
+- `watch_patterns` (Set of String) Select Xray watch name by patterns. Only one attribute - 'watch_names' or 'watch_patterns' can be set..
 
 <a id="nestedblock--filters--license_filters"></a>
 ### Nested Schema for `filters.license_filters`
@@ -113,7 +113,7 @@ Optional:
 Optional:
 
 - `cve` (String) CVE.
-- `cvss_score` (Block Set, Max: 1) CVSS score. (see [below for nested schema](#nestedblock--filters--security_filters--cvss_score))
+- `cvss_score` (Block Set) CVSS score. (see [below for nested schema](#nestedblock--filters--security_filters--cvss_score))
 - `has_remediation` (Boolean) Whether the issue has a fix or not.
 - `issue_id` (String) Issue ID.
 - `summary_contains` (String) Vulnerability Summary.
@@ -143,9 +143,9 @@ Optional:
 
 Optional:
 
-- `builds` (Block Set, Max: 1) The builds to include into the report. Only one type of resource can be set per report. (see [below for nested schema](#nestedblock--resources--builds))
-- `projects` (Block Set, Max: 1) The projects to include into the report. Only one type of resource can be set per report. (see [below for nested schema](#nestedblock--resources--projects))
-- `release_bundles` (Block Set, Max: 1) The release bundles to include into the report. Only one type of resource can be set per report. (see [below for nested schema](#nestedblock--resources--release_bundles))
+- `builds` (Block Set) The builds to include into the report. Only one type of resource can be set per report. (see [below for nested schema](#nestedblock--resources--builds))
+- `projects` (Block Set) The projects to include into the report. Only one type of resource can be set per report. (see [below for nested schema](#nestedblock--resources--projects))
+- `release_bundles` (Block Set) The release bundles to include into the report. Only one type of resource can be set per report. (see [below for nested schema](#nestedblock--resources--release_bundles))
 - `repository` (Block Set) The list of repositories for the report. Only one type of resource can be set per report. (see [below for nested schema](#nestedblock--resources--repository))
 
 <a id="nestedblock--resources--builds"></a>
@@ -164,7 +164,7 @@ Optional:
 
 Optional:
 
-- `include_key_patterns` (Set of String) The list of include patterns.
+- `include_key_patterns` (Set of String) The list of include patterns
 - `names` (Set of String) The list of project names.
 - `number_of_latest_versions` (Number) The number of latest release bundle versions to include to the report.
 
