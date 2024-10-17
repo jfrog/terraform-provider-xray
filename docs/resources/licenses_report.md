@@ -48,18 +48,18 @@ resource "xray_licenses_report" "report" {
 
 ### Required
 
-- `filters` (Block Set, Min: 1) Advanced filters. (see [below for nested schema](#nestedblock--filters))
 - `name` (String) Name of the report.
-- `resources` (Block Set, Min: 1, Max: 1) The list of resources to include into the report. (see [below for nested schema](#nestedblock--resources))
 
 ### Optional
 
+- `filters` (Block Set) Advanced filters. (see [below for nested schema](#nestedblock--filters))
 - `project_key` (String) Project key for assigning this resource to. Must be 2 - 10 lowercase alphanumeric and hyphen characters.
-- `report_id` (Number) Report ID
+- `resources` (Block Set) The list of resources to include into the report. (see [below for nested schema](#nestedblock--resources))
 
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+- `report_id` (Number) Report ID
 
 <a id="nestedblock--filters"></a>
 ### Nested Schema for `filters`
@@ -70,7 +70,7 @@ Optional:
 - `component` (String) Artifact's component.
 - `license_names` (Set of String) Filter licenses by names. Only one of 'license_names' or 'license_patterns' can be set.
 - `license_patterns` (Set of String) Filter licenses by patterns. Only one of 'license_names' or 'license_patterns' can be set.
-- `scan_date` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--filters--scan_date))
+- `scan_date` (Block Set) (see [below for nested schema](#nestedblock--filters--scan_date))
 - `unknown` (Boolean) Unknown displays the components that Xray could not discover any licenses for.
 - `unrecognized` (Boolean) Unrecognized displays the components that Xray found licenses for, but these licenses are not Xray recognized licenses.
 
@@ -79,8 +79,8 @@ Optional:
 
 Optional:
 
-- `end` (String) Scan end date.
-- `start` (String) Scan start date.
+- `end` (String) Scanned end date.
+- `start` (String) Scanned start date.
 
 
 
@@ -89,9 +89,9 @@ Optional:
 
 Optional:
 
-- `builds` (Block Set, Max: 1) The builds to include into the report. Only one type of resource can be set per report. (see [below for nested schema](#nestedblock--resources--builds))
-- `projects` (Block Set, Max: 1) The projects to include into the report. Only one type of resource can be set per report. (see [below for nested schema](#nestedblock--resources--projects))
-- `release_bundles` (Block Set, Max: 1) The release bundles to include into the report. Only one type of resource can be set per report. (see [below for nested schema](#nestedblock--resources--release_bundles))
+- `builds` (Block Set) The builds to include into the report. Only one type of resource can be set per report. (see [below for nested schema](#nestedblock--resources--builds))
+- `projects` (Block Set) The projects to include into the report. Only one type of resource can be set per report. (see [below for nested schema](#nestedblock--resources--projects))
+- `release_bundles` (Block Set) The release bundles to include into the report. Only one type of resource can be set per report. (see [below for nested schema](#nestedblock--resources--release_bundles))
 - `repository` (Block Set) The list of repositories for the report. Only one type of resource can be set per report. (see [below for nested schema](#nestedblock--resources--repository))
 
 <a id="nestedblock--resources--builds"></a>
@@ -110,7 +110,7 @@ Optional:
 
 Optional:
 
-- `include_key_patterns` (Set of String) The list of include patterns.
+- `include_key_patterns` (Set of String) The list of include patterns
 - `names` (Set of String) The list of project names.
 - `number_of_latest_versions` (Number) The number of latest release bundle versions to include to the report.
 

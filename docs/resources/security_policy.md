@@ -126,13 +126,13 @@ resource "xray_security_policy" "malicious_package" {
 ### Required
 
 - `name` (String) Name of the policy (must be unique)
-- `rule` (Block Set, Min: 1) A list of user-defined rules allowing you to trigger violations for specific vulnerability or license breaches by setting a license or security criteria, with a corresponding set of automatic actions according to your needs. Rules are processed according to the ascending order in which they are placed in the Rules list on the Policy. If a rule is met, the subsequent rules in the list will not be applied. (see [below for nested schema](#nestedblock--rule))
 - `type` (String) Type of the policy
 
 ### Optional
 
 - `description` (String) More verbose description of the policy
 - `project_key` (String) Project key for assigning this resource to. Must be 2 - 10 lowercase alphanumeric and hyphen characters.
+- `rule` (Block Set) A list of user-defined rules allowing you to trigger violations for specific vulnerability or license breaches by setting a license or security criteria, with a corresponding set of automatic actions according to your needs. Rules are processed according to the ascending order in which they are placed in the Rules list on the Policy. If a rule is met, the subsequent rules in the list will not be applied. (see [below for nested schema](#nestedblock--rule))
 
 ### Read-Only
 
@@ -146,20 +146,20 @@ resource "xray_security_policy" "malicious_package" {
 
 Required:
 
-- `actions` (Block Set, Min: 1, Max: 1) Specifies the actions to take once a security policy violation has been triggered. (see [below for nested schema](#nestedblock--rule--actions))
-- `criteria` (Block Set, Min: 1, Max: 1) The set of security conditions to examine when an scanned artifact is scanned. (see [below for nested schema](#nestedblock--rule--criteria))
 - `name` (String) Name of the rule
 - `priority` (Number) Integer describing the rule priority. Must be at least 1
+
+Optional:
+
+- `actions` (Block Set) Specifies the actions to take once a security policy violation has been triggered. (see [below for nested schema](#nestedblock--rule--actions))
+- `criteria` (Block Set) The set of security conditions to examine when an scanned artifact is scanned. (see [below for nested schema](#nestedblock--rule--criteria))
 
 <a id="nestedblock--rule--actions"></a>
 ### Nested Schema for `rule.actions`
 
-Required:
-
-- `block_download` (Block Set, Min: 1, Max: 1) Block download of artifacts that meet the Artifact Filter and Severity Filter specifications for this watch (see [below for nested schema](#nestedblock--rule--actions--block_download))
-
 Optional:
 
+- `block_download` (Block Set) Block download of artifacts that meet the Artifact Filter and Severity Filter specifications for this watch (see [below for nested schema](#nestedblock--rule--actions--block_download))
 - `block_release_bundle_distribution` (Boolean) Blocks Release Bundle distribution to Edge nodes if a violation is found. Default value is `false`.
 - `block_release_bundle_promotion` (Boolean) Blocks Release Bundle promotion if a violation is found. Default value is `false`.
 - `build_failure_grace_period_in_days` (Number) Allow grace period for certain number of days. All violations will be ignored during this time. To be used only if `fail_build` is enabled.
@@ -188,8 +188,8 @@ Optional:
 - `applicable_cves_only` (Boolean) Default value is `false`. Mark to skip CVEs that are not applicable in the context of the artifact. The contextual analysis operation might be long and affect build time if the `fail_build` action is set.
 
 ~>Only supported by JFrog Advanced Security
-- `cvss_range` (Block List, Max: 1) The CVSS score range to apply to the rule. This is used for a fine-grained control, rather than using the predefined severities. The score range is based on CVSS v3 scoring, and CVSS v2 score is CVSS v3 score is not available. (see [below for nested schema](#nestedblock--rule--criteria--cvss_range))
-- `exposures` (Block List, Max: 1) Creates policy rules for specific exposures.
+- `cvss_range` (Block List) The CVSS score range to apply to the rule. This is used for a fine-grained control, rather than using the predefined severities. The score range is based on CVSS v3 scoring, and CVSS v2 score is CVSS v3 score is not available. (see [below for nested schema](#nestedblock--rule--criteria--cvss_range))
+- `exposures` (Block List) Creates policy rules for specific exposures.
 
 ~>Only supported by JFrog Advanced Security (see [below for nested schema](#nestedblock--rule--criteria--exposures))
 - `fix_version_dependant` (Boolean) Default value is `false`. Issues that do not have a fixed version are not generated until a fixed version is available. Must be `false` with `malicious_package` enabled.
