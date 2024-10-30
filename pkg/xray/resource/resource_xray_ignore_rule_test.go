@@ -607,7 +607,7 @@ func sourceTestCase(source string, t *testing.T) (*testing.T, resource.TestCase)
 
 func TestAccIgnoreRule_artifact(t *testing.T) {
 	_, fqrn, name := testutil.MkNames("ignore-rule-", "xray_ignore_rule")
-	expirationDate := time.Now().Add(time.Hour * 48)
+	expirationDate := time.Now().UTC().Add(time.Hour * 48)
 
 	config := util.ExecuteTemplate("TestAccIgnoreRule", `
 		resource "xray_ignore_rule" "{{ .name }}" {
@@ -624,7 +624,7 @@ func TestAccIgnoreRule_artifact(t *testing.T) {
 		}
 	`, map[string]interface{}{
 		"name":           name,
-		"expirationDate": expirationDate.Format("2006-01-02"),
+		"expirationDate": expirationDate.Local().Format("2006-01-02"),
 	})
 
 	resource.Test(t, resource.TestCase{
@@ -636,7 +636,7 @@ func TestAccIgnoreRule_artifact(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet(fqrn, "id"),
 					resource.TestCheckResourceAttr(fqrn, "notes", "fake notes"),
-					resource.TestCheckResourceAttr(fqrn, "expiration_date", expirationDate.Format("2006-01-02")),
+					resource.TestCheckResourceAttr(fqrn, "expiration_date", expirationDate.Local().Format("2006-01-02")),
 					resource.TestCheckResourceAttr(fqrn, "is_expired", "false"),
 					resource.TestCheckResourceAttr(fqrn, "artifact.#", "1"),
 					resource.TestCheckResourceAttr(fqrn, "artifact.0.name", "fake-name"),
