@@ -348,7 +348,7 @@ func (m *IgnoreRuleResourceModel) fromAPIModel(ctx context.Context, apiModel Ign
 
 	expiresAt := types.StringNull()
 	if apiModel.ExpiresAt != nil {
-		expiresAt = types.StringValue(apiModel.ExpiresAt.Format("2006-01-02"))
+		expiresAt = types.StringValue(apiModel.ExpiresAt.Local().Format("2006-01-02"))
 	}
 	m.ExpiredAt = expiresAt
 
