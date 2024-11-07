@@ -1,8 +1,15 @@
-## 2.13.1 (October 31, 2024). Tested on Artifactory 7.98.8 and Xray 3.104.18 with Terraform 1.9.8 and OpenTofu 1.8.5
+## 2.13.2 (November 8, 2024)
 
 BUG FIXES:
 
-* resource/xray_ignore_rule: Fix another date parsing issue with timezone for `expiration_date` attribute. Issue: [#265](https://github.com/jfrog/terraform-provider-xray/issues/265) PR: [#268](https://github.com/jfrog/terraform-provider-xray/issues/268)
+* resource/xray_security_policy: Fix "Provider produced inconsistent result after apply" error after resource creation. Issue: [#265](https://github.com/jfrog/terraform-provider-xray/issues/265) PR: [#268](https://github.com/jfrog/terraform-provider-xray/issues/268)
+
+
+## 2.13.1 (October 31, 2024). Tested on Artifactory 7.98.7 and Xray 3.104.18 with Terraform 1.9.8 and OpenTofu 1.8.4
+
+BUG FIXES:
+
+* resource/xray_ignore_rule: Fix another date parsing issue with timezone for `expiration_date` attribute. Issue: [#259](https://github.com/jfrog/terraform-provider-xray/issues/259) PR: [#260](https://github.com/jfrog/terraform-provider-xray/issues/260)
 
 ## 2.13.0 (October 17, 2024). Tested on Artifactory 7.90.14 and Xray 3.104.18 with Terraform 1.9.8 and OpenTofu 1.8.3
 
