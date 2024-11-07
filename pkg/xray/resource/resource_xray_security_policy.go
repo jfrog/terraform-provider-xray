@@ -87,9 +87,9 @@ func (r *SecurityPolicyResource) toCriteriaAPIModel(ctx context.Context, criteri
 		criteria = &PolicyRuleCriteriaAPIModel{
 			MinimumSeverity:     attrs["min_severity"].(types.String).ValueString(),
 			CVSSRange:           cvssRange,
-			FixVersionDependant: attrs["fix_version_dependant"].(types.Bool).ValueBool(),
-			ApplicableCVEsOnly:  attrs["applicable_cves_only"].(types.Bool).ValueBool(),
-			MaliciousPackage:    attrs["malicious_package"].(types.Bool).ValueBool(),
+			FixVersionDependant: attrs["fix_version_dependant"].(types.Bool).ValueBoolPointer(),
+			ApplicableCVEsOnly:  attrs["applicable_cves_only"].(types.Bool).ValueBoolPointer(),
+			MaliciousPackage:    attrs["malicious_package"].(types.Bool).ValueBoolPointer(),
 			VulnerabilityIds:    vulnerabilityIds,
 			Exposures:           exposures,
 			PackageName:         attrs["package_name"].(types.String).ValueString(),
@@ -105,23 +105,23 @@ func (r SecurityPolicyResource) toAPIModel(ctx context.Context, plan PolicyResou
 	return plan.toAPIModel(ctx, policy, r.toCriteriaAPIModel, toActionsAPIModel)
 }
 
-func (r *SecurityPolicyResource) fromCriteriaAPIModel(ctx context.Context, criteraAPIModel *PolicyRuleCriteriaAPIModel) (types.Set, diag.Diagnostics) {
+func (r *SecurityPolicyResource) fromCriteriaAPIModel(ctx context.Context, criteriaAPIModel *PolicyRuleCriteriaAPIModel) (types.Set, diag.Diagnostics) {
 	diags := diag.Diagnostics{}
 
 	criteriaSet := types.SetNull(securityCriteriaSetElementType)
-	if criteraAPIModel != nil {
+	if criteriaAPIModel != nil {
 		minimumSeverity := types.StringNull()
-		if criteraAPIModel.MinimumSeverity != "" {
-			minimumSeverity = types.StringValue(criteraAPIModel.MinimumSeverity)
+		if criteriaAPIModel.MinimumSeverity != "" {
+			minimumSeverity = types.StringValue(criteriaAPIModel.MinimumSeverity)
 		}
 
 		cvssRangeList := types.ListNull(cvssRangeElementType)
-		if criteraAPIModel.CVSSRange != nil {
+		if criteriaAPIModel.CVSSRange != nil {
 			cvssRange, d := types.ObjectValue(
 				cvssRangeAttrType,
 				map[string]attr.Value{
-					"from": types.Float64PointerValue(criteraAPIModel.CVSSRange.From),
-					"to":   types.Float64PointerValue(criteraAPIModel.CVSSRange.To),
+					"from": types.Float64PointerValue(criteriaAPIModel.CVSSRange.From),
+					"to":   types.Float64PointerValue(criteriaAPIModel.CVSSRange.To),
 				},
 			)
 			if d.HasError() {
@@ -139,16 +139,16 @@ func (r *SecurityPolicyResource) fromCriteriaAPIModel(ctx context.Context, crite
 			cvssRangeList = cr
 		}
 
-		vulnerabilityIDs, d := types.SetValueFrom(ctx, types.StringType, criteraAPIModel.VulnerabilityIds)
+		vulnerabilityIDs, d := types.SetValueFrom(ctx, types.StringType, criteriaAPIModel.VulnerabilityIds)
 		if d.HasError() {
 			diags.Append(d...)
 		}
 
 		exposuresList := types.ListNull(exposuresElementType)
-		if criteraAPIModel.Exposures != nil {
+		if criteriaAPIModel.Exposures != nil {
 			var minSeverity *string
-			if criteraAPIModel.Exposures.MinSeverity != nil {
-				s := lo.Capitalize(*criteraAPIModel.Exposures.MinSeverity)
+			if criteriaAPIModel.Exposures.MinSeverity != nil {
+				s := lo.Capitalize(*criteriaAPIModel.Exposures.MinSeverity)
 				minSeverity = &s
 			}
 
@@ -156,10 +156,10 @@ func (r *SecurityPolicyResource) fromCriteriaAPIModel(ctx context.Context, crite
 				exposuresAttrType,
 				map[string]attr.Value{
 					"min_severity": types.StringPointerValue(minSeverity),
-					"secrets":      types.BoolPointerValue(criteraAPIModel.Exposures.Secrets),
-					"applications": types.BoolPointerValue(criteraAPIModel.Exposures.Applications),
-					"services":     types.BoolPointerValue(criteraAPIModel.Exposures.Services),
-					"iac":          types.BoolPointerValue(criteraAPIModel.Exposures.Iac),
+					"secrets":      types.BoolPointerValue(criteriaAPIModel.Exposures.Secrets),
+					"applications": types.BoolPointerValue(criteriaAPIModel.Exposures.Applications),
+					"services":     types.BoolPointerValue(criteriaAPIModel.Exposures.Services),
+					"iac":          types.BoolPointerValue(criteriaAPIModel.Exposures.Iac),
 				},
 			)
 			if d.HasError() {
@@ -178,16 +178,16 @@ func (r *SecurityPolicyResource) fromCriteriaAPIModel(ctx context.Context, crite
 		}
 
 		packageName := types.StringNull()
-		if criteraAPIModel.PackageName != "" {
-			packageName = types.StringValue(criteraAPIModel.PackageName)
+		if criteriaAPIModel.PackageName != "" {
+			packageName = types.StringValue(criteriaAPIModel.PackageName)
 		}
 
 		packageType := types.StringNull()
-		if criteraAPIModel.PackageType != "" {
-			packageType = types.StringValue(criteraAPIModel.PackageType)
+		if criteriaAPIModel.PackageType != "" {
+			packageType = types.StringValue(criteriaAPIModel.PackageType)
 		}
 
-		packageVersions, d := types.SetValueFrom(ctx, types.StringType, criteraAPIModel.PackageVersions)
+		packageVersions, d := types.SetValueFrom(ctx, types.StringType, criteriaAPIModel.PackageVersions)
 		if d.HasError() {
 			diags.Append(d...)
 		}
@@ -196,9 +196,9 @@ func (r *SecurityPolicyResource) fromCriteriaAPIModel(ctx context.Context, crite
 			securityCriteriaAttrTypes,
 			map[string]attr.Value{
 				"min_severity":          minimumSeverity,
-				"fix_version_dependant": types.BoolValue(criteraAPIModel.FixVersionDependant),
-				"applicable_cves_only":  types.BoolValue(criteraAPIModel.ApplicableCVEsOnly),
-				"malicious_package":     types.BoolValue(criteraAPIModel.MaliciousPackage),
+				"fix_version_dependant": types.BoolPointerValue(criteriaAPIModel.FixVersionDependant),
+				"applicable_cves_only":  types.BoolPointerValue(criteriaAPIModel.ApplicableCVEsOnly),
+				"malicious_package":     types.BoolPointerValue(criteriaAPIModel.MaliciousPackage),
 				"cvss_range":            cvssRangeList,
 				"vulnerability_ids":     vulnerabilityIDs,
 				"exposures":             exposuresList,
@@ -381,20 +381,14 @@ var securityPolicyCriteriaAttrs = map[string]schema.Attribute{
 	},
 	"fix_version_dependant": schema.BoolAttribute{
 		Optional:    true,
-		Computed:    true,
-		Default:     booldefault.StaticBool(false),
-		Description: "Default value is `false`. Issues that do not have a fixed version are not generated until a fixed version is available. Must be `false` with `malicious_package` enabled.",
+		Description: "Issues that do not have a fixed version are not generated until a fixed version is available. Must be `false` with `malicious_package` enabled.",
 	},
 	"applicable_cves_only": schema.BoolAttribute{
 		Optional:    true,
-		Computed:    true,
-		Default:     booldefault.StaticBool(false),
-		Description: "Default value is `false`. Mark to skip CVEs that are not applicable in the context of the artifact. The contextual analysis operation might be long and affect build time if the `fail_build` action is set.\n\n~>Only supported by JFrog Advanced Security",
+		Description: "Mark to skip CVEs that are not applicable in the context of the artifact. The contextual analysis operation might be long and affect build time if the `fail_build` action is set.\n\n~>Only supported by JFrog Advanced Security",
 	},
 	"malicious_package": schema.BoolAttribute{
 		Optional: true,
-		Computed: true,
-		Default:  booldefault.StaticBool(false),
 		Validators: []validator.Bool{
 			boolvalidator.ConflictsWith(
 				path.MatchRelative().AtParent().AtName("min_severity"),
@@ -403,7 +397,7 @@ var securityPolicyCriteriaAttrs = map[string]schema.Attribute{
 				path.MatchRelative().AtParent().AtName("cvss_range"),
 			),
 		},
-		Description: "Default value is `false`. Generating a violation on a malicious package.",
+		Description: "Generating a violation on a malicious package.",
 	},
 	"vulnerability_ids": schema.SetAttribute{
 		ElementType: types.StringType,
