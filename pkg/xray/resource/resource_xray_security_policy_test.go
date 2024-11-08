@@ -1207,10 +1207,7 @@ const securityPolicyTwoRules = `resource "xray_security_policy" "{{ .resource_na
 		name = "{{ .rule_name_1 }}"
 		priority = 1
 		criteria {
-			cvss_range {
-				from = {{ .cvss_from }}
-				to = {{ .cvss_to }}
-			}
+			min_severity = "{{ .min_severity }}"
 		}
 		actions {
 			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
