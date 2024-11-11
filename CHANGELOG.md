@@ -1,3 +1,10 @@
+## 2.13.2 (November 8, 2024). Tested on Artifactory 7.98.8 and Xray 3.104.18 with Terraform 1.9.8 and OpenTofu 1.8.5
+
+BUG FIXES:
+
+* resource/xray_security_policy: Fix "Provider produced inconsistent result after apply" error after resource creation. Issue: [#265](https://github.com/jfrog/terraform-provider-xray/issues/265) PR: [#268](https://github.com/jfrog/terraform-provider-xray/issues/268)
+
+
 ## 2.13.1 (October 31, 2024). Tested on Artifactory 7.98.7 and Xray 3.104.18 with Terraform 1.9.8 and OpenTofu 1.8.4
 
 BUG FIXES:

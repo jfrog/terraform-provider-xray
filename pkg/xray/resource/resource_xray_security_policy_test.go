@@ -27,9 +27,8 @@ var testDataSecurity = map[string]string{
 	"policy_name":                       "terraform-security-policy",
 	"policy_description":                "policy created by xray acceptance tests",
 	"rule_name":                         "test-security-rule",
-	"cvss_from":                         "1", // conflicts with min_severity
-	"cvss_to":                           "5", // conflicts with min_severity
-	"applicable_cves_only":              fmt.Sprintf("%t", testutil.RandBool()),
+	"cvss_from":                         "1",    // conflicts with min_severity
+	"cvss_to":                           "5",    // conflicts with min_severity
 	"min_severity":                      "High", // conflicts with cvss_from/cvss_to
 	"block_release_bundle_distribution": "true",
 	"block_release_bundle_promotion":    "true",
@@ -50,7 +49,6 @@ func TestAccSecurityPolicy_UpgradeFromSDKv2(t *testing.T) {
 	testData["resource_name"] = resourceName
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-4-%d", testutil.RandomInt())
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-4-%d", testutil.RandomInt())
-	testData["applicable_cves_only"] = "false"
 
 	template := `
 	resource "xray_security_policy" "{{ .resource_name }}" {
@@ -329,7 +327,6 @@ func TestAccSecurityPolicy_withProjectKey(t *testing.T) {
 	testData["project_key"] = projectKey
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-4-%d", testutil.RandomInt())
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-4-%d", testutil.RandomInt())
-	testData["applicable_cves_only"] = "false"
 
 	template := `
 	resource "project" "{{ .project_key }}" {
@@ -417,7 +414,6 @@ func TestAccSecurityPolicy_createBlockDownloadTrueCVSS(t *testing.T) {
 	testData["resource_name"] = resourceName
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-4-%d", testutil.RandomInt())
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-4-%d", testutil.RandomInt())
-	testData["applicable_cves_only"] = "false"
 
 	resource.Test(t, resource.TestCase{
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
@@ -445,7 +441,6 @@ func TestAccSecurityPolicy_createBlockDownloadFalseCVSS(t *testing.T) {
 	testData["resource_name"] = resourceName
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-5-%d", testutil.RandomInt())
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-5-%d", testutil.RandomInt())
-	testData["applicable_cves_only"] = "false"
 	testData["block_unscanned"] = "false"
 	testData["block_active"] = "false"
 
@@ -652,7 +647,6 @@ func TestAccSecurityPolicy_createCVSSFloat(t *testing.T) {
 	testData["resource_name"] = resourceName
 	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-8-%d", testutil.RandomInt())
 	testData["rule_name"] = fmt.Sprintf("test-security-rule-8-%d", testutil.RandomInt())
-	testData["applicable_cves_only"] = "false"
 	testData["cvss_from"] = "1.5"
 	testData["cvss_to"] = "5.3"
 
@@ -1036,12 +1030,12 @@ func verifySecurityPolicy(fqrn string, testData map[string]string, criteriaType 
 		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.block_download.0.active", testData["block_active"]),
 		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.block_download.0.unscanned", testData["block_unscanned"]),
 	)
+
 	if criteriaType == criteriaTypeCvss {
 		return resource.ComposeTestCheckFunc(
 			commonCheckList,
 			resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.cvss_range.0.from", testData["cvss_from"]),
 			resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.cvss_range.0.to", testData["cvss_to"]),
-			resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.applicable_cves_only", testData["applicable_cves_only"]),
 		)
 	}
 	if criteriaType == criteriaTypeSeverity {
@@ -1213,10 +1207,7 @@ const securityPolicyTwoRules = `resource "xray_security_policy" "{{ .resource_na
 		name = "{{ .rule_name_1 }}"
 		priority = 1
 		criteria {
-			cvss_range {
-				from = {{ .cvss_from }}
-				to = {{ .cvss_to }}
-			}
+			min_severity = "{{ .min_severity }}"
 		}
 		actions {
 			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
