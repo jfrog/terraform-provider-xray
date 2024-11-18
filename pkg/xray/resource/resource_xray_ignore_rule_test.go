@@ -12,7 +12,7 @@ import (
 	"github.com/jfrog/terraform-provider-shared/client"
 	"github.com/jfrog/terraform-provider-shared/testutil"
 	"github.com/jfrog/terraform-provider-shared/util"
-	"github.com/jfrog/terraform-provider-xray/pkg/acctest"
+	"github.com/jfrog/terraform-provider-xray/v3/pkg/acctest"
 )
 
 func TestAccIgnoreRule_UpgradeFromSDKv2(t *testing.T) {

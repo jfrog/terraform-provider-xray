@@ -1,4 +1,4 @@
-module github.com/jfrog/terraform-provider-xray
+module github.com/jfrog/terraform-provider-xray/v3
 
 // if you need to do local dev, literally just uncomment the line below
 // replace github.com/jfrog/terraform-provider-shared => ../terraform-provider-shared

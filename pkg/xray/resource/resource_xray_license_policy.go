@@ -3,9 +3,11 @@ package xray
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -42,13 +44,13 @@ func (r LicensePolicyResource) toCriteriaAPIModel(ctx context.Context, criteriaE
 		attrs := criteriaElems[0].(types.Object).Attributes()
 
 		var allowedLicenses []string
-		d := attrs["allowed_licenses"].(types.Set).ElementsAs(ctx, &allowedLicenses, false)
+		d := attrs["allowed_licenses"].(types.List).ElementsAs(ctx, &allowedLicenses, false)
 		if d.HasError() {
 			diags.Append(d...)
 		}
 
 		var bannedLicenses []string
-		d = attrs["banned_licenses"].(types.Set).ElementsAs(ctx, &bannedLicenses, false)
+		d = attrs["banned_licenses"].(types.List).ElementsAs(ctx, &bannedLicenses, false)
 		if d.HasError() {
 			diags.Append(d...)
 		}
@@ -82,8 +84,8 @@ func (r LicensePolicyResource) toAPIModel(ctx context.Context, plan PolicyResour
 var licenseCriteriaAttrTypes = lo.Assign(
 	map[string]attr.Type{
 		"allow_unknown":            types.BoolType,
-		"allowed_licenses":         types.SetType{ElemType: types.StringType},
-		"banned_licenses":          types.SetType{ElemType: types.StringType},
+		"allowed_licenses":         types.ListType{ElemType: types.StringType},
+		"banned_licenses":          types.ListType{ElemType: types.StringType},
 		"multi_license_permissive": types.BoolType,
 	},
 )
@@ -97,12 +99,12 @@ func (r *LicensePolicyResource) fromCriteriaAPIModel(ctx context.Context, criter
 
 	criteriaSet := types.SetNull(licenseCriteriaSetElementType)
 	if criteraAPIModel != nil {
-		allowedLicenses, d := types.SetValueFrom(ctx, types.StringType, criteraAPIModel.AllowedLicenses)
+		allowedLicenses, d := types.ListValueFrom(ctx, types.StringType, criteraAPIModel.AllowedLicenses)
 		if d.HasError() {
 			diags.Append(d...)
 		}
 
-		bannedLicenses, d := types.SetValueFrom(ctx, types.StringType, criteraAPIModel.BannedLicenses)
+		bannedLicenses, d := types.ListValueFrom(ctx, types.StringType, criteraAPIModel.BannedLicenses)
 		if d.HasError() {
 			diags.Append(d...)
 		}
@@ -232,14 +234,20 @@ var licenseRuleSetElementType = types.ObjectType{
 }
 
 var licensePolicyCriteriaAttrs = map[string]schema.Attribute{
-	"banned_licenses": schema.SetAttribute{
+	"banned_licenses": schema.ListAttribute{
 		ElementType: types.StringType,
 		Optional:    true,
+		Validators: []validator.List{
+			listvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("allowed_licenses")),
+		},
 		Description: "A list of OSS license names that may not be attached to a component. Supports custom licenses added by the user, but there is no verification if the license exists on the Xray side. If the added license doesn't exist, the policy won't trigger the violation.",
 	},
-	"allowed_licenses": schema.SetAttribute{
+	"allowed_licenses": schema.ListAttribute{
 		ElementType: types.StringType,
 		Optional:    true,
+		Validators: []validator.List{
+			listvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("banned_licenses")),
+		},
 		Description: "A list of OSS license names that may be attached to a component. Supports custom licenses added by the user, but there is no verification if the license exists on the Xray side. If the added license doesn't exist, the policy won't trigger the violation.",
 	},
 	"allow_unknown": schema.BoolAttribute{

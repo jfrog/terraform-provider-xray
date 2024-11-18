@@ -14,11 +14,11 @@ import (
 	"github.com/jfrog/terraform-provider-shared/client"
 	"github.com/jfrog/terraform-provider-shared/util"
 	validatorfw_string "github.com/jfrog/terraform-provider-shared/validator/fw/string"
-	xray_datasource "github.com/jfrog/terraform-provider-xray/pkg/xray/datasource"
-	xray_resource "github.com/jfrog/terraform-provider-xray/pkg/xray/resource"
+	xray_datasource "github.com/jfrog/terraform-provider-xray/v3/pkg/xray/datasource"
+	xray_resource "github.com/jfrog/terraform-provider-xray/v3/pkg/xray/resource"
 )
 
-var Version = "2.11.1"
+var Version = "3.0.0"
 var productId = "terraform-provider-xray/" + Version
 
 // Ensure the implementation satisfies the provider.Provider interface.
@@ -34,7 +34,6 @@ type XrayProviderModel struct {
 	AccessToken          types.String `tfsdk:"access_token"`
 	OIDCProviderName     types.String `tfsdk:"oidc_provider_name"`
 	TFCCredentialTagName types.String `tfsdk:"tfc_credential_tag_name"`
-	CheckLicense         types.Bool   `tfsdk:"check_license"`
 }
 
 // Metadata satisfies the provider.Provider interface for ArtifactoryProvider
@@ -75,11 +74,6 @@ func (p *XrayProvider) Schema(ctx context.Context, req provider.SchemaRequest, r
 					stringvalidator.LengthAtLeast(1),
 				},
 				Description: "Terraform Cloud Workload Identity Token tag name. Use for generating multiple TFC workload identity tokens. When set, the provider will attempt to use env var with this tag name as suffix. **Note:** this is case sensitive, so if set to `JFROG`, then env var `TFC_WORKLOAD_IDENTITY_TOKEN_JFROG` is used instead of `TFC_WORKLOAD_IDENTITY_TOKEN`. See [Generating Multiple Tokens](https://developer.hashicorp.com/terraform/cloud-docs/workspaces/dynamic-provider-credentials/manual-generation#generating-multiple-tokens) on HCP Terraform for more details.",
-			},
-			"check_license": schema.BoolAttribute{
-				Optional:           true,
-				Description:        "Toggle for pre-flight checking of Artifactory Pro and Enterprise license. Default to `true`.",
-				DeprecationMessage: "Remove this attribute from your provider configuration as it is no longer used and the attribute will be removed in the next major version of the provider.",
 			},
 		},
 	}
