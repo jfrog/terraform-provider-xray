@@ -73,13 +73,13 @@ func (m RepoConfigResourceModel) toAPIModel(_ context.Context, xrayVersion, pack
 						exp := ExposuresAPIModel{}
 
 						switch packageType {
-						case "docker":
+						case "docker", "oci":
 							exp.ScannersCategory = map[string]bool{
 								"services_scan":     scannerCategoryAttrs["services"].(types.Bool).ValueBool(),
 								"secrets_scan":      scannerCategoryAttrs["secrets"].(types.Bool).ValueBool(),
 								"applications_scan": scannerCategoryAttrs["applications"].(types.Bool).ValueBool(),
 							}
-						case "maven":
+						case "maven", "nuget":
 							exp.ScannersCategory = map[string]bool{
 								"secrets_scan": scannerCategoryAttrs["secrets"].(types.Bool).ValueBool(),
 							}
@@ -217,12 +217,24 @@ var pathsConfigSetResourceModelElementTypes types.ObjectType = types.ObjectType{
 var exposuresPackageTypes = func(xrayVersion string) []string {
 	packageTypes := []string{"docker", "terraformbackend"}
 
+	if ok, err := util.CheckVersion(xrayVersion, "3.59.4"); err == nil && ok {
+		packageTypes = append(packageTypes, "oci")
+	}
+
 	if ok, err := util.CheckVersion(xrayVersion, "3.78.9"); err == nil && ok {
 		packageTypes = append(packageTypes, "maven", "npm", "pypi")
 	}
 
+	if ok, err := util.CheckVersion(xrayVersion, "3.101.5"); err == nil && ok {
+		packageTypes = append(packageTypes, "cocoapods")
+	}
+
 	if ok, err := util.CheckVersion(xrayVersion, "3.102.3"); err == nil && ok {
 		packageTypes = append(packageTypes, "generic")
+	}
+
+	if ok, err := util.CheckVersion(xrayVersion, "3.106.4"); err == nil && ok {
+		packageTypes = append(packageTypes, "nuget")
 	}
 
 	return packageTypes
@@ -230,6 +242,10 @@ var exposuresPackageTypes = func(xrayVersion string) []string {
 
 var vulnContextualAnalysisPackageTypes = func(xrayVersion string) []string {
 	packageTypes := []string{"docker"}
+
+	if ok, err := util.CheckVersion(xrayVersion, "3.59.4"); err == nil && ok {
+		packageTypes = append(packageTypes, "oci")
+	}
 
 	if ok, err := util.CheckVersion(xrayVersion, "3.77.4"); err == nil && ok {
 		packageTypes = append(packageTypes, "maven")
@@ -268,11 +284,11 @@ func (m *RepoConfigResourceModel) fromAPIModel(_ context.Context, xrayVersion, p
 				}
 
 				switch packageType {
-				case "docker":
+				case "docker", "oci":
 					scannersCategoryAttrValues["services"] = types.BoolValue(apiModel.RepoConfig.Exposures.ScannersCategory["services_scan"])
 					scannersCategoryAttrValues["secrets"] = types.BoolValue(apiModel.RepoConfig.Exposures.ScannersCategory["secrets_scan"])
 					scannersCategoryAttrValues["applications"] = types.BoolValue(apiModel.RepoConfig.Exposures.ScannersCategory["applications_scan"])
-				case "maven":
+				case "maven", "nuget":
 					scannersCategoryAttrValues["secrets"] = types.BoolValue(apiModel.RepoConfig.Exposures.ScannersCategory["secrets_scan"])
 				case "npm", "pypi":
 					scannersCategoryAttrValues["secrets"] = types.BoolValue(apiModel.RepoConfig.Exposures.ScannersCategory["secrets_scan"])
