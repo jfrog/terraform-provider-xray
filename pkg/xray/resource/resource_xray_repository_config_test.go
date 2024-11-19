@@ -117,49 +117,60 @@ func TestAccRepositoryConfig_JasDisabled(t *testing.T) {
 		t.Skipf("Env var JFROG_JAS_DISABLED is not set to 'true'")
 	}
 
-	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
-	_, _, repoName := testutil.MkNames("local-generic-", "artifactory_local_generic_repository")
+	packageTypes := []string{"generic", "cocoapods"}
 
-	var testData = map[string]string{
-		"resource_name":     resourceName,
-		"repo_name":         repoName,
-		"retention_in_days": "90",
+	for _, packageType := range packageTypes {
+		t.Run(packageType, testAccRepositoryConfig(packageType))
 	}
-	config := util.ExecuteTemplate(
-		fqrn,
-		`resource "artifactory_local_generic_repository" "{{ .repo_name }}" {
+}
+
+func testAccRepositoryConfig(packageType string) func(t *testing.T) {
+	return func(t *testing.T) {
+		_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
+		_, _, repoName := testutil.MkNames(fmt.Sprintf("local-%s", packageType), fmt.Sprintf("artifactory_local_%s_repository", packageType))
+
+		var testData = map[string]string{
+			"package_type":      packageType,
+			"resource_name":     resourceName,
+			"repo_name":         repoName,
+			"retention_in_days": "90",
+		}
+		config := util.ExecuteTemplate(
+			fqrn,
+			`resource "artifactory_local_{{ .package_type }}_repository" "{{ .repo_name }}" {
 			key        = "{{ .repo_name }}"
 			xray_index = true
 		}
 
 		resource "xray_repository_config" "{{ .resource_name }}" {
-			repo_name   = artifactory_local_generic_repository.{{ .repo_name }}.key
+			repo_name   = artifactory_local_{{ .package_type }}_repository.{{ .repo_name }}.key
 			jas_enabled = false
 
 			config {
 				retention_in_days = {{ .retention_in_days }}
 			}
 		}`,
-		testData,
-	)
+			testData,
+		)
 
-	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
-		ExternalProviders: map[string]resource.ExternalProvider{
-			"artifactory": {
-				Source: "jfrog/artifactory",
+		resource.Test(t, resource.TestCase{
+			ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+			ExternalProviders: map[string]resource.ExternalProvider{
+				"artifactory": {
+					Source: "jfrog/artifactory",
+				},
 			},
-		},
-		Steps: []resource.TestStep{
-			{
-				Config: config,
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(fqrn, "repo_name", testData["repo_name"]),
-					resource.TestCheckResourceAttr(fqrn, "config.0.retention_in_days", testData["retention_in_days"]),
-				),
+			Steps: []resource.TestStep{
+				{
+					Config: config,
+					Check: resource.ComposeTestCheckFunc(
+						resource.TestCheckResourceAttr(fqrn, "repo_name", testData["repo_name"]),
+						resource.TestCheckResourceAttr(fqrn, "config.0.retention_in_days", testData["retention_in_days"]),
+					),
+				},
 			},
-		},
-	})
+		})
+	}
 }
 
 // TestAccRepositoryConfig_JasDisabled_vulnContextualAnalysis_set needs to be run against a JPD that does not have JAS enabled
@@ -391,6 +402,29 @@ func TestAccRepositoryConfig_RepoConfigCreate_exposure(t *testing.T) {
 			},
 		},
 		{
+			"nuget",
+			TestDataRepoConfigNugetTemplate,
+			"3.106.4",
+			func(fqrn string, testData map[string]string) resource.TestCheckFunc {
+				return resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.secrets", testData["secrets_scan"]),
+				)
+			},
+		},
+		{
+			"oci",
+			TestDataRepoConfigOCITemplate,
+			"3.59.4",
+			func(fqrn string, testData map[string]string) resource.TestCheckFunc {
+				return resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "jas_enabled", "true"),
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.services", testData["services_scan"]),
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.secrets", testData["secrets_scan"]),
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.applications", testData["applications_scan"]),
+				)
+			},
+		},
+		{
 			"pypi",
 			TestDataRepoConfigNpmPyPiTemplate,
 			"3.78.9",
@@ -420,7 +454,7 @@ func TestAccRepositoryConfig_RepoConfigCreate_no_exposure(t *testing.T) {
 		t.Skipf("Env var JFROG_JAS_DISABLED is set to 'true'")
 	}
 
-	packageTypes := []string{"alpine", "bower", "composer", "conan", "conda", "debian", "gems", "go", "gradle", "ivy", "nuget", "rpm", "sbt"}
+	packageTypes := []string{"alpine", "bower", "composer", "conan", "conda", "debian", "gems", "go", "gradle", "ivy", "rpm", "sbt"}
 	template := `
 	resource "artifactory_local_{{ .package_type }}_repository" "{{ .repo_name }}" {
 		key        = "{{ .repo_name }}"
@@ -484,8 +518,7 @@ func testAccRepositoryConfigRepoConfigCreate(packageType, template, validVersion
 			ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 			ExternalProviders: map[string]resource.ExternalProvider{
 				"artifactory": {
-					Source:            "jfrog/artifactory",
-					VersionConstraint: "10.1.2",
+					Source: "jfrog/artifactory",
 				},
 			},
 			Steps: []resource.TestStep{
@@ -731,6 +764,51 @@ resource "xray_repository_config" "{{ .resource_name }}" {
 
     exposures {
       scanners_category {
+        secrets      = true
+        applications = true
+      }
+	}
+  }
+}`
+
+const TestDataRepoConfigNugetTemplate = `
+resource "artifactory_local_nuget_repository" "{{ .repo_name }}" {
+	key        = "{{ .repo_name }}"
+	xray_index = true
+}
+
+resource "xray_repository_config" "{{ .resource_name }}" {
+  repo_name = artifactory_local_nuget_repository.{{ .repo_name }}.key
+  jas_enabled = true
+
+  config {
+    retention_in_days        = {{ .retention_in_days }}
+
+	exposures {
+      scanners_category {
+        secrets = true
+      }
+	}
+  }
+}`
+
+const TestDataRepoConfigOCITemplate = `
+resource "artifactory_local_oci_repository" "{{ .repo_name }}" {
+	key        = "{{ .repo_name }}"
+	xray_index = true
+}
+
+resource "xray_repository_config" "{{ .resource_name }}" {
+  repo_name   = artifactory_local_oci_repository.{{ .repo_name }}.key
+  jas_enabled = true
+
+  config {
+    retention_in_days        = {{ .retention_in_days }}
+	vuln_contextual_analysis = {{ .vuln_contextual_analysis }}
+
+	exposures {
+      scanners_category {
+        services     = true
         secrets      = true
         applications = true
       }
