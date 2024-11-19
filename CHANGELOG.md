@@ -8,6 +8,7 @@ BUG FIXES:
 
 * resource/xray_license_policy: Switch `allowed_licenses` and `banned_licenses` attribute type from `TypeSet` to `TypeList` to resolve performance issue with large number of licenses. Add validation to ensure `allowed_licenses` and `banned_licenses` attributes cannot be set at the same time. Issue: [#262](https://github.com/jfrog/terraform-provider-xray/issues/262) and [#271](https://github.com/jfrog/terraform-provider-xray/issues/271) PR: [#274](https://github.com/jfrog/terraform-provider-xray/issues/274)
 * resource/xray_security_policy: Fix validation not allowing `malicious_package` set to `false` when `min_severity` is set. Issue: [#272](https://github.com/jfrog/terraform-provider-xray/issues/272) PR: [#276](https://github.com/jfrog/terraform-provider-xray/issues/276)
+* resource/xray_repository_config: Add missing package types (`nuget` and `oci`) support for `exposure`. Add `cocoapods` package type support for scanning. Issue: [#273](https://github.com/jfrog/terraform-provider-xray/issues/273) PR: [#277](https://github.com/jfrog/terraform-provider-xray/issues/277)
 
 ## 2.13.2 (November 11, 2024). Tested on Artifactory 7.98.8 and Xray 3.104.18 with Terraform 1.9.8 and OpenTofu 1.8.5
 
