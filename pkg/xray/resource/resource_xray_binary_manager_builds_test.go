@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/jfrog/terraform-provider-shared/testutil"
 	"github.com/jfrog/terraform-provider-shared/util"
-	"github.com/jfrog/terraform-provider-xray/pkg/acctest"
+	"github.com/jfrog/terraform-provider-xray/v3/pkg/acctest"
 	"github.com/samber/lo"
 )
 

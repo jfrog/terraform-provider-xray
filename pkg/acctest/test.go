@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/jfrog/terraform-provider-shared/client"
 	"github.com/jfrog/terraform-provider-shared/testutil"
-	"github.com/jfrog/terraform-provider-xray/pkg/xray"
+	"github.com/jfrog/terraform-provider-xray/v3/pkg/xray"
 )
 
 // Provider PreCheck(t) must be called before using this provider instance.

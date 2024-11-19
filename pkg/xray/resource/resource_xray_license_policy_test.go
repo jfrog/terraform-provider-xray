@@ -10,7 +10,7 @@ import (
 	"github.com/jfrog/terraform-provider-shared/testutil"
 	"github.com/jfrog/terraform-provider-shared/util"
 	"github.com/jfrog/terraform-provider-shared/util/sdk"
-	"github.com/jfrog/terraform-provider-xray/pkg/acctest"
+	"github.com/jfrog/terraform-provider-xray/v3/pkg/acctest"
 )
 
 var testDataLicense = map[string]string{
@@ -82,7 +82,6 @@ func TestAccLicensePolicy_UpgradeFromSDKv2(t *testing.T) {
 	config := util.ExecuteTemplate(fqrn, template, testData)
 
 	resource.Test(t, resource.TestCase{
-		CheckDestroy: acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
 		Steps: []resource.TestStep{
 			{
 				ExternalProviders: map[string]resource.ExternalProvider{
@@ -97,8 +96,13 @@ func TestAccLicensePolicy_UpgradeFromSDKv2(t *testing.T) {
 				),
 			},
 			{
-				Config:                   config,
-				ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+				Config: config,
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"xray": {
+						Source:            "jfrog/xray",
+						VersionConstraint: "2.13.2",
+					},
+				},
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectEmptyPlan(),
@@ -490,3 +494,77 @@ const licensePolicyTemplate = `resource "xray_license_policy" "{{ .resource_name
 		}
 	}
 }`
+
+func TestAccLicensePolicy_MigrateSetToList(t *testing.T) {
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_license_policy")
+
+	testData := sdk.MergeMaps(testDataLicense)
+	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-license-policy-3-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-license-rule-3-%d", testutil.RandomInt())
+	testData["multi_license_permissive"] = "true"
+	testData["allowedOrBanned"] = "allowed_licenses"
+
+	template := `
+	resource "xray_license_policy" "{{ .resource_name }}" {
+		name        = "{{ .policy_name }}"
+		description = "{{ .policy_description }}"
+		type        = "license"
+
+		rule {
+			name = "{{ .rule_name }}"
+			priority = 1
+
+			criteria {
+	          allowed_licenses = ["{{ .license_0 }}","{{ .license_1 }}"]
+	          allow_unknown = {{ .allow_unknown }}
+	          multi_license_permissive = {{ .multi_license_permissive }}
+			}
+
+			actions {
+	          mails = ["{{ .mails_0 }}", "{{ .mails_1 }}"]
+	          block_download {
+					unscanned = {{ .block_unscanned }}
+					active = {{ .block_active }}
+	          }
+	          block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+	          block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
+	          fail_build = {{ .fail_build }}
+	          notify_watch_recipients = {{ .notify_watch_recipients }}
+	          notify_deployer = {{ .notify_deployer }}
+	          create_ticket_enabled = {{ .create_ticket_enabled }}
+	          custom_severity = "{{ .custom_severity }}"
+	          build_failure_grace_period_in_days = {{ .grace_period_days }}
+			}
+		}
+	}`
+
+	config := util.ExecuteTemplate(fqrn, template, testData)
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy: acctest.VerifyDeleted(fqrn, testData["resource_name"], acctest.CheckPolicy),
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"xray": {
+						Source:            "jfrog/xray",
+						VersionConstraint: "2.13.2",
+					},
+				},
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					verifyLicensePolicy(fqrn, testData, testData["allowedOrBanned"]),
+				),
+			},
+			{
+				Config:                   config,
+				ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+		},
+	})
+}

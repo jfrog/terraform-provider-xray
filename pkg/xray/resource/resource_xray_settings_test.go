@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/jfrog/terraform-provider-shared/testutil"
 	"github.com/jfrog/terraform-provider-shared/util"
-	"github.com/jfrog/terraform-provider-xray/pkg/acctest"
+	"github.com/jfrog/terraform-provider-xray/v3/pkg/acctest"
 )
 
 func TestAccSettings_UpgradeFromSDKv2(t *testing.T) {

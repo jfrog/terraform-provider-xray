@@ -132,7 +132,7 @@ Optional:
 - `block_download` (Block Set) Block download of artifacts that meet the Artifact Filter and Severity Filter specifications for this watch (see [below for nested schema](#nestedblock--rule--actions--block_download))
 - `block_release_bundle_distribution` (Boolean) Blocks Release Bundle distribution to Edge nodes if a violation is found. Default value is `false`.
 - `block_release_bundle_promotion` (Boolean) Blocks Release Bundle promotion if a violation is found. Default value is `false`.
-- `build_failure_grace_period_in_days` (Number) Allow grace period for certain number of days. All violations will be ignored during this time. To be used only if `fail_build` is enabled.
+- `build_failure_grace_period_in_days` (Number) Allow grace period for certain number of days. All violations will be ignored during this time. To be used only if `fail_build` is enabled. Default value is `0`
 - `create_ticket_enabled` (Boolean) Create Jira Ticket for this Policy Violation. Requires configured Jira integration. Default value is `false`.
 - `custom_severity` (String) The severity of violation to be triggered if the `criteria` are met.
 - `fail_build` (Boolean) Whether or not the related CI build should be marked as failed if a violation is triggered. This option is only available when the policy is applied to an `xray_watch` resource with a `type` of `builds`. Default value is `false`.
@@ -157,8 +157,8 @@ Optional:
 Optional:
 
 - `allow_unknown` (Boolean) A violation will be generated for artifacts with unknown licenses (`true` or `false`).
-- `allowed_licenses` (Set of String) A list of OSS license names that may be attached to a component. Supports custom licenses added by the user, but there is no verification if the license exists on the Xray side. If the added license doesn't exist, the policy won't trigger the violation.
-- `banned_licenses` (Set of String) A list of OSS license names that may not be attached to a component. Supports custom licenses added by the user, but there is no verification if the license exists on the Xray side. If the added license doesn't exist, the policy won't trigger the violation.
+- `allowed_licenses` (List of String) A list of OSS license names that may be attached to a component. Supports custom licenses added by the user, but there is no verification if the license exists on the Xray side. If the added license doesn't exist, the policy won't trigger the violation.
+- `banned_licenses` (List of String) A list of OSS license names that may not be attached to a component. Supports custom licenses added by the user, but there is no verification if the license exists on the Xray side. If the added license doesn't exist, the policy won't trigger the violation.
 - `multi_license_permissive` (Boolean) Do not generate a violation if at least one license is valid in cases whereby multiple licenses were detected on the component.
 
 ## Import
