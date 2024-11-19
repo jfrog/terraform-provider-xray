@@ -1,4 +1,4 @@
-## 3.0.0 (November 20, 2024)
+## 3.0.0 (November 20, 2024). Tested on Artifactory 7.98.8 and Xray 3.104.18 with Terraform 1.9.8 and OpenTofu 1.8.5
 
 BREAKING CHANGES:
 
