@@ -4,7 +4,6 @@ import (
 	"context"
 	"regexp"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/boolvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/float64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
@@ -388,15 +387,7 @@ var securityPolicyCriteriaAttrs = map[string]schema.Attribute{
 		Description: "Mark to skip CVEs that are not applicable in the context of the artifact. The contextual analysis operation might be long and affect build time if the `fail_build` action is set.\n\n~>Only supported by JFrog Advanced Security",
 	},
 	"malicious_package": schema.BoolAttribute{
-		Optional: true,
-		Validators: []validator.Bool{
-			boolvalidator.ConflictsWith(
-				path.MatchRelative().AtParent().AtName("min_severity"),
-			),
-			boolvalidator.ConflictsWith(
-				path.MatchRelative().AtParent().AtName("cvss_range"),
-			),
-		},
+		Optional:    true,
 		Description: "Generating a violation on a malicious package.",
 	},
 	"vulnerability_ids": schema.SetAttribute{
@@ -495,11 +486,27 @@ func (r SecurityPolicyResource) ValidateConfig(ctx context.Context, req resource
 		attrs := criteria.Elements()[0].(types.Object).Attributes()
 
 		fixVersionDependant := attrs["fix_version_dependant"].(types.Bool).ValueBool()
+		minSeverity := attrs["min_severity"].(types.String).ValueString()
+		cvssRange := attrs["cvss_range"].(types.List)
 		maliciousPackage := attrs["malicious_package"].(types.Bool).ValueBool()
 
-		packageName := attrs["package_name"].(types.String)
-		packagType := attrs["package_type"].(types.String)
-		packageVersions := attrs["package_versions"].(types.Set)
+		if maliciousPackage && minSeverity != "" {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("rules").AtSetValue(rule).AtName("criteria").AtSetValue(criteria.Elements()[0]).AtName("malicious_package"),
+				"Invalid Attribute Configuration",
+				"malicious_package cannot be set to 'true' if min_severity is set",
+			)
+			return
+		}
+
+		if maliciousPackage && !cvssRange.IsNull() {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("rules").AtSetValue(rule).AtName("criteria").AtSetValue(criteria.Elements()[0]).AtName("malicious_package"),
+				"Invalid Attribute Configuration",
+				"malicious_package cannot be set to 'true' if cvss_range is set",
+			)
+			return
+		}
 
 		if maliciousPackage && fixVersionDependant {
 			resp.Diagnostics.AddAttributeError(
@@ -509,6 +516,10 @@ func (r SecurityPolicyResource) ValidateConfig(ctx context.Context, req resource
 			)
 			return
 		}
+
+		packageName := attrs["package_name"].(types.String)
+		packagType := attrs["package_type"].(types.String)
+		packageVersions := attrs["package_versions"].(types.Set)
 
 		if fixVersionDependant && (!packageName.IsNull() || !packagType.IsNull() || !packageVersions.IsNull()) {
 			resp.Diagnostics.AddAttributeError(

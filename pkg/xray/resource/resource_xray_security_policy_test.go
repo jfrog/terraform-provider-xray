@@ -567,7 +567,7 @@ func TestAccSecurityPolicy_createMaliciousPackageFail(t *testing.T) {
 	})
 }
 
-func TestAccSecurityPolicy_createMaliciousPackageCvssMinSeverityFail(t *testing.T) {
+func TestAccSecurityPolicy_createMaliciousPackageFailMinSeverity(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
 	testData := sdk.MergeMaps(testDataSecurity)
 
@@ -582,8 +582,30 @@ func TestAccSecurityPolicy_createMaliciousPackageCvssMinSeverityFail(t *testing.
 		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:      util.ExecuteTemplate(fqrn, securityPolicyCVSSMinSeverityMaliciousPkg, testData),
-				ExpectError: regexp.MustCompile("(?s).*Invalid Attribute Combination.*cvss_range.*cannot be specified when.*malicious_package.*is specified.*"),
+				Config:      util.ExecuteTemplate(fqrn, securityPolicyMaliciousPkgMinSeverityDep, testData),
+				ExpectError: regexp.MustCompile("malicious_package cannot be set to 'true' if min_severity is set"),
+			},
+		},
+	})
+}
+
+func TestAccSecurityPolicy_createCvssMaliciousPackageFail(t *testing.T) {
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
+
+	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-6-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-6-%d", testutil.RandomInt())
+	testData["malicious_package"] = "true"
+	testData["min_severity"] = "High"
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      util.ExecuteTemplate(fqrn, securityPolicyCVSSMaliciousPkg, testData),
+				ExpectError: regexp.MustCompile("malicious_package cannot be set to 'true' if cvss_range is set"),
 			},
 		},
 	})
@@ -604,8 +626,30 @@ func TestAccSecurityPolicy_createCvssMinSeverityFail(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:      util.ExecuteTemplate(fqrn, securityPolicyCVSSMinSeverityMaliciousPkg, testData),
+				Config:      util.ExecuteTemplate(fqrn, securityPolicyCVSSMinSeverity, testData),
 				ExpectError: regexp.MustCompile("(?s).*Invalid Attribute Combination.*cvss_range.*cannot be specified when.*min_severity.*is specified.*"),
+			},
+		},
+	})
+}
+
+func TestAccSecurityPolicy_createCvssVulnerabilityIDsFail(t *testing.T) {
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
+
+	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-6-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-6-%d", testutil.RandomInt())
+	testData["malicious_package"] = "false"
+	testData["vulnerability_ids"] = "High"
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      util.ExecuteTemplate(fqrn, securityPolicyCVSSVulnerabilityIDs, testData),
+				ExpectError: regexp.MustCompile("(?s).*Invalid Attribute Combination.*cvss_range.*cannot be specified when.*vulnerability_ids.*is specified.*"),
 			},
 		},
 	})
@@ -773,43 +817,37 @@ func TestAccSecurityPolicy_vulnerabilityIdsIncorrectCVEFails(t *testing.T) {
 	}
 }
 
-func TestAccSecurityPolicy_conflictingAttributesFail(t *testing.T) {
+func TestAccSecurityPolicy_exporsureConflictingAttributesFail(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
 	testData := sdk.MergeMaps(testDataSecurity)
 
-	testAttributes := []string{
+	conflictingAttributes := []string{
 		"vulnerability_ids = [\"CVE-2022-12345\", \"CVE-2021-67890\", \"XRAY-1234\"]",
 		"cvss_range {\nfrom = 1 \nto = 3\n}",
-		"malicious_package = true",
+		"malicious_package = false",
 		"min_severity = \"High\"",
-		"exposures {\nmin_severity = \"High\" \nsecrets = true \n applications = true \n services = true \n iac = true\n}",
 	}
 
-	for _, testAttribute := range testAttributes {
-		for _, conflictingAttribute := range testAttributes {
-			if testAttribute == conflictingAttribute {
-				continue
-			}
-			testData["resource_name"] = resourceName
-			testData["policy_name"] = fmt.Sprintf("terraform-security-policy-9-%d", testutil.RandomInt())
-			testData["rule_name"] = fmt.Sprintf("test-security-rule-9-%d", testutil.RandomInt())
-			testData["block_unscanned"] = "false"
-			testData["block_active"] = "false"
-			testData["test_attribute"] = testAttribute
-			testData["malicious_package"] = "true"
-			testData["conflicting_attribute"] = conflictingAttribute
+	for _, conflictingAttribute := range conflictingAttributes {
+		testData["resource_name"] = resourceName
+		testData["policy_name"] = fmt.Sprintf("terraform-security-policy-9-%d", testutil.RandomInt())
+		testData["rule_name"] = fmt.Sprintf("test-security-rule-9-%d", testutil.RandomInt())
+		testData["block_unscanned"] = "false"
+		testData["block_active"] = "false"
+		testData["malicious_package"] = "false"
+		testData["exposures"] = "{\nmin_severity = \"High\" \nsecrets = true \n applications = true \n services = true \n iac = true\n}"
+		testData["conflicting_attribute"] = conflictingAttribute
 
-			resource.Test(t, resource.TestCase{
-				CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
-				ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
-				Steps: []resource.TestStep{
-					{
-						Config:      util.ExecuteTemplate(fqrn, securityPolicyVulnIdsConflict, testData),
-						ExpectError: regexp.MustCompile("(?s).*Invalid Attribute Combination.*cvss_range.*cannot be specified when.*vulnerability_ids.*is specified.*"),
-					},
+		resource.Test(t, resource.TestCase{
+			CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
+			ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+			Steps: []resource.TestStep{
+				{
+					Config:      util.ExecuteTemplate(fqrn, securityPolicyVulnIdsConflict, testData),
+					ExpectError: regexp.MustCompile("(?s).*Invalid Attribute Combination.*cvss_range.*cannot be specified when.*vulnerability_ids.*is specified.*"),
 				},
-			})
-		}
+			},
+		})
 	}
 }
 
@@ -1150,7 +1188,13 @@ const securityPolicyVulnIdsConflict = `resource "xray_security_policy" "{{ .reso
 		name = "{{ .rule_name }}"
 		priority = 1
 		criteria {
-			{{ .test_attribute }}
+			exposures {
+				min_severity = "High"
+				secrets = true
+				applications = true
+				services = true
+				iac = true
+			}
 			{{ .conflicting_attribute }}
 		}
 		actions {
@@ -1249,7 +1293,7 @@ const securityPolicyTwoRules = `resource "xray_security_policy" "{{ .resource_na
 	}
 }`
 
-const securityPolicyCVSSMinSeverityMaliciousPkg = `resource "xray_security_policy" "{{ .resource_name }}" {
+const securityPolicyCVSSMinSeverity = `resource "xray_security_policy" "{{ .resource_name }}" {
 	name = "{{ .policy_name }}"
 	description = "{{ .policy_description }}"
 	type = "security"
@@ -1258,6 +1302,65 @@ const securityPolicyCVSSMinSeverityMaliciousPkg = `resource "xray_security_polic
 		priority 	= 1
 		criteria {
 			min_severity 	  = "{{ .min_severity }}"
+			cvss_range {
+				from = {{ .cvss_from }}
+				to 	 = {{ .cvss_to }}
+			}
+		}
+		actions {
+			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
+			fail_build = {{ .fail_build }}
+			notify_watch_recipients = {{ .notify_watch_recipients }}
+			notify_deployer = {{ .notify_deployer }}
+			create_ticket_enabled = {{ .create_ticket_enabled }}
+			build_failure_grace_period_in_days = {{ .grace_period_days }}
+			block_download {
+				unscanned = {{ .block_unscanned }}
+				active = {{ .block_active }}
+			}
+		}
+	}
+}`
+
+const securityPolicyCVSSVulnerabilityIDs = `resource "xray_security_policy" "{{ .resource_name }}" {
+	name = "{{ .policy_name }}"
+	description = "{{ .policy_description }}"
+	type = "security"
+	rule {
+		name 		= "{{ .rule_name }}"
+		priority 	= 1
+		criteria {
+			vulnerability_ids = ["CVE-2022-12345", "CVE-2021-67890", "XRAY-1234"]
+			cvss_range {
+				from = {{ .cvss_from }}
+				to 	 = {{ .cvss_to }}
+			}
+		}
+		actions {
+			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
+			fail_build = {{ .fail_build }}
+			notify_watch_recipients = {{ .notify_watch_recipients }}
+			notify_deployer = {{ .notify_deployer }}
+			create_ticket_enabled = {{ .create_ticket_enabled }}
+			build_failure_grace_period_in_days = {{ .grace_period_days }}
+			block_download {
+				unscanned = {{ .block_unscanned }}
+				active = {{ .block_active }}
+			}
+		}
+	}
+}`
+
+const securityPolicyCVSSMaliciousPkg = `resource "xray_security_policy" "{{ .resource_name }}" {
+	name = "{{ .policy_name }}"
+	description = "{{ .policy_description }}"
+	type = "security"
+	rule {
+		name 		= "{{ .rule_name }}"
+		priority 	= 1
+		criteria {
 			malicious_package = {{ .malicious_package }}
 			cvss_range {
 				from = {{ .cvss_from }}
@@ -1375,6 +1478,33 @@ const securityPolicyMaliciousPkgFixVersionDep = `resource "xray_security_policy"
 		criteria {
             malicious_package	  = "{{ .malicious_package }}"
 			fix_version_dependant = {{ .fix_version_dependant }}
+		}
+		actions {
+			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
+			fail_build = {{ .fail_build }}
+			notify_watch_recipients = {{ .notify_watch_recipients }}
+			notify_deployer = {{ .notify_deployer }}
+			create_ticket_enabled = {{ .create_ticket_enabled }}
+			build_failure_grace_period_in_days = {{ .grace_period_days }}
+			block_download {
+				unscanned = {{ .block_unscanned }}
+				active = {{ .block_active }}
+			}
+		}
+	}
+}`
+
+const securityPolicyMaliciousPkgMinSeverityDep = `resource "xray_security_policy" "{{ .resource_name }}" {
+	name = "{{ .policy_name }}"
+	description = "{{ .policy_description }}"
+	type = "security"
+	rule {
+		name = "{{ .rule_name }}"
+		priority = 1
+		criteria {
+            malicious_package	  = "{{ .malicious_package }}"
+			min_severity = "{{ .min_severity }}"
 		}
 		actions {
 			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
