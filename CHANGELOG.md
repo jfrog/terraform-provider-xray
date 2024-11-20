@@ -1,3 +1,9 @@
+## 3.0.1 (November 19, 2024)
+
+BUG FIXES:
+
+* GoReleaser: Fix incorrect `ldflags` value. PR: [#278](https://github.com/jfrog/terraform-provider-xray/issues/278)
+
 ## 3.0.0 (November 19, 2024). Tested on Artifactory 7.98.8 and Xray 3.104.18 with Terraform 1.9.8 and OpenTofu 1.8.5
 
 BREAKING CHANGES:
