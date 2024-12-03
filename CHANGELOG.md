@@ -1,3 +1,9 @@
+## 3.0.2 (December 4, 2024)
+
+BUG FIXES:
+
+* resource/xray_ignore_rule: Fix incorrect API request field name for `release_bundle` attribute. Issue: [#285](https://github.com/jfrog/terraform-provider-xray/issues/285) PR: [#286](https://github.com/jfrog/terraform-provider-xray/issues/286)
+
 ## 3.0.1 (November 19, 2024)
 
 BUG FIXES:
