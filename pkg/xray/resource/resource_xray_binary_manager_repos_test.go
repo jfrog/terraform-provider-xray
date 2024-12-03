@@ -14,14 +14,13 @@ import (
 func TestAccBinaryManagerRepos_full(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("test-bin-mgr-repos", "xray_binary_manager_repos")
 	_, _, repo1Name := testutil.MkNames("test-local-generic-repo", "artifactory_local_generic_repository")
-	_, _, repo2Name := testutil.MkNames("test-local-docker-repo", "artifactory_local_docker_repository")
+	_, _, repo2Name := testutil.MkNames("test-local-docker-repo", "artifactory_local_docker_v2_repository")
 	_, _, repo3Name := testutil.MkNames("test-local-npm-repo", "artifactory_local_npm_repository")
 
 	const template = `
 		resource "artifactory_local_generic_repository" "{{ .repo1 }}" {
 			key = "{{ .repo1 }}"
 			xray_index = true
-			project_key = "default"
 
 			lifecycle {
 				ignore_changes = ["project_key"]
@@ -31,7 +30,6 @@ func TestAccBinaryManagerRepos_full(t *testing.T) {
 		resource "artifactory_local_docker_v2_repository" "{{ .repo2 }}" {
 			key = "{{ .repo2 }}"
 			xray_index = false
-			project_key = "default"
 
 			lifecycle {
 				ignore_changes = ["project_key"]
@@ -62,7 +60,6 @@ func TestAccBinaryManagerRepos_full(t *testing.T) {
 		resource "artifactory_local_generic_repository" "{{ .repo1 }}" {
 			key = "{{ .repo1 }}"
 			xray_index = true
-			project_key = "default"
 
 			lifecycle {
 				ignore_changes = ["project_key"]
@@ -72,7 +69,6 @@ func TestAccBinaryManagerRepos_full(t *testing.T) {
 		resource "artifactory_local_docker_v2_repository" "{{ .repo2 }}" {
 			key = "{{ .repo2 }}"
 			xray_index = true
-			project_key = "default"
 
 			lifecycle {
 				ignore_changes = ["project_key"]
@@ -81,7 +77,6 @@ func TestAccBinaryManagerRepos_full(t *testing.T) {
 
 		resource "artifactory_local_npm_repository" "{{ .repo3 }}" {
 			key = "{{ .repo3 }}"
-			project_key = "default"
 
 			lifecycle {
 				ignore_changes = ["project_key"]
@@ -162,7 +157,7 @@ func TestAccBinaryManagerRepos_full(t *testing.T) {
 func TestAccBinaryManagerRepos_project_full(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("test-bin-mgr-repos", "xray_binary_manager_repos")
 	_, _, repo1Name := testutil.MkNames("test-local-generic-repo", "artifactory_local_generic_repository")
-	_, _, repo2Name := testutil.MkNames("test-local-docker-repo", "artifactory_local_docker_repository")
+	_, _, repo2Name := testutil.MkNames("test-local-docker-repo", "artifactory_local_docker_v2_repository")
 	_, _, repo3Name := testutil.MkNames("test-local-npm-repo", "artifactory_local_npm_repository")
 	_, _, projectName := testutil.MkNames("test-project", "project")
 
