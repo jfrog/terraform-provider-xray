@@ -10,11 +10,6 @@ import (
 )
 
 func TestAccWorkersCount_full(t *testing.T) {
-	// jfrogURL := os.Getenv("JFROG_URL")
-	// if strings.HasSuffix(jfrogURL, "jfrog.io") {
-	// 	t.Skipf("env var JFROG_URL '%s' is a cloud instance.", jfrogURL)
-	// }
-
 	_, fqrn, resourceName := testutil.MkNames("test-workers-count-", "xray_workers_count")
 
 	temp := `
