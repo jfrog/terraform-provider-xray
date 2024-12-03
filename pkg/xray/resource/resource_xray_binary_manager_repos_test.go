@@ -21,11 +21,13 @@ func TestAccBinaryManagerRepos_full(t *testing.T) {
 		resource "artifactory_local_generic_repository" "{{ .repo1 }}" {
 			key = "{{ .repo1 }}"
 			xray_index = true
+			project_key = "default"
 		}
 
 		resource "artifactory_local_docker_v2_repository" "{{ .repo2 }}" {
 			key = "{{ .repo2 }}"
 			xray_index = false
+			project_key = "default"
 		}
 
 		resource "xray_binary_manager_repos" "{{ .name }}" {
@@ -50,17 +52,20 @@ func TestAccBinaryManagerRepos_full(t *testing.T) {
 
 	const updateTemplate = `
 		resource "artifactory_local_generic_repository" "{{ .repo1 }}" {
-		  key = "{{ .repo1 }}"
-		  xray_index = true
+			key = "{{ .repo1 }}"
+			xray_index = true
+			project_key = "default"
 		}
 
 		resource "artifactory_local_docker_v2_repository" "{{ .repo2 }}" {
-		  key = "{{ .repo2 }}"
-		  xray_index = true
+			key = "{{ .repo2 }}"
+			xray_index = true
+			project_key = "default"
 		}
 
 		resource "artifactory_local_npm_repository" "{{ .repo3 }}" {
-		  key = "{{ .repo3 }}"
+			key = "{{ .repo3 }}"
+			project_key = "default"
 		}
 
 		resource "xray_binary_manager_repos" "{{ .name }}" {
