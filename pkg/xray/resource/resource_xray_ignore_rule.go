@@ -441,7 +441,7 @@ type IgnoreFiltersAPIModel struct {
 	Watches          []string                                 `json:"watches,omitempty"`
 	DockerLayers     []string                                 `json:"docker-layers,omitempty"`
 	OperationalRisks []string                                 `json:"operational_risk,omitempty"`
-	ReleaseBundles   []IgnoreFilterNameVersionAPIModel        `json:"release_bundles,omitempty"`
+	ReleaseBundles   []IgnoreFilterNameVersionAPIModel        `json:"release-bundles,omitempty"`
 	Builds           []IgnoreFilterNameVersionProjectAPIModel `json:"builds,omitempty"`
 	Components       []IgnoreFilterNameVersionAPIModel        `json:"components,omitempty"`
 	Artifacts        []IgnoreFilterNameVersionPathAPIModel    `json:"artifacts,omitempty"`

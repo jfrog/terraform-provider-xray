@@ -3,7 +3,9 @@ package xray_test
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -786,6 +788,99 @@ func TestAccIgnoreRule_build_with_project_key(t *testing.T) {
 			{
 				Config: config,
 				Check:  resource.TestCheckResourceAttr(fqrn, "project_key", projectKey),
+			},
+		},
+	})
+}
+
+// TestAccIgnoreRule_release_bundle would only be successful when executed against Artifactory instance
+// that has Distribution enabled (i.e. has edge node(s) configured)
+func TestAccIgnoreRule_release_bundle(t *testing.T) {
+	jfrogURL := os.Getenv("JFROG_URL")
+	if !strings.HasSuffix(jfrogURL, "jfrog.io") {
+		t.Skipf("env var JFROG_URL '%s' is not a cloud instance.", jfrogURL)
+	}
+
+	_, fqrn, name := testutil.MkNames("ignore-rule-", "xray_ignore_rule")
+	_, _, releaseBundleName := testutil.MkNames("test-release-bundle-v1", "distribution_release_bundle_v1")
+	expirationDate := time.Now().UTC().Add(time.Hour * 48)
+
+	config := util.ExecuteTemplate("TestAccIgnoreRule", `
+		resource "distribution_release_bundle_v1" "{{ .releaseBundleName }}" {
+			name = "{{ .releaseBundleName }}"
+			version = "1.0.0"
+			sign_immediately = false
+			description = "Test description"
+
+			release_notes = {
+				syntax = "plain_text"
+				content = "test release notes"
+			}
+
+			spec = {
+				queries = [{
+					aql = "items.find({ \"repo\" : \"example-repo-local\" })"
+					query_name: "query-1"
+
+					mappings = [{
+						input = "original_repository/(.*)"
+						output = "new_repository/$1"
+					}]
+
+					added_props = [{
+						key = "test-key"
+						values = ["test-value"]
+					}]
+					
+					exclude_props_patterns = [
+						"test-patterns"
+					]
+				}]
+			}
+		}
+			
+		resource "xray_ignore_rule" "{{ .name }}" {
+		  notes            = "fake notes"
+		  expiration_date  = "{{ .expirationDate }}"
+		  vulnerabilities  = ["any"]
+		  cves             = ["any"]
+
+		  release_bundle {
+			  name    = distribution_release_bundle_v1.{{ .releaseBundleName }}.name
+			  version = distribution_release_bundle_v1.{{ .releaseBundleName }}.version
+		  }
+		}
+	`, map[string]interface{}{
+		"releaseBundleName": releaseBundleName,
+		"name":              name,
+		"expirationDate":    expirationDate.Local().Format("2006-01-02"),
+	})
+
+	resource.Test(t, resource.TestCase{
+		ExternalProviders: map[string]resource.ExternalProvider{
+			"distribution": {
+				Source: "jfrog/distribution",
+			},
+		},
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckIgnoreRule),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet(fqrn, "id"),
+					resource.TestCheckResourceAttr(fqrn, "notes", "fake notes"),
+					resource.TestCheckResourceAttr(fqrn, "expiration_date", expirationDate.Local().Format("2006-01-02")),
+					resource.TestCheckResourceAttr(fqrn, "is_expired", "false"),
+					resource.TestCheckResourceAttr(fqrn, "release_bundle.#", "1"),
+					resource.TestCheckResourceAttr(fqrn, "release_bundle.0.name", releaseBundleName),
+					resource.TestCheckResourceAttr(fqrn, "release_bundle.0.version", "1.0.0"),
+				),
+			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
