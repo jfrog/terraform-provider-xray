@@ -20,8 +20,6 @@ import (
 	utilfw "github.com/jfrog/terraform-provider-shared/util/fw"
 	validatorfw_string "github.com/jfrog/terraform-provider-shared/validator/fw/string"
 	"github.com/samber/lo"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 )
 
 const BinaryManagerReposEndpoint = "xray/api/v1/binMgr/{id}/repos"
@@ -145,10 +143,32 @@ type BinaryManagerRepoAPIModel struct {
 	PackageType string `json:"pkg_type"`
 }
 
-var validTitledPackageTypes = lo.Map(validPackageTypes, func(packageType string, _ int) string {
-	caser := cases.Title(language.AmericanEnglish, cases.NoLower)
-	return caser.String(packageType)
-})
+var validBinMgrPackageTypes = []string{
+	"Alpine Linux",
+	"Bower",
+	"Cargo",
+	"Composer",
+	"CocoaPods",
+	"Conan",
+	"Conda",
+	"CRAN",
+	"Debian",
+	"Docker",
+	"Gems",
+	"Generic",
+	"Go",
+	"Gradle",
+	"HuggingFaceML",
+	"Ivy",
+	"Maven",
+	"npm",
+	"NuGet",
+	"OCI",
+	"Pypi",
+	"RPM",
+	"SBT",
+	"TerraformBackend",
+}
 
 func (r *BinaryManagerReposResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
@@ -190,9 +210,9 @@ func (r *BinaryManagerReposResource) Schema(ctx context.Context, req resource.Sc
 						"package_type": schema.StringAttribute{
 							Required: true,
 							Validators: []validator.String{
-								stringvalidator.OneOf(validTitledPackageTypes...),
+								stringvalidator.OneOf(validBinMgrPackageTypes...),
 							},
-							Description: fmt.Sprintf("Artifactory package type. Valid value: %s", strings.Join(validTitledPackageTypes, ", ")),
+							Description: fmt.Sprintf("Artifactory package type. Valid value: %s", strings.Join(validBinMgrPackageTypes, ", ")),
 						},
 					},
 				},
