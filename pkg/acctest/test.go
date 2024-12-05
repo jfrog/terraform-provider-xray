@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/go-resty/resty/v2"
@@ -23,12 +24,40 @@ var ProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, erro
 	"xray": providerserver.NewProtocol6WithError(xray.NewProvider()()),
 }
 
+// testAccProviderConfigure ensures Provider is only configured once
+//
+// The PreCheck(t) function is invoked for every test and this prevents
+// extraneous reconfiguration to the same values each time. However, this does
+// not prevent reconfiguration that may happen should the address of
+// Provider be errantly reused in ProviderFactories.
+var testAccProviderConfigure sync.Once
+
 func init() {
 	Provider = xray.NewProvider()()
 
 	ProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
 		"xray": providerserver.NewProtocol6WithError(Provider),
 	}
+}
+
+// PreCheck This function should be present in every acceptance test.
+func PreCheck(t *testing.T) {
+	// Since we are outside the scope of the Terraform configuration we must
+	// call Configure() to properly initialize the provider configuration.
+	testAccProviderConfigure.Do(func() {
+		restyClient := GetTestResty(t)
+
+		artifactoryUrl := testutil.GetEnvVarWithFallback(t, "JFROG_URL", "ARTIFACTORY_URL")
+		// Set custom base URL so repos that relies on it will work
+		// https://www.jfrog.com/confluence/display/JFROG/Artifactory+REST+API#ArtifactoryRESTAPI-UpdateCustomURLBase
+		_, err := restyClient.R().
+			SetBody(artifactoryUrl).
+			SetHeader("Content-Type", "text/plain").
+			Put("/artifactory/api/system/configuration/baseUrl")
+		if err != nil {
+			t.Fatalf("failed to set custom base URL: %v", err)
+		}
+	})
 }
 
 type CheckFun func(id string, request *resty.Request) (*resty.Response, error)

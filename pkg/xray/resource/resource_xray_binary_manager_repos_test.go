@@ -134,6 +134,7 @@ func TestAccBinaryManagerRepos_full(t *testing.T) {
 			updatedConfig := util.ExecuteTemplate("TestAccBinaryManagerRepos_full", updateTemplate, updatedTestData)
 
 			resource.Test(t, resource.TestCase{
+				PreCheck:                 func() { acctest.PreCheck(t) },
 				ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 				ExternalProviders: map[string]resource.ExternalProvider{
 					"artifactory": {
