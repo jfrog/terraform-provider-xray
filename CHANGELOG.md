@@ -1,3 +1,9 @@
+## 3.0.3 (December 19, 2024). Tested on Artifactory 7.98.11 and Xray 3.107.18 with Terraform 1.10.3 and OpenTofu 1.8.7
+
+BUG FIXES:
+
+* resource/xray_webhook: Fix `headers` attribute not being imported correctly. Issue: [#290](https://github.com/jfrog/terraform-provider-xray/issues/290) PR: [#291](https://github.com/jfrog/terraform-provider-xray/issues/291)
+
 ## 3.0.2 (December 5, 2024). Tested on Artifactory 7.98.9 and Xray 3.107.16 with Terraform 1.10.1 and OpenTofu 1.8.7
 
 BUG FIXES:

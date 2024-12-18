@@ -202,28 +202,31 @@ func (r *WebhookResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	state.Name = types.StringValue(webhook.Name)
 
-	if state.Description.IsNull() {
-		state.Description = types.StringValue("")
-	}
+	description := types.StringNull()
 	if len(webhook.Description) > 0 {
-		state.Description = types.StringValue(webhook.Description)
+		description = types.StringValue(webhook.Description)
 	}
+	state.Description = description
 
 	state.URL = types.StringValue(webhook.URL)
 	state.UseProxy = types.BoolValue(webhook.UseProxy)
 
-	if !state.UserName.IsNull() {
-		state.UserName = types.StringValue(webhook.UserName)
+	username := types.StringNull()
+	if len(webhook.UserName) > 0 {
+		username = types.StringValue(webhook.UserName)
 	}
+	state.UserName = username
 
-	if !state.Headers.IsNull() {
-		headers, ds := types.MapValueFrom(ctx, types.StringType, webhook.Headers)
+	headers := types.MapNull(types.StringType)
+	if len(webhook.Headers) > 0 {
+		hs, ds := types.MapValueFrom(ctx, types.StringType, webhook.Headers)
 		if ds.HasError() {
 			resp.Diagnostics.Append(ds...)
 			return
 		}
-		state.Headers = headers
+		headers = hs
 	}
+	state.Headers = headers
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
