@@ -86,6 +86,23 @@ func TestAccWebhook_full(t *testing.T) {
 			name        = "{{ .name }}"
 			description = "{{ .description }}"
 			url         = "{{ .url }}"
+			use_proxy   = "{{ .use_proxy }}"
+		}
+	`
+	testData := map[string]string{
+		"name":        resourceName,
+		"description": "test description 2",
+		"url":         url,
+		"use_proxy":   "false",
+	}
+
+	config := util.ExecuteTemplate("TestAccWebhook_full", template, testData)
+
+	const updateTemplate = `
+		resource "xray_webhook" "{{ .name }}" {
+			name        = "{{ .name }}"
+			description = "{{ .description }}"
+			url         = "{{ .url }}"
 			use_proxy   = {{ .use_proxy }}
 			user_name   = "{{ .user_name }}"
 			password    = "{{ .password }}"
@@ -96,7 +113,7 @@ func TestAccWebhook_full(t *testing.T) {
 			}
 		}
 	`
-	testData := map[string]string{
+	updatedTestData := map[string]string{
 		"name":          resourceName,
 		"description":   "test description",
 		"url":           url,
@@ -107,23 +124,6 @@ func TestAccWebhook_full(t *testing.T) {
 		"header1_value": "header1_value",
 		"header2_name":  "header2_name",
 		"header2_value": "header2_value",
-	}
-
-	config := util.ExecuteTemplate("TestAccWebhook_full", template, testData)
-
-	const updateTemplate = `
-		resource "xray_webhook" "{{ .name }}" {
-			name        = "{{ .name }}"
-			description = "{{ .description }}"
-			url         = "{{ .url }}"
-			use_proxy   = "{{ .use_proxy }}"
-		}
-	`
-	updatedTestData := map[string]string{
-		"name":        resourceName,
-		"description": "test description 2",
-		"url":         url,
-		"use_proxy":   "false",
 	}
 	updatedConfig := util.ExecuteTemplate("TestAccWebhook_full", updateTemplate, updatedTestData)
 
@@ -138,11 +138,9 @@ func TestAccWebhook_full(t *testing.T) {
 					resource.TestCheckResourceAttr(fqrn, "description", testData["description"]),
 					resource.TestCheckResourceAttr(fqrn, "url", testData["url"]),
 					resource.TestCheckResourceAttr(fqrn, "use_proxy", testData["use_proxy"]),
-					resource.TestCheckResourceAttr(fqrn, "user_name", testData["user_name"]),
-					resource.TestCheckResourceAttr(fqrn, "password", testData["password"]),
-					resource.TestCheckResourceAttr(fqrn, "headers.%", "2"),
-					resource.TestCheckResourceAttr(fqrn, "headers.header1_name", testData["header1_value"]),
-					resource.TestCheckResourceAttr(fqrn, "headers.header2_name", testData["header2_value"]),
+					resource.TestCheckNoResourceAttr(fqrn, "user_name"),
+					resource.TestCheckNoResourceAttr(fqrn, "password"),
+					resource.TestCheckNoResourceAttr(fqrn, "headers.%"),
 				),
 			},
 			{
@@ -152,9 +150,11 @@ func TestAccWebhook_full(t *testing.T) {
 					resource.TestCheckResourceAttr(fqrn, "description", updatedTestData["description"]),
 					resource.TestCheckResourceAttr(fqrn, "url", updatedTestData["url"]),
 					resource.TestCheckResourceAttr(fqrn, "use_proxy", updatedTestData["use_proxy"]),
-					resource.TestCheckNoResourceAttr(fqrn, "user_name"),
-					resource.TestCheckNoResourceAttr(fqrn, "password"),
-					resource.TestCheckNoResourceAttr(fqrn, "headers.%"),
+					resource.TestCheckResourceAttr(fqrn, "user_name", updatedTestData["user_name"]),
+					resource.TestCheckResourceAttr(fqrn, "password", updatedTestData["password"]),
+					resource.TestCheckResourceAttr(fqrn, "headers.%", "2"),
+					resource.TestCheckResourceAttr(fqrn, "headers.header1_name", updatedTestData["header1_value"]),
+					resource.TestCheckResourceAttr(fqrn, "headers.header2_name", updatedTestData["header2_value"]),
 				),
 				ConfigPlanChecks: testutil.ConfigPlanChecks(""),
 			},
