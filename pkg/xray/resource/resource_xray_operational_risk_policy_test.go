@@ -278,7 +278,7 @@ func TestAccOperationalRiskPolicy_customCriteria(t *testing.T) {
 	testData["policy_name"] = fmt.Sprintf("terraform-operational-risk-policy-%d", testutil.RandomInt())
 	testData["op_risk_custom_use_and_condition"] = "true"
 	testData["op_risk_custom_is_eol"] = "false"
-	testData["op_risk_custom_release_date_greater_than_months"] = testutil.RandSelect("6", "12", "18", "24", "30", "36").(string)
+	testData["op_risk_custom_release_date_greater_than_months"] = testutil.RandSelect("6", "12", "18", "24", "30", "36", "5", "99").(string)
 	testData["op_risk_custom_newer_versions_greater_than"] = testutil.RandSelect("1", "2", "3", "4", "5").(string)
 	testData["op_risk_custom_release_cadence_per_year_less_than"] = testutil.RandSelect("1", "2", "3", "4", "5").(string)
 	testData["op_risk_custom_commits_less_than"] = testutil.RandSelect("10", "25", "50", "100").(string)

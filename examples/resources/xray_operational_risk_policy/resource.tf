@@ -50,12 +50,12 @@ resource "xray_operational_risk_policy" "custom_criteria" {
         release_cadence_per_year_less_than = 1
         commits_less_than                  = 10
         committers_less_than               = 1
-        risk                               = "medium"
+        risk                               = "Medium"
       }
     }
 
     actions {
-      webhooks                           = []
+      webhooks                           = ["sec-webhooks"]
       mails                              = ["test@email.com"]
       block_release_bundle_distribution  = false
       fail_build                         = true
