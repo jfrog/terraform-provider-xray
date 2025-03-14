@@ -195,19 +195,21 @@ func TestAccBinaryManagerRepos_project_full(t *testing.T) {
 	const template = `
 		resource "artifactory_local_generic_repository" "{{ .repo1 }}" {
 			key = "{{ .repo1 }}"
+			project_environments = ["DEV"]
 			xray_index = true
 
 			lifecycle {
-				ignore_changes = ["project_key"]
+				ignore_changes = ["project_key", "project_environments"]
 			}
 		}
 
 		resource "artifactory_local_docker_v2_repository" "{{ .repo2 }}" {
 			key = "{{ .repo2 }}"
+			project_environments = ["DEV"]
 			xray_index = false
 
 			lifecycle {
-				ignore_changes = ["project_key"]
+				ignore_changes = ["project_key", "project_environments"]
 			}
 		}
 
@@ -261,19 +263,21 @@ func TestAccBinaryManagerRepos_project_full(t *testing.T) {
 	const updateTemplate = `
 		resource "artifactory_local_generic_repository" "{{ .repo1 }}" {
 			key = "{{ .repo1 }}"
+			project_environments = ["DEV"]
 			xray_index = true
 
 			lifecycle {
-				ignore_changes = ["project_key"]
+				ignore_changes = ["project_key", "project_environments"]
 			}
 		}
 
 		resource "artifactory_local_docker_v2_repository" "{{ .repo2 }}" {
 			key = "{{ .repo2 }}"
+			project_environments = ["DEV"]
 			xray_index = true
 
 			lifecycle {
-				ignore_changes = ["project_key"]
+				ignore_changes = ["project_key", "project_environments"]
 			}
 		}
 

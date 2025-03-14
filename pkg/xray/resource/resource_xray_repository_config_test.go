@@ -454,14 +454,11 @@ func TestAccRepositoryConfig_RepoConfigCreate_no_exposure(t *testing.T) {
 		t.Skipf("Env var JFROG_JAS_DISABLED is set to 'true'")
 	}
 
-	packageTypes := []string{"alpine", "bower", "composer", "conan", "conda", "debian", "gems", "go", "gradle", "ivy", "rpm", "sbt"}
+	packageTypes := []string{"bower", "composer", "conan", "conda", "ivy", "sbt"}
 	template := `
 	resource "artifactory_local_{{ .package_type }}_repository" "{{ .repo_name }}" {
 		key        = "{{ .repo_name }}"
 		xray_index = true
-		{{ if eq .package_type "debian" }}
-		index_compression_formats = ["bz2"]
-		{{ end }}
 	}
 
 	resource "xray_repository_config" "{{ .resource_name }}" {

@@ -103,9 +103,9 @@ var opRiskPolicyCriteriaBlocks = map[string]schema.Block{
 				"release_date_greater_than_months": schema.Int64Attribute{
 					Optional: true,
 					Validators: []validator.Int64{
-						int64validator.OneOf(6, 12, 18, 24, 30, 36),
+						int64validator.Between(1, 999),
 					},
-					Description: "Release age greater than (in months): 6, 12, 18, 24, 30, or 36",
+					Description: "Release age greater than (in months): any value between 1 and 999",
 				},
 				"newer_versions_greater_than": schema.Int64Attribute{
 					Optional: true,
