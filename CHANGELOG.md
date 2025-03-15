@@ -3,6 +3,7 @@
 BUG FIXES:
 
 * resource/resource_xray_operational_risk_policy: Fix 'Release age greater than' field (in months) now accepts any value between 1 and 999. PR: [#311](https://github.com/jfrog/terraform-provider-xray/pull/311)
+* resource/xray_repository_config: Fix resource showing updates when there are no changes in resource for package type generic. PR: [#310](https://github.com/jfrog/terraform-provider-xray/pull/310)
 
 ## 3.0.3 (December 19, 2024). Tested on Artifactory 7.98.11 and Xray 3.107.18 with Terraform 1.10.3 and OpenTofu 1.8.7
 

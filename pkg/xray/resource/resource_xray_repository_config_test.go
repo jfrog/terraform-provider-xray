@@ -553,7 +553,7 @@ func TestAccRepositoryConfig_RepoConfigCreate_InvalidExposures(t *testing.T) {
 		ExternalProviders: map[string]resource.ExternalProvider{
 			"artifactory": {
 				Source:            "jfrog/artifactory",
-				VersionConstraint: "10.1.2",
+				VersionConstraint: "12.9.1",
 			},
 		},
 		Steps: []resource.TestStep{
@@ -641,7 +641,8 @@ func TestAccRepositoryConfig_RepoPathsUpdate(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		ExternalProviders: map[string]resource.ExternalProvider{
 			"artifactory": {
-				Source: "jfrog/artifactory",
+				Source:            "jfrog/artifactory",
+				VersionConstraint: "12.9.1",
 			},
 		},
 		Steps: []resource.TestStep{
@@ -719,7 +720,9 @@ resource "xray_repository_config" "{{ .resource_name }}" {
     retention_in_days        = {{ .retention_in_days }}
 
 	exposures {
-      scanners_category {}
+      scanners_category {
+			secrets = true	  		
+	  }
 	}
   }
 }`
@@ -824,7 +827,7 @@ resource "xray_repository_config" "{{ .resource_name }}" {
   jas_enabled = true
 
   config {
-    vuln_contextual_analysis = true
+	vuln_contextual_analysis = true
     retention_in_days = 90
 
 	exposures {
@@ -868,7 +871,9 @@ resource "xray_repository_config" "{{ .resource_name }}" {
   
   config {
     exposures {
-      scanners_category {}
+      scanners_category {
+		secrets = true  
+	 }
     }
   }
 

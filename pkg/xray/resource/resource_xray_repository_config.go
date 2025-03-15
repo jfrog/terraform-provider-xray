@@ -79,7 +79,7 @@ func (m RepoConfigResourceModel) toAPIModel(_ context.Context, xrayVersion, pack
 								"secrets_scan":      scannerCategoryAttrs["secrets"].(types.Bool).ValueBool(),
 								"applications_scan": scannerCategoryAttrs["applications"].(types.Bool).ValueBool(),
 							}
-						case "maven", "nuget":
+						case "maven", "nuget", "generic":
 							exp.ScannersCategory = map[string]bool{
 								"secrets_scan": scannerCategoryAttrs["secrets"].(types.Bool).ValueBool(),
 							}
@@ -288,7 +288,7 @@ func (m *RepoConfigResourceModel) fromAPIModel(_ context.Context, xrayVersion, p
 					scannersCategoryAttrValues["services"] = types.BoolValue(apiModel.RepoConfig.Exposures.ScannersCategory["services_scan"])
 					scannersCategoryAttrValues["secrets"] = types.BoolValue(apiModel.RepoConfig.Exposures.ScannersCategory["secrets_scan"])
 					scannersCategoryAttrValues["applications"] = types.BoolValue(apiModel.RepoConfig.Exposures.ScannersCategory["applications_scan"])
-				case "maven", "nuget":
+				case "maven", "nuget", "generic":
 					scannersCategoryAttrValues["secrets"] = types.BoolValue(apiModel.RepoConfig.Exposures.ScannersCategory["secrets_scan"])
 				case "npm", "pypi":
 					scannersCategoryAttrValues["secrets"] = types.BoolValue(apiModel.RepoConfig.Exposures.ScannersCategory["secrets_scan"])
