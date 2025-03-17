@@ -4,7 +4,7 @@ module github.com/jfrog/terraform-provider-xray/v3
 // replace github.com/jfrog/terraform-provider-shared => ../terraform-provider-shared
 
 go 1.22.7
-toolchain go1.23.7
+toolchain go1.24.1
 
 require (
 	github.com/go-resty/resty/v2 v2.16.5
@@ -14,7 +14,7 @@ require (
 	github.com/hashicorp/terraform-plugin-framework-validators v0.17.0
 	github.com/hashicorp/terraform-plugin-go v0.26.0
 	github.com/hashicorp/terraform-plugin-testing v1.11.0
-	github.com/jfrog/terraform-provider-shared v1.28.0
+	github.com/jfrog/terraform-provider-shared v1.29.0
 	github.com/samber/lo v1.49.1
 	golang.org/x/exp v0.0.0-20230809150735-7b3493d9a819
 )
