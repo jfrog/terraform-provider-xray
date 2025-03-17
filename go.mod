@@ -3,7 +3,8 @@ module github.com/jfrog/terraform-provider-xray/v3
 // if you need to do local dev, literally just uncomment the line below
 // replace github.com/jfrog/terraform-provider-shared => ../terraform-provider-shared
 
-go 1.22.7
+go 1.23.0
+
 toolchain go1.24.1
 
 require (
