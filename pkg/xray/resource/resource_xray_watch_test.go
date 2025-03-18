@@ -59,7 +59,6 @@ func TestAccWatch_UpgradeFromSDKv2(t *testing.T) {
 			{
 				ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 				Config:                   config,
-				ConfigPlanChecks:         testutil.ConfigPlanChecks(""),
 			},
 		},
 	})

@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/jfrog/terraform-provider-shared/client"
 	"github.com/jfrog/terraform-provider-shared/testutil"
 	"github.com/jfrog/terraform-provider-shared/util/sdk"
@@ -553,7 +554,7 @@ func mkFilterTestCase_UpgradeFromSDKv2(t *testing.T, resourceFields map[string]i
 	config := fmt.Sprintf(remoteRepoFull, resourceName, name, allFieldsHcl)
 
 	return t, resource.TestCase{
-		CheckDestroy: acctest.VerifyDeleted(fqrn, "", testCheckReport), // how to get ID?
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "key", testCheckReport), // how to get ID?
 		Steps: []resource.TestStep{
 			{
 				Config: config,
@@ -568,8 +569,11 @@ func mkFilterTestCase_UpgradeFromSDKv2(t *testing.T, resourceFields map[string]i
 			{
 				Config:                   config,
 				ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
-				PlanOnly:                 true,
-				ConfigPlanChecks:         testutil.ConfigPlanChecks(""),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
 			},
 		},
 	}

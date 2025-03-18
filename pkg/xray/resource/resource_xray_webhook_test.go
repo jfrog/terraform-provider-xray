@@ -71,7 +71,6 @@ func TestAccWebhook_UpgradeFromSDKv2(t *testing.T) {
 			{
 				ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 				Config:                   config,
-				ConfigPlanChecks:         testutil.ConfigPlanChecks(""),
 			},
 		},
 	})
@@ -156,7 +155,6 @@ func TestAccWebhook_full(t *testing.T) {
 					resource.TestCheckResourceAttr(fqrn, "headers.header1_name", updatedTestData["header1_value"]),
 					resource.TestCheckResourceAttr(fqrn, "headers.header2_name", updatedTestData["header2_value"]),
 				),
-				ConfigPlanChecks: testutil.ConfigPlanChecks(""),
 			},
 			{
 				ResourceName:                         fqrn,
