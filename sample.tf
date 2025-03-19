@@ -3,7 +3,7 @@ terraform {
   required_providers {
     xray = {
       source  = "jfrog/xray"
-      version = "3.0.0"
+      version = "3.0.4"
     }
   }
 }
@@ -18,6 +18,20 @@ provider "xray" {
 
 resource "random_id" "randid" {
   byte_length = 2
+}
+
+resource "xray_webhook" "xraywebhooks1234" {
+	name        = "xraywebhooks${random_id.randid.dec}"
+	description = "My webhook description"
+	url         = "https://tempurl.org"
+	use_proxy   = false
+	user_name   = "my_user_1"
+	password    = "my_user_password"
+
+	headers = {
+		header1_name = "header1_value"
+		header2_name = "header2_value"
+	}
 }
 
 resource "xray_security_policy" "security1" {
@@ -35,7 +49,7 @@ resource "xray_security_policy" "security1" {
     }
 
     actions {
-      webhooks                           = []
+      webhooks                           = ["xraywebhooks${random_id.randid.dec}"]
       mails                              = ["test@email.com"]
       block_release_bundle_distribution  = true
       fail_build                         = true
@@ -70,7 +84,7 @@ resource "xray_security_policy" "security2" {
     }
 
     actions {
-      webhooks                           = []
+      webhooks                           = ["xraywebhooks${random_id.randid.dec}"]
       mails                              = ["test@email.com"]
       block_release_bundle_distribution  = true
       fail_build                         = true
@@ -103,7 +117,7 @@ resource "xray_license_policy" "license1" {
     }
 
     actions {
-      webhooks                           = []
+      webhooks                           = ["xraywebhooks${random_id.randid.dec}"]
       mails                              = ["test@email.com"]
       block_release_bundle_distribution  = false
       fail_build                         = true
@@ -137,7 +151,7 @@ resource "xray_license_policy" "license2" {
     }
 
     actions {
-      webhooks                           = []
+      webhooks                           = ["xraywebhooks${random_id.randid.dec}"]
       mails                              = ["test@email.com"]
       block_release_bundle_distribution  = false
       fail_build                         = true
@@ -194,19 +208,7 @@ resource "xray_watch" "repository" {
   watch_resource {
     type       = "repository"
     bin_mgr_id = "default"
-    name       = "your-repository-name"
-    repo_type  = "local"
-
-    filter {
-      type  = "regex"
-      value = ".*"
-    }
-  }
-
-  watch_resource {
-    type       = "repository"
-    bin_mgr_id = "default"
-    name       = "your-other-repository-name"
+    name       = "example-repo-local"
     repo_type  = "local"
 
     filter {
@@ -308,7 +310,7 @@ resource "xray_watch" "all-projects" {
 }
 
 resource "xray_watch" "all-projects-with-filters" {
-  name        = "all-projects-watch-${random_id.randid.dec}"
+  name        = "all-projects-with-filters-watch-${random_id.randid.dec}"
   description = "Watch all the projects with Ant patterns filter"
   active      = true
 
@@ -341,11 +343,7 @@ resource "xray_watch" "project" {
 
   watch_resource {
     type = "project"
-    name = "my-project-key"
-  }
-  watch_resource {
-    type = "project"
-    name = "my-another-project-key"
+    name = "myproj"
   }
 
   assigned_policy {
@@ -373,7 +371,7 @@ resource "xray_workers_count" "workers-count" {
     new_content      = 4
     existing_content = 2
   }
-  alert {
+  policy_enforcer {
     new_content      = 4
     existing_content = 2
   }
@@ -383,11 +381,42 @@ resource "xray_workers_count" "workers-count" {
   notification {
     new_content = 2
   }
+  user_catalog {
+    new_content      = 4
+    existing_content = 2
+  }
+  sbom_impact_analysis {
+    new_content      = 4
+    existing_content = 2
+  }
+  migration_sbom {
+    new_content      = 4
+    existing_content = 2
+  }
+  sbom {
+    new_content      = 4
+    existing_content = 2
+  } 
+  panoramic {
+    new_content      = 4
+  }
 }
 
 resource "xray_repository_config" "xray-repo-config-pattern" {
 
   repo_name = "example-repo-local"
+  jas_enabled = true
+
+  config {
+    vuln_contextual_analysis = true
+    retention_in_days        = 90
+
+    exposures {
+      scanners_category {
+        secrets = true
+      }
+	  }
+  }
 
   paths_config {
 
@@ -416,9 +445,16 @@ resource "xray_repository_config" "xray-repo-config" {
 
   repo_name = "example-repo-local"
 
+  jas_enabled = true
   config {
     vuln_contextual_analysis = true
     retention_in_days        = 90
+    
+    exposures {
+      scanners_category {
+        secrets = true
+      }
+	  }
   }
 }
 
@@ -499,7 +535,6 @@ resource "xray_violations_report" "report" {
   filters {
     type 					= "security"
     watch_names 			= ["NameOfWatch1","NameOfWatch2"]
-    watch_patterns 			= ["WildcardWatch*","WildcardWatch1*"]
     component 				= "*vulnerable:component*"
     artifact 				= "some://impacted*artifact"
     policy_names 			= ["policy1","policy2"]
@@ -570,8 +605,9 @@ resource "xray_vulnerabilities_report" "report" {
 
 resource "xray_ignore_rule" "ignore-rule-2590577" {
   notes           = "notes"
-  expiration_date = "2023-01-19"
+  expiration_date = "2026-01-19"
   vulnerabilities = ["any"]
+  cves = ["any"]
 
   component {
     name    = "name"

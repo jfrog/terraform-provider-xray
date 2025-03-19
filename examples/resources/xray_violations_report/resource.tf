@@ -18,7 +18,6 @@ resource "xray_violations_report" "report" {
   filters {
     type           = "security"
     watch_names    = ["NameOfWatch1", "NameOfWatch2"]
-    watch_patterns = ["WildcardWatch*", "WildcardWatch1*"]
     component      = "*vulnerable:component*"
     artifact       = "some://impacted*artifact"
     policy_names   = ["policy1", "policy2"]

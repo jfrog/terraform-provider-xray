@@ -30,7 +30,7 @@ resource "xray_workers_count" "workers-count" {
     new_content      = 4
     existing_content = 2
   }
-  alert {
+  policy_enforcer {
     new_content      = 4
     existing_content = 2
   }
@@ -39,6 +39,25 @@ resource "xray_workers_count" "workers-count" {
   }
   notification {
     new_content = 2
+  }
+  user_catalog {
+    new_content      = 4
+    existing_content = 2
+  }
+  sbom_impact_analysis {
+    new_content      = 4
+    existing_content = 2
+  }
+  migration_sbom {
+    new_content      = 4
+    existing_content = 2
+  }
+  sbom {
+    new_content      = 4
+    existing_content = 2
+  } 
+  panoramic {
+    new_content      = 4
   }
 }
 ```

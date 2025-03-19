@@ -13,7 +13,7 @@ resource "xray_operational_risk_policy" "min_risk" {
     }
 
     actions {
-      webhooks                           = []
+      webhooks                           = ["sec-webhooks"]
       mails                              = ["test@email.com"]
       block_release_bundle_distribution  = false
       block_release_bundle_promotion     = false
