@@ -1,4 +1,4 @@
-## 3.0.5 (March 21, 2025)
+## 3.0.5 (March 21, 2025). Tested on Artifactory 7.104.12 and Xray 3.111.20 with Terraform 1.11.2 and OpenTofu 1.9.0
 
 BUG FIXES:
 
