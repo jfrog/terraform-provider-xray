@@ -306,7 +306,7 @@ func packNameVersionPath(models []IgnoreFilterNameVersionPathAPIModel) (basetype
 				nameVersionPathMap["version"] = types.StringValue(property.Version)
 			}
 
-			if property.Version != "" {
+			if property.Path != "" {
 				nameVersionPathMap["path"] = types.StringValue(property.Path)
 			}
 
