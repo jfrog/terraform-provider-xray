@@ -1,3 +1,9 @@
+## 3.0.5 (March 21, 2025). Tested on Artifactory 7.104.12 and Xray 3.111.20 with Terraform 1.11.2 and OpenTofu 1.9.0
+
+BUG FIXES:
+
+* resource/xray_ignore_rule: Fix "Provider produced inconsistent result after apply" after creation of ignore rule with specified artifact with path but no version attribute. PR: [#318](https://github.com/jfrog/terraform-provider-xray/pull/318) Issue: [#303](https://github.com/jfrog/terraform-provider-xray/issues/303)
+
 ## 3.0.4 (March 08, 2025). Tested on Artifactory 7.104.12 and Xray 3.111.20 with Terraform 1.11.2 and OpenTofu 1.9.0
 
 BUG FIXES:
