@@ -37,3 +37,27 @@ resource "xray_ignore_rule" "ignore-111" {
     path    = "invalid-path/"
   }
 }
+
+resource "xray_ignore_rule" "ignore-rule-2590576" {
+  notes           = "notes"
+  expiration_date = "2026-04-05"
+  cves = ["any"]
+  vulnerabilities = ["any"]
+
+	release_bundle {
+		name    = "fake-name"
+		version = "fake-version"
+  }
+}
+
+resource "xray_ignore_rule" "ignore-rule-2590577" {
+  notes           = "notes"
+  expiration_date = "2026-04-06"
+  cves = ["any"]
+  vulnerabilities = ["any"]
+
+	release_bundles_v2 {
+		name    = "releaseBundleV2://fake-name"
+		version = "fake-version"
+  }
+}

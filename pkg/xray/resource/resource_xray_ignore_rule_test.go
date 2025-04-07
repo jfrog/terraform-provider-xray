@@ -963,3 +963,126 @@ func testCheckIgnoreRule(id string, request *resty.Request) (*resty.Response, er
 
 	return res, nil
 }
+
+func TestAccIgnoreRule_check_release_bundle_v1(t *testing.T) {
+	_, fqrn, name := testutil.MkNames("ignore-rule-", "xray_ignore_rule")
+	expirationDate := time.Now().UTC().Add(time.Hour * 48)
+
+	config := util.ExecuteTemplate("TestAccIgnoreRule", `
+		resource "xray_ignore_rule" "{{ .name }}" {
+		  notes            = "fake notes"
+		  expiration_date  = "{{ .expirationDate }}"
+		  vulnerabilities  = ["any"]
+		  cves             = ["any"]
+
+		  release_bundle {
+			  name    = "fake-name"
+			  version = "fake-version"
+		  }
+		}
+	`, map[string]interface{}{
+		"name":           name,
+		"expirationDate": expirationDate.Local().Format("2006-01-02"),
+	})
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckIgnoreRule),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet(fqrn, "id"),
+					resource.TestCheckResourceAttr(fqrn, "notes", "fake notes"),
+					resource.TestCheckResourceAttr(fqrn, "expiration_date", expirationDate.Local().Format("2006-01-02")),
+					resource.TestCheckResourceAttr(fqrn, "is_expired", "false"),
+					resource.TestCheckResourceAttr(fqrn, "release_bundle.#", "1"),
+					resource.TestCheckResourceAttr(fqrn, "release_bundle.0.name", "fake-name"),
+					resource.TestCheckResourceAttr(fqrn, "release_bundle.0.version", "fake-version"),
+				),
+			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func TestAccIgnoreRule_release_bundle_v2(t *testing.T) {
+	_, fqrn, name := testutil.MkNames("ignore-rule-", "xray_ignore_rule")
+	expirationDate := time.Now().UTC().Add(time.Hour * 48)
+
+	config := util.ExecuteTemplate("TestAccIgnoreRule", `
+		resource "xray_ignore_rule" "{{ .name }}" {
+		  notes            = "fake notes"
+		  expiration_date  = "{{ .expirationDate }}"
+		  vulnerabilities  = ["any"]
+		  cves             = ["any"]
+
+		  release_bundles_v2 {
+			  name    = "releaseBundleV2://fake-name"
+			  version    = "fake-version"
+		  }
+		}
+	`, map[string]interface{}{
+		"name":           name,
+		"expirationDate": expirationDate.Local().Format("2006-01-02"),
+	})
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckIgnoreRule),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet(fqrn, "id"),
+					resource.TestCheckResourceAttr(fqrn, "notes", "fake notes"),
+					resource.TestCheckResourceAttr(fqrn, "expiration_date", expirationDate.Local().Format("2006-01-02")),
+					resource.TestCheckResourceAttr(fqrn, "is_expired", "false"),
+					resource.TestCheckResourceAttr(fqrn, "release_bundles_v2.#", "1"),
+					resource.TestCheckResourceAttr(fqrn, "release_bundles_v2.0.name", "releaseBundleV2://fake-name"),
+					resource.TestCheckResourceAttr(fqrn, "release_bundles_v2.0.version", "fake-version"),
+				),
+			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func TestAccIgnoreRule_invalid_release_bundles_v2_name(t *testing.T) {
+	_, _, name := testutil.MkNames("ignore-rule-", "xray_ignore_rule")
+	expirationDate := time.Now().Add(time.Hour * 48)
+
+	config := util.ExecuteTemplate("TestAccIgnoreRule", `
+		resource "xray_ignore_rule" "{{ .name }}" {
+		  notes            = "fake notes"
+		  expiration_date  = "{{ .expirationDate }}"
+		  vulnerabilities  = ["any"]
+
+		  release_bundles_v2 {
+			  name    = "fake-name"
+			  version    = "fake-version"
+		  }
+		}
+	`, map[string]interface{}{
+		"name":           name,
+		"expirationDate": expirationDate.Format("2006-01-02"),
+	})
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      config,
+				ExpectError: regexp.MustCompile("Name must start with 'releaseBundleV2://' followed by a valid name."),
+			},
+		},
+	})
+}
