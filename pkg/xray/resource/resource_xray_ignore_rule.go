@@ -63,6 +63,7 @@ type IgnoreRuleResourceModel struct {
 	Watches          types.Set    `tfsdk:"watches"`
 	DockerLayers     types.Set    `tfsdk:"docker_layers"`
 	ReleaseBundles   types.Set    `tfsdk:"release_bundle"`
+	ReleaseBundlesv2 types.Set    `tfsdk:"release_bundles_v2"`
 	Builds           types.Set    `tfsdk:"build"`
 	Components       types.Set    `tfsdk:"component"`
 	Artifacts        types.Set    `tfsdk:"artifact"`
@@ -151,6 +152,11 @@ func (m IgnoreRuleResourceModel) toAPIModel(ctx context.Context, apiModel *Ignor
 		unpackFilterNameVersion,
 	)
 
+	releaseBundlesv2 := lo.Map(
+		m.ReleaseBundlesv2.Elements(),
+		unpackFilterNameVersion,
+	)
+
 	builds := lo.Map(
 		m.Builds.Elements(),
 		unpackFilterNameVersionProject(m.ProjectKey.ValueString()),
@@ -175,6 +181,7 @@ func (m IgnoreRuleResourceModel) toAPIModel(ctx context.Context, apiModel *Ignor
 		OperationalRisks: operationalRisks,
 		DockerLayers:     dockerLayers,
 		ReleaseBundles:   releaseBundles,
+		ReleaseBundlesv2: releaseBundlesv2,
 		Builds:           builds,
 		Components:       components,
 		Artifacts:        artifacts,
@@ -402,6 +409,12 @@ func (m *IgnoreRuleResourceModel) fromAPIModel(ctx context.Context, apiModel Ign
 	}
 	m.ReleaseBundles = releaseBundles
 
+	releaseBundlesv2, d := packNameVersion(apiModel.IgnoreFilters.ReleaseBundlesv2)
+	if d != nil {
+		diags.Append(d...)
+	}
+	m.ReleaseBundlesv2 = releaseBundlesv2
+
 	builds, d := packNameVersionProject(apiModel.IgnoreFilters.Builds)
 	if d != nil {
 		diags.Append(d...)
@@ -442,6 +455,7 @@ type IgnoreFiltersAPIModel struct {
 	DockerLayers     []string                                 `json:"docker-layers,omitempty"`
 	OperationalRisks []string                                 `json:"operational_risk,omitempty"`
 	ReleaseBundles   []IgnoreFilterNameVersionAPIModel        `json:"release-bundles,omitempty"`
+	ReleaseBundlesv2 []IgnoreFilterNameVersionAPIModel        `json:"release_bundles_v2,omitempty"`
 	Builds           []IgnoreFilterNameVersionProjectAPIModel `json:"builds,omitempty"`
 	Components       []IgnoreFilterNameVersionAPIModel        `json:"components,omitempty"`
 	Artifacts        []IgnoreFilterNameVersionPathAPIModel    `json:"artifacts,omitempty"`
@@ -619,6 +633,39 @@ func (r *IgnoreRuleResource) Schema(ctx context.Context, req resource.SchemaRequ
 					setplanmodifier.RequiresReplace(),
 				},
 				Description: "List of specific release bundles to ignore. Omit to apply to all.",
+			},
+			"release_bundles_v2": schema.SetNestedBlock{
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"name": schema.StringAttribute{
+							Required: true,
+							Validators: []validator.String{
+								stringvalidator.RegexMatches(
+									regexp.MustCompile(`^releaseBundleV2:\/\/[a-zA-Z0-9_\-\.]+$`),
+									"Name must start with 'releaseBundleV2://' followed by a valid name.",
+								),
+							},
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.RequiresReplace(),
+							},
+							Description: "Name of the release bundle v2. Must start with 'releaseBundleV2://'.",
+						},
+						"version": schema.StringAttribute{
+							Optional: true,
+							Validators: []validator.String{
+								stringvalidator.LengthAtLeast(1),
+							},
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.RequiresReplace(),
+							},
+							Description: "Version of the release bundle v2.",
+						},
+					},
+				},
+				PlanModifiers: []planmodifier.Set{
+					setplanmodifier.RequiresReplace(),
+				},
+				Description: "List of specific release bundles v2 to ignore. Omit to apply to all.",
 			},
 			"build": schema.SetNestedBlock{
 				NestedObject: schema.NestedBlockObject{
