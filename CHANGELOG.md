@@ -1,3 +1,9 @@
+## 3.0.6 (April 11, 2025).
+
+IMPROVEMENTS: 
+
+* resource/xray_ignore_rule: Added `exposures` attribute to support creating ignore rule for Exposures violation. PR: [#320](https://github.com/jfrog/terraform-provider-xray/pull/320) Issue: [#301](https://github.com/jfrog/terraform-provider-xray/issues/301)
+
 ## 3.0.5 (April 07, 2025). Tested on Artifactory 7.104.14 and Xray 3.111.23 with Terraform 1.11.3 and OpenTofu 1.9.0
 
 BUG FIXES:

@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -64,6 +65,7 @@ type IgnoreRuleResourceModel struct {
 	DockerLayers     types.Set    `tfsdk:"docker_layers"`
 	ReleaseBundles   types.Set    `tfsdk:"release_bundle"`
 	ReleaseBundlesv2 types.Set    `tfsdk:"release_bundles_v2"`
+	Exposures        types.Object `tfsdk:"exposures"`
 	Builds           types.Set    `tfsdk:"build"`
 	Components       types.Set    `tfsdk:"component"`
 	Artifacts        types.Set    `tfsdk:"artifact"`
@@ -99,6 +101,51 @@ func unpackFilterNameVersionPath(elem attr.Value, _ int) IgnoreFilterNameVersion
 		},
 		Path: attrs["path"].(types.String).ValueString(),
 	}
+}
+
+func unpackFilterScannersCategoriesFilePath(ctx context.Context, exposuresElemns attr.Value) (IgnoreFilterExposuresAPIModel, diag.Diagnostics) {
+	diags := diag.Diagnostics{}
+	exposures := IgnoreFilterExposuresAPIModel{}
+
+	if exposuresElemns.IsNull() || exposuresElemns.IsUnknown() {
+		return exposures, diags
+	}
+
+	attrs, ok := exposuresElemns.(basetypes.ObjectValue)
+	if !ok {
+		diags.AddError("Type Conversion Error", "Expected ObjectValue for exposures")
+		return exposures, diags
+	}
+
+	attributes := attrs.Attributes()
+	if scannersAttr, ok := attributes["scanners"]; ok && !scannersAttr.IsNull() {
+		var scanners []string
+		d := scannersAttr.(basetypes.SetValue).ElementsAs(ctx, &scanners, false)
+		if d.HasError() {
+			diags.Append(d...)
+		}
+		exposures.Scanners = scanners
+	}
+
+	if categoriesAttr, ok := attributes["categories"]; ok && !categoriesAttr.IsNull() {
+		var categories []string
+		d := categoriesAttr.(basetypes.SetValue).ElementsAs(ctx, &categories, false)
+		if d.HasError() {
+			diags.Append(d...)
+		}
+		exposures.Categories = categories
+	}
+
+	if filePathAttr, ok := attributes["file_path"]; ok && !filePathAttr.IsNull() {
+		var filePaths []string
+		d := filePathAttr.(basetypes.SetValue).ElementsAs(ctx, &filePaths, false)
+		if d.HasError() {
+			diags.Append(d...)
+		}
+		exposures.FilePath = filePaths
+	}
+
+	return exposures, diags
 }
 
 func (m IgnoreRuleResourceModel) toAPIModel(ctx context.Context, apiModel *IgnoreRuleAPIModel) (ds diag.Diagnostics) {
@@ -157,6 +204,15 @@ func (m IgnoreRuleResourceModel) toAPIModel(ctx context.Context, apiModel *Ignor
 		unpackFilterNameVersion,
 	)
 
+	// Initialize exposures with a default value
+	exposures := IgnoreFilterExposuresAPIModel{}
+	// Only include exposures if it is not null or unknown
+	if !m.Exposures.IsNull() && !m.Exposures.IsUnknown() {
+		var d diag.Diagnostics
+		exposures, d = unpackFilterScannersCategoriesFilePath(ctx, m.Exposures)
+		ds.Append(d...)
+	}
+
 	builds := lo.Map(
 		m.Builds.Elements(),
 		unpackFilterNameVersionProject(m.ProjectKey.ValueString()),
@@ -182,6 +238,7 @@ func (m IgnoreRuleResourceModel) toAPIModel(ctx context.Context, apiModel *Ignor
 		DockerLayers:     dockerLayers,
 		ReleaseBundles:   releaseBundles,
 		ReleaseBundlesv2: releaseBundlesv2,
+		Exposures:        exposures,
 		Builds:           builds,
 		Components:       components,
 		Artifacts:        artifacts,
@@ -204,6 +261,12 @@ var nameVersionPathResourceModelAttributeTypes map[string]attr.Type = map[string
 	"name":    types.StringType,
 	"version": types.StringType,
 	"path":    types.StringType,
+}
+
+var scannersCategoriesFilePathResourceModelAttributeTypes map[string]attr.Type = map[string]attr.Type{
+	"scanners":   types.SetType{ElemType: types.StringType},
+	"categories": types.SetType{ElemType: types.StringType},
+	"file_path":  types.SetType{ElemType: types.StringType},
 }
 
 var nameVersionPathSetResourceModelAttributeTypes types.ObjectType = types.ObjectType{
@@ -335,6 +398,51 @@ func packNameVersionPath(models []IgnoreFilterNameVersionPathAPIModel) (basetype
 	return nameVersionPathSet, diags
 }
 
+func packScannersCategoriesFilePath(ctx context.Context, exposuresAPIModel IgnoreFilterExposuresAPIModel) (basetypes.ObjectValue, diag.Diagnostics) {
+	diags := diag.Diagnostics{}
+
+	scanners := types.SetNull(types.StringType)
+	if len(exposuresAPIModel.Scanners) > 0 {
+		sc, d := types.SetValueFrom(ctx, types.StringType, exposuresAPIModel.Scanners)
+		if d.HasError() {
+			diags.Append(d...)
+		}
+		scanners = sc
+	}
+
+	categories := types.SetNull(types.StringType)
+	if len(exposuresAPIModel.Categories) > 0 {
+		ca, d := types.SetValueFrom(ctx, types.StringType, exposuresAPIModel.Categories)
+		if d.HasError() {
+			diags.Append(d...)
+		}
+		categories = ca
+	}
+
+	filePath := types.SetNull(types.StringType)
+	if len(exposuresAPIModel.FilePath) > 0 {
+		fp, d := types.SetValueFrom(ctx, types.StringType, exposuresAPIModel.FilePath)
+		if d.HasError() {
+			diags.Append(d...)
+		}
+		filePath = fp
+	}
+
+	exposures, d := types.ObjectValue(
+		scannersCategoriesFilePathResourceModelAttributeTypes,
+		map[string]attr.Value{
+			"scanners":   scanners,
+			"categories": categories,
+			"file_path":  filePath,
+		},
+	)
+	if d.HasError() {
+		diags.Append(d...)
+	}
+
+	return exposures, diags
+}
+
 func (m *IgnoreRuleResourceModel) fromAPIModel(ctx context.Context, apiModel IgnoreRuleAPIModel) diag.Diagnostics {
 	diags := diag.Diagnostics{}
 
@@ -415,6 +523,19 @@ func (m *IgnoreRuleResourceModel) fromAPIModel(ctx context.Context, apiModel Ign
 	}
 	m.ReleaseBundlesv2 = releaseBundlesv2
 
+	// Only set exposures if it has meaningful data
+	if len(apiModel.IgnoreFilters.Exposures.Scanners) > 0 ||
+		len(apiModel.IgnoreFilters.Exposures.Categories) > 0 ||
+		len(apiModel.IgnoreFilters.Exposures.FilePath) > 0 {
+		exposures, d := packScannersCategoriesFilePath(ctx, apiModel.IgnoreFilters.Exposures)
+		if d != nil {
+			diags.Append(d...)
+		}
+		m.Exposures = exposures
+	} else {
+		m.Exposures = types.ObjectNull(scannersCategoriesFilePathResourceModelAttributeTypes)
+	}
+
 	builds, d := packNameVersionProject(apiModel.IgnoreFilters.Builds)
 	if d != nil {
 		diags.Append(d...)
@@ -456,6 +577,7 @@ type IgnoreFiltersAPIModel struct {
 	OperationalRisks []string                                 `json:"operational_risk,omitempty"`
 	ReleaseBundles   []IgnoreFilterNameVersionAPIModel        `json:"release-bundles,omitempty"`
 	ReleaseBundlesv2 []IgnoreFilterNameVersionAPIModel        `json:"release_bundles_v2,omitempty"`
+	Exposures        IgnoreFilterExposuresAPIModel            `json:"exposures,omitempty"`
 	Builds           []IgnoreFilterNameVersionProjectAPIModel `json:"builds,omitempty"`
 	Components       []IgnoreFilterNameVersionAPIModel        `json:"components,omitempty"`
 	Artifacts        []IgnoreFilterNameVersionPathAPIModel    `json:"artifacts,omitempty"`
@@ -474,6 +596,12 @@ type IgnoreFilterNameVersionProjectAPIModel struct {
 type IgnoreFilterNameVersionPathAPIModel struct {
 	IgnoreFilterNameVersionAPIModel
 	Path string `json:"path,omitempty"`
+}
+
+type IgnoreFilterExposuresAPIModel struct {
+	Scanners   []string `json:"scanners,omitempty"`
+	Categories []string `json:"categories,omitempty"`
+	FilePath   []string `json:"file_path,omitempty"`
 }
 
 func (r *IgnoreRuleResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -758,6 +886,47 @@ func (r *IgnoreRuleResource) Schema(ctx context.Context, req resource.SchemaRequ
 					setplanmodifier.RequiresReplace(),
 				},
 				Description: "List of specific artifacts to ignore. Omit to apply to all.",
+			},
+			"exposures": schema.SingleNestedBlock{
+				Attributes: map[string]schema.Attribute{
+					"scanners": schema.SetAttribute{
+						ElementType: types.StringType,
+						Optional:    true,
+						Validators: []validator.Set{
+							setvalidator.SizeAtLeast(1),
+							setvalidator.ValueStringsAre(stringvalidator.RegexMatches(
+								regexp.MustCompile(`^EXP-\d+$`),
+								"Scanner IDs must start with 'EXP-' followed by a number",
+							)),
+						},
+						Description: "Ignores all violations for the specific scanner. Scanner IDs must start with 'EXP-' followed by a number.",
+					},
+					"categories": schema.SetAttribute{
+						ElementType: types.StringType,
+						Optional:    true,
+						Validators: []validator.Set{
+							setvalidator.SizeAtLeast(1),
+							setvalidator.ValueStringsAre(stringvalidator.OneOf("secrets", "services", "applications", "iac")),
+						},
+						Description: "Ignores all violations of the specific exposures category. Include one or more exposure categories: 'secrets', 'services', 'applications', or 'iac'.",
+					},
+					"file_path": schema.SetAttribute{
+						ElementType: types.StringType,
+						Optional:    true,
+						Validators: []validator.Set{
+							setvalidator.SizeAtLeast(1),
+							setvalidator.ValueStringsAre(stringvalidator.RegexMatches(
+								regexp.MustCompile(`^/.*$`),
+								"File paths must start with a '/'",
+							)),
+						},
+						Description: "Path of the artifact. Must start with a '/'.",
+					},
+				},
+				Description: "List of specific exposures to ignore. Omit to apply to all.",
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.RequiresReplace(),
+				},
 			},
 		},
 		Description: "Provides an Xray ignore rule resource. See [Xray Ignore Rules](https://www.jfrog.com/confluence/display/JFROG/Ignore+Rules) and [REST API](https://www.jfrog.com/confluence/display/JFROG/Xray+REST+API#XrayRESTAPI-IGNORERULES) for more details. Notice: at least one of the 'vulnerabilities/cves/liceneses', 'component', and 'docker_layers/artifact/build/release_bundle' should not be empty. When selecting the ignore criteria, take note of the combinations you choose. Some combinations such as omitting everything is not allowed as it will ignore all future violations (in the watch or in the system).",
