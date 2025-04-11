@@ -1086,3 +1086,146 @@ func TestAccIgnoreRule_invalid_release_bundles_v2_name(t *testing.T) {
 		},
 	})
 }
+
+func TestAccIgnoreRule_exposures(t *testing.T) {
+	_, fqrn, name := testutil.MkNames("ignore-rule-", "xray_ignore_rule")
+	expirationDate := time.Now().UTC().Add(time.Hour * 48)
+
+	config := util.ExecuteTemplate("TestAccIgnoreRule", `
+		resource "xray_ignore_rule" "{{ .name }}" {
+		  notes            = "fake notes"
+		  expiration_date  = "{{ .expirationDate }}"
+
+		  exposures {
+			  scanners    = [ "EXP-124" ]
+			  categories  = [ "secrets", "applications", "services" ]
+			  file_path   = [ "/path/to/file" ]
+		  }
+		}
+	`, map[string]interface{}{
+		"name":           name,
+		"expirationDate": expirationDate.Local().Format("2006-01-02"),
+	})
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckIgnoreRule),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet(fqrn, "id"),
+					resource.TestCheckResourceAttr(fqrn, "notes", "fake notes"),
+					resource.TestCheckResourceAttr(fqrn, "expiration_date", expirationDate.Local().Format("2006-01-02")),
+					resource.TestCheckResourceAttr(fqrn, "is_expired", "false"),
+					resource.TestCheckResourceAttr(fqrn, "exposures.scanners.#", "1"),
+					resource.TestCheckTypeSetElemAttr(fqrn, "exposures.scanners.*", "EXP-124"),
+					resource.TestCheckResourceAttr(fqrn, "exposures.categories.#", "3"),
+					resource.TestCheckTypeSetElemAttr(fqrn, "exposures.categories.*", "secrets"),
+					resource.TestCheckTypeSetElemAttr(fqrn, "exposures.categories.*", "applications"),
+					resource.TestCheckTypeSetElemAttr(fqrn, "exposures.categories.*", "services"),
+					resource.TestCheckResourceAttr(fqrn, "exposures.file_path.#", "1"),
+					resource.TestCheckTypeSetElemAttr(fqrn, "exposures.file_path.*", "/path/to/file"),
+				),
+			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func TestAccIgnoreRule_invalid_exposures_categories(t *testing.T) {
+	_, fqrn, name := testutil.MkNames("ignore-rule-", "xray_ignore_rule")
+	expirationDate := time.Now().UTC().Add(time.Hour * 48)
+
+	config := util.ExecuteTemplate("TestAccIgnoreRule", `
+		resource "xray_ignore_rule" "{{ .name }}" {
+		  notes            = "fake notes"
+		  expiration_date  = "{{ .expirationDate }}"
+
+		  exposures {
+			  categories  = [ "fake-value" ]
+		  }
+		}
+	`, map[string]interface{}{
+		"name":           name,
+		"expirationDate": expirationDate.Local().Format("2006-01-02"),
+	})
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckIgnoreRule),
+		Steps: []resource.TestStep{
+			{
+				Config:      config,
+				ExpectError: regexp.MustCompile(".*value must be one of:\n\\[\"secrets\" \"services\" \"applications\" \"iac\"\\].*"),
+			},
+		},
+	})
+}
+
+func TestAccIgnoreRule_invalid_exposures_scanners(t *testing.T) {
+	_, fqrn, name := testutil.MkNames("ignore-rule-", "xray_ignore_rule")
+	expirationDate := time.Now().UTC().Add(time.Hour * 48)
+
+	config := util.ExecuteTemplate("TestAccIgnoreRule", `
+		resource "xray_ignore_rule" "{{ .name }}" {
+		  notes            = "fake notes"
+		  expiration_date  = "{{ .expirationDate }}"
+
+		  exposures {
+			  scanners  = [ "fake-id" ]
+		  }
+		}
+	`, map[string]interface{}{
+		"name":           name,
+		"expirationDate": expirationDate.Local().Format("2006-01-02"),
+	})
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckIgnoreRule),
+		Steps: []resource.TestStep{
+			{
+				Config:      config,
+				ExpectError: regexp.MustCompile(".*Scanner IDs must start with\n'EXP-' followed by a number.*"),
+			},
+		},
+	})
+}
+
+func TestAccIgnoreRule_invalid_exposures_filepath(t *testing.T) {
+	_, fqrn, name := testutil.MkNames("ignore-rule-", "xray_ignore_rule")
+	expirationDate := time.Now().UTC().Add(time.Hour * 48)
+
+	config := util.ExecuteTemplate("TestAccIgnoreRule", `
+		resource "xray_ignore_rule" "{{ .name }}" {
+		  notes            = "fake notes"
+		  expiration_date  = "{{ .expirationDate }}"
+
+		  exposures {
+			  file_path  = [ "fake-path" ]
+		  }
+		}
+	`, map[string]interface{}{
+		"name":           name,
+		"expirationDate": expirationDate.Local().Format("2006-01-02"),
+	})
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckIgnoreRule),
+		Steps: []resource.TestStep{
+			{
+				Config:      config,
+				ExpectError: regexp.MustCompile(".*File paths must start with\na '/'"),
+			},
+		},
+	})
+}

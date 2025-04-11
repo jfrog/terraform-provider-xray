@@ -61,3 +61,14 @@ resource "xray_ignore_rule" "ignore-rule-2590577" {
 		version = "fake-version"
   }
 }
+
+resource "xray_ignore_rule" "ignore-rule-2590578" {
+  notes           = "notes"
+  expiration_date = "2026-04-06"
+
+  exposures {
+      scanners   = [ "EXP-123" ]
+      categories = [ "secrets" , "applications" ]
+      file_path  = ["/path/to/file"]
+  }
+}
