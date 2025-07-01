@@ -878,7 +878,7 @@ func TestAccSecurityPolicy_vulnerabilityIdsLimitFail(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      util.ExecuteTemplate(fqrn, securityPolicyVulnIdsLimit, testData),
-				ExpectError: regexp.MustCompile(".*set must contain at least 1 elements and at most 100 elements.*"),
+				ExpectError: regexp.MustCompile(".*list must contain at least 1 elements and at most 100 elements.*"),
 			},
 		},
 	})

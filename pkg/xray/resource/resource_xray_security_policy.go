@@ -47,7 +47,7 @@ func (r *SecurityPolicyResource) toCriteriaAPIModel(ctx context.Context, criteri
 		attrs := criteriaElems[0].(types.Object).Attributes()
 
 		var vulnerabilityIds []string
-		d := attrs["vulnerability_ids"].(types.Set).ElementsAs(ctx, &vulnerabilityIds, false)
+		d := attrs["vulnerability_ids"].(types.List).ElementsAs(ctx, &vulnerabilityIds, false)
 		if d.HasError() {
 			diags.Append(d...)
 		}
@@ -138,7 +138,7 @@ func (r *SecurityPolicyResource) fromCriteriaAPIModel(ctx context.Context, crite
 			cvssRangeList = cr
 		}
 
-		vulnerabilityIDs, d := types.SetValueFrom(ctx, types.StringType, criteriaAPIModel.VulnerabilityIds)
+		vulnerabilityIDs, d := types.ListValueFrom(ctx, types.StringType, criteriaAPIModel.VulnerabilityIds)
 		if d.HasError() {
 			diags.Append(d...)
 		}
@@ -254,7 +254,7 @@ var securityCriteriaAttrTypes = map[string]attr.Type{
 	"applicable_cves_only":  types.BoolType,
 	"malicious_package":     types.BoolType,
 	"cvss_range":            types.ListType{ElemType: cvssRangeElementType},
-	"vulnerability_ids":     types.SetType{ElemType: types.StringType},
+	"vulnerability_ids":     types.ListType{ElemType: types.StringType},
 	"exposures":             types.ListType{ElemType: exposuresElementType},
 	"package_name":          types.StringType,
 	"package_type":          types.StringType,
@@ -390,27 +390,27 @@ var securityPolicyCriteriaAttrs = map[string]schema.Attribute{
 		Optional:    true,
 		Description: "Generating a violation on a malicious package.",
 	},
-	"vulnerability_ids": schema.SetAttribute{
+	"vulnerability_ids": schema.ListAttribute{
 		ElementType: types.StringType,
 		Optional:    true,
-		Validators: []validator.Set{
-			setvalidator.SizeBetween(1, 100),
-			setvalidator.ValueStringsAre(
+		Validators: []validator.List{
+			listvalidator.SizeBetween(1, 100),
+			listvalidator.ValueStringsAre(
 				stringvalidator.RegexMatches(regexp.MustCompile(`(CVE\W*\d{4}\W+\d{4,}|XRAY-\d{4,})`), "invalid Vulnerability, must be a valid CVE or Xray ID, example CVE-2021-12345, XRAY-1234"),
 			),
-			setvalidator.ConflictsWith(
+			listvalidator.ConflictsWith(
 				path.MatchRelative().AtParent().AtName("malicious_package"),
 			),
-			setvalidator.ConflictsWith(
+			listvalidator.ConflictsWith(
 				path.MatchRelative().AtParent().AtName("min_severity"),
 			),
-			setvalidator.ConflictsWith(
+			listvalidator.ConflictsWith(
 				path.MatchRelative().AtParent().AtName("cvss_range"),
 			),
-			setvalidator.ConflictsWith(
+			listvalidator.ConflictsWith(
 				path.MatchRelative().AtParent().AtName("exposures"),
 			),
-			setvalidator.ConflictsWith(
+			listvalidator.ConflictsWith(
 				path.MatchRelative().AtParent().AtName("package_name"),
 				path.MatchRelative().AtParent().AtName("package_type"),
 				path.MatchRelative().AtParent().AtName("package_versions"),
