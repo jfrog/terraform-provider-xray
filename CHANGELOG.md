@@ -1,4 +1,4 @@
-## 3.0.7 (Jul 02, 2025).
+## 3.0.7 (Jul 02, 2025). Tested on Artifactory 7.111.10 and Xray 3.118.22 with Terraform 1.12.2 and OpenTofu 1.10.1
 
 IMPROVEMENTS:
 
