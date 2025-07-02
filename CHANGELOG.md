@@ -1,8 +1,13 @@
-## 3.0.7 (June 16, 2025). Tested on Artifactory 7.111.8 with Terraform 1.12.0 and OpenTofu 1.9.1
+## 3.0.7 (Jul 02, 2025). Tested on Artifactory 7.111.10 and Xray 3.118.22 with Terraform 1.12.2 and OpenTofu 1.10.1
 
 IMPROVEMENTS:
 
-* GNUmakefile : Enhanced ARM64 Build Process with Dynamic GOARM64 Detection. PR: [332](https://github.com/jfrog/terraform-provider-xray/pull/332)
+* GNUmakefile : Enhanced ARM64 Build Process with Dynamic GOARM64 Detection. PR: [#332](https://github.com/jfrog/terraform-provider-xray/pull/332)
+
+BUG FIXES:
+
+* resource/xray_security_policy: Switch `vulnerability_ids` attribute type from `TypeSet` to `TypeList` to resolve performance issue with large number of CVE's. PR: [#334](https://github.com/jfrog/terraform-provider-xray/pull/334)
+
 
 ## 3.0.6 (April 11, 2025). Tested on Artifactory 7.104.15 and Xray 3.111.24 with Terraform 1.11.4 and OpenTofu 1.9.0
 

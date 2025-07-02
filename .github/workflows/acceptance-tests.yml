@@ -108,7 +108,7 @@ jobs:
             --set artifactory.license.dataKey=artifactory.cluster.license \
             --set artifactory.persistence.size=50Gi \
             --set nginx.service.ssloffload=true \
-            --set postgresql.persistence.size=50Gi
+            --set postgresql.primary.persistence.size=50Gi
             # --set nginx.service.loadBalancerSourceRanges="{$WHITELIST_CIDR}" \
           echo "Waiting for Artifactory roll out"
           kubectl rollout status deployment/artifactory-artifactory-nginx
@@ -139,7 +139,7 @@ jobs:
         run: |
           helm upgrade --install xray jfrog/xray \
             --version $XRAY_HELM_CHART_VERSION \
-            --set postgresql.persistence.size=200Gi \
+            --set postgresql.primary.persistence.size=200Gi \
             --set xray.jfrogUrl=http://artifactory-artifactory-nginx \
             --set xray.masterKey=$MASTER_KEY \
             --set xray.joinKey=$JOIN_KEY \
