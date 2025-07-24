@@ -159,7 +159,7 @@ func (p *XrayProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 
 	version, err := util.GetXrayVersion(restyClient)
 	if err != nil {
-		resp.Diagnostics.AddError(
+		resp.Diagnostics.AddWarning(
 			"Error getting Xray version",
 			err.Error(),
 		)
