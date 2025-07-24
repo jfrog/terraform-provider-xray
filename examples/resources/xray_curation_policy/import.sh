@@ -1,0 +1,1 @@
+terraform import xray_curation_policy.critical_vulns_policy 4 
