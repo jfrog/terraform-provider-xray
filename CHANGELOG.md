@@ -1,3 +1,9 @@
+## 3.1.0 (Aug 19, 2025).
+
+IMPROVEMENTS:
+
+* resource/xray_catalog_labels: Added support for creating catalog labels, package assignments, and package version assignments. PR: PR: [#344](https://github.com/jfrog/terraform-provider-xray/pull/344)
+
 ## 3.0.7 (Jul 02, 2025). Tested on Artifactory 7.111.10 and Xray 3.118.22 with Terraform 1.12.2 and OpenTofu 1.10.1
 
 IMPROVEMENTS:

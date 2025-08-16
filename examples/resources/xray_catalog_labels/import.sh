@@ -1,0 +1,5 @@
+terraform import xray_catalog_labels.basic lbl_basic_1,lbl_basic_2
+terraform import xray_catalog_labels.with_package_assignments pkg_label
+terraform import xray_catalog_labels.with_version_assignments_single ver_label_one
+terraform import xray_catalog_labels.with_version_assignments_bulk ver_label_bulk
+terraform import xray_catalog_labels.combined combined_lbl,doc_label 

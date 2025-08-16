@@ -987,7 +987,7 @@ func (r *RepoConfigResource) getPackageType(repoName string) (string, error) {
 	}
 
 	if resp.IsError() {
-		return "", fmt.Errorf(resp.String())
+		return "", fmt.Errorf("%s", resp.String())
 	}
 
 	return repo.PackageType, nil
