@@ -14,7 +14,7 @@ require (
 	github.com/hashicorp/terraform-plugin-framework v1.15.0
 	github.com/hashicorp/terraform-plugin-framework-validators v0.18.0
 	github.com/hashicorp/terraform-plugin-go v0.28.0
-	github.com/hashicorp/terraform-plugin-testing v1.13.2
+	github.com/hashicorp/terraform-plugin-testing v1.13.3
 	github.com/jfrog/terraform-provider-shared v1.30.1
 	github.com/samber/lo v1.51.0
 	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b
