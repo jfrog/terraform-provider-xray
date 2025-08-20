@@ -41,6 +41,8 @@ resource "xray_binary_manager_release_bundles_v2" "my-indexed-release-bundles" {
 
 Import is supported using the following syntax:
 
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
 ```shell
 terraform import xray_binary_manager_release_bundles_v2.my-indexed-release-bundles default
 

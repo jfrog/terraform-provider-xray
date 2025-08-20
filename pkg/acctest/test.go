@@ -276,3 +276,19 @@ func CheckPolicyDeleted(id string, t *testing.T, request *resty.Request) *resty.
 	}
 	return nil
 }
+
+func checkCurationCondition(id string, request *resty.Request) (*resty.Response, error) {
+	return request.Get("xray/api/v1/curation/conditions/" + id)
+}
+
+func CheckCurationCondition(id string, request *resty.Request) (*resty.Response, error) {
+	return checkCurationCondition(id, request.AddRetryCondition(client.NeverRetry))
+}
+
+func checkCurationPolicy(id string, request *resty.Request) (*resty.Response, error) {
+	return request.Get("xray/api/v1/curation/policies/" + id)
+}
+
+func CheckCurationPolicy(id string, request *resty.Request) (*resty.Response, error) {
+	return checkCurationPolicy(id, request.AddRetryCondition(client.NeverRetry))
+}

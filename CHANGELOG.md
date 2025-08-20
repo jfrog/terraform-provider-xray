@@ -1,8 +1,10 @@
-## 3.1.0 (Aug 19, 2025). Tested on JFrog Platform 11.2.0 (Artifactory 7.117.14, Xray 3.124.20, Catalog 1.24.0) with Terraform 1.12.2 and OpenTofu 1.10.5
+## 3.1.0 (Aug 20, 2025). Tested on JFrog Platform 11.2.1 (Artifactory 7.117.14, Xray 3.124.20, Catalog 1.24.0) with Terraform 1.12.2 and OpenTofu 1.10.5
 
 IMPROVEMENTS:
 
 * resource/xray_catalog_labels: Added support for creating catalog labels, package assignments, and package version assignments. PR: PR: [#344](https://github.com/jfrog/terraform-provider-xray/pull/344)
+
+* resource/xray_curation_policy, resource/xray_custom_curation_condition : add a new resource allowing to create curation policies and custom curation conditions. PR: [#341](https://github.com/jfrog/terraform-provider-xray/pull/341)
 
 ## 3.0.7 (Jul 02, 2025). Tested on Artifactory 7.111.10 and Xray 3.118.22 with Terraform 1.12.2 and OpenTofu 1.10.1
 

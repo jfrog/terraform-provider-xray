@@ -1,0 +1,1 @@
+terraform import xray_custom_curation_condition.cvss_condition 29 
