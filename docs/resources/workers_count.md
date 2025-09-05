@@ -180,6 +180,10 @@ Required:
 
 ## Import
 
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+Import is supported using the following syntax:
+
 Workers count resource can be imported using their names, e.g.
 ```
 $ terraform import xray_workers_count.workers-count workers-count

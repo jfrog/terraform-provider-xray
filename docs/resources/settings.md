@@ -46,6 +46,10 @@ resource "xray_settings" "db_sync" {
 
 ## Import
 
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
 Settings can be imported using the DB sync time as the ID, e.g.
 ```
 $ terraform import xray_settings.my-settings 00:00

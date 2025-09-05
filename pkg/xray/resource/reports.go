@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
@@ -152,6 +153,38 @@ func (m ReportResourceModel) toAPIModel(
 			}
 		}
 
+		var releaseBundlesv2 *ReleaseBundlesv2APIModel
+		if v, ok := attrs["release_bundles_v2"]; ok {
+			if len(v.(types.Set).Elements()) > 0 {
+				attrs := v.(types.Set).Elements()[0].(types.Object).Attributes()
+
+				var names []string
+				d := attrs["names"].(types.Set).ElementsAs(ctx, &names, false)
+				if d.HasError() {
+					diags.Append(d...)
+				}
+
+				var includePatterns []string
+				d = attrs["include_patterns"].(types.Set).ElementsAs(ctx, &includePatterns, false)
+				if d.HasError() {
+					diags.Append(d...)
+				}
+
+				var excludePatterns []string
+				d = attrs["exclude_patterns"].(types.Set).ElementsAs(ctx, &excludePatterns, false)
+				if d.HasError() {
+					diags.Append(d...)
+				}
+
+				releaseBundlesv2 = &ReleaseBundlesv2APIModel{
+					Names:                  names,
+					IncludePatterns:        includePatterns,
+					ExcludePatterns:        excludePatterns,
+					NumberOfLatestVersions: attrs["number_of_latest_versions"].(types.Int64).ValueInt64(),
+				}
+			}
+		}
+
 		var projects *ProjectsAPIModel
 		if v, ok := attrs["projects"]; ok {
 			if len(v.(types.Set).Elements()) > 0 {
@@ -169,19 +202,27 @@ func (m ReportResourceModel) toAPIModel(
 					diags.Append(d...)
 				}
 
+				var excludeKeyPatterns []string
+				d = attrs["exclude_key_patterns"].(types.Set).ElementsAs(ctx, &excludeKeyPatterns, false)
+				if d.HasError() {
+					diags.Append(d...)
+				}
+
 				projects = &ProjectsAPIModel{
 					Names:                  names,
 					IncludeKeyPatterns:     includeKeyPatterns,
+					ExcludeKeyPatterns:     excludeKeyPatterns,
 					NumberOfLatestVersions: attrs["number_of_latest_versions"].(types.Int64).ValueInt64(),
 				}
 			}
 		}
 
 		resources = &ResourcesAPIModel{
-			Repositories:   repositories,
-			Builds:         builds,
-			ReleaseBundles: releaseBundles,
-			Projects:       projects,
+			Repositories:     repositories,
+			Builds:           builds,
+			ReleaseBundles:   releaseBundles,
+			ReleaseBundlesv2: releaseBundlesv2,
+			Projects:         projects,
 		}
 	}
 
@@ -219,9 +260,6 @@ var reportsSchemaAttrs = lo.Assign(
 			Required: true,
 			Validators: []validator.String{
 				stringvalidator.LengthAtLeast(1),
-			},
-			PlanModifiers: []planmodifier.String{
-				stringplanmodifier.RequiresReplace(),
 			},
 			Description: "Name of the report.",
 		},
@@ -264,6 +302,7 @@ var reportsBlocks = func(filtersAttrs map[string]schema.Attribute, filtersBlocks
 							setvalidator.ConflictsWith(
 								path.MatchRelative().AtParent().AtName("builds"),
 								path.MatchRelative().AtParent().AtName("release_bundles"),
+								path.MatchRelative().AtParent().AtName("release_bundles_v2"),
 								path.MatchRelative().AtParent().AtName("projects"),
 							),
 						},
@@ -325,6 +364,7 @@ var reportsBlocks = func(filtersAttrs map[string]schema.Attribute, filtersBlocks
 							setvalidator.ConflictsWith(
 								path.MatchRelative().AtParent().AtName("repository"),
 								path.MatchRelative().AtParent().AtName("release_bundles"),
+								path.MatchRelative().AtParent().AtName("release_bundles_v2"),
 								path.MatchRelative().AtParent().AtName("projects"),
 							),
 						},
@@ -375,7 +415,7 @@ var reportsBlocks = func(filtersAttrs map[string]schema.Attribute, filtersBlocks
 									Computed: true,
 									Default:  int64default.StaticInt64(1),
 									Validators: []validator.Int64{
-										int64validator.AtLeast(0),
+										int64validator.AtLeast(1),
 									},
 									Description: "The number of latest release bundle versions to include to the report.",
 								},
@@ -386,10 +426,73 @@ var reportsBlocks = func(filtersAttrs map[string]schema.Attribute, filtersBlocks
 							setvalidator.ConflictsWith(
 								path.MatchRelative().AtParent().AtName("repository"),
 								path.MatchRelative().AtParent().AtName("builds"),
+								path.MatchRelative().AtParent().AtName("release_bundles_v2"),
 								path.MatchRelative().AtParent().AtName("projects"),
 							),
 						},
 						Description: "The release bundles to include into the report. Only one type of resource can be set per report.",
+					},
+					"release_bundles_v2": schema.SetNestedBlock{
+						NestedObject: schema.NestedBlockObject{
+							Attributes: map[string]schema.Attribute{
+								"names": schema.SetAttribute{
+									ElementType: types.StringType,
+									Optional:    true,
+									Computed:    true,
+									Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
+									Validators: []validator.Set{
+										setvalidator.ConflictsWith(
+											path.MatchRelative().AtParent().AtName("include_patterns"),
+											path.MatchRelative().AtParent().AtName("exclude_patterns"),
+										),
+									},
+									Description: "The list of release bundles names.",
+								},
+								"include_patterns": schema.SetAttribute{
+									ElementType: types.StringType,
+									Optional:    true,
+									Computed:    true,
+									Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
+									Validators: []validator.Set{
+										setvalidator.ConflictsWith(
+											path.MatchRelative().AtParent().AtName("names"),
+										),
+									},
+									Description: "The list of include patterns",
+								},
+								"exclude_patterns": schema.SetAttribute{
+									ElementType: types.StringType,
+									Optional:    true,
+									Computed:    true,
+									Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
+									Validators: []validator.Set{
+										setvalidator.ConflictsWith(
+											path.MatchRelative().AtParent().AtName("names"),
+										),
+									},
+									Description: "The list of exclude patterns",
+								},
+								"number_of_latest_versions": schema.Int64Attribute{
+									Optional: true,
+									Computed: true,
+									Default:  int64default.StaticInt64(1),
+									Validators: []validator.Int64{
+										int64validator.AtLeast(1),
+									},
+									Description: "The number of latest release bundle versions to include to the report.",
+								},
+							},
+						},
+						Validators: []validator.Set{
+							setvalidator.SizeAtMost(1),
+							setvalidator.ConflictsWith(
+								path.MatchRelative().AtParent().AtName("repository"),
+								path.MatchRelative().AtParent().AtName("builds"),
+								path.MatchRelative().AtParent().AtName("release_bundles"),
+								path.MatchRelative().AtParent().AtName("projects"),
+							),
+						},
+						Description: "The release bundles v2 to include into the report. Only one type of resource can be set per report.",
 					},
 					"projects": schema.SetNestedBlock{
 						NestedObject: schema.NestedBlockObject{
@@ -418,12 +521,24 @@ var reportsBlocks = func(filtersAttrs map[string]schema.Attribute, filtersBlocks
 									},
 									Description: "The list of include patterns",
 								},
+								"exclude_key_patterns": schema.SetAttribute{
+									ElementType: types.StringType,
+									Optional:    true,
+									Computed:    true,
+									Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
+									Description: "The list of exclude patterns",
+									Validators: []validator.Set{
+										setvalidator.ConflictsWith(
+											path.MatchRelative().AtParent().AtName("names"),
+										),
+									},
+								},
 								"number_of_latest_versions": schema.Int64Attribute{
 									Optional: true,
 									Computed: true,
 									Default:  int64default.StaticInt64(1),
 									Validators: []validator.Int64{
-										int64validator.AtLeast(0),
+										int64validator.AtLeast(1),
 									},
 									Description: "The number of latest release bundle versions to include to the report.",
 								},
@@ -435,6 +550,7 @@ var reportsBlocks = func(filtersAttrs map[string]schema.Attribute, filtersBlocks
 								path.MatchRelative().AtParent().AtName("repository"),
 								path.MatchRelative().AtParent().AtName("builds"),
 								path.MatchRelative().AtParent().AtName("release_bundles"),
+								path.MatchRelative().AtParent().AtName("release_bundles_v2"),
 							),
 						},
 						Description: "The projects to include into the report. Only one type of resource can be set per report.",
@@ -470,10 +586,11 @@ type ReportAPIModel struct {
 }
 
 type ResourcesAPIModel struct {
-	Repositories   *[]RepositoryAPIModel   `json:"repositories,omitempty"`
-	Builds         *BuildsAPIModel         `json:"builds,omitempty"`
-	ReleaseBundles *ReleaseBundlesAPIModel `json:"release_bundles,omitempty"`
-	Projects       *ProjectsAPIModel       `json:"projects,omitempty"`
+	Repositories     *[]RepositoryAPIModel     `json:"repositories,omitempty"`
+	Builds           *BuildsAPIModel           `json:"builds,omitempty"`
+	ReleaseBundles   *ReleaseBundlesAPIModel   `json:"release_bundles,omitempty"`
+	ReleaseBundlesv2 *ReleaseBundlesv2APIModel `json:"release_bundles_v2,omitempty"`
+	Projects         *ProjectsAPIModel         `json:"projects,omitempty"`
 }
 
 type RepositoryAPIModel struct {
@@ -496,36 +613,57 @@ type ReleaseBundlesAPIModel struct {
 	NumberOfLatestVersions int64    `json:"number_of_latest_versions,omitempty"`
 }
 
+type ReleaseBundlesv2APIModel struct {
+	Names                  []string `json:"names,omitempty"`
+	IncludePatterns        []string `json:"include_patterns,omitempty"`
+	ExcludePatterns        []string `json:"exclude_patterns,omitempty"`
+	NumberOfLatestVersions int64    `json:"number_of_latest_versions,omitempty"`
+}
+
 type ProjectsAPIModel struct {
 	Names                  []string `json:"names,omitempty"`
 	IncludeKeyPatterns     []string `json:"include_key_patterns,omitempty"`
+	ExcludeKeyPatterns     []string `json:"exclude_key_patterns,omitempty"`
 	NumberOfLatestVersions int64    `json:"number_of_latest_versions,omitempty"`
 }
 
 type FiltersAPIModel struct {
-	VulnerableComponent string                   `json:"vulnerable_component,omitempty"` // Vulnerability report filter
-	ImpactedArtifact    string                   `json:"impacted_artifact,omitempty"`
-	HasRemediation      bool                     `json:"has_remediation,omitempty"`
-	CVE                 string                   `json:"cve,omitempty"`
-	IssueId             string                   `json:"issue_id,omitempty"`
-	CVSSScore           *CVSSScoreAPIModel       `json:"cvss_score,omitempty"`
-	Published           *StartAndEndDateAPIModel `json:"published,omitempty"`
-	Unknown             bool                     `json:"unknown"` // Licenses report filter
-	Unrecognized        bool                     `json:"unrecognized"`
-	LicenseNames        []string                 `json:"license_names,omitempty"`
-	LicensePatterns     []string                 `json:"license_patterns,omitempty"`
-	Type                string                   `json:"type,omitempty"` // Violations report filter
-	WatchNames          []string                 `json:"watch_names,omitempty"`
-	WatchPatterns       []string                 `json:"watch_patterns,omitempty"`
-	PolicyNames         []string                 `json:"policy_names,omitempty"`
-	Updated             *StartAndEndDateAPIModel `json:"updated"`
-	SecurityFilters     *SecurityFilterAPIModel  `json:"security_filters,omitempty"`
-	LicenseFilters      *LicenseFilterAPIModel   `json:"license_filters,omitempty"`
-	Risks               []string                 `json:"risks,omitempty"`     // Operational risks filter
-	ScanDate            *StartAndEndDateAPIModel `json:"scan_date,omitempty"` // Common attributes
-	Component           string                   `json:"component,omitempty"`
-	Artifact            string                   `json:"artifact,omitempty"`
-	Severities          []string                 `json:"severities,omitempty"`
+	// Vulnerability report filter
+	VulnerableComponent string `json:"vulnerable_component,omitempty"`
+	HasRemediation      *bool  `json:"has_remediation,omitempty"`
+	CVE                 string `json:"cve,omitempty"`
+	IssueId             string `json:"issue_id,omitempty"`
+
+	// Licenses report filter
+	Unknown         *bool    `json:"unknown,omitempty"`
+	Unrecognized    *bool    `json:"unrecognized,omitempty"`
+	LicenseNames    []string `json:"license_names,omitempty"`
+	LicensePatterns []string `json:"license_patterns,omitempty"`
+
+	// Violations report filter
+	Type                     string                           `json:"type,omitempty"`
+	ViolationStatus          string                           `json:"violation_status,omitempty"`
+	WatchNames               []string                         `json:"watch_names,omitempty"`
+	WatchPatterns            []string                         `json:"watch_patterns,omitempty"`
+	PolicyNames              []string                         `json:"policy_names,omitempty"`
+	Updated                  *StartAndEndDateAPIModel         `json:"updated,omitempty"`
+	SecurityViolationFilters *SecurityViolationFilterAPIModel `json:"security_filters,omitempty"`
+	LicenseViolationFilters  *LicenseViolationFilterAPIModel  `json:"license_filters,omitempty"`
+
+	// Exposures report filter
+	Category string `json:"category,omitempty"`
+
+	// Operational risks filter
+	Risks []string `json:"risks,omitempty"`
+
+	// Common attributes
+	Component        string                   `json:"component,omitempty"`
+	Artifact         string                   `json:"artifact,omitempty"`
+	ImpactedArtifact string                   `json:"impacted_artifact,omitempty"`
+	CVSSScore        *CVSSScoreAPIModel       `json:"cvss_score,omitempty"`
+	Severities       []string                 `json:"severities,omitempty"`
+	ScanDate         *StartAndEndDateAPIModel `json:"scan_date,omitempty"`
+	Published        *StartAndEndDateAPIModel `json:"published,omitempty"`
 }
 
 type CVSSScoreAPIModel struct {
@@ -538,20 +676,144 @@ type StartAndEndDateAPIModel struct {
 	End   string `json:"end,omitempty"`
 }
 
-type SecurityFilterAPIModel struct {
+type SecurityViolationFilterAPIModel struct {
 	Cve             string                   `json:"cve,omitempty"`
 	IssueId         string                   `json:"issue_id,omitempty"`
 	CVSSScore       *CVSSScoreAPIModel       `json:"cvss_score,omitempty"`
 	SummaryContains string                   `json:"summary_contains"`
-	HasRemediation  bool                     `json:"has_remediation,omitempty"`
+	HasRemediation  *bool                    `json:"has_remediation,omitempty"`
 	Published       *StartAndEndDateAPIModel `json:"published,omitempty"`
 }
 
-type LicenseFilterAPIModel struct {
-	Unknown         bool     `json:"unknown"`
-	Unrecognized    bool     `json:"unrecognized"`
+type LicenseViolationFilterAPIModel struct {
+	Unknown         *bool    `json:"unknown"`
 	LicenseNames    []string `json:"license_names,omitempty"`
 	LicensePatterns []string `json:"license_patterns,omitempty"`
+}
+
+func validateDateRange(attrs map[string]attr.Value, blockName string, resp *resource.ValidateConfigResponse) {
+	if dateSet, ok := attrs[blockName].(types.Set); ok && !dateSet.IsNull() {
+		dateElems := dateSet.Elements()
+		if len(dateElems) > 0 {
+			if dateObj, ok := dateElems[0].(types.Object); ok {
+				dateAttrs := dateObj.Attributes()
+				if start, ok := dateAttrs["start"].(types.String); ok {
+					if end, ok := dateAttrs["end"].(types.String); ok {
+						if !start.IsNull() && !end.IsNull() {
+							startTime, _ := time.Parse(time.RFC3339, start.ValueString())
+							endTime, _ := time.Parse(time.RFC3339, end.ValueString())
+							if endTime.Before(startTime) {
+								resp.Diagnostics.AddError(
+									fmt.Sprintf("Invalid %s range", blockName),
+									"End date must be after start date",
+								)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+func validateSingleResourceType(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var config ReportResourceModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if !config.Resources.IsNull() && !config.Resources.IsUnknown() {
+		resourcesElems := config.Resources.Elements()
+		if len(resourcesElems) > 0 {
+			if resourcesObj, ok := resourcesElems[0].(types.Object); ok {
+				attrs := resourcesObj.Attributes()
+				resourceCount := 0
+				resourceTypes := []string{"repository", "builds", "release_bundles", "release_bundles_v2", "projects"}
+				for _, resourceType := range resourceTypes {
+					if v, ok := attrs[resourceType].(types.Set); ok && !v.IsNull() && len(v.Elements()) > 0 {
+						resourceCount++
+					}
+				}
+				if resourceCount > 1 {
+					resp.Diagnostics.AddError(
+						"Invalid Resource Configuration",
+						"Only one type of resource (repository, builds, release_bundles, release_bundles_v2, or projects) can be specified per report.",
+					)
+				}
+			}
+		}
+	}
+}
+
+func validateSecurityFilterCveAndIssueId(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var config ReportResourceModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if !config.Filters.IsNull() && !config.Filters.IsUnknown() {
+		filtersElems := config.Filters.Elements()
+		if len(filtersElems) > 0 {
+			attrs := filtersElems[0].(types.Object).Attributes()
+
+			// Check cve and issue_id mutual exclusivity
+			cve := attrs["cve"].(types.String)
+			issueId := attrs["issue_id"].(types.String)
+			if !cve.IsNull() && !issueId.IsNull() {
+				resp.Diagnostics.AddError(
+					"Invalid Attribute Combination",
+					"Only one of 'cve' or 'issue_id' can be specified in filters block",
+				)
+			}
+		}
+	}
+}
+
+func validateSecurityFilterSeveritiesAndCvssScore(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var config ReportResourceModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if !config.Filters.IsNull() && !config.Filters.IsUnknown() {
+		filtersElems := config.Filters.Elements()
+		if len(filtersElems) > 0 {
+			attrs := filtersElems[0].(types.Object).Attributes()
+
+			// Check severities and cvss_score mutual exclusivity
+			severities := attrs["severities"].(types.Set)
+			cvssScore := attrs["cvss_score"].(types.Set)
+			if !severities.IsNull() && !cvssScore.IsNull() && len(severities.Elements()) > 0 && len(cvssScore.Elements()) > 0 {
+				resp.Diagnostics.AddError(
+					"Invalid Attribute Combination",
+					"Only one of 'severities' or 'cvss_score' can be specified in filters block",
+				)
+			}
+		}
+	}
+}
+
+func validateDateRanges(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse, blocks ...string) {
+	var config ReportResourceModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if !config.Filters.IsNull() && !config.Filters.IsUnknown() {
+		filtersElems := config.Filters.Elements()
+		if len(filtersElems) > 0 {
+			if filtersObj, ok := filtersElems[0].(types.Object); ok {
+				attrs := filtersObj.Attributes()
+				for _, block := range blocks {
+					validateDateRange(attrs, block, resp)
+				}
+			}
+		}
+	}
 }
 
 func (r *ReportResource) Create(
@@ -661,49 +923,11 @@ func (r *ReportResource) Update(
 ) {
 	go util.SendUsageResourceUpdate(ctx, r.ProviderData.Client.R(), r.ProviderData.ProductId, r.TypeName)
 
-	var plan ReportResourceModel
-
-	// Read Terraform plan data into the model
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	request, err := getRestyRequest(r.ProviderData.Client, plan.ProjectKey.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"failed to get Resty client",
-			err.Error(),
-		)
-		return
-	}
-
-	var report ReportAPIModel
-	resp.Diagnostics.Append(toAPIModel(ctx, plan, &report)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	response, err := request.
-		SetPathParam("reportType", reportType).
-		SetBody(report).
-		SetResult(&report).
-		Post(ReportsEndpoint)
-
-	if err != nil {
-		utilfw.UnableToUpdateResourceError(resp, err.Error())
-		return
-	}
-
-	if response.IsError() {
-		utilfw.UnableToUpdateResourceError(resp, response.String())
-		return
-	}
-
-	plan.ID = types.StringValue(fmt.Sprintf("%d", report.ReportId))
-
-	// Save data into Terraform state
-	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+	// Add error about API limitations
+	resp.Diagnostics.AddError(
+		"Report Update Not Supported",
+		"Direct updates to Xray Reports are not supported by the public API. The resource needs to be destroyed and recreated to apply changes.",
+	)
 }
 
 func (r *ReportResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

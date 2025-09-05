@@ -140,6 +140,11 @@ func (r *OperationalRisksReportResource) Schema(ctx context.Context, req resourc
 	}
 }
 
+func (r *OperationalRisksReportResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	validateSingleResourceType(ctx, req, resp)
+	validateDateRanges(ctx, req, resp, "scan_date")
+}
+
 func (r *OperationalRisksReportResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
@@ -149,7 +154,7 @@ func (r *OperationalRisksReportResource) Configure(ctx context.Context, req reso
 }
 
 func (r *OperationalRisksReportResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	r.ReportResource.Create(ctx, "violations", r.toAPIModel, req, resp)
+	r.ReportResource.Create(ctx, "operationalRisks", r.toAPIModel, req, resp)
 }
 
 func (r *OperationalRisksReportResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -157,7 +162,11 @@ func (r *OperationalRisksReportResource) Read(ctx context.Context, req resource.
 }
 
 func (r *OperationalRisksReportResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	r.ReportResource.Update(ctx, "violations", r.toAPIModel, req, resp)
+	// Add error about API limitations
+	resp.Diagnostics.AddError(
+		"Operational Risks Report Update Not Supported",
+		"Direct updates to Operational Risks Report are not supported by the public API. The resource needs to be destroyed and recreated to apply changes.",
+	)
 }
 
 func (r *OperationalRisksReportResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

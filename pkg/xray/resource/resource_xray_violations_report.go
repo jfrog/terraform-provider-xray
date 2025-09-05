@@ -2,6 +2,7 @@ package xray
 
 import (
 	"context"
+	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/float64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
@@ -11,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -47,20 +47,20 @@ func (r *ViolationsReportResource) toFiltersAPIModel(ctx context.Context, filter
 		}
 
 		var watchPatterns []string
-		d = attrs["watch_patterns"].(types.Set).ElementsAs(ctx, &watchPatterns, false)
-		if d.HasError() {
+		f := attrs["watch_patterns"].(types.Set).ElementsAs(ctx, &watchPatterns, false)
+		if f.HasError() {
 			diags.Append(d...)
 		}
 
 		var policyNames []string
-		d = attrs["policy_names"].(types.Set).ElementsAs(ctx, &policyNames, false)
-		if d.HasError() {
+		g := attrs["policy_names"].(types.Set).ElementsAs(ctx, &policyNames, false)
+		if g.HasError() {
 			diags.Append(d...)
 		}
 
 		var severities []string
-		d = attrs["severities"].(types.Set).ElementsAs(ctx, &severities, false)
-		if d.HasError() {
+		h := attrs["severities"].(types.Set).ElementsAs(ctx, &severities, false)
+		if h.HasError() {
 			diags.Append(d...)
 		}
 
@@ -68,14 +68,13 @@ func (r *ViolationsReportResource) toFiltersAPIModel(ctx context.Context, filter
 		updatedElems := attrs["updated"].(types.Set).Elements()
 		if len(updatedElems) > 0 {
 			attrs := updatedElems[0].(types.Object).Attributes()
-
 			updated = &StartAndEndDateAPIModel{
 				Start: attrs["start"].(types.String).ValueString(),
 				End:   attrs["end"].(types.String).ValueString(),
 			}
 		}
 
-		var securityFilters *SecurityFilterAPIModel
+		var securityViolationFilters *SecurityViolationFilterAPIModel
 		securityFiltersElems := attrs["security_filters"].(types.Set).Elements()
 		if len(securityFiltersElems) > 0 {
 			attrs := securityFiltersElems[0].(types.Object).Attributes()
@@ -91,16 +90,32 @@ func (r *ViolationsReportResource) toFiltersAPIModel(ctx context.Context, filter
 				}
 			}
 
-			securityFilters = &SecurityFilterAPIModel{
+			var published *StartAndEndDateAPIModel
+			publishedElems := attrs["published"].(types.Set).Elements()
+			if len(publishedElems) > 0 {
+				attrs := publishedElems[0].(types.Object).Attributes()
+				published = &StartAndEndDateAPIModel{
+					Start: attrs["start"].(types.String).ValueString(),
+					End:   attrs["end"].(types.String).ValueString(),
+				}
+			}
+
+			securityViolationFilters = &SecurityViolationFilterAPIModel{
 				Cve:             attrs["cve"].(types.String).ValueString(),
 				IssueId:         attrs["issue_id"].(types.String).ValueString(),
 				SummaryContains: attrs["summary_contains"].(types.String).ValueString(),
-				HasRemediation:  attrs["has_remediation"].(types.Bool).ValueBool(),
+				Published:       published,
 				CVSSScore:       cvssScore,
+			}
+
+			// Only set has_remediation if it's explicitly set in config
+			if v := attrs["has_remediation"].(types.Bool); !v.IsNull() {
+				val := v.ValueBool()
+				securityViolationFilters.HasRemediation = &val
 			}
 		}
 
-		var licenseFilters *LicenseFilterAPIModel
+		var licenseViolationFilters *LicenseViolationFilterAPIModel
 		licenseFiltersElems := attrs["license_filters"].(types.Set).Elements()
 		if len(licenseFiltersElems) > 0 {
 			attrs := licenseFiltersElems[0].(types.Object).Attributes()
@@ -112,30 +127,35 @@ func (r *ViolationsReportResource) toFiltersAPIModel(ctx context.Context, filter
 			}
 
 			var licensePatterns []string
-			d = attrs["license_patterns"].(types.Set).ElementsAs(ctx, &licensePatterns, false)
-			if d.HasError() {
+			f := attrs["license_patterns"].(types.Set).ElementsAs(ctx, &licensePatterns, false)
+			if f.HasError() {
 				diags.Append(d...)
 			}
 
-			licenseFilters = &LicenseFilterAPIModel{
-				Unknown:         attrs["unknown"].(types.Bool).ValueBool(),
-				Unrecognized:    attrs["unrecognized"].(types.Bool).ValueBool(),
+			licenseViolationFilters = &LicenseViolationFilterAPIModel{
 				LicenseNames:    licenseNames,
 				LicensePatterns: licensePatterns,
+			}
+
+			// Only set unknown if it's explicitly set in config
+			if v := attrs["unknown"].(types.Bool); !v.IsNull() {
+				val := v.ValueBool()
+				licenseViolationFilters.Unknown = &val
 			}
 		}
 
 		filters = &FiltersAPIModel{
-			Type:            attrs["type"].(types.String).ValueString(),
-			Component:       attrs["component"].(types.String).ValueString(),
-			Artifact:        attrs["artifact"].(types.String).ValueString(),
-			WatchNames:      watchNames,
-			WatchPatterns:   watchPatterns,
-			PolicyNames:     policyNames,
-			Severities:      severities,
-			Updated:         updated,
-			SecurityFilters: securityFilters,
-			LicenseFilters:  licenseFilters,
+			Type:                     attrs["type"].(types.String).ValueString(),
+			ViolationStatus:          attrs["violation_status"].(types.String).ValueString(),
+			Component:                attrs["component"].(types.String).ValueString(),
+			Artifact:                 attrs["artifact"].(types.String).ValueString(),
+			WatchNames:               watchNames,
+			WatchPatterns:            watchPatterns,
+			PolicyNames:              policyNames,
+			Severities:               severities,
+			Updated:                  updated,
+			SecurityViolationFilters: securityViolationFilters,
+			LicenseViolationFilters:  licenseViolationFilters,
 		}
 	}
 
@@ -183,6 +203,16 @@ var violationsFiltersAttrs = map[string]schema.Attribute{
 		},
 		Description: "Select Xray watch name by patterns. Only one attribute - 'watch_names' or 'watch_patterns' can be set..",
 	},
+	"policy_names": schema.SetAttribute{
+		ElementType: types.StringType,
+		Optional:    true,
+		Computed:    true,
+		Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
+		Validators: []validator.Set{
+			setvalidator.SizeAtLeast(1),
+		},
+		Description: "Select Xray policies by name.",
+	},
 	"component": schema.StringAttribute{
 		Optional: true,
 		Validators: []validator.String{
@@ -197,16 +227,6 @@ var violationsFiltersAttrs = map[string]schema.Attribute{
 		},
 		Description: "Filter by artifact name, you can use (*) at the beginning or end of a substring as a wildcard.",
 	},
-	"policy_names": schema.SetAttribute{
-		ElementType: types.StringType,
-		Optional:    true,
-		Computed:    true,
-		Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
-		Validators: []validator.Set{
-			setvalidator.SizeAtLeast(1),
-		},
-		Description: "Select Xray policies by name.",
-	},
 	"severities": schema.SetAttribute{
 		ElementType: types.StringType,
 		Optional:    true,
@@ -215,10 +235,18 @@ var violationsFiltersAttrs = map[string]schema.Attribute{
 		Validators: []validator.Set{
 			setvalidator.SizeAtLeast(1),
 			setvalidator.ValueStringsAre(
-				stringvalidator.OneOf("None", "Low", "Medium", "High"),
+				stringvalidator.OneOf("Low", "Medium", "High", "Critical"),
 			),
 		},
-		Description: "Risk/severity levels. Allowed values: 'None', 'Low', 'Medium', 'High'.",
+		Description: "Risk/Severites levels. Allowed values: 'Low', 'Medium', 'High', 'Critical'.",
+	},
+	"violation_status": schema.StringAttribute{
+		Optional: true,
+		Validators: []validator.String{
+			stringvalidator.LengthAtLeast(1),
+			stringvalidator.OneOf("All", "Active", "Ignored"),
+		},
+		Description: "Violation status.",
 	},
 }
 
@@ -255,6 +283,10 @@ var violationsFiltersBlocks = map[string]schema.Block{
 					Default:  stringdefault.StaticString(""), // backward compatibility with SDKv2 version
 					Validators: []validator.String{
 						stringvalidator.LengthAtLeast(1),
+						stringvalidator.RegexMatches(regexp.MustCompile(`^CVE-\d{4}-\d{4,}$`), "invalid Vulnerability, must be a valid CVE, example CVE-2021-12345"),
+						stringvalidator.ConflictsWith(
+							path.MatchRelative().AtParent().AtName("issue_id"),
+						),
 					},
 					Description: "CVE.",
 				},
@@ -264,6 +296,9 @@ var violationsFiltersBlocks = map[string]schema.Block{
 					Default:  stringdefault.StaticString(""), // backward compatibility with SDKv2 version
 					Validators: []validator.String{
 						stringvalidator.LengthAtLeast(1),
+						stringvalidator.ConflictsWith(
+							path.MatchRelative().AtParent().AtName("cve"),
+						),
 					},
 					Description: "Issue ID.",
 				},
@@ -280,6 +315,29 @@ var violationsFiltersBlocks = map[string]schema.Block{
 				},
 			},
 			Blocks: map[string]schema.Block{
+				"published": schema.SetNestedBlock{
+					NestedObject: schema.NestedBlockObject{
+						Attributes: map[string]schema.Attribute{
+							"start": schema.StringAttribute{
+								Optional: true,
+								Validators: []validator.String{
+									IsRFC3339Time(),
+								},
+								Description: "Published from date.",
+							},
+							"end": schema.StringAttribute{
+								Optional: true,
+								Validators: []validator.String{
+									IsRFC3339Time(),
+								},
+								Description: "Published to date.",
+							},
+						},
+					},
+					Validators: []validator.Set{
+						setvalidator.SizeAtMost(1),
+					},
+				},
 				"cvss_score": schema.SetNestedBlock{
 					NestedObject: schema.NestedBlockObject{
 						Attributes: map[string]schema.Attribute{
@@ -316,15 +374,7 @@ var violationsFiltersBlocks = map[string]schema.Block{
 			Attributes: map[string]schema.Attribute{
 				"unknown": schema.BoolAttribute{
 					Optional:    true,
-					Computed:    true,
-					Default:     booldefault.StaticBool(false),
 					Description: "Unknown displays the components that Xray could not discover any licenses for.",
-				},
-				"unrecognized": schema.BoolAttribute{
-					Optional:    true,
-					Computed:    true,
-					Default:     booldefault.StaticBool(false),
-					Description: "Unrecognized displays the components that Xray found licenses for, but these licenses are not Xray recognized licenses.",
 				},
 				"license_names": schema.SetAttribute{
 					ElementType: types.StringType,
@@ -333,6 +383,9 @@ var violationsFiltersBlocks = map[string]schema.Block{
 					Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
 					Validators: []validator.Set{
 						setvalidator.SizeAtLeast(1),
+						setvalidator.ConflictsWith(
+							path.MatchRelative().AtParent().AtName("license_patterns"),
+						),
 					},
 					Description: "Filter licenses by names.",
 				},
@@ -343,6 +396,9 @@ var violationsFiltersBlocks = map[string]schema.Block{
 					Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
 					Validators: []validator.Set{
 						setvalidator.SizeAtLeast(1),
+						setvalidator.ConflictsWith(
+							path.MatchRelative().AtParent().AtName("license_names"),
+						),
 					},
 					Description: "Filter licenses by patterns.",
 				},
@@ -366,6 +422,95 @@ func (r *ViolationsReportResource) Schema(ctx context.Context, req resource.Sche
 	}
 }
 
+func validateSecurityViolationFilterCveAndIssueId(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var config ReportResourceModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if !config.Filters.IsNull() && !config.Filters.IsUnknown() {
+		filtersElems := config.Filters.Elements()
+		if len(filtersElems) > 0 {
+			attrs := filtersElems[0].(types.Object).Attributes()
+			securityFilters := attrs["security_filters"].(types.Set)
+			if !securityFilters.IsNull() && len(securityFilters.Elements()) > 0 {
+				securityFilterAttrs := securityFilters.Elements()[0].(types.Object).Attributes()
+				cve := securityFilterAttrs["cve"].(types.String)
+				issueId := securityFilterAttrs["issue_id"].(types.String)
+				if !cve.IsNull() && !issueId.IsNull() {
+					resp.Diagnostics.AddError(
+						"Invalid Attribute Combination",
+						"Only one of 'cve' or 'issue_id' can be specified in security_filters block",
+					)
+				}
+			}
+		}
+	}
+}
+
+func validateViolationTypeAndFilters(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var config ReportResourceModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if !config.Filters.IsNull() && !config.Filters.IsUnknown() {
+		filtersElems := config.Filters.Elements()
+		if len(filtersElems) > 0 {
+			attrs := filtersElems[0].(types.Object).Attributes()
+			violationType := attrs["type"].(types.String).ValueString()
+			securityFilters := attrs["security_filters"].(types.Set)
+			licenseFilters := attrs["license_filters"].(types.Set)
+
+			switch violationType {
+			case "security":
+				if !licenseFilters.IsNull() && len(licenseFilters.Elements()) > 0 {
+					resp.Diagnostics.AddError(
+						"Invalid Attribute Combination",
+						"license_filters cannot be specified when type is \"security\"",
+					)
+				}
+			case "license":
+				if !securityFilters.IsNull() && len(securityFilters.Elements()) > 0 {
+					resp.Diagnostics.AddError(
+						"Invalid Attribute Combination",
+						"security_filters cannot be specified when type is \"license\"",
+					)
+				}
+			case "operational_risk":
+				severities := attrs["severities"].(types.Set)
+				if severities.IsNull() || len(severities.Elements()) == 0 {
+					resp.Diagnostics.AddError(
+						"Missing Required Attribute",
+						"severities must be specified when type is \"operational_risk\"",
+					)
+				}
+				if !securityFilters.IsNull() && len(securityFilters.Elements()) > 0 {
+					resp.Diagnostics.AddError(
+						"Invalid Attribute Combination",
+						"security_filters cannot be specified when type is \"operational_risk\"",
+					)
+				}
+				if !licenseFilters.IsNull() && len(licenseFilters.Elements()) > 0 {
+					resp.Diagnostics.AddError(
+						"Invalid Attribute Combination",
+						"license_filters cannot be specified when type is \"operational_risk\"",
+					)
+				}
+			}
+		}
+	}
+}
+
+func (r *ViolationsReportResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	validateSingleResourceType(ctx, req, resp)
+	validateDateRanges(ctx, req, resp, "updated", "published")
+	validateViolationTypeAndFilters(ctx, req, resp)
+	validateSecurityViolationFilterCveAndIssueId(ctx, req, resp)
+}
+
 func (r *ViolationsReportResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
@@ -383,7 +528,11 @@ func (r *ViolationsReportResource) Read(ctx context.Context, req resource.ReadRe
 }
 
 func (r *ViolationsReportResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	r.ReportResource.Update(ctx, "violations", r.toAPIModel, req, resp)
+	// Add error about API limitations
+	resp.Diagnostics.AddError(
+		"Violations Report Update Not Supported",
+		"Direct updates to Violations Report are not supported by the public API. The resource needs to be destroyed and recreated to apply changes.",
+	)
 }
 
 func (r *ViolationsReportResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

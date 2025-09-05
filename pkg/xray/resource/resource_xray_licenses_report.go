@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -56,19 +55,29 @@ func (r *LicensesReportResource) toFiltersAPIModel(ctx context.Context, filtersE
 		}
 
 		var licensePatterns []string
-		d = attrs["license_patterns"].(types.Set).ElementsAs(ctx, &licensePatterns, false)
-		if d.HasError() {
+		f := attrs["license_patterns"].(types.Set).ElementsAs(ctx, &licensePatterns, false)
+		if f.HasError() {
 			diags.Append(d...)
 		}
 
 		filters = &FiltersAPIModel{
 			Component:       attrs["component"].(types.String).ValueString(),
 			Artifact:        attrs["artifact"].(types.String).ValueString(),
-			Unknown:         attrs["unknown"].(types.Bool).ValueBool(),
-			Unrecognized:    attrs["unrecognized"].(types.Bool).ValueBool(),
 			LicenseNames:    licenseNames,
 			LicensePatterns: licensePatterns,
 			ScanDate:        scanDate,
+		}
+
+		// Only set unknown if it's explicitly set in config
+		if v := attrs["unknown"].(types.Bool); !v.IsNull() {
+			val := v.ValueBool()
+			filters.Unknown = &val
+		}
+
+		// Only set unrecognized if it's explicitly set in config
+		if v := attrs["unrecognized"].(types.Bool); !v.IsNull() {
+			val := v.ValueBool()
+			filters.Unrecognized = &val
 		}
 	}
 
@@ -89,25 +98,21 @@ var licensesFiltersAttrs = map[string]schema.Attribute{
 		Validators: []validator.String{
 			stringvalidator.LengthAtLeast(1),
 		},
-		Description: "Artifact's component.",
+		Description: "Filter by component name, you can use (*) at the beginning or end of a substring as a wildcard.",
 	},
 	"artifact": schema.StringAttribute{
 		Optional: true,
 		Validators: []validator.String{
 			stringvalidator.LengthAtLeast(1),
 		},
-		Description: "Artifact name.",
+		Description: "Filter by artifact name, you can use (*) at thebeginning or end of a substring as a wildcard.",
 	},
 	"unknown": schema.BoolAttribute{
 		Optional:    true,
-		Computed:    true,
-		Default:     booldefault.StaticBool(false),
 		Description: "Unknown displays the components that Xray could not discover any licenses for.",
 	},
 	"unrecognized": schema.BoolAttribute{
 		Optional:    true,
-		Computed:    true,
-		Default:     booldefault.StaticBool(false),
 		Description: "Unrecognized displays the components that Xray found licenses for, but these licenses are not Xray recognized licenses.",
 	},
 	"license_names": schema.SetAttribute{
@@ -164,6 +169,11 @@ var licensesFiltersBlocks = map[string]schema.Block{
 	},
 }
 
+func (r *LicensesReportResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	validateSingleResourceType(ctx, req, resp)
+	validateDateRanges(ctx, req, resp, "scan_date")
+}
+
 func (r *LicensesReportResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Version:    1,
@@ -194,7 +204,11 @@ func (r *LicensesReportResource) Read(ctx context.Context, req resource.ReadRequ
 }
 
 func (r *LicensesReportResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	r.ReportResource.Update(ctx, "licenses", r.toAPIModel, req, resp)
+	// Add error about API limitations
+	resp.Diagnostics.AddError(
+		"Licenses Report Update Not Supported",
+		"Direct updates to Licenses Risks Report are not supported by the public API. The resource needs to be destroyed and recreated to apply changes.",
+	)
 }
 
 func (r *LicensesReportResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
