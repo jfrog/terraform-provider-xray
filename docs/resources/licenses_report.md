@@ -11,33 +11,73 @@ Creates Xray License Due Diligence report. The License Due Diligence report prov
 ## Example Usage
 
 ```terraform
-resource "xray_licenses_report" "report" {
-  name = "test-license-report"
-
+# Example: Create a licenses report for repositories
+resource "xray_licenses_report" "repository-report" {
+  name = "repository-licenses-report"
   resources {
     repository {
-      name                  = "reponame"
-      include_path_patterns = ["pattern1", "pattern2"]
-      exclude_path_patterns = ["pattern2", "pattern2"]
+      name                  = "docker-local"
+      include_path_patterns = ["folder1/path/*", "folder2/path*"]
+      exclude_path_patterns = ["folder1/path2/*", "folder2/path2*"]
     }
-
     repository {
-      name                  = "reponame1"
-      include_path_patterns = ["pattern1", "pattern2"]
-      exclude_path_patterns = ["pattern1", "pattern2"]
+      name                  = "libs-release-local"
+      include_path_patterns = ["**/*.jar", "**/*.war"]
     }
   }
-
   filters {
-    component     = "component-name"
-    artifact      = "impacted-artifact"
-    unknown       = false
-    unrecognized  = true
-    license_names = ["Apache", "MIT"]
-
+    component    = "*log4j*"
+    artifact     = "*spring*"
+    unknown      = true
+    license_names = ["Apache-2.0", "MIT"]
     scan_date {
-      start = "2020-06-29T12:22:16Z"
-      end   = "2020-07-29T12:22:16Z"
+      start = "2023-01-01T00:00:00Z"
+      end   = "2023-12-31T23:59:59Z"
+    }
+  }
+}
+
+# Example: Create a licenses report for builds with patterns
+resource "xray_licenses_report" "build-report" {
+  name = "build-licenses-report"
+  resources {
+    builds {
+      include_patterns         = ["build-*", "release-*"]
+      exclude_patterns         = ["test-*", "dev-*"]
+      number_of_latest_versions = 5
+    }
+  }
+  filters {
+    component       = "*node*"
+    artifact        = "*web-app*"
+    unknown         = false
+    unrecognized    = false
+    license_patterns = ["*GPL*", "*MIT*"]
+    scan_date {
+      start = "2023-01-01T00:00:00Z"
+      end   = "2023-12-31T23:59:59Z"
+    }
+  }
+}
+
+# Example: Create a licenses report for projects
+resource "xray_licenses_report" "project-report" {
+  name = "project-licenses-report"
+  resources {
+    projects {
+      names                     = ["project-1", "project-2"]
+      number_of_latest_versions = 3
+    }
+  }
+  filters {
+    component    = "*commons*"
+    artifact     = "*utils*"
+    unknown      = true
+    unrecognized = true
+    license_names = ["BSD-3-Clause", "LGPL-2.1"]
+    scan_date {
+      start = "2023-01-01T00:00:00Z"
+      end   = "2023-12-31T23:59:59Z"
     }
   }
 }
@@ -66,8 +106,8 @@ resource "xray_licenses_report" "report" {
 
 Optional:
 
-- `artifact` (String) Artifact name.
-- `component` (String) Artifact's component.
+- `artifact` (String) Filter by artifact name, you can use (*) at thebeginning or end of a substring as a wildcard.
+- `component` (String) Filter by component name, you can use (*) at the beginning or end of a substring as a wildcard.
 - `license_names` (Set of String) Filter licenses by names. Only one of 'license_names' or 'license_patterns' can be set.
 - `license_patterns` (Set of String) Filter licenses by patterns. Only one of 'license_names' or 'license_patterns' can be set.
 - `scan_date` (Block Set) (see [below for nested schema](#nestedblock--filters--scan_date))
@@ -92,6 +132,7 @@ Optional:
 - `builds` (Block Set) The builds to include into the report. Only one type of resource can be set per report. (see [below for nested schema](#nestedblock--resources--builds))
 - `projects` (Block Set) The projects to include into the report. Only one type of resource can be set per report. (see [below for nested schema](#nestedblock--resources--projects))
 - `release_bundles` (Block Set) The release bundles to include into the report. Only one type of resource can be set per report. (see [below for nested schema](#nestedblock--resources--release_bundles))
+- `release_bundles_v2` (Block Set) The release bundles v2 to include into the report. Only one type of resource can be set per report. (see [below for nested schema](#nestedblock--resources--release_bundles_v2))
 - `repository` (Block Set) The list of repositories for the report. Only one type of resource can be set per report. (see [below for nested schema](#nestedblock--resources--repository))
 
 <a id="nestedblock--resources--builds"></a>
@@ -110,6 +151,7 @@ Optional:
 
 Optional:
 
+- `exclude_key_patterns` (Set of String) The list of exclude patterns
 - `include_key_patterns` (Set of String) The list of include patterns
 - `names` (Set of String) The list of project names.
 - `number_of_latest_versions` (Number) The number of latest release bundle versions to include to the report.
@@ -117,6 +159,17 @@ Optional:
 
 <a id="nestedblock--resources--release_bundles"></a>
 ### Nested Schema for `resources.release_bundles`
+
+Optional:
+
+- `exclude_patterns` (Set of String) The list of exclude patterns
+- `include_patterns` (Set of String) The list of include patterns
+- `names` (Set of String) The list of release bundles names.
+- `number_of_latest_versions` (Number) The number of latest release bundle versions to include to the report.
+
+
+<a id="nestedblock--resources--release_bundles_v2"></a>
+### Nested Schema for `resources.release_bundles_v2`
 
 Optional:
 

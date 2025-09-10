@@ -11,51 +11,102 @@ Creates Xray Violations report. The Violations report provides you with informat
 ## Example Usage
 
 ```terraform
-resource "xray_violations_report" "report" {
-  name = "test-violations-report"
-
+# Example: Create a security violations report for repositories
+resource "xray_violations_report" "security-report" {
+  name = "security-violations-report"
   resources {
     repository {
-      name                  = "reponame"
-      include_path_patterns = ["pattern1", "pattern2"]
-      exclude_path_patterns = ["pattern2", "pattern2"]
+      name                  = "docker-local"
+      include_path_patterns = ["folder1/path/*", "folder2/path*"]
+      exclude_path_patterns = ["folder1/path2/*", "folder2/path2*"]
     }
-
     repository {
-      name                  = "reponame1"
-      include_path_patterns = ["pattern1", "pattern2"]
-      exclude_path_patterns = ["pattern1", "pattern2"]
+      name                  = "libs-release-local"
+      include_path_patterns = ["**/*.jar", "**/*.war"]
     }
   }
-
   filters {
-    type           = "security"
-    watch_names    = ["NameOfWatch1", "NameOfWatch2"]
-    component      = "*vulnerable:component*"
-    artifact       = "some://impacted*artifact"
-    policy_names   = ["policy1", "policy2"]
-    severities     = ["High", "Medium"]
-
-    updated {
-      start = "2020-06-29T12:22:16Z"
-      end   = "2020-07-29T12:22:16Z"
-    }
+    type             = "security"
+    watch_names      = ["security-watch"]
+    policy_names     = ["security-policy"]
+    component        = "*log4j*"
+    artifact         = "*spring*"
+    violation_status = "Active"
+    severities       = ["Critical", "High"]
 
     security_filters {
-      issue_id = "XRAY-87343"
-      summary_contains = "kernel"
+      issue_id         = "XRAY-87343"
+      summary_contains = "remote code execution"
       has_remediation  = true
-
       cvss_score {
-        min_score = 6.3
-        max_score = 9
+        min_score = 7.0
+        max_score = 10.0
+      }
+      published {
+        start = "2023-01-01T00:00:00Z"
+        end   = "2023-12-31T23:59:59Z"
       }
     }
 
+    updated {
+      start = "2023-01-01T00:00:00Z"
+      end   = "2023-12-31T23:59:59Z"
+    }
+  }
+}
+
+# Example: Create a license violations report for builds
+resource "xray_violations_report" "license-report" {
+  name = "license-violations-report"
+  resources {
+    builds {
+      names                     = ["build-1", "build-2"]
+      number_of_latest_versions = 5
+    }
+  }
+  filters {
+    type             = "license"
+    watch_patterns   = ["license-watch-*"]
+    policy_names     = ["license-policy"]
+    component        = "*commons*"
+    artifact         = "*utils*"
+    violation_status = "Active"
+    severities       = ["High"]
+
     license_filters {
-      unknown       = false
-      unrecognized  = true
-      license_names = ["Apache", "MIT"]
+      unknown         = true
+      license_names   = ["GPL-2.0", "AGPL-3.0"]
+      license_patterns = ["*GPL*"]
+    }
+
+    updated {
+      start = "2023-01-01T00:00:00Z"
+      end   = "2023-12-31T23:59:59Z"
+    }
+  }
+}
+
+# Example: Create an operational risk violations report for projects
+resource "xray_violations_report" "operational-risk-report" {
+  name = "operational-risk-violations-report"
+  resources {
+    projects {
+      names                     = ["project-1", "project-2"]
+      number_of_latest_versions = 3
+    }
+  }
+  filters {
+    type             = "operational_risk"
+    watch_names      = ["ops-risk-watch"]
+    policy_names     = ["ops-risk-policy"]
+    component        = "*node*"
+    artifact         = "*web-app*"
+    violation_status = "Active"
+    severities       = ["Critical", "High", "Medium"]
+
+    updated {
+      start = "2023-01-01T00:00:00Z"
+      end   = "2023-12-31T23:59:59Z"
     }
   }
 }
@@ -89,9 +140,10 @@ Optional:
 - `license_filters` (Block Set) Licenses Filters. (see [below for nested schema](#nestedblock--filters--license_filters))
 - `policy_names` (Set of String) Select Xray policies by name.
 - `security_filters` (Block Set) Security Filters. (see [below for nested schema](#nestedblock--filters--security_filters))
-- `severities` (Set of String) Risk/severity levels. Allowed values: 'None', 'Low', 'Medium', 'High'.
+- `severities` (Set of String) Risk/Severites levels. Allowed values: 'Low', 'Medium', 'High', 'Critical'.
 - `type` (String) Violation type.
 - `updated` (Block Set) (see [below for nested schema](#nestedblock--filters--updated))
+- `violation_status` (String) Violation status.
 - `watch_names` (Set of String) Select Xray watch by names. Only one attribute - 'watch_names' or 'watch_patterns' can be set.
 - `watch_patterns` (Set of String) Select Xray watch name by patterns. Only one attribute - 'watch_names' or 'watch_patterns' can be set..
 
@@ -103,7 +155,6 @@ Optional:
 - `license_names` (Set of String) Filter licenses by names.
 - `license_patterns` (Set of String) Filter licenses by patterns.
 - `unknown` (Boolean) Unknown displays the components that Xray could not discover any licenses for.
-- `unrecognized` (Boolean) Unrecognized displays the components that Xray found licenses for, but these licenses are not Xray recognized licenses.
 
 
 <a id="nestedblock--filters--security_filters"></a>
@@ -115,6 +166,7 @@ Optional:
 - `cvss_score` (Block Set) CVSS score. (see [below for nested schema](#nestedblock--filters--security_filters--cvss_score))
 - `has_remediation` (Boolean) Whether the issue has a fix or not.
 - `issue_id` (String) Issue ID.
+- `published` (Block Set) (see [below for nested schema](#nestedblock--filters--security_filters--published))
 - `summary_contains` (String) Vulnerability Summary.
 
 <a id="nestedblock--filters--security_filters--cvss_score"></a>
@@ -124,6 +176,15 @@ Optional:
 
 - `max_score` (Number) Maximum CVSS score.
 - `min_score` (Number) Minimum CVSS score.
+
+
+<a id="nestedblock--filters--security_filters--published"></a>
+### Nested Schema for `filters.security_filters.published`
+
+Optional:
+
+- `end` (String) Published to date.
+- `start` (String) Published from date.
 
 
 
@@ -145,6 +206,7 @@ Optional:
 - `builds` (Block Set) The builds to include into the report. Only one type of resource can be set per report. (see [below for nested schema](#nestedblock--resources--builds))
 - `projects` (Block Set) The projects to include into the report. Only one type of resource can be set per report. (see [below for nested schema](#nestedblock--resources--projects))
 - `release_bundles` (Block Set) The release bundles to include into the report. Only one type of resource can be set per report. (see [below for nested schema](#nestedblock--resources--release_bundles))
+- `release_bundles_v2` (Block Set) The release bundles v2 to include into the report. Only one type of resource can be set per report. (see [below for nested schema](#nestedblock--resources--release_bundles_v2))
 - `repository` (Block Set) The list of repositories for the report. Only one type of resource can be set per report. (see [below for nested schema](#nestedblock--resources--repository))
 
 <a id="nestedblock--resources--builds"></a>
@@ -163,6 +225,7 @@ Optional:
 
 Optional:
 
+- `exclude_key_patterns` (Set of String) The list of exclude patterns
 - `include_key_patterns` (Set of String) The list of include patterns
 - `names` (Set of String) The list of project names.
 - `number_of_latest_versions` (Number) The number of latest release bundle versions to include to the report.
@@ -170,6 +233,17 @@ Optional:
 
 <a id="nestedblock--resources--release_bundles"></a>
 ### Nested Schema for `resources.release_bundles`
+
+Optional:
+
+- `exclude_patterns` (Set of String) The list of exclude patterns
+- `include_patterns` (Set of String) The list of include patterns
+- `names` (Set of String) The list of release bundles names.
+- `number_of_latest_versions` (Number) The number of latest release bundle versions to include to the report.
+
+
+<a id="nestedblock--resources--release_bundles_v2"></a>
+### Nested Schema for `resources.release_bundles_v2`
 
 Optional:
 

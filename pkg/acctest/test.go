@@ -292,3 +292,11 @@ func checkCurationPolicy(id string, request *resty.Request) (*resty.Response, er
 func CheckCurationPolicy(id string, request *resty.Request) (*resty.Response, error) {
 	return checkCurationPolicy(id, request.AddRetryCondition(client.NeverRetry))
 }
+
+func checkReport(id string, request *resty.Request) (*resty.Response, error) {
+	return request.Get("xray/api/v1/reports/" + id)
+}
+
+func CheckReport(id string, request *resty.Request) (*resty.Response, error) {
+	return checkReport(id, request.AddRetryCondition(client.NeverRetry))
+}

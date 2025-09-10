@@ -186,6 +186,7 @@ func (p *XrayProvider) Resources(ctx context.Context) []func() resource.Resource
 	return []func() resource.Resource{
 		xray_resource.NewBinaryManagerBuildsResource,
 		xray_resource.NewBinaryManagerReposResource,
+		xray_resource.NewExposuresReportResource,
 		xray_resource.NewBinaryManagerReleaseBundlesV2Resource,
 		xray_resource.NewCatalogLabelsResource,
 		xray_resource.NewCustomCurationConditionResource,
