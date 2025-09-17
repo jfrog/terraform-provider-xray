@@ -57,7 +57,7 @@ func (r *LicensesReportResource) toFiltersAPIModel(ctx context.Context, filtersE
 		var licensePatterns []string
 		f := attrs["license_patterns"].(types.Set).ElementsAs(ctx, &licensePatterns, false)
 		if f.HasError() {
-			diags.Append(d...)
+			diags.Append(f...)
 		}
 
 		filters = &FiltersAPIModel{
@@ -172,6 +172,7 @@ var licensesFiltersBlocks = map[string]schema.Block{
 func (r *LicensesReportResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	validateSingleResourceType(ctx, req, resp)
 	validateDateRanges(ctx, req, resp, "scan_date")
+	validateProjectsScope(ctx, req, resp, r.ProviderData.Client)
 }
 
 func (r *LicensesReportResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {

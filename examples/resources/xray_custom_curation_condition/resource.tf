@@ -75,16 +75,6 @@ resource "xray_custom_curation_condition" "cvss_range_epss_score" {
   ])
 }
 
-# CVECVSSRange with default values (empty param_values)
-resource "xray_custom_curation_condition" "cvss_range_defaults" {
-  name                 = "default-vulnerability-blocking"
-  condition_template_id = "CVECVSSRange"
-  
-  # Uses defaults: vulnerability_cvss_score_range=[0,10], apply_only_if_fix_is_available=false, 
-  # do_not_apply_for_already_existing_vulnerabilities=true
-  param_values = jsonencode([])
-}
-
 # ============================================================================
 # SpecificVersions - Block or allow specific package versions
 # ============================================================================
@@ -360,14 +350,14 @@ resource "xray_custom_curation_condition" "openssf_comprehensive" {
     {
       param_id = "list_of_scorecard_checks"
       value    = {
-        "Code-Review"        = 7
-        "Maintained"         = 5
-        "SAST"              = 8
-        "Vulnerabilities"   = 9
-        "License"           = 6
-        "Security-Policy"   = 7
-        "Branch-Protection" = 6
-        "Binary-Artifacts"  = 9
+        "code_review"       = 7
+        "maintained"        = 5
+        "sast"              = 8
+        "vulnerabilities"   = 9
+        "license"           = 6
+        "security_policy"   = 7
+        "branch_protection" = 6
+        "binary_artifacts"  = 9
       }
     },
     {
