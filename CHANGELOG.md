@@ -2,6 +2,8 @@
 
 IMPROVEMENTS:
 
+* resource/xray_vulnerabilites_report: Added support for the attributes cron_schedule, emails, cron_schedule_timezone, and the filters ca_filter and runtime_filter in Xray vulnerabilites reports. PR: [#357](https://github.com/jfrog/terraform-provider-xray/pull/357)
+
 * resource/xray_violations_report: Added support for the attributes cron_schedule, emails, cron_schedule_timezone, and the filters ca_filter and runtime_filter in Xray violation reports. PR: [#354](https://github.com/jfrog/terraform-provider-xray/pull/354)
 
 * provider: Added support for disabling version checks using the environment variable SKIP_XRAY_VERSION_CHECK=true (default: false). Issue: [#338](https://github.com/jfrog/terraform-provider-xray/issues/338) PR:[#355](https://github.com/jfrog/terraform-provider-xray/pull/355)
