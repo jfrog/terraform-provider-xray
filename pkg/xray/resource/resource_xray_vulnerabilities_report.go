@@ -260,6 +260,7 @@ func (r *VulnerabilitiesReportResource) ValidateConfig(ctx context.Context, req 
 	validateDateRanges(ctx, req, resp, "scan_date", "published")
 	validateSecurityFilterSeveritiesAndCvssScore(ctx, req, resp)
 	validateSecurityFilterCveAndIssueId(ctx, req, resp)
+	validateProjectsScope(ctx, req, resp, r.ProviderData.Client)
 }
 
 func (r *VulnerabilitiesReportResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

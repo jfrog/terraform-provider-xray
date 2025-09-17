@@ -1537,9 +1537,14 @@ func TestAccCurationPolicy_LabelWaivers_Basic(t *testing.T) {
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckCurationPolicy),
 		Steps: []resource.TestStep{
 			{
-				// Step 1: Create shared repositories and verify they exist
-				Config: sharedRepoConfig,
-				Check:  resource.ComposeTestCheckFunc(getSharedRepoVerification()...),
+				// Step 1: Create shared repositories and labels
+				Config: sharedRepoConfig + labelsCfg,
+				Check: resource.ComposeTestCheckFunc(
+					append(getSharedRepoVerification(),
+						// Verify labels were created
+						resource.TestCheckResourceAttr("xray_catalog_labels.labels_"+labelPrefix, "labels.#", "5"),
+					)...,
+				),
 			},
 			{
 				// Step 2: Create policy with label waivers

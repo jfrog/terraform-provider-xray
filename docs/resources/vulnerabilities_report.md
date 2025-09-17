@@ -77,7 +77,7 @@ resource "xray_vulnerabilities_report" "project-report" {
   name = "project-vulnerabilities-report"
   resources {
     projects {
-      names                     = ["project-1", "project-2"]
+      keys = ["project-1", "project-2"]
       number_of_latest_versions = 3
     }
   }
@@ -216,7 +216,8 @@ Optional:
 
 - `exclude_key_patterns` (Set of String) The list of exclude patterns
 - `include_key_patterns` (Set of String) The list of include patterns
-- `names` (Set of String) The list of project names.
+- `keys` (Set of String) The list of project keys. Note: Available from Xray version 3.130.0 and higher.
+- `names` (Set of String, Deprecated) The list of project names.
 - `number_of_latest_versions` (Number) The number of latest release bundle versions to include to the report.
 
 
