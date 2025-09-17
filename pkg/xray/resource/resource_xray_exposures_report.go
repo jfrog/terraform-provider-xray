@@ -120,6 +120,7 @@ func (r *ExposuresReportResource) Schema(ctx context.Context, req resource.Schem
 func (r *ExposuresReportResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	validateSingleResourceType(ctx, req, resp)
 	validateDateRanges(ctx, req, resp, "scan_date")
+	validateProjectsScope(ctx, req, resp, r.ProviderData.Client)
 }
 
 func (r *ExposuresReportResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

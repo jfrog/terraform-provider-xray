@@ -195,6 +195,9 @@ jobs:
             --set artifactory.artifactory.persistence.size=50Gi \
             --set postgresql.primary.persistence.size=500Gi \
             --set postgresql.primary.resourcesPreset=medium \
+            --set xray.serviceAccount.create=true \
+            --set xray.rbac.create=true \
+            --set jas.healthcheck.enabled=true \
             --set catalog.enabled=true \
             # --set artifactory.nginx.service.loadBalancerSourceRanges="{$WHITELIST_CIDR}" \
           echo "Waiting for JFrog Platform services roll out"

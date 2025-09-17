@@ -11,9 +11,14 @@ Creates Xray Violations report. The Violations report provides you with informat
 ## Example Usage
 
 ```terraform
-# Example: Create a security violations report for repositories
+# Example: Create a security violations report for repositories with all features
 resource "xray_violations_report" "security-report" {
   name = "security-violations-report"
+  
+  cron_schedule          = "30 09 * * MON" # requires Xray 3.130.0 or higher
+  cron_schedule_timezone = "America/New_York" # requires Xray 3.130.0 or higher
+  emails                 = ["security-team@example.com", "devops@example.com"] # requires Xray 3.130.0 or higher
+
   resources {
     repository {
       name                  = "docker-local"
@@ -25,6 +30,7 @@ resource "xray_violations_report" "security-report" {
       include_path_patterns = ["**/*.jar", "**/*.war"]
     }
   }
+
   filters {
     type             = "security"
     watch_names      = ["security-watch"]
@@ -32,7 +38,22 @@ resource "xray_violations_report" "security-report" {
     component        = "*log4j*"
     artifact         = "*spring*"
     violation_status = "Active"
-    severities       = ["Critical", "High"]
+    severities       = ["Critical", "High", "Medium"]
+
+    # Contextual Analysis Filter (requires Xray 3.130.0 or higher)
+    ca_filter {
+      allowed_ca_statuses = [
+        "applicable",
+        "not_applicable",
+        "undetermined",
+        "not_scanned"
+      ]
+    }
+
+    # Runtime Filter (requires Xray 3.130.0 or higher)
+    runtime_filter {
+      time_period = "7 days"
+    }
 
     security_filters {
       issue_id         = "XRAY-87343"
@@ -55,15 +76,22 @@ resource "xray_violations_report" "security-report" {
   }
 }
 
-# Example: Create a license violations report for builds
+# Example: Create a license violations report for builds with scheduled reporting
 resource "xray_violations_report" "license-report" {
   name = "license-violations-report"
+
+  # Automated report generation (requires Xray 3.130.0 or higher)
+  cron_schedule          = "00 23 * * SUN" # requires Xray 3.130.0 or higher
+  cron_schedule_timezone = "Europe/London" # requires Xray 3.130.0 or higher
+  emails                 = ["legal-team@example.com", "compliance@example.com"] # requires Xray 3.130.0 or higher
+
   resources {
     builds {
       names                     = ["build-1", "build-2"]
       number_of_latest_versions = 5
     }
   }
+
   filters {
     type             = "license"
     watch_patterns   = ["license-watch-*"]
@@ -73,10 +101,23 @@ resource "xray_violations_report" "license-report" {
     violation_status = "Active"
     severities       = ["High"]
 
+    # Contextual Analysis Filter (requires Xray 3.130.0 or higher)
+    ca_filter {
+      allowed_ca_statuses = [
+        "applicable",
+        "technology_unsupported",
+        "upgrade_required"
+      ]
+    }
+
+    # Runtime Filter (requires Xray 3.130.0 or higher)
+    runtime_filter {
+      time_period = "30 days"
+    }
+
     license_filters {
-      unknown         = true
-      license_names   = ["GPL-2.0", "AGPL-3.0"]
-      license_patterns = ["*GPL*"]
+      unknown          = true
+      license_names    = ["GPL-2.0", "AGPL-3.0"]
     }
 
     updated {
@@ -86,15 +127,22 @@ resource "xray_violations_report" "license-report" {
   }
 }
 
-# Example: Create an operational risk violations report for projects
+# Example: Create an operational risk violations report for projects with daily updates
 resource "xray_violations_report" "operational-risk-report" {
   name = "operational-risk-violations-report"
+
+  # Automated report generation
+  cron_schedule          = "15 06 * * *" # requires Xray 3.130.0 or higher
+  cron_schedule_timezone = "Asia/Tokyo" # requires Xray 3.130.0 or higher
+  emails                 = ["ops-team@example.com", "risk-management@example.com"] # requires Xray 3.130.0 or higher
+
   resources {
     projects {
-      names                     = ["project-1", "project-2"]
+      keys = ["project-1", "project-2"]
       number_of_latest_versions = 3
     }
   }
+
   filters {
     type             = "operational_risk"
     watch_names      = ["ops-risk-watch"]
@@ -103,6 +151,66 @@ resource "xray_violations_report" "operational-risk-report" {
     artifact         = "*web-app*"
     violation_status = "Active"
     severities       = ["Critical", "High", "Medium"]
+
+    # Contextual Analysis Filter (requires Xray 3.130.0 or higher)
+    ca_filter {
+      allowed_ca_statuses = [
+        "applicable",
+        "rescan_required",
+        "not_covered"
+      ]
+    }
+
+    # Runtime Filter (requires Xray 3.130.0 or higher)
+    runtime_filter {
+      time_period = "24 hours"
+    }
+
+    updated {
+      start = "2023-01-01T00:00:00Z"
+      end   = "2023-12-31T23:59:59Z"
+    }
+  }
+}
+
+# Example: Create a malicious violations report for release bundles with weekly schedule
+resource "xray_violations_report" "malicious-report" {
+  name = "malicious-violations-report"
+
+  # Automated report generation (requires Xray 3.130.0 or higher)
+  cron_schedule          = "45 12 * * FRI"
+  cron_schedule_timezone = "UTC"
+  emails                 = ["security-alerts@example.com"]
+
+  resources {
+    release_bundles {
+      names                     = ["release-1", "release-2"]
+      number_of_latest_versions = 2
+    }
+  }
+
+  filters {
+    type             = "malicious"
+    watch_names      = ["malware-watch"]
+    policy_names     = ["malware-policy"]
+    component        = "*npm*"
+    artifact         = "*package*"
+    violation_status = "Active"
+    severities       = ["Critical"]
+
+    # Contextual Analysis Filter (requires Xray 3.130.0 or higher)
+    ca_filter {
+      allowed_ca_statuses = [
+        "applicable",
+        "not_scanned",
+        "undetermined"
+      ]
+    }
+
+    # Runtime Filter (requires Xray 3.130.0 or higher)
+    runtime_filter {
+      time_period = "3 days"
+    }
 
     updated {
       start = "2023-01-01T00:00:00Z"
@@ -121,6 +229,19 @@ resource "xray_violations_report" "operational-risk-report" {
 
 ### Optional
 
+- `cron_schedule` (String) Schedule for automated report generation. Format: 'minute hour day-of-month month day-of-week' where:
+  - minute: must be 00, 15, 30, or 45 (quarter-hourly)
+  - hour: must be 00-23 (2-digit format, e.g., 03 not 3)
+  - day-of-month: 1-31, * (any), or ? (unspecified)
+  - month: 1-12 or JAN-DEC
+  - day-of-week: 0-6 (0=Sunday) or SUN-SAT
+Examples:
+  - '45 03 * * MON' = Every Monday at 03:45 AM
+  - '00 00 1 * ?' = At midnight (00:00) on the first day of every month
+  - '30 12 ? * MON-FRI' = At 12:30 PM every weekday
+Note: Requires Xray 3.130.0 or higher.
+- `cron_schedule_timezone` (String) Timezone for cron schedule. For valid timezone formats, see: [iana-timezones](https://timeapi.io/documentation/iana-timezones). Note: Requires Xray 3.130.0 or higher. Only used when cron_schedule is set.
+- `emails` (Set of String) List of email addresses to notify when report generation is complete. Note: Requires Xray 3.130.0 or higher.
 - `filters` (Block Set) Advanced filters. (see [below for nested schema](#nestedblock--filters))
 - `project_key` (String) Project key for assigning this resource to. Must be 2 - 10 lowercase alphanumeric and hyphen characters.
 - `resources` (Block Set) The list of resources to include into the report. (see [below for nested schema](#nestedblock--resources))
@@ -136,9 +257,11 @@ resource "xray_violations_report" "operational-risk-report" {
 Optional:
 
 - `artifact` (String) Filter by artifact name, you can use (*) at the beginning or end of a substring as a wildcard.
+- `ca_filter` (Block Set) Contextual Analysis Filter. Note: Requires Xray 3.130.0 or higher. (see [below for nested schema](#nestedblock--filters--ca_filter))
 - `component` (String) Filter by component name, you can use (*) at the beginning or end of a substring as a wildcard.
 - `license_filters` (Block Set) Licenses Filters. (see [below for nested schema](#nestedblock--filters--license_filters))
 - `policy_names` (Set of String) Select Xray policies by name.
+- `runtime_filter` (Block Set) Runtime Filter. Note: Requires Xray 3.130.0 or higher. (see [below for nested schema](#nestedblock--filters--runtime_filter))
 - `security_filters` (Block Set) Security Filters. (see [below for nested schema](#nestedblock--filters--security_filters))
 - `severities` (Set of String) Risk/Severites levels. Allowed values: 'Low', 'Medium', 'High', 'Critical'.
 - `type` (String) Violation type.
@@ -146,6 +269,14 @@ Optional:
 - `violation_status` (String) Violation status.
 - `watch_names` (Set of String) Select Xray watch by names. Only one attribute - 'watch_names' or 'watch_patterns' can be set.
 - `watch_patterns` (Set of String) Select Xray watch name by patterns. Only one attribute - 'watch_names' or 'watch_patterns' can be set..
+
+<a id="nestedblock--filters--ca_filter"></a>
+### Nested Schema for `filters.ca_filter`
+
+Optional:
+
+- `allowed_ca_statuses` (Set of String) Allowed CA statuses.
+
 
 <a id="nestedblock--filters--license_filters"></a>
 ### Nested Schema for `filters.license_filters`
@@ -155,6 +286,14 @@ Optional:
 - `license_names` (Set of String) Filter licenses by names.
 - `license_patterns` (Set of String) Filter licenses by patterns.
 - `unknown` (Boolean) Unknown displays the components that Xray could not discover any licenses for.
+
+
+<a id="nestedblock--filters--runtime_filter"></a>
+### Nested Schema for `filters.runtime_filter`
+
+Optional:
+
+- `time_period` (String) Time period to filter by.
 
 
 <a id="nestedblock--filters--security_filters"></a>
@@ -227,7 +366,8 @@ Optional:
 
 - `exclude_key_patterns` (Set of String) The list of exclude patterns
 - `include_key_patterns` (Set of String) The list of include patterns
-- `names` (Set of String) The list of project names.
+- `keys` (Set of String) The list of project keys. Note: Available from Xray version 3.130.0 and higher.
+- `names` (Set of String, Deprecated) The list of project names.
 - `number_of_latest_versions` (Number) The number of latest release bundle versions to include to the report.
 
 
