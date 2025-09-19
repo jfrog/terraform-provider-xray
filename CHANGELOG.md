@@ -2,6 +2,8 @@
 
 IMPROVEMENTS:
 
+* provider: Added support for disabling version checks using the environment variable SKIP_XRAY_VERSION_CHECK=true (default: false). Issue: [#338](https://github.com/jfrog/terraform-provider-xray/issues/338) PR:[#355](https://github.com/jfrog/terraform-provider-xray/pull/355)
+
 * resource/xray_*_report: Refactor report resources (operational risk, violations, vulnerabilities, licenses), Added exposures report resource PR: [#347](https://github.com/jfrog/terraform-provider-xray/pull/347)
 
 ## 3.1.0 (Aug 20, 2025). Tested on JFrog Platform 11.2.1 (Artifactory 7.117.14, Xray 3.124.20, Catalog 1.24.0) with Terraform 1.12.2 and OpenTofu 1.10.5

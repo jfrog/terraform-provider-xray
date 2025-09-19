@@ -157,13 +157,19 @@ func (p *XrayProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 		)
 	}
 
-	version, err := util.GetXrayVersion(restyClient)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error getting Xray version",
-			err.Error(),
-		)
-		return
+	// Check if version check is disabled via environment variable
+	skipVersionCheck := util.GetBoolEnvVar([]string{"SKIP_XRAY_VERSION_CHECK"}, false)
+
+	var version string
+	if !skipVersionCheck {
+		version, err = util.GetXrayVersion(restyClient)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error getting Xray version",
+				err.Error(),
+			)
+			return
+		}
 	}
 
 	featureUsage := fmt.Sprintf("Terraform/%s", req.TerraformVersion)
