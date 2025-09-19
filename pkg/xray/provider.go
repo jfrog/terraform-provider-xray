@@ -32,6 +32,7 @@ type XrayProvider struct {
 type XrayProviderModel struct {
 	Url                  types.String `tfsdk:"url"`
 	AccessToken          types.String `tfsdk:"access_token"`
+	SkipXrayVersionCheck types.Bool   `tfsdk:"skip_xray_version_check"`
 	OIDCProviderName     types.String `tfsdk:"oidc_provider_name"`
 	TFCCredentialTagName types.String `tfsdk:"tfc_credential_tag_name"`
 }
@@ -61,6 +62,10 @@ func (p *XrayProvider) Schema(ctx context.Context, req provider.SchemaRequest, r
 				},
 				Description: "This is a bearer token that can be given to you by your admin under `Identity and Access`",
 			},
+			"skip_xray_version_check": schema.BoolAttribute{
+				Optional: true,
+				Description: "Skip version check. Default to false if not set.",
+			},
 			"oidc_provider_name": schema.StringAttribute{
 				Optional: true,
 				Validators: []validator.String{
@@ -83,6 +88,7 @@ func (p *XrayProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 	// Check environment variables, first available OS variable will be assigned to the var
 	url := util.CheckEnvVars([]string{"JFROG_URL", "XRAY_URL"}, "http://localhost:8081")
 	accessToken := util.CheckEnvVars([]string{"JFROG_ACCESS_TOKEN", "XRAY_ACCESS_TOKEN"}, "")
+	skipXrayVersionCheck := util.GetBoolEnvVar([]string{"SKIP_XRAY_VERSION_CHECK"}, false)
 
 	var config XrayProviderModel
 
@@ -157,13 +163,21 @@ func (p *XrayProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 		)
 	}
 
-	version, err := util.GetXrayVersion(restyClient)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error getting Xray version",
-			err.Error(),
-		)
-		return
+	var version string
+	// check SkipXrayVersionCheck is set in provider config, which should take precedence over
+	// environment variable data, if found.
+	if !config.SkipXrayVersionCheck.IsNull() {
+		skipXrayVersionCheck = config.SkipXrayVersionCheck.ValueBool()
+	}
+	if !skipXrayVersionCheck {
+		version, err = util.GetXrayVersion(restyClient)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error getting Xray version",
+				err.Error(),
+			)
+			return
+		}
 	}
 
 	featureUsage := fmt.Sprintf("Terraform/%s", req.TerraformVersion)

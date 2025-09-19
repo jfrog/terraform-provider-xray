@@ -11,9 +11,15 @@ terraform {
 provider "xray" {
   url          = "artifactory.site.com/xray"
   access_token = "abc..xy"
+  
+  //optional: Skip xray version check, default is false.
+  //skip_xray_version_check = true
+
   // Also user can supply the following env vars:
   // JFROG_URL or XRAY_URL
   // XRAY_ACCESS_TOKEN or JFROG_ACCESS_TOKEN
+  // Optional: Skip version check, default is false.
+  // SKIP_XRAY_VERSION_CHECK = true
 }
 
 resource "random_id" "randid" {
