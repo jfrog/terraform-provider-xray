@@ -1,6 +1,8 @@
-## 3.1.1 (Sep 10, 2025).
+## 3.1.1 (Sep 19, 2025).
 
 IMPROVEMENTS:
+
+* resource/xray_violations_report: Added support for the attributes cron_schedule, emails, cron_schedule_timezone, and the filters ca_filter and runtime_filter in Xray violation reports. PR: [#354](https://github.com/jfrog/terraform-provider-xray/pull/354)
 
 * resource/xray_*_report: Refactor report resources (operational risk, violations, vulnerabilities, licenses), Added exposures report resource PR: [#347](https://github.com/jfrog/terraform-provider-xray/pull/347)
 

@@ -49,7 +49,7 @@ resource "xray_operational_risks_report" "project-report" {
   name = "project-operational-risks-report"
   resources {
     projects {
-      names                     = ["project-1", "project-2"]
+      keys = ["project-1", "project-2"]
       number_of_latest_versions = 3
     }
   }
