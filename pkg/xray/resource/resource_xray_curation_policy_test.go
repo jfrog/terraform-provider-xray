@@ -1530,6 +1530,11 @@ func TestAccCurationPolicy_LabelWaivers_Basic(t *testing.T) {
 	// Use shared repositories configuration
 	sharedRepoConfig := getSharedRepoConfig()
 
+	// Add a delay function to ensure labels are propagated
+	waitForLabels := func() {
+		time.Sleep(15 * time.Second) // Give system more time to propagate labels
+	}
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
@@ -1537,9 +1542,17 @@ func TestAccCurationPolicy_LabelWaivers_Basic(t *testing.T) {
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckCurationPolicy),
 		Steps: []resource.TestStep{
 			{
-				// Step 1: Create shared repositories and verify they exist
-				Config: sharedRepoConfig,
-				Check:  resource.ComposeTestCheckFunc(getSharedRepoVerification()...),
+				// Step 1: Create shared repositories and labels
+				Config: sharedRepoConfig + labelsCfg,
+				PreConfig: func() {
+					waitForLabels() // Wait for labels to propagate
+				},
+				Check: resource.ComposeTestCheckFunc(
+					append(getSharedRepoVerification(),
+						// Verify labels were created
+						resource.TestCheckResourceAttr("xray_catalog_labels.labels_"+labelPrefix, "labels.#", "5"),
+					)...,
+				),
 			},
 			{
 				// Step 2: Create policy with label waivers
@@ -1591,6 +1604,11 @@ func TestAccCurationPolicy_LabelWaivers_Multiple(t *testing.T) {
 	// Repository configuration
 	repoConfig := createCuratedRepoConfig("npm", repoName)
 
+	// Add a delay function to ensure labels are propagated
+	waitForLabels := func() {
+		time.Sleep(15 * time.Second) // Give system more time to propagate labels
+	}
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
@@ -1598,11 +1616,16 @@ func TestAccCurationPolicy_LabelWaivers_Multiple(t *testing.T) {
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckCurationPolicy),
 		Steps: []resource.TestStep{
 			{
-				// Step 1: Create repository first and verify it exists
-				Config: repoConfig,
+				// Step 1: Create repository and labels first and verify they exist
+				Config: repoConfig + labelsCfg,
+				PreConfig: func() {
+					waitForLabels() // Wait for labels to propagate
+				},
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(fmt.Sprintf("artifactory_remote_npm_repository.%s", repoName), "key", repoName),
 					resource.TestCheckResourceAttr(fmt.Sprintf("artifactory_remote_npm_repository.%s", repoName), "curated", "true"),
+					// Verify labels were created
+					resource.TestCheckResourceAttr("xray_catalog_labels.labels_"+labelPrefix, "labels.#", "5"),
 				),
 			},
 			{

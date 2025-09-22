@@ -126,7 +126,7 @@ jobs:
       - name: Authenticate with Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GKE_SERVICE_ACCOUNT_JSON }}
+          credentials_json: ${{ secrets.GKE_SERVICE_ACCOUNT_JSON_JFROG_DEV }}
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
         with:
@@ -136,10 +136,11 @@ jobs:
       - name: Setup k8s cluster
         id: create_cluster
         env:
-          GKE_ZONE: ${{ vars.GKE_ZONE }}
-          GKE_PROJECT: ${{ vars.GKE_PROJECT }}
-          MACHINE_TYPE: ${{ vars.GKE_MACHINE_TYPE }}
-          NUM_NODES: ${{ vars.GKE_NUM_NODES }} # default is 3
+          GKE_ZONE: ${{ vars.GKE_ZONE_JFROG_DEV }}
+          GKE_PROJECT: ${{ vars.GKE_PROJECT_JFROG_DEV }}
+          MACHINE_TYPE: ${{ vars.GKE_MACHINE_TYPE_JFROG_DEV }}
+          NUM_NODES: ${{ vars.GKE_NUM_NODES_JFROG_DEV }} # default is 3
+          WHITELIST_CIDR_JFROG_DEV: ${{ secrets.WHITELIST_CIDR_JFROG_DEV }}
         run: |
           export GKE_CLUSTER=tf-provider-xray-${{ matrix.cli }}-$(date +%s)
           echo "GKE_CLUSTER=$GKE_CLUSTER" >> "$GITHUB_ENV"
@@ -158,9 +159,10 @@ jobs:
             --disk-size 50Gi \
             --min-nodes 1 \
             --max-nodes 5 \
-            --project "$GKE_PROJECT"
-            # --enable-master-authorized-networks \
-            # --master-authorized-networks "$WHITELIST_CIDR"
+            --project "$GKE_PROJECT" \
+            --enable-master-authorized-networks \
+            --no-enable-ip-alias \
+            --master-authorized-networks "${WHITELIST_CIDR_JFROG_DEV}","${WHITELIST_CIDR}"
             # add your NAT CIDR to whitelist local or CI/CD NAT IP. Set WHITELIST_CIDR in CI/CD to add CIDR to the list automatically.
           gcloud container clusters get-credentials "$GKE_CLUSTER" --zone "$GKE_ZONE" --project "$GKE_PROJECT"
       - name: Install JFrog Platform
@@ -288,8 +290,8 @@ jobs:
       - name: Delete GKE cluster
         if: always() && steps.create_cluster.conclusion == 'success'
         env:
-          GKE_ZONE: ${{ vars.GKE_ZONE }}
-          GKE_PROJECT: ${{ vars.GKE_PROJECT }}
+          GKE_ZONE: ${{ vars.GKE_ZONE_JFROG_DEV }}
+          GKE_PROJECT: ${{ vars.GKE_PROJECT_JFROG_DEV }}
         run: |
           echo "Deleting GKE cluster ${GKE_CLUSTER} using default authentication"
           gcloud container clusters delete "${GKE_CLUSTER}" --zone "${GKE_ZONE}" --project "${GKE_PROJECT}" --quiet
