@@ -1,4 +1,4 @@
-## 3.1.1 (Sep 10, 2025).
+## 3.1.1 (Sep 10, 2025). Tested on JFrog Platform 11.2.2 (Artifactory 7.117.17, Xray 3.124.26, Catalog 1.25.6) with Terraform 1.13.3 and OpenTofu 1.10.6
 
 IMPROVEMENTS:
 
