@@ -34,9 +34,15 @@ terraform {
 provider "xray" {
   url          = "artifactory.site.com/xray"
   access_token = "abc..xy"
+  
+  //optional: Skip xray version check, default is false.
+  //skip_xray_version_check = true
+
   // Also user can supply the following env vars:
   // JFROG_URL or XRAY_URL
   // XRAY_ACCESS_TOKEN or JFROG_ACCESS_TOKEN
+  // Optional: Skip version check, default is false.
+  // SKIP_XRAY_VERSION_CHECK = true
 }
 
 resource "random_id" "randid" {
@@ -650,6 +656,7 @@ Artifactory access tokens may be used via the Authorization header by providing 
 block. Getting this value from the environment is supported with the `XRAY_ACCESS_TOKEN`,
 or `JFROG_ACCESS_TOKEN` variables.
 Set `url` field to provide JFrog Xray URL. Alternatively you can set `ARTIFACTORY_URL`, `JFROG_URL` or `PROJECTS_URL` variables.
+Set `skip_xray_version_check` field to true to skip the version check. Alternatively you can set the `SKIP_XRAY_VERSION_CHECK` variable to true to skip the version check
 
 Usage:
 ```hcl
@@ -657,6 +664,7 @@ Usage:
 provider "xray" {
   url = "artifactory.site.com/xray"
   access_token = "abc...xy"
+  skip_xray_version_check = true
 }
 ```
 
@@ -722,5 +730,6 @@ provider "xray" {
 
 - `access_token` (String, Sensitive) This is a bearer token that can be given to you by your admin under `Identity and Access`
 - `oidc_provider_name` (String) OIDC provider name. See [Configure an OIDC Integration](https://jfrog.com/help/r/jfrog-platform-administration-documentation/configure-an-oidc-integration) for more details.
+- `skip_xray_version_check` (Boolean) Skip version check. Default to false if not set.
 - `tfc_credential_tag_name` (String) Terraform Cloud Workload Identity Token tag name. Use for generating multiple TFC workload identity tokens. When set, the provider will attempt to use env var with this tag name as suffix. **Note:** this is case sensitive, so if set to `JFROG`, then env var `TFC_WORKLOAD_IDENTITY_TOKEN_JFROG` is used instead of `TFC_WORKLOAD_IDENTITY_TOKEN`. See [Generating Multiple Tokens](https://developer.hashicorp.com/terraform/cloud-docs/workspaces/dynamic-provider-credentials/manual-generation#generating-multiple-tokens) on HCP Terraform for more details.
 - `url` (String) URL of Xray. This can also be sourced from the `XRAY_URL` or `JFROG_URL` environment variable. Default to 'http://localhost:8081' if not set.

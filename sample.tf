@@ -14,6 +14,8 @@ provider "xray" {
   // Also user can supply the following env vars:
   // JFROG_URL or XRAY_URL
   // XRAY_ACCESS_TOKEN or JFROG_ACCESS_TOKEN
+  // Optional: Skip version check default is false.
+  // SKIP_XRAY_VERSION_CHECK = true
 }
 
 resource "random_id" "randid" {

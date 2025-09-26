@@ -33,6 +33,7 @@ Artifactory access tokens may be used via the Authorization header by providing 
 block. Getting this value from the environment is supported with the `XRAY_ACCESS_TOKEN`,
 or `JFROG_ACCESS_TOKEN` variables.
 Set `url` field to provide JFrog Xray URL. Alternatively you can set `ARTIFACTORY_URL`, `JFROG_URL` or `PROJECTS_URL` variables.
+Set `skip_xray_version_check` field to true to skip the version check. Alternatively you can set the `SKIP_XRAY_VERSION_CHECK` variable to true to skip the version check
 
 Usage:
 ```hcl
@@ -40,6 +41,7 @@ Usage:
 provider "xray" {
   url = "artifactory.site.com/xray"
   access_token = "abc...xy"
+  skip_xray_version_check = true
 }
 ```
 
