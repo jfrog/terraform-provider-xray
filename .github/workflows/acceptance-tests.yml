@@ -162,7 +162,9 @@ jobs:
             --project "$GKE_PROJECT" \
             --enable-master-authorized-networks \
             --no-enable-ip-alias \
-            --master-authorized-networks "${WHITELIST_CIDR_JFROG_DEV}","${WHITELIST_CIDR}"
+            --master-authorized-networks "${WHITELIST_CIDR_JFROG_DEV}","${WHITELIST_CIDR}" \
+            --labels="environment=test,team=infra-setup,app=tf-xray-provider,purpose=acceptance-tests,managed-by=github-actions" \
+            --node-labels="environment=test,team=infra-setup,app=tf-xray-provider,purpose=acceptance-tests,managed-by=github-actions"
             # add your NAT CIDR to whitelist local or CI/CD NAT IP. Set WHITELIST_CIDR in CI/CD to add CIDR to the list automatically.
           gcloud container clusters get-credentials "$GKE_CLUSTER" --zone "$GKE_ZONE" --project "$GKE_PROJECT"
       - name: Install JFrog Platform
