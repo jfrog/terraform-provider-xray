@@ -40,6 +40,32 @@ func (r *ViolationsReportResource) toFiltersAPIModel(ctx context.Context, filter
 	if len(filtersElems) > 0 {
 		attrs := filtersElems[0].(types.Object).Attributes()
 
+		// Check version for CA and Runtime filters during apply
+		caFilterSet := attrs["ca_filter"].(types.Set)
+		runtimeFilterSet := attrs["runtime_filter"].(types.Set)
+
+		// Check CA filter version requirement
+		if !caFilterSet.IsNull() && len(caFilterSet.Elements()) > 0 {
+			if _, err := util.CheckXrayVersion(r.ProviderData.Client, MinVersionForCAAndRuntimeFilters, "Contextual analysis filter is available from Xray version %s and higher. Current version: %s"); err != nil {
+				diags.AddError(
+					"Feature Not Available",
+					err.Error(),
+				)
+				return nil, diags
+			}
+		}
+
+		// Check runtime filter version requirement
+		if !runtimeFilterSet.IsNull() && len(runtimeFilterSet.Elements()) > 0 {
+			if _, err := util.CheckXrayVersion(r.ProviderData.Client, MinVersionForCAAndRuntimeFilters, "Runtime filter is available from Xray version %s and higher. Current version: %s"); err != nil {
+				diags.AddError(
+					"Feature Not Available",
+					err.Error(),
+				)
+				return nil, diags
+			}
+		}
+
 		var watchNames []string
 		d := attrs["watch_names"].(types.Set).ElementsAs(ctx, &watchNames, false)
 		if d.HasError() {
@@ -49,19 +75,19 @@ func (r *ViolationsReportResource) toFiltersAPIModel(ctx context.Context, filter
 		var watchPatterns []string
 		f := attrs["watch_patterns"].(types.Set).ElementsAs(ctx, &watchPatterns, false)
 		if f.HasError() {
-			diags.Append(d...)
+			diags.Append(f...)
 		}
 
 		var policyNames []string
 		g := attrs["policy_names"].(types.Set).ElementsAs(ctx, &policyNames, false)
 		if g.HasError() {
-			diags.Append(d...)
+			diags.Append(g...)
 		}
 
 		var severities []string
 		h := attrs["severities"].(types.Set).ElementsAs(ctx, &severities, false)
 		if h.HasError() {
-			diags.Append(d...)
+			diags.Append(h...)
 		}
 
 		var updated *StartAndEndDateAPIModel
@@ -115,6 +141,29 @@ func (r *ViolationsReportResource) toFiltersAPIModel(ctx context.Context, filter
 			}
 		}
 
+		var runtimeFilter *RuntimeFilterAPIModel
+		runtimeFilterElems := attrs["runtime_filter"].(types.Set).Elements()
+		if len(runtimeFilterElems) > 0 {
+			runtimeFilterAttrs := runtimeFilterElems[0].(types.Object).Attributes()
+			runtimeFilter = &RuntimeFilterAPIModel{
+				TimePeriod: runtimeFilterAttrs["time_period"].(types.String).ValueString(),
+			}
+		}
+
+		var caFilter *CAFilterAPIModel
+		caFilterElems := attrs["ca_filter"].(types.Set).Elements()
+		if len(caFilterElems) > 0 {
+			caFilterAttrs := caFilterElems[0].(types.Object).Attributes()
+			var allowedCAStatuses []string
+			d := caFilterAttrs["allowed_ca_statuses"].(types.Set).ElementsAs(ctx, &allowedCAStatuses, false)
+			if d.HasError() {
+				diags.Append(d...)
+			}
+			caFilter = &CAFilterAPIModel{
+				AllowedCAStatuses: allowedCAStatuses,
+			}
+		}
+
 		var licenseViolationFilters *LicenseViolationFilterAPIModel
 		licenseFiltersElems := attrs["license_filters"].(types.Set).Elements()
 		if len(licenseFiltersElems) > 0 {
@@ -156,6 +205,8 @@ func (r *ViolationsReportResource) toFiltersAPIModel(ctx context.Context, filter
 			Updated:                  updated,
 			SecurityViolationFilters: securityViolationFilters,
 			LicenseViolationFilters:  licenseViolationFilters,
+			RuntimeFilter:            runtimeFilter,
+			CAFilter:                 caFilter,
 		}
 	}
 
@@ -175,7 +226,7 @@ var violationsFiltersAttrs = map[string]schema.Attribute{
 		Optional: true,
 		Validators: []validator.String{
 			stringvalidator.LengthAtLeast(1),
-			stringvalidator.OneOf("security", "license", "operational_risk"),
+			stringvalidator.OneOf("security", "license", "malicious", "operational_risk"),
 		},
 		Description: "Violation type.",
 	},
@@ -296,6 +347,7 @@ var violationsFiltersBlocks = map[string]schema.Block{
 					Default:  stringdefault.StaticString(""), // backward compatibility with SDKv2 version
 					Validators: []validator.String{
 						stringvalidator.LengthAtLeast(1),
+						stringvalidator.RegexMatches(regexp.MustCompile(`^XRAY-\d{4,6}$`), "invalid Issue ID, must be a valid Issue ID, example XRAY-123456"),
 						stringvalidator.ConflictsWith(
 							path.MatchRelative().AtParent().AtName("cve"),
 						),
@@ -409,6 +461,53 @@ var violationsFiltersBlocks = map[string]schema.Block{
 		},
 		Description: "Licenses Filters.",
 	},
+	"ca_filter": schema.SetNestedBlock{
+		NestedObject: schema.NestedBlockObject{
+			Attributes: map[string]schema.Attribute{
+				"allowed_ca_statuses": schema.SetAttribute{
+					ElementType: types.StringType,
+					Optional:    true,
+					Validators: []validator.Set{
+						setvalidator.ValueStringsAre(
+							stringvalidator.OneOf(
+								"applicable",
+								"not_applicable",
+								"undetermined",
+								"not_scanned",
+								"not_covered",
+								"rescan_required",
+								"upgrade_required",
+								"technology_unsupported",
+							),
+						),
+						setvalidator.SizeAtLeast(1),
+					},
+					Description: "Allowed CA statuses.",
+				},
+			},
+		},
+		Validators: []validator.Set{
+			setvalidator.SizeAtMost(1),
+		},
+		Description: "Contextual Analysis Filter. Note: Requires Xray " + MinVersionForCAAndRuntimeFilters + " or higher.",
+	},
+	"runtime_filter": schema.SetNestedBlock{
+		NestedObject: schema.NestedBlockObject{
+			Attributes: map[string]schema.Attribute{
+				"time_period": schema.StringAttribute{
+					Optional: true,
+					Validators: []validator.String{
+						stringvalidator.OneOf("now", "1 hour", "24 hours", "3 days", "7 days", "10 days", "30 days"),
+					},
+					Description: "Time period to filter by.",
+				},
+			},
+		},
+		Validators: []validator.Set{
+			setvalidator.SizeAtMost(1),
+		},
+		Description: "Runtime Filter. Note: Requires Xray " + MinVersionForCAAndRuntimeFilters + " or higher.",
+	},
 }
 
 func (r *ViolationsReportResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -449,66 +548,13 @@ func validateSecurityViolationFilterCveAndIssueId(ctx context.Context, req resou
 	}
 }
 
-func validateViolationTypeAndFilters(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
-	var config ReportResourceModel
-	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	if !config.Filters.IsNull() && !config.Filters.IsUnknown() {
-		filtersElems := config.Filters.Elements()
-		if len(filtersElems) > 0 {
-			attrs := filtersElems[0].(types.Object).Attributes()
-			violationType := attrs["type"].(types.String).ValueString()
-			securityFilters := attrs["security_filters"].(types.Set)
-			licenseFilters := attrs["license_filters"].(types.Set)
-
-			switch violationType {
-			case "security":
-				if !licenseFilters.IsNull() && len(licenseFilters.Elements()) > 0 {
-					resp.Diagnostics.AddError(
-						"Invalid Attribute Combination",
-						"license_filters cannot be specified when type is \"security\"",
-					)
-				}
-			case "license":
-				if !securityFilters.IsNull() && len(securityFilters.Elements()) > 0 {
-					resp.Diagnostics.AddError(
-						"Invalid Attribute Combination",
-						"security_filters cannot be specified when type is \"license\"",
-					)
-				}
-			case "operational_risk":
-				severities := attrs["severities"].(types.Set)
-				if severities.IsNull() || len(severities.Elements()) == 0 {
-					resp.Diagnostics.AddError(
-						"Missing Required Attribute",
-						"severities must be specified when type is \"operational_risk\"",
-					)
-				}
-				if !securityFilters.IsNull() && len(securityFilters.Elements()) > 0 {
-					resp.Diagnostics.AddError(
-						"Invalid Attribute Combination",
-						"security_filters cannot be specified when type is \"operational_risk\"",
-					)
-				}
-				if !licenseFilters.IsNull() && len(licenseFilters.Elements()) > 0 {
-					resp.Diagnostics.AddError(
-						"Invalid Attribute Combination",
-						"license_filters cannot be specified when type is \"operational_risk\"",
-					)
-				}
-			}
-		}
-	}
-}
-
 func (r *ViolationsReportResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	validateSingleResourceType(ctx, req, resp)
 	validateDateRanges(ctx, req, resp, "updated", "published")
-	validateViolationTypeAndFilters(ctx, req, resp)
 	validateSecurityViolationFilterCveAndIssueId(ctx, req, resp)
+	validateCaAndRuntimeFilters(ctx, req, resp, r.ProviderData.Client)
+	validateCronAndNotify(ctx, req, resp, r.ProviderData.Client)
+	validateProjectsScope(ctx, req, resp, r.ProviderData.Client)
 }
 
 func (r *ViolationsReportResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

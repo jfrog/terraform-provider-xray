@@ -1,6 +1,10 @@
-## 3.1.1 (Sep 25, 2025). Tested on JFrog Platform 11.2.2 (Artifactory 7.117.17, Xray 3.124.26, Catalog 1.25.7) with Terraform 1.13.3 and OpenTofu 1.10.6
+## 3.1.1 (Sep 30, 2025). Tested on JFrog Platform 11.2.3 (Artifactory 7.117.17, Xray 3.124.27, Catalog 1.25.7) with Terraform 1.13.3 and OpenTofu 1.10.6
 
 IMPROVEMENTS:
+
+* resource/xray_vulnerabilites_report: Added support for the attributes cron_schedule, emails, cron_schedule_timezone, and the filters ca_filter and runtime_filter in Xray vulnerabilites reports. PR: [#357](https://github.com/jfrog/terraform-provider-xray/pull/357)
+
+* resource/xray_violations_report: Added support for the attributes cron_schedule, emails, cron_schedule_timezone, and the filters ca_filter and runtime_filter in Xray violation reports. PR: [#354](https://github.com/jfrog/terraform-provider-xray/pull/354)
 
 * provider: Added support for disabling version checks using the environment variable SKIP_XRAY_VERSION_CHECK=true (default: false). Issue: [#338](https://github.com/jfrog/terraform-provider-xray/issues/338) PR:[#355](https://github.com/jfrog/terraform-provider-xray/pull/355)
 

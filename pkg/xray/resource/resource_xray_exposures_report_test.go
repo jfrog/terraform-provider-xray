@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/jfrog/terraform-provider-shared/testutil"
+	"github.com/jfrog/terraform-provider-shared/util"
 	"github.com/jfrog/terraform-provider-xray/v3/pkg/acctest"
 )
 
@@ -351,59 +352,15 @@ func TestAccExposuresReport_ReleaseBundleV2(t *testing.T) {
 	})
 
 	// // Test case for release bundles v2 by pattern
-	// t.Run("exp_release_bundles_v2_by_pattern", func(t *testing.T) {
-	// 	reportName := fmt.Sprintf("exp-release-bundle-v2-by-pattern-%d", testutil.RandomInt())
-	// 	_, fqrn, name := testutil.MkNames(reportName, "xray_exposures_report")
+	t.Run("exp_release_bundles_v2_by_pattern", func(t *testing.T) {
+		// Skip test if Xray version is lower than 3.130.0
+		version, err := util.CheckXrayVersion(acctest.GetTestResty(t), FixVersionForReleaseBundleV2, "")
+		if err != nil || version < FixVersionForReleaseBundleV2 {
+			t.Skipf("Skipping test: requires Xray version %s or higher", FixVersionForReleaseBundleV2)
+			return
+		}
 
-	// 	resource.Test(t, resource.TestCase{
-	// 		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
-	// 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "report_id", acctest.CheckReport),
-	// 		Steps: []resource.TestStep{
-	// 			{
-	// 				Config: fmt.Sprintf(`
-	// 					resource "xray_exposures_report" "%s" {
-	// 						name = "%s"
-	// 						resources {
-	// 							release_bundles_v2 {
-	// 								include_patterns = ["v2.*-release", "v2.*-hotfix"]
-	// 								exclude_patterns = ["*-snapshot", "*-rc"]
-	// 								number_of_latest_versions = 5
-	// 							}
-	// 						}
-	// 						filters {
-	// 							impacted_artifact = "*spring*"
-	// 							category = "services"
-	// 							scan_date {
-	// 								start = "2020-06-29T12:22:16Z"
-	// 								end = "2020-07-29T12:22:16Z"
-	// 							}
-	// 						}
-	// 					}
-	// 				`, name, reportName),
-	// 				Check: resource.ComposeTestCheckFunc(
-	// 					resource.TestCheckResourceAttr(fqrn, "name", reportName),
-	// 					resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.include_patterns.#", "2"),
-	// 					resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.include_patterns.0", "v2.*-release"),
-	// 					resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.include_patterns.1", "v2.*-hotfix"),
-	// 					resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.exclude_patterns.#", "2"),
-	// 					resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.exclude_patterns.0", "*-snapshot"),
-	// 					resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.exclude_patterns.1", "*-rc"),
-	// 					resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.number_of_latest_versions", "5"),
-	// 					resource.TestCheckResourceAttr(fqrn, "filters.0.impacted_artifact", "*spring*"),
-	// 					resource.TestCheckResourceAttr(fqrn, "filters.0.category", "services"),
-	// 					resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.start", "2020-06-29T12:22:16Z"),
-	// 					resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.end", "2020-07-29T12:22:16Z"),
-	// 				),
-	// 			},
-	// 		},
-	// 	})
-	// })
-}
-
-func TestAccExposuresReport_Project(t *testing.T) {
-	// Test case for project by name
-	t.Run("exp_project_by_name", func(t *testing.T) {
-		reportName := fmt.Sprintf("exp-project-by-name-%d", testutil.RandomInt())
+		reportName := fmt.Sprintf("exp-release-bundle-v2-by-pattern-%d", testutil.RandomInt())
 		_, fqrn, name := testutil.MkNames(reportName, "xray_exposures_report")
 
 		resource.Test(t, resource.TestCase{
@@ -415,8 +372,72 @@ func TestAccExposuresReport_Project(t *testing.T) {
 						resource "xray_exposures_report" "%s" {
 							name = "%s"
 							resources {
-								projects {
-									names = ["test-project-1", "test-project-2"]
+								release_bundles_v2 {
+									include_patterns = ["v2.*-release", "v2.*-hotfix"]
+									exclude_patterns = ["*-snapshot", "*-rc"]
+									number_of_latest_versions = 5
+								}
+							}
+							filters {
+								impacted_artifact = "*spring*"
+								category = "services"
+								scan_date {
+									start = "2020-06-29T12:22:16Z"
+									end = "2020-07-29T12:22:16Z"
+								}
+							}
+						}
+					`, name, reportName),
+					Check: resource.ComposeTestCheckFunc(
+						resource.TestCheckResourceAttr(fqrn, "name", reportName),
+						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.include_patterns.#", "2"),
+						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.include_patterns.0", "v2.*-hotfix"),
+						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.include_patterns.1", "v2.*-release"),
+						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.exclude_patterns.#", "2"),
+						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.exclude_patterns.0", "*-rc"),
+						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.exclude_patterns.1", "*-snapshot"),
+						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.number_of_latest_versions", "5"),
+						resource.TestCheckResourceAttr(fqrn, "filters.0.impacted_artifact", "*spring*"),
+						resource.TestCheckResourceAttr(fqrn, "filters.0.category", "services"),
+						resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.start", "2020-06-29T12:22:16Z"),
+						resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.end", "2020-07-29T12:22:16Z"),
+					),
+				},
+			},
+		})
+	})
+}
+
+func TestAccExposuresReport_Project(t *testing.T) {
+	// Test case for project by name
+	t.Run("exp_project_by_name", func(t *testing.T) {
+		reportName := fmt.Sprintf("exp-project-by-name-%d", testutil.RandomInt())
+		_, fqrn, name := testutil.MkNames(reportName, "xray_exposures_report")
+
+		// Check if Xray version supports extended features
+		version, err := util.CheckXrayVersion(acctest.GetTestResty(t), FixVersionForProjectScopeKey, "")
+
+		var projectConfig string
+		if err == nil && version >= FixVersionForProjectScopeKey {
+			projectConfig = `
+							keys = ["key1", "key2"]
+							number_of_latest_versions = 2`
+		} else {
+			projectConfig = `
+							names = ["test-project-1", "test-project-2"]
+							number_of_latest_versions = 2`
+		}
+
+		resource.Test(t, resource.TestCase{
+			ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+			CheckDestroy:             acctest.VerifyDeleted(fqrn, "report_id", acctest.CheckReport),
+			Steps: []resource.TestStep{
+				{
+					Config: fmt.Sprintf(`
+						resource "xray_exposures_report" "%s" {
+							name = "%s"
+							resources {
+								projects {%s
 								}
 							}
 							filters {
@@ -428,17 +449,36 @@ func TestAccExposuresReport_Project(t *testing.T) {
 								}
 							}
 						}
-					`, name, reportName),
-					Check: resource.ComposeTestCheckFunc(
-						resource.TestCheckResourceAttr(fqrn, "name", reportName),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.projects.0.names.#", "2"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.projects.0.names.0", "test-project-1"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.projects.0.names.1", "test-project-2"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.impacted_artifact", "*spring*"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.category", "iac"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.start", "2020-06-29T12:22:16Z"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.end", "2020-07-29T12:22:16Z"),
-					),
+					`, name, reportName, projectConfig),
+					Check: func() resource.TestCheckFunc {
+						baseChecks := []resource.TestCheckFunc{
+							resource.TestCheckResourceAttr(fqrn, "name", reportName),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.projects.0.number_of_latest_versions", "2"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.impacted_artifact", "*spring*"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.category", "iac"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.start", "2020-06-29T12:22:16Z"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.end", "2020-07-29T12:22:16Z"),
+						}
+
+						projectNamesChecks := []resource.TestCheckFunc{
+							resource.TestCheckResourceAttr(fqrn, "resources.0.projects.0.names.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.projects.0.names.0", "test-project-1"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.projects.0.names.1", "test-project-2"),
+						}
+
+						projectKeysChecks := []resource.TestCheckFunc{
+							resource.TestCheckResourceAttr(fqrn, "resources.0.projects.0.keys.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.projects.0.keys.0", "key1"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.projects.0.keys.1", "key2"),
+						}
+
+						if err == nil && version >= FixVersionForProjectScopeKey {
+							allChecks := append(baseChecks, projectKeysChecks...)
+							return resource.ComposeTestCheckFunc(allChecks...)
+						}
+						allChecks := append(baseChecks, projectNamesChecks...)
+						return resource.ComposeTestCheckFunc(allChecks...)
+					}(),
 				},
 			},
 		})

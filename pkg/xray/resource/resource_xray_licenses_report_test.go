@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/jfrog/terraform-provider-shared/testutil"
+	"github.com/jfrog/terraform-provider-shared/util"
 	"github.com/jfrog/terraform-provider-xray/v3/pkg/acctest"
 )
 
@@ -404,69 +405,14 @@ func TestAccLicensesReport_ReleaseBundleV2(t *testing.T) {
 	})
 
 	// Test case for release bundles v2 by pattern
-	// t.Run("license_release_bundles_v2_by_pattern", func(t *testing.T) {
-	// 	reportName := fmt.Sprintf("license-release-bundle-v2-by-pattern-%d", testutil.RandomInt())
-	// 	_, fqrn, name := testutil.MkNames(reportName, "xray_licenses_report")
-
-	// 	resource.Test(t, resource.TestCase{
-	// 		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
-	// 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "report_id", acctest.CheckReport),
-	// 		Steps: []resource.TestStep{
-	// 			{
-	// 				Config: fmt.Sprintf(`
-	// 					resource "xray_licenses_report" "%s" {
-	// 						name = "%s"
-	// 						resources {
-	// 							release_bundles_v2 {
-	// 								include_patterns = ["prod-*", "release-*"]
-	// 								exclude_patterns = ["dev-*", "test-*"]
-	// 								number_of_latest_versions = 5
-	// 							}
-	// 						}
-	// 						filters {
-	// 							component = "*log4j*"
-	// 							artifact = "*spring*"
-	// 							license_patterns = ["*GPL*", "*MIT*"]
-	// 							unrecognized = true
-	// 							unknown = false
-	// 							scan_date {
-	// 								start = "2020-06-29T12:22:16Z"
-	// 								end = "2020-07-29T12:22:16Z"
-	// 							}
-	// 						}
-	// 					}
-	// 				`, name, reportName),
-	// 				Check: resource.ComposeTestCheckFunc(
-	// 					resource.TestCheckResourceAttr(fqrn, "name", reportName),
-	// 					resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.include_patterns.#", "2"),
-	// 					resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.include_patterns.0", "prod-*"),
-	// 					resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.include_patterns.1", "release-*"),
-	// 					resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.exclude_patterns.#", "2"),
-	// 					resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.exclude_patterns.0", "dev-*"),
-	// 					resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.exclude_patterns.1", "test-*"),
-	// 					resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.number_of_latest_versions", "5"),
-	// 					resource.TestCheckResourceAttr(fqrn, "filters.0.component", "*log4j*"),
-	// 					resource.TestCheckResourceAttr(fqrn, "filters.0.artifact", "*spring*"),
-	// 					resource.TestCheckResourceAttr(fqrn, "filters.0.license_patterns.#", "2"),
-	// 					resource.TestCheckResourceAttr(fqrn, "filters.0.license_patterns.0", "*GPL*"),
-	// 					resource.TestCheckResourceAttr(fqrn, "filters.0.license_patterns.1", "*MIT*"),
-	// 					resource.TestCheckResourceAttr(fqrn, "filters.0.unrecognized", "true"),
-	// 					resource.TestCheckResourceAttr(fqrn, "filters.0.unknown", "false"),
-	// 					resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.start", "2020-06-29T12:22:16Z"),
-	// 					resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.end", "2020-07-29T12:22:16Z"),
-	// 				),
-	// 			},
-	// 		},
-	// 	})
-	// })
-}
-
-func TestAccLicensesReport_Project(t *testing.T) {
-	// Test case for projects by name
-	t.Run("license_projects_by_name", func(t *testing.T) {
-		project1Name := fmt.Sprintf("license-project-1-%d", testutil.RandomInt())
-		project2Name := fmt.Sprintf("license-project-2-%d", testutil.RandomInt())
-		reportName := fmt.Sprintf("license-project-by-name-%d", testutil.RandomInt())
+	t.Run("license_release_bundles_v2_by_pattern", func(t *testing.T) {
+		// Skip test if Xray version is lower than 3.130.0
+		version, err := util.CheckXrayVersion(acctest.GetTestResty(t), FixVersionForReleaseBundleV2, "")
+		if err != nil || version < FixVersionForReleaseBundleV2 {
+			t.Skipf("Skipping test: requires Xray version %s or higher", FixVersionForReleaseBundleV2)
+			return
+		}
+		reportName := fmt.Sprintf("license-release-bundle-v2-by-pattern-%d", testutil.RandomInt())
 		_, fqrn, name := testutil.MkNames(reportName, "xray_licenses_report")
 
 		resource.Test(t, resource.TestCase{
@@ -478,8 +424,80 @@ func TestAccLicensesReport_Project(t *testing.T) {
 						resource "xray_licenses_report" "%s" {
 							name = "%s"
 							resources {
-								projects {
-									names = ["%s", "%s"]
+								release_bundles_v2 {
+									include_patterns = ["prod-*", "release-*"]
+									exclude_patterns = ["dev-*", "test-*"]
+									number_of_latest_versions = 5
+								}
+							}
+							filters {
+								component = "*log4j*"
+								artifact = "*spring*"
+								license_patterns = ["*GPL*", "*MIT*"]
+								unrecognized = true
+								unknown = false
+								scan_date {
+									start = "2020-06-29T12:22:16Z"
+									end = "2020-07-29T12:22:16Z"
+								}
+							}
+						}
+					`, name, reportName),
+					Check: resource.ComposeTestCheckFunc(
+						resource.TestCheckResourceAttr(fqrn, "name", reportName),
+						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.include_patterns.#", "2"),
+						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.include_patterns.0", "prod-*"),
+						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.include_patterns.1", "release-*"),
+						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.exclude_patterns.#", "2"),
+						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.exclude_patterns.0", "dev-*"),
+						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.exclude_patterns.1", "test-*"),
+						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.number_of_latest_versions", "5"),
+						resource.TestCheckResourceAttr(fqrn, "filters.0.component", "*log4j*"),
+						resource.TestCheckResourceAttr(fqrn, "filters.0.artifact", "*spring*"),
+						resource.TestCheckResourceAttr(fqrn, "filters.0.license_patterns.#", "2"),
+						resource.TestCheckResourceAttr(fqrn, "filters.0.license_patterns.0", "*GPL*"),
+						resource.TestCheckResourceAttr(fqrn, "filters.0.license_patterns.1", "*MIT*"),
+						resource.TestCheckResourceAttr(fqrn, "filters.0.unrecognized", "true"),
+						resource.TestCheckResourceAttr(fqrn, "filters.0.unknown", "false"),
+						resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.start", "2020-06-29T12:22:16Z"),
+						resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.end", "2020-07-29T12:22:16Z"),
+					),
+				},
+			},
+		})
+	})
+}
+
+func TestAccLicensesReport_Project(t *testing.T) {
+	// Test case for projects by name
+	t.Run("license_projects_by_name", func(t *testing.T) {
+		reportName := fmt.Sprintf("license-project-by-name-%d", testutil.RandomInt())
+		_, fqrn, name := testutil.MkNames(reportName, "xray_licenses_report")
+
+		// Check if Xray version supports extended features
+		version, err := util.CheckXrayVersion(acctest.GetTestResty(t), FixVersionForProjectScopeKey, "")
+
+		var projectConfig string
+		if err == nil && version >= FixVersionForProjectScopeKey {
+			projectConfig = `
+							keys = ["key1", "key2"]
+							number_of_latest_versions = 2`
+		} else {
+			projectConfig = `
+							names = ["test-project-1", "test-project-2"]
+							number_of_latest_versions = 2`
+		}
+
+		resource.Test(t, resource.TestCase{
+			ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+			CheckDestroy:             acctest.VerifyDeleted(fqrn, "report_id", acctest.CheckReport),
+			Steps: []resource.TestStep{
+				{
+					Config: fmt.Sprintf(`
+						resource "xray_licenses_report" "%s" {
+							name = "%s"
+							resources {
+								projects {%s
 								}
 							}
 							filters {
@@ -494,20 +512,41 @@ func TestAccLicensesReport_Project(t *testing.T) {
 								}
 							}
 						}
-					`, name, reportName, project1Name, project2Name),
-					Check: resource.ComposeTestCheckFunc(
-						resource.TestCheckResourceAttr(fqrn, "name", reportName),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.projects.0.names.#", "2"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.component", "*log4j*"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.artifact", "*spring*"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.license_names.#", "2"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.license_names.0", "Apache-2.0"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.license_names.1", "MIT"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.unrecognized", "false"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.unknown", "false"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.start", "2020-06-29T12:22:16Z"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.end", "2020-07-29T12:22:16Z"),
-					),
+					`, name, reportName, projectConfig),
+					Check: func() resource.TestCheckFunc {
+						baseChecks := []resource.TestCheckFunc{
+							resource.TestCheckResourceAttr(fqrn, "name", reportName),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.projects.0.number_of_latest_versions", "2"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.component", "*log4j*"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.artifact", "*spring*"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.license_names.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.license_names.0", "Apache-2.0"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.license_names.1", "MIT"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.unrecognized", "false"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.unknown", "false"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.start", "2020-06-29T12:22:16Z"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.end", "2020-07-29T12:22:16Z"),
+						}
+
+						projectNamesChecks := []resource.TestCheckFunc{
+							resource.TestCheckResourceAttr(fqrn, "resources.0.projects.0.names.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.projects.0.names.0", "test-project-1"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.projects.0.names.1", "test-project-2"),
+						}
+
+						projectKeysChecks := []resource.TestCheckFunc{
+							resource.TestCheckResourceAttr(fqrn, "resources.0.projects.0.keys.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.projects.0.keys.0", "key1"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.projects.0.keys.1", "key2"),
+						}
+
+						if err == nil && version >= FixVersionForProjectScopeKey {
+							allChecks := append(baseChecks, projectKeysChecks...)
+							return resource.ComposeTestCheckFunc(allChecks...)
+						}
+						allChecks := append(baseChecks, projectNamesChecks...)
+						return resource.ComposeTestCheckFunc(allChecks...)
+					}(),
 				},
 			},
 		})

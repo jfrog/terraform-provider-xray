@@ -1,6 +1,11 @@
 # Example: Create a vulnerabilities report for repositories with CVE
 resource "xray_vulnerabilities_report" "repository-report" {
   name = "repository-vulnerabilities-report"
+
+  # Automated report generation (requires Xray 3.130.0 or higher)
+  cron_schedule          = "30 09 * * MON"
+  cron_schedule_timezone = "America/New_York"
+  emails                 = ["security-team@example.com", "devops@example.com"]
   resources {
     repository {
       name                  = "docker-local"
@@ -29,12 +34,32 @@ resource "xray_vulnerabilities_report" "repository-report" {
       start = "2023-01-01T00:00:00Z"
       end   = "2023-12-31T23:59:59Z"
     }
+
+    # Contextual Analysis Filter (requires Xray 3.130.0 or higher)
+    ca_filter {
+      allowed_ca_statuses = [
+        "applicable",
+        "not_applicable",
+        "undetermined",
+        "not_scanned"
+      ]
+    }
+
+    # Runtime Filter (requires Xray 3.130.0 or higher)
+    runtime_filter {
+      time_period = "7 days"
+    }
   }
 }
 
 # Example: Create a vulnerabilities report for builds with patterns
 resource "xray_vulnerabilities_report" "build-report" {
   name = "build-vulnerabilities-report"
+
+  # Automated report generation (requires Xray 3.130.0 or higher)
+  cron_schedule          = "00 23 * * SUN"
+  cron_schedule_timezone = "Europe/London"
+  emails                 = ["build-team@example.com", "ci-cd@example.com"]
   resources {
     builds {
       include_patterns         = ["build-*", "release-*"]
@@ -56,15 +81,35 @@ resource "xray_vulnerabilities_report" "build-report" {
       start = "2023-01-01T00:00:00Z"
       end   = "2023-12-31T23:59:59Z"
     }
+
+    # Contextual Analysis Filter (requires Xray 3.130.0 or higher)
+    ca_filter {
+      allowed_ca_statuses = [
+        "applicable",
+        "not_applicable",
+        "undetermined",
+        "not_scanned"
+      ]
+    }
+
+    # Runtime Filter (requires Xray 3.130.0 or higher)
+    runtime_filter {
+      time_period = "7 days"
+    }
   }
 }
 
 # Example: Create a vulnerabilities report for projects
 resource "xray_vulnerabilities_report" "project-report" {
   name = "project-vulnerabilities-report"
+
+  # Automated report generation (requires Xray 3.130.0 or higher)
+  cron_schedule          = "15 06 * * *"
+  cron_schedule_timezone = "Asia/Tokyo"
+  emails                 = ["project-team@example.com", "managers@example.com"]
   resources {
     projects {
-      names                     = ["project-1", "project-2"]
+      keys = ["project-1", "project-2"]
       number_of_latest_versions = 3
     }
   }
@@ -81,12 +126,32 @@ resource "xray_vulnerabilities_report" "project-report" {
       start = "2023-01-01T00:00:00Z"
       end   = "2023-12-31T23:59:59Z"
     }
+
+    # Contextual Analysis Filter (requires Xray 3.130.0 or higher)
+    ca_filter {
+      allowed_ca_statuses = [
+        "applicable",
+        "not_applicable",
+        "undetermined",
+        "not_scanned"
+      ]
+    }
+
+    # Runtime Filter (requires Xray 3.130.0 or higher)
+    runtime_filter {
+      time_period = "7 days"
+    }
   }
 }
 
 # Example: Create a vulnerabilities report for release bundles
 resource "xray_vulnerabilities_report" "release-bundle-report" {
   name = "release-bundle-vulnerabilities-report"
+
+  # Automated report generation (requires Xray 3.130.0 or higher)
+  cron_schedule          = "45 12 * * FRI"
+  cron_schedule_timezone = "UTC"
+  emails                 = ["release-team@example.com", "qa@example.com"]
   resources {
     release_bundles {
       names                     = ["release-1", "release-2"]
@@ -108,6 +173,21 @@ resource "xray_vulnerabilities_report" "release-bundle-report" {
     scan_date {
       start = "2023-01-01T00:00:00Z"
       end   = "2023-12-31T23:59:59Z"
+    }
+
+    # Contextual Analysis Filter (requires Xray 3.130.0 or higher)
+    ca_filter {
+      allowed_ca_statuses = [
+        "applicable",
+        "not_applicable",
+        "undetermined",
+        "not_scanned"
+      ]
+    }
+
+    # Runtime Filter (requires Xray 3.130.0 or higher)
+    runtime_filter {
+      time_period = "7 days"
     }
   }
 }

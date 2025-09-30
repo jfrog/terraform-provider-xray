@@ -46,7 +46,7 @@ resource "xray_exposures_report" "applications-report" {
   name = "applications-exposure-report"
   resources {
     projects {
-      names = ["test-project-1", "test-project-2"]
+      keys = ["test-project-1", "test-project-2"]
       number_of_latest_versions = 3
     }
   }

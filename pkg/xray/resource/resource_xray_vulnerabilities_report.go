@@ -40,6 +40,32 @@ func (r *VulnerabilitiesReportResource) toFiltersAPIModel(ctx context.Context, f
 	if len(filtersElems) > 0 {
 		attrs := filtersElems[0].(types.Object).Attributes()
 
+		// Check version for CA and Runtime filters during apply
+		caFilterSet := attrs["ca_filter"].(types.Set)
+		runtimeFilterSet := attrs["runtime_filter"].(types.Set)
+
+		// Check CA filter version requirement
+		if !caFilterSet.IsNull() && len(caFilterSet.Elements()) > 0 {
+			if _, err := util.CheckXrayVersion(r.ProviderData.Client, MinVersionForCAAndRuntimeFilters, "Contextual analysis filter is available from Xray version %s and higher. Current version: %s"); err != nil {
+				diags.AddError(
+					"Feature Not Available",
+					err.Error(),
+				)
+				return nil, diags
+			}
+		}
+
+		// Check runtime filter version requirement
+		if !runtimeFilterSet.IsNull() && len(runtimeFilterSet.Elements()) > 0 {
+			if _, err := util.CheckXrayVersion(r.ProviderData.Client, MinVersionForCAAndRuntimeFilters, "Runtime filter is available from Xray version %s and higher. Current version: %s"); err != nil {
+				diags.AddError(
+					"Feature Not Available",
+					err.Error(),
+				)
+				return nil, diags
+			}
+		}
+
 		var cvssScore *CVSSScoreAPIModel
 		cvssScoreElems := attrs["cvss_score"].(types.Set).Elements()
 		if len(cvssScoreElems) > 0 {
@@ -77,6 +103,29 @@ func (r *VulnerabilitiesReportResource) toFiltersAPIModel(ctx context.Context, f
 			diags.Append(d...)
 		}
 
+		var runtimeFilter *RuntimeFilterAPIModel
+		runtimeFilterElems := attrs["runtime_filter"].(types.Set).Elements()
+		if len(runtimeFilterElems) > 0 {
+			runtimeFilterAttrs := runtimeFilterElems[0].(types.Object).Attributes()
+			runtimeFilter = &RuntimeFilterAPIModel{
+				TimePeriod: runtimeFilterAttrs["time_period"].(types.String).ValueString(),
+			}
+		}
+
+		var caFilter *CAFilterAPIModel
+		caFilterElems := attrs["ca_filter"].(types.Set).Elements()
+		if len(caFilterElems) > 0 {
+			caFilterAttrs := caFilterElems[0].(types.Object).Attributes()
+			var allowedCAStatuses []string
+			d := caFilterAttrs["allowed_ca_statuses"].(types.Set).ElementsAs(ctx, &allowedCAStatuses, false)
+			if d.HasError() {
+				diags.Append(d...)
+			}
+			caFilter = &CAFilterAPIModel{
+				AllowedCAStatuses: allowedCAStatuses,
+			}
+		}
+
 		// Create filters without has_remediation first
 		filters = &FiltersAPIModel{
 			VulnerableComponent: attrs["vulnerable_component"].(types.String).ValueString(),
@@ -87,6 +136,8 @@ func (r *VulnerabilitiesReportResource) toFiltersAPIModel(ctx context.Context, f
 			ScanDate:            scanDate,
 			Severities:          severities,
 			CVSSScore:           cvssScore,
+			RuntimeFilter:       runtimeFilter,
+			CAFilter:            caFilter,
 		}
 
 		// Only set has_remediation if it's explicitly set in config
@@ -143,6 +194,7 @@ var vulnerabilitiesFiltersAttrs = map[string]schema.Attribute{
 		Default:  stringdefault.StaticString(""), // backward compatibility with SDKv2 version
 		Validators: []validator.String{
 			stringvalidator.LengthAtLeast(1),
+			stringvalidator.RegexMatches(regexp.MustCompile(`^XRAY-\d{4,6}$`), "invalid Issue ID, must be a valid Issue ID, example XRAY-123456"),
 			stringvalidator.ConflictsWith(
 				path.MatchRelative().AtParent().AtName("cve"),
 			),
@@ -240,6 +292,53 @@ var vulnerabilitiesFiltersBlocks = map[string]schema.Block{
 			setvalidator.SizeAtMost(1),
 		},
 	},
+	"ca_filter": schema.SetNestedBlock{
+		NestedObject: schema.NestedBlockObject{
+			Attributes: map[string]schema.Attribute{
+				"allowed_ca_statuses": schema.SetAttribute{
+					ElementType: types.StringType,
+					Optional:    true,
+					Validators: []validator.Set{
+						setvalidator.ValueStringsAre(
+							stringvalidator.OneOf(
+								"applicable",
+								"not_applicable",
+								"undetermined",
+								"not_scanned",
+								"not_covered",
+								"rescan_required",
+								"upgrade_required",
+								"technology_unsupported",
+							),
+						),
+						setvalidator.SizeAtLeast(1),
+					},
+					Description: "Allowed CA statuses.",
+				},
+			},
+		},
+		Validators: []validator.Set{
+			setvalidator.SizeAtMost(1),
+		},
+		Description: "Contextual Analysis Filter. Note: Requires Xray " + MinVersionForCAAndRuntimeFilters + " or higher.",
+	},
+	"runtime_filter": schema.SetNestedBlock{
+		NestedObject: schema.NestedBlockObject{
+			Attributes: map[string]schema.Attribute{
+				"time_period": schema.StringAttribute{
+					Optional: true,
+					Validators: []validator.String{
+						stringvalidator.OneOf("now", "1 hour", "24 hours", "3 days", "7 days", "10 days", "30 days"),
+					},
+					Description: "Time period to filter by.",
+				},
+			},
+		},
+		Validators: []validator.Set{
+			setvalidator.SizeAtMost(1),
+		},
+		Description: "Runtime Filter. Note: Requires Xray " + MinVersionForCAAndRuntimeFilters + " or higher.",
+	},
 }
 
 func (r *VulnerabilitiesReportResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -260,6 +359,9 @@ func (r *VulnerabilitiesReportResource) ValidateConfig(ctx context.Context, req 
 	validateDateRanges(ctx, req, resp, "scan_date", "published")
 	validateSecurityFilterSeveritiesAndCvssScore(ctx, req, resp)
 	validateSecurityFilterCveAndIssueId(ctx, req, resp)
+	validateCaAndRuntimeFilters(ctx, req, resp, r.ProviderData.Client)
+	validateCronAndNotify(ctx, req, resp, r.ProviderData.Client)
+	validateProjectsScope(ctx, req, resp, r.ProviderData.Client)
 }
 
 func (r *VulnerabilitiesReportResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
