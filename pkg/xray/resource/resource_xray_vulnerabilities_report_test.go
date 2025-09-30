@@ -17,53 +17,115 @@ func TestAccVulnerabilitiesReport_Repository(t *testing.T) {
 		reportName := fmt.Sprintf("vuln-repo-by-name-%d", testutil.RandomInt())
 		_, fqrn, name := testutil.MkNames(reportName, "xray_vulnerabilities_report")
 
+		// Check if Xray version supports extended features
+		version, err := util.CheckXrayVersion(acctest.GetTestResty(t), MinVersionForCAAndRuntimeFilters, "")
+
+		var extendedFilters string
+		if err == nil && version >= MinVersionForCAAndRuntimeFilters {
+			extendedFilters = `
+						ca_filter {
+							allowed_ca_statuses = ["applicable", "not_applicable", "undetermined"]
+						}`
+		}
+
+		var runtimeFilter string
+		if err == nil && version >= MinVersionForCAAndRuntimeFilters {
+			if isRuntimeFilterEnabled() {
+				runtimeFilter = `
+						runtime_filter {
+							time_period = "now"
+						}`
+			}
+		}
+
+		var extendedAttrs string
+		if err == nil && version >= MinVersionForCronAndNotify {
+			extendedAttrs = `
+					cron_schedule = "15 06 * * TUE"
+					cron_schedule_timezone = "America/Los_Angeles"
+					emails = ["user1@example.com", "user2@example.com"]`
+		}
+
+		config := fmt.Sprintf(`
+				resource "xray_vulnerabilities_report" "%s" {
+					name = "%s"%s
+					resources {
+						repository {
+							name = "docker-local"
+						}
+						repository {
+							name = "libs-release-local"
+						}
+					}
+					filters {
+						vulnerable_component = "*log4j*"
+						impacted_artifact = "*spring*"
+						has_remediation = true
+						issue_id = "XRAY-87343"
+						severities = ["Critical", "High"]
+						published {
+							start = "2020-06-29T12:22:16Z"
+							end = "2020-07-29T12:22:16Z"
+						}
+						scan_date {
+							start = "2020-06-29T12:22:16Z"
+							end = "2020-07-29T12:22:16Z"
+						}%s
+					}
+				}
+			`, name, reportName, extendedAttrs, fmt.Sprintf("%s%s", extendedFilters, runtimeFilter))
+
 		resource.Test(t, resource.TestCase{
 			ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 			CheckDestroy:             acctest.VerifyDeleted(fqrn, "report_id", acctest.CheckReport),
 			Steps: []resource.TestStep{
 				{
-					Config: fmt.Sprintf(`
-						resource "xray_vulnerabilities_report" "%s" {
-							name = "%s"
-							resources {
-								repository {
-									name = "docker-local"
-								}
-								repository {
-									name = "libs-release-local"
-								}
-							}
-							filters {
-								vulnerable_component = "*log4j*"
-								impacted_artifact = "*spring*"
-								has_remediation = true
-								issue_id = "XRAY-87343"
-								severities = ["Critical", "High"]
-								published {
-									start = "2020-06-29T12:22:16Z"
-									end = "2020-07-29T12:22:16Z"
-								}
-								scan_date {
-									start = "2020-06-29T12:22:16Z"
-									end = "2020-07-29T12:22:16Z"
-								}
-							}
+					Config: config,
+					Check: func() resource.TestCheckFunc {
+						baseChecks := []resource.TestCheckFunc{
+							resource.TestCheckResourceAttr(fqrn, "name", reportName),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.repository.0.name", "docker-local"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.repository.1.name", "libs-release-local"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.vulnerable_component", "*log4j*"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.impacted_artifact", "*spring*"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.has_remediation", "true"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.issue_id", "XRAY-87343"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.severities.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.published.0.start", "2020-06-29T12:22:16Z"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.published.0.end", "2020-07-29T12:22:16Z"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.start", "2020-06-29T12:22:16Z"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.end", "2020-07-29T12:22:16Z"),
 						}
-					`, name, reportName),
-					Check: resource.ComposeTestCheckFunc(
-						resource.TestCheckResourceAttr(fqrn, "name", reportName),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.repository.0.name", "docker-local"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.repository.1.name", "libs-release-local"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.vulnerable_component", "*log4j*"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.impacted_artifact", "*spring*"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.has_remediation", "true"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.issue_id", "XRAY-87343"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.severities.#", "2"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.published.0.start", "2020-06-29T12:22:16Z"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.published.0.end", "2020-07-29T12:22:16Z"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.start", "2020-06-29T12:22:16Z"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.end", "2020-07-29T12:22:16Z"),
-					),
+
+						extendedChecks := []resource.TestCheckFunc{
+							// Cron schedule checks
+							resource.TestCheckResourceAttr(fqrn, "cron_schedule", "15 06 * * TUE"),
+							resource.TestCheckResourceAttr(fqrn, "cron_schedule_timezone", "America/Los_Angeles"),
+							// Email checks
+							resource.TestCheckResourceAttr(fqrn, "emails.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "emails.0", "user1@example.com"),
+							resource.TestCheckResourceAttr(fqrn, "emails.1", "user2@example.com"),
+							// CA filter checks
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.#", "3"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.0", "applicable"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.1", "not_applicable"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.2", "undetermined"),
+						}
+
+						runtimeChecks := []resource.TestCheckFunc{
+							// Runtime filter checks
+							resource.TestCheckResourceAttr(fqrn, "filters.0.runtime_filter.0.time_period", "now"),
+						}
+
+						if err == nil && version >= MinVersionForCAAndRuntimeFilters {
+							allChecks := append(baseChecks, extendedChecks...)
+							if isRuntimeFilterEnabled() {
+								allChecks = append(allChecks, runtimeChecks...)
+							}
+							return resource.ComposeTestCheckFunc(allChecks...)
+						}
+						return resource.ComposeTestCheckFunc(baseChecks...)
+					}(),
 				},
 			},
 		})
@@ -74,65 +136,126 @@ func TestAccVulnerabilitiesReport_Repository(t *testing.T) {
 		reportName := fmt.Sprintf("vuln-repo-by-pattern-%d", testutil.RandomInt())
 		_, fqrn, name := testutil.MkNames(reportName, "xray_vulnerabilities_report")
 
+		// Check if Xray version supports extended features
+		version, err := util.CheckXrayVersion(acctest.GetTestResty(t), MinVersionForCAAndRuntimeFilters, "")
+
+		var extendedFilters string
+		if err == nil && version >= MinVersionForCAAndRuntimeFilters {
+			extendedFilters = `
+						ca_filter {
+							allowed_ca_statuses = ["not_applicable", "undetermined"]
+						}`
+		}
+
+		var runtimeFilter string
+		if err == nil && version >= MinVersionForCAAndRuntimeFilters {
+			if isRuntimeFilterEnabled() {
+				runtimeFilter = `
+						runtime_filter {
+							time_period = "1 hour"
+						}`
+			}
+		}
+
+		var extendedAttrs string
+		if err == nil && version >= MinVersionForCronAndNotify {
+			extendedAttrs = `
+					cron_schedule = "30 09 * * WED"
+					cron_schedule_timezone = "Europe/London"
+					emails = ["admin1@example.com", "admin2@example.com"]`
+		}
+
+		config := fmt.Sprintf(`
+				resource "xray_vulnerabilities_report" "%s" {
+					name = "%s"%s
+					resources {
+						repository {
+							name = "docker-local"
+							include_path_patterns = ["folder1/path/*", "folder2/path*"]
+							exclude_path_patterns = ["folder1/path2/*", "folder2/path2*"]
+						}
+						repository {
+							name = "libs-release-local"
+							include_path_patterns = ["**/*.jar", "**/*.war"]
+						}
+					}
+					filters {
+						vulnerable_component = "*log4j*"
+						impacted_artifact = "*spring*"
+						has_remediation = false
+						issue_id = "XRAY-87343"
+						severities = ["Critical", "High"]
+						published {
+							start = "2020-06-29T12:22:16Z"
+							end = "2020-07-29T12:22:16Z"
+						}
+						scan_date {
+							start = "2020-06-29T12:22:16Z"
+							end = "2020-07-29T12:22:16Z"
+						}%s
+					}
+				}
+			`, name, reportName, extendedAttrs, fmt.Sprintf("%s%s", extendedFilters, runtimeFilter))
+
 		resource.Test(t, resource.TestCase{
 			ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 			CheckDestroy:             acctest.VerifyDeleted(fqrn, "report_id", acctest.CheckReport),
 			Steps: []resource.TestStep{
 				{
-					Config: fmt.Sprintf(`
-						resource "xray_vulnerabilities_report" "%s" {
-							name = "%s"
-							resources {
-								repository {
-									name = "docker-local"
-									include_path_patterns = ["folder1/path/*", "folder2/path*"]
-									exclude_path_patterns = ["folder1/path2/*", "folder2/path2*"]
-								}
-								repository {
-									name = "libs-release-local"
-									include_path_patterns = ["**/*.jar", "**/*.war"]
-								}
-							}
-							filters {
-								vulnerable_component = "*log4j*"
-								impacted_artifact = "*spring*"
-								has_remediation = false
-								issue_id = "XRAY-87343"
-								severities = ["Critical", "High"]
-								published {
-									start = "2020-06-29T12:22:16Z"
-									end = "2020-07-29T12:22:16Z"
-								}
-								scan_date {
-									start = "2020-06-29T12:22:16Z"
-									end = "2020-07-29T12:22:16Z"
-								}
-							}
+					Config: config,
+					Check: func() resource.TestCheckFunc {
+						baseChecks := []resource.TestCheckFunc{
+							resource.TestCheckResourceAttr(fqrn, "name", reportName),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.repository.0.name", "docker-local"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.repository.0.include_path_patterns.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.repository.0.include_path_patterns.0", "folder1/path/*"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.repository.0.include_path_patterns.1", "folder2/path*"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.repository.0.exclude_path_patterns.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.repository.0.exclude_path_patterns.0", "folder1/path2/*"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.repository.0.exclude_path_patterns.1", "folder2/path2*"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.repository.1.name", "libs-release-local"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.repository.1.include_path_patterns.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.repository.1.include_path_patterns.0", "**/*.jar"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.repository.1.include_path_patterns.1", "**/*.war"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.vulnerable_component", "*log4j*"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.impacted_artifact", "*spring*"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.has_remediation", "false"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.issue_id", "XRAY-87343"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.severities.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.published.0.start", "2020-06-29T12:22:16Z"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.published.0.end", "2020-07-29T12:22:16Z"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.start", "2020-06-29T12:22:16Z"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.end", "2020-07-29T12:22:16Z"),
 						}
-					`, name, reportName),
-					Check: resource.ComposeTestCheckFunc(
-						resource.TestCheckResourceAttr(fqrn, "name", reportName),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.repository.0.name", "docker-local"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.repository.0.include_path_patterns.#", "2"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.repository.0.include_path_patterns.0", "folder1/path/*"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.repository.0.include_path_patterns.1", "folder2/path*"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.repository.0.exclude_path_patterns.#", "2"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.repository.0.exclude_path_patterns.0", "folder1/path2/*"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.repository.0.exclude_path_patterns.1", "folder2/path2*"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.repository.1.name", "libs-release-local"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.repository.1.include_path_patterns.#", "2"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.repository.1.include_path_patterns.0", "**/*.jar"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.repository.1.include_path_patterns.1", "**/*.war"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.vulnerable_component", "*log4j*"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.impacted_artifact", "*spring*"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.has_remediation", "false"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.issue_id", "XRAY-87343"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.severities.#", "2"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.published.0.start", "2020-06-29T12:22:16Z"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.published.0.end", "2020-07-29T12:22:16Z"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.start", "2020-06-29T12:22:16Z"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.end", "2020-07-29T12:22:16Z"),
-					),
+
+						extendedChecks := []resource.TestCheckFunc{
+							// Cron schedule checks
+							resource.TestCheckResourceAttr(fqrn, "cron_schedule", "30 09 * * WED"),
+							resource.TestCheckResourceAttr(fqrn, "cron_schedule_timezone", "Europe/London"),
+							// Email checks
+							resource.TestCheckResourceAttr(fqrn, "emails.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "emails.0", "admin1@example.com"),
+							resource.TestCheckResourceAttr(fqrn, "emails.1", "admin2@example.com"),
+							// CA filter checks
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.0", "not_applicable"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.1", "undetermined"),
+						}
+
+						runtimeChecks := []resource.TestCheckFunc{
+							// Runtime filter checks
+							resource.TestCheckResourceAttr(fqrn, "filters.0.runtime_filter.0.time_period", "1 hour"),
+						}
+
+						if err == nil && version >= MinVersionForCAAndRuntimeFilters {
+							allChecks := append(baseChecks, extendedChecks...)
+							if isRuntimeFilterEnabled() {
+								allChecks = append(allChecks, runtimeChecks...)
+							}
+							return resource.ComposeTestCheckFunc(allChecks...)
+						}
+						return resource.ComposeTestCheckFunc(baseChecks...)
+					}(),
 				},
 			},
 		})
@@ -147,48 +270,110 @@ func TestAccVulnerabilitiesReport_Build(t *testing.T) {
 		reportName := fmt.Sprintf("vuln-build-by-name-%d", testutil.RandomInt())
 		_, fqrn, name := testutil.MkNames(reportName, "xray_vulnerabilities_report")
 
+		// Check if Xray version supports extended features
+		version, err := util.CheckXrayVersion(acctest.GetTestResty(t), MinVersionForCAAndRuntimeFilters, "")
+
+		var extendedFilters string
+		if err == nil && version >= MinVersionForCAAndRuntimeFilters {
+			extendedFilters = `
+						ca_filter {
+							allowed_ca_statuses = ["applicable", "not_applicable", "undetermined"]
+						}`
+		}
+
+		var runtimeFilter string
+		if err == nil && version >= MinVersionForCAAndRuntimeFilters {
+			if isRuntimeFilterEnabled() {
+				runtimeFilter = `
+						runtime_filter {
+							time_period = "24 hours"
+						}`
+			}
+		}
+
+		var extendedAttrs string
+		if err == nil && version >= MinVersionForCronAndNotify {
+			extendedAttrs = `
+					cron_schedule = "45 12 * * THU"
+					cron_schedule_timezone = "Asia/Tokyo"
+					emails = ["dev1@example.com", "dev2@example.com"]`
+		}
+
+		config := fmt.Sprintf(`
+				# Create vulnerabilities report for builds by name
+				resource "xray_vulnerabilities_report" "%s" {
+					name = "%s"%s
+					resources {
+						builds {
+							names = ["%s", "%s"]
+						}
+					}
+					filters {
+						vulnerable_component = "*log4j*"
+						impacted_artifact = "*spring*"
+						has_remediation = true
+						cve = "CVE-2021-44228"
+						cvss_score {
+							min_score = 7.0
+							max_score = 10.0
+						}
+						scan_date {
+							start = "2020-06-29T12:22:16Z"
+							end = "2020-07-29T12:22:16Z"
+						}%s
+					}
+				}
+			`, name, reportName, extendedAttrs, build1Name, build2Name, fmt.Sprintf("%s%s", extendedFilters, runtimeFilter))
+
 		resource.Test(t, resource.TestCase{
 			ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 			CheckDestroy:             acctest.VerifyDeleted(fqrn, "report_id", acctest.CheckReport),
 			Steps: []resource.TestStep{
 				{
-					Config: fmt.Sprintf(`
-						# Create vulnerabilities report for builds by name
-						resource "xray_vulnerabilities_report" "%s" {
-							name = "%s"
-							resources {
-								builds {
-									names = ["%s", "%s"]
-								}
-							}
-							filters {
-								vulnerable_component = "*log4j*"
-								impacted_artifact = "*spring*"
-								has_remediation = true
-								cve = "CVE-2021-44228"
-								cvss_score {
-									min_score = 7.0
-									max_score = 10.0
-								}
-								scan_date {
-									start = "2020-06-29T12:22:16Z"
-									end = "2020-07-29T12:22:16Z"
-								}
-							}
+					Config: config,
+					Check: func() resource.TestCheckFunc {
+						baseChecks := []resource.TestCheckFunc{
+							resource.TestCheckResourceAttr(fqrn, "name", reportName),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.builds.0.names.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.vulnerable_component", "*log4j*"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.impacted_artifact", "*spring*"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.has_remediation", "true"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.cve", "CVE-2021-44228"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.cvss_score.0.min_score", "7"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.cvss_score.0.max_score", "10"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.start", "2020-06-29T12:22:16Z"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.end", "2020-07-29T12:22:16Z"),
 						}
-					`, name, reportName, build1Name, build2Name),
-					Check: resource.ComposeTestCheckFunc(
-						resource.TestCheckResourceAttr(fqrn, "name", reportName),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.builds.0.names.#", "2"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.vulnerable_component", "*log4j*"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.impacted_artifact", "*spring*"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.has_remediation", "true"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.cve", "CVE-2021-44228"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.cvss_score.0.min_score", "7"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.cvss_score.0.max_score", "10"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.start", "2020-06-29T12:22:16Z"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.end", "2020-07-29T12:22:16Z"),
-					),
+
+						extendedChecks := []resource.TestCheckFunc{
+							// Cron schedule checks
+							resource.TestCheckResourceAttr(fqrn, "cron_schedule", "45 12 * * THU"),
+							resource.TestCheckResourceAttr(fqrn, "cron_schedule_timezone", "Asia/Tokyo"),
+							// Email checks
+							resource.TestCheckResourceAttr(fqrn, "emails.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "emails.0", "dev1@example.com"),
+							resource.TestCheckResourceAttr(fqrn, "emails.1", "dev2@example.com"),
+							// CA filter checks
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.#", "3"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.0", "applicable"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.1", "not_applicable"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.2", "undetermined"),
+						}
+
+						runtimeChecks := []resource.TestCheckFunc{
+							// Runtime filter checks
+							resource.TestCheckResourceAttr(fqrn, "filters.0.runtime_filter.0.time_period", "24 hours"),
+						}
+
+						if err == nil && version >= MinVersionForCAAndRuntimeFilters {
+							allChecks := append(baseChecks, extendedChecks...)
+							if isRuntimeFilterEnabled() {
+								allChecks = append(allChecks, runtimeChecks...)
+							}
+							return resource.ComposeTestCheckFunc(allChecks...)
+						}
+						return resource.ComposeTestCheckFunc(baseChecks...)
+					}(),
 				},
 			},
 		})
@@ -199,56 +384,118 @@ func TestAccVulnerabilitiesReport_Build(t *testing.T) {
 		reportName := fmt.Sprintf("vuln-build-by-pattern-%d", testutil.RandomInt())
 		_, fqrn, name := testutil.MkNames(reportName, "xray_vulnerabilities_report")
 
+		// Check if Xray version supports extended features
+		version, err := util.CheckXrayVersion(acctest.GetTestResty(t), MinVersionForCAAndRuntimeFilters, "")
+
+		var extendedFilters string
+		if err == nil && version >= MinVersionForCAAndRuntimeFilters {
+			extendedFilters = `
+						ca_filter {
+							allowed_ca_statuses = ["not_scanned", "not_covered", "rescan_required"]
+						}`
+		}
+
+		var runtimeFilter string
+		if err == nil && version >= MinVersionForCAAndRuntimeFilters {
+			if isRuntimeFilterEnabled() {
+				runtimeFilter = `
+						runtime_filter {
+							time_period = "3 days"
+						}`
+			}
+		}
+
+		var extendedAttrs string
+		if err == nil && version >= MinVersionForCronAndNotify {
+			extendedAttrs = `
+					cron_schedule = "00 15 * * FRI"
+					cron_schedule_timezone = "Australia/Sydney"
+					emails = ["qa1@example.com", "qa2@example.com"]`
+		}
+
+		config := fmt.Sprintf(`
+				# Create vulnerabilities report for builds by pattern
+				resource "xray_vulnerabilities_report" "%s" {
+					name = "%s"%s
+					resources {
+						builds {
+							include_patterns = ["build-*", "release-*"]
+							exclude_patterns = ["test-*", "dev-*"]
+							number_of_latest_versions = 5
+						}
+					}
+					filters {
+						vulnerable_component = "*log4j*"
+						impacted_artifact = "*spring*"
+						has_remediation = false
+						cve = "CVE-2021-44228"
+						cvss_score {
+							min_score = 7.0
+							max_score = 10.0
+						}
+						scan_date {
+							start = "2020-06-29T12:22:16Z"
+							end = "2020-07-29T12:22:16Z"
+						}%s
+					}
+				}
+			`, name, reportName, extendedAttrs, fmt.Sprintf("%s%s", extendedFilters, runtimeFilter))
+
 		resource.Test(t, resource.TestCase{
 			ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 			CheckDestroy:             acctest.VerifyDeleted(fqrn, "report_id", acctest.CheckReport),
 			Steps: []resource.TestStep{
 				{
-					Config: fmt.Sprintf(`
-						# Create vulnerabilities report for builds by pattern
-						resource "xray_vulnerabilities_report" "%s" {
-							name = "%s"
-							resources {
-								builds {
-									include_patterns = ["build-*", "release-*"]
-									exclude_patterns = ["test-*", "dev-*"]
-									number_of_latest_versions = 5
-								}
-							}
-							filters {
-								vulnerable_component = "*log4j*"
-								impacted_artifact = "*spring*"
-								has_remediation = false
-								cve = "CVE-2021-44228"
-								cvss_score {
-									min_score = 7.0
-									max_score = 10.0
-								}
-								scan_date {
-									start = "2020-06-29T12:22:16Z"
-									end = "2020-07-29T12:22:16Z"
-								}
-							}
+					Config: config,
+					Check: func() resource.TestCheckFunc {
+						baseChecks := []resource.TestCheckFunc{
+							resource.TestCheckResourceAttr(fqrn, "name", reportName),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.builds.0.include_patterns.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.builds.0.include_patterns.0", "build-*"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.builds.0.include_patterns.1", "release-*"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.builds.0.exclude_patterns.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.builds.0.exclude_patterns.0", "dev-*"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.builds.0.exclude_patterns.1", "test-*"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.builds.0.number_of_latest_versions", "5"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.vulnerable_component", "*log4j*"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.impacted_artifact", "*spring*"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.has_remediation", "false"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.cve", "CVE-2021-44228"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.cvss_score.0.min_score", "7"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.cvss_score.0.max_score", "10"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.start", "2020-06-29T12:22:16Z"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.end", "2020-07-29T12:22:16Z"),
 						}
-					`, name, reportName),
-					Check: resource.ComposeTestCheckFunc(
-						resource.TestCheckResourceAttr(fqrn, "name", reportName),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.builds.0.include_patterns.#", "2"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.builds.0.include_patterns.0", "build-*"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.builds.0.include_patterns.1", "release-*"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.builds.0.exclude_patterns.#", "2"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.builds.0.exclude_patterns.0", "dev-*"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.builds.0.exclude_patterns.1", "test-*"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.builds.0.number_of_latest_versions", "5"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.vulnerable_component", "*log4j*"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.impacted_artifact", "*spring*"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.has_remediation", "false"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.cve", "CVE-2021-44228"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.cvss_score.0.min_score", "7"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.cvss_score.0.max_score", "10"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.start", "2020-06-29T12:22:16Z"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.end", "2020-07-29T12:22:16Z"),
-					),
+
+						extendedChecks := []resource.TestCheckFunc{
+							// Cron schedule checks
+							resource.TestCheckResourceAttr(fqrn, "cron_schedule", "00 15 * * FRI"),
+							resource.TestCheckResourceAttr(fqrn, "cron_schedule_timezone", "Australia/Sydney"),
+							// Email checks
+							resource.TestCheckResourceAttr(fqrn, "emails.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "emails.0", "qa1@example.com"),
+							resource.TestCheckResourceAttr(fqrn, "emails.1", "qa2@example.com"),
+							// CA filter checks
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.#", "3"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.0", "not_covered"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.1", "not_scanned"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.2", "rescan_required"),
+						}
+
+						runtimeChecks := []resource.TestCheckFunc{
+							// Runtime filter checks
+							resource.TestCheckResourceAttr(fqrn, "filters.0.runtime_filter.0.time_period", "3 days"),
+						}
+
+						if err == nil && version >= MinVersionForCAAndRuntimeFilters {
+							allChecks := append(baseChecks, extendedChecks...)
+							if isRuntimeFilterEnabled() {
+								allChecks = append(allChecks, runtimeChecks...)
+							}
+							return resource.ComposeTestCheckFunc(allChecks...)
+						}
+						return resource.ComposeTestCheckFunc(baseChecks...)
+					}(),
 				},
 			},
 		})
@@ -263,46 +510,108 @@ func TestAccVulnerabilitiesReport_ReleaseBundle(t *testing.T) {
 		reportName := fmt.Sprintf("vuln-release-bundle-by-name-%d", testutil.RandomInt())
 		_, fqrn, name := testutil.MkNames(reportName, "xray_vulnerabilities_report")
 
+		// Check if Xray version supports extended features
+		version, err := util.CheckXrayVersion(acctest.GetTestResty(t), MinVersionForCAAndRuntimeFilters, "")
+
+		var extendedFilters string
+		if err == nil && version >= MinVersionForCAAndRuntimeFilters {
+			extendedFilters = `
+						ca_filter {
+							allowed_ca_statuses = ["applicable", "not_applicable", "undetermined"]
+						}`
+		}
+
+		var runtimeFilter string
+		if err == nil && version >= MinVersionForCAAndRuntimeFilters {
+			if isRuntimeFilterEnabled() {
+				runtimeFilter = `
+						runtime_filter {
+							time_period = "24 hours"
+						}`
+			}
+		}
+
+		var extendedAttrs string
+		if err == nil && version >= MinVersionForCronAndNotify {
+			extendedAttrs = `
+					cron_schedule = "15 18 * * SAT"
+					cron_schedule_timezone = "UTC"
+					emails = ["ops1@example.com", "ops2@example.com"]`
+		}
+
+		config := fmt.Sprintf(`
+				# Create vulnerabilities report for release bundles by name
+				resource "xray_vulnerabilities_report" "%s" {
+					name = "%s"%s
+					resources {
+						release_bundles {
+							names = ["%s", "%s"]
+						}
+					}
+					filters {
+						vulnerable_component = "*log4j*"
+						impacted_artifact = "*spring*"
+						has_remediation = true
+						cvss_score {
+							min_score = 7.0
+							max_score = 10.0
+						}
+						scan_date {
+							start = "2020-06-29T12:22:16Z"
+							end = "2020-07-29T12:22:16Z"
+						}%s
+					}
+				}
+			`, name, reportName, extendedAttrs, releaseBundle1Name, releaseBundle2Name, fmt.Sprintf("%s%s", extendedFilters, runtimeFilter))
+
 		resource.Test(t, resource.TestCase{
 			ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 			CheckDestroy:             acctest.VerifyDeleted(fqrn, "report_id", acctest.CheckReport),
 			Steps: []resource.TestStep{
 				{
-					Config: fmt.Sprintf(`
-						# Create vulnerabilities report for release bundles by name
-						resource "xray_vulnerabilities_report" "%s" {
-							name = "%s"
-							resources {
-								release_bundles {
-									names = ["%s", "%s"]
-								}
-							}
-							filters {
-								vulnerable_component = "*log4j*"
-								impacted_artifact = "*spring*"
-								has_remediation = true
-								cvss_score {
-									min_score = 7.0
-									max_score = 10.0
-								}
-								scan_date {
-									start = "2020-06-29T12:22:16Z"
-									end = "2020-07-29T12:22:16Z"
-								}
-							}
+					Config: config,
+					Check: func() resource.TestCheckFunc {
+						baseChecks := []resource.TestCheckFunc{
+							resource.TestCheckResourceAttr(fqrn, "name", reportName),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles.0.names.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.vulnerable_component", "*log4j*"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.impacted_artifact", "*spring*"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.has_remediation", "true"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.cvss_score.0.min_score", "7"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.cvss_score.0.max_score", "10"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.start", "2020-06-29T12:22:16Z"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.end", "2020-07-29T12:22:16Z"),
 						}
-					`, name, reportName, releaseBundle1Name, releaseBundle2Name),
-					Check: resource.ComposeTestCheckFunc(
-						resource.TestCheckResourceAttr(fqrn, "name", reportName),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles.0.names.#", "2"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.vulnerable_component", "*log4j*"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.impacted_artifact", "*spring*"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.has_remediation", "true"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.cvss_score.0.min_score", "7"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.cvss_score.0.max_score", "10"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.start", "2020-06-29T12:22:16Z"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.end", "2020-07-29T12:22:16Z"),
-					),
+
+						extendedChecks := []resource.TestCheckFunc{
+							// Cron schedule checks
+							resource.TestCheckResourceAttr(fqrn, "cron_schedule", "15 18 * * SAT"),
+							resource.TestCheckResourceAttr(fqrn, "cron_schedule_timezone", "UTC"),
+							// Email checks
+							resource.TestCheckResourceAttr(fqrn, "emails.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "emails.0", "ops1@example.com"),
+							resource.TestCheckResourceAttr(fqrn, "emails.1", "ops2@example.com"),
+							// CA filter checks
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.#", "3"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.0", "applicable"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.1", "not_applicable"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.2", "undetermined"),
+						}
+
+						runtimeChecks := []resource.TestCheckFunc{
+							// Runtime filter checks
+							resource.TestCheckResourceAttr(fqrn, "filters.0.runtime_filter.0.time_period", "24 hours"),
+						}
+
+						if err == nil && version >= MinVersionForCAAndRuntimeFilters {
+							allChecks := append(baseChecks, extendedChecks...)
+							if isRuntimeFilterEnabled() {
+								allChecks = append(allChecks, runtimeChecks...)
+							}
+							return resource.ComposeTestCheckFunc(allChecks...)
+						}
+						return resource.ComposeTestCheckFunc(baseChecks...)
+					}(),
 				},
 			},
 		})
@@ -313,56 +622,118 @@ func TestAccVulnerabilitiesReport_ReleaseBundle(t *testing.T) {
 		reportName := fmt.Sprintf("vuln-release-bundle-by-pattern-%d", testutil.RandomInt())
 		_, fqrn, name := testutil.MkNames(reportName, "xray_vulnerabilities_report")
 
+		// Check if Xray version supports extended features
+		version, err := util.CheckXrayVersion(acctest.GetTestResty(t), MinVersionForCAAndRuntimeFilters, "")
+
+		var extendedFilters string
+		if err == nil && version >= MinVersionForCAAndRuntimeFilters {
+			extendedFilters = `
+						ca_filter {
+							allowed_ca_statuses = ["rescan_required", "upgrade_required", "technology_unsupported"]
+						}`
+		}
+
+		var runtimeFilter string
+		if err == nil && version >= MinVersionForCAAndRuntimeFilters {
+			if isRuntimeFilterEnabled() {
+				runtimeFilter = `
+						runtime_filter {
+							time_period = "7 days"
+						}`
+			}
+		}
+
+		var extendedAttrs string
+		if err == nil && version >= MinVersionForCronAndNotify {
+			extendedAttrs = `
+					cron_schedule = "30 21 * * SUN"
+					cron_schedule_timezone = "America/Chicago"
+					emails = ["security1@example.com", "security2@example.com"]`
+		}
+
+		config := fmt.Sprintf(`
+				# Create vulnerabilities report for release bundles by pattern
+				resource "xray_vulnerabilities_report" "%s" {
+					name = "%s"%s
+					resources {
+						release_bundles {
+							include_patterns = ["prod-*", "release-*"]
+							exclude_patterns = ["dev-*", "test-*"]
+							number_of_latest_versions = 5
+						}
+					}
+					filters {
+						vulnerable_component = "*log4j*"
+						impacted_artifact = "*spring*"
+						has_remediation = false
+						cve = "CVE-2021-44228"
+						cvss_score {
+							min_score = 7.0
+							max_score = 10.0
+						}
+						scan_date {
+							start = "2020-06-29T12:22:16Z"
+							end = "2020-07-29T12:22:16Z"
+						}%s
+					}
+				}
+			`, name, reportName, extendedAttrs, fmt.Sprintf("%s%s", extendedFilters, runtimeFilter))
+
 		resource.Test(t, resource.TestCase{
 			ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 			CheckDestroy:             acctest.VerifyDeleted(fqrn, "report_id", acctest.CheckReport),
 			Steps: []resource.TestStep{
 				{
-					Config: fmt.Sprintf(`
-						# Create vulnerabilities report for release bundles by pattern
-						resource "xray_vulnerabilities_report" "%s" {
-							name = "%s"
-							resources {
-								release_bundles {
-									include_patterns = ["prod-*", "release-*"]
-									exclude_patterns = ["dev-*", "test-*"]
-									number_of_latest_versions = 5
-								}
-							}
-							filters {
-								vulnerable_component = "*log4j*"
-								impacted_artifact = "*spring*"
-								has_remediation = false
-								cve = "CVE-2021-44228"
-								cvss_score {
-									min_score = 7.0
-									max_score = 10.0
-								}
-								scan_date {
-									start = "2020-06-29T12:22:16Z"
-									end = "2020-07-29T12:22:16Z"
-								}
-							}
+					Config: config,
+					Check: func() resource.TestCheckFunc {
+						baseChecks := []resource.TestCheckFunc{
+							resource.TestCheckResourceAttr(fqrn, "name", reportName),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles.0.include_patterns.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles.0.include_patterns.0", "prod-*"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles.0.include_patterns.1", "release-*"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles.0.exclude_patterns.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles.0.exclude_patterns.0", "dev-*"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles.0.exclude_patterns.1", "test-*"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles.0.number_of_latest_versions", "5"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.vulnerable_component", "*log4j*"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.impacted_artifact", "*spring*"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.has_remediation", "false"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.cve", "CVE-2021-44228"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.cvss_score.0.min_score", "7"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.cvss_score.0.max_score", "10"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.start", "2020-06-29T12:22:16Z"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.end", "2020-07-29T12:22:16Z"),
 						}
-					`, name, reportName),
-					Check: resource.ComposeTestCheckFunc(
-						resource.TestCheckResourceAttr(fqrn, "name", reportName),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles.0.include_patterns.#", "2"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles.0.include_patterns.0", "prod-*"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles.0.include_patterns.1", "release-*"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles.0.exclude_patterns.#", "2"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles.0.exclude_patterns.0", "dev-*"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles.0.exclude_patterns.1", "test-*"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles.0.number_of_latest_versions", "5"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.vulnerable_component", "*log4j*"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.impacted_artifact", "*spring*"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.has_remediation", "false"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.cve", "CVE-2021-44228"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.cvss_score.0.min_score", "7"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.cvss_score.0.max_score", "10"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.start", "2020-06-29T12:22:16Z"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.end", "2020-07-29T12:22:16Z"),
-					),
+
+						extendedChecks := []resource.TestCheckFunc{
+							// Cron schedule checks
+							resource.TestCheckResourceAttr(fqrn, "cron_schedule", "30 21 * * SUN"),
+							resource.TestCheckResourceAttr(fqrn, "cron_schedule_timezone", "America/Chicago"),
+							// Email checks
+							resource.TestCheckResourceAttr(fqrn, "emails.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "emails.0", "security1@example.com"),
+							resource.TestCheckResourceAttr(fqrn, "emails.1", "security2@example.com"),
+							// CA filter checks
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.#", "3"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.0", "rescan_required"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.1", "technology_unsupported"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.2", "upgrade_required"),
+						}
+
+						runtimeChecks := []resource.TestCheckFunc{
+							// Runtime filter checks
+							resource.TestCheckResourceAttr(fqrn, "filters.0.runtime_filter.0.time_period", "7 days"),
+						}
+
+						if err == nil && version >= MinVersionForCAAndRuntimeFilters {
+							allChecks := append(baseChecks, extendedChecks...)
+							if isRuntimeFilterEnabled() {
+								allChecks = append(allChecks, runtimeChecks...)
+							}
+							return resource.ComposeTestCheckFunc(allChecks...)
+						}
+						return resource.ComposeTestCheckFunc(baseChecks...)
+					}(),
 				},
 			},
 		})
@@ -378,50 +749,112 @@ func TestAccVulnerabilitiesReport_ReleaseBundleV2(t *testing.T) {
 		reportName := fmt.Sprintf("vuln-release-bundle-v2-by-name-%d", testutil.RandomInt())
 		_, fqrn, name := testutil.MkNames(reportName, "xray_vulnerabilities_report")
 
+		// Check if Xray version supports extended features
+		version, err := util.CheckXrayVersion(acctest.GetTestResty(t), MinVersionForCAAndRuntimeFilters, "")
+
+		var extendedFilters string
+		if err == nil && version >= MinVersionForCAAndRuntimeFilters {
+			extendedFilters = `
+						ca_filter {
+							allowed_ca_statuses = ["applicable", "not_applicable", "undetermined"]
+						}`
+		}
+
+		var runtimeFilter string
+		if err == nil && version >= MinVersionForCAAndRuntimeFilters {
+			if isRuntimeFilterEnabled() {
+				runtimeFilter = `
+						runtime_filter {
+							time_period = "24 hours"
+						}`
+			}
+		}
+
+		var extendedAttrs string
+		if err == nil && version >= MinVersionForCronAndNotify {
+			extendedAttrs = `
+					cron_schedule = "45 00 * * MON"
+					cron_schedule_timezone = "Europe/Paris"
+					emails = ["release1@example.com", "release2@example.com"]`
+		}
+
+		config := fmt.Sprintf(`
+				# Create vulnerabilities report for release bundles v2 by name
+				resource "xray_vulnerabilities_report" "%s" {
+					name = "%s"%s
+					resources {
+						release_bundles_v2 {
+							names = ["%s", "%s"]
+							number_of_latest_versions = 3
+						}
+					}
+					filters {
+						vulnerable_component = "*log4j*"
+						impacted_artifact = "*spring*"
+						has_remediation = true
+						cvss_score {
+							min_score = 7.0
+							max_score = 10.0
+						}
+						scan_date {
+							start = "2020-06-29T12:22:16Z"
+							end = "2020-07-29T12:22:16Z"
+						}%s
+					}
+				}
+			`, name, reportName, extendedAttrs, releaseBundle1Name, releaseBundle2Name, fmt.Sprintf("%s%s", extendedFilters, runtimeFilter))
+
 		resource.Test(t, resource.TestCase{
 			ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 			CheckDestroy:             acctest.VerifyDeleted(fqrn, "report_id", acctest.CheckReport),
 			Steps: []resource.TestStep{
 				{
-					Config: fmt.Sprintf(`
-						# Create vulnerabilities report for release bundles v2 by name
-						resource "xray_vulnerabilities_report" "%s" {
-							name = "%s"
-							resources {
-								release_bundles_v2 {
-									names = ["%s", "%s"]
-									number_of_latest_versions = 3
-								}
-							}
-							filters {
-								vulnerable_component = "*log4j*"
-								impacted_artifact = "*spring*"
-								has_remediation = true
-								cvss_score {
-									min_score = 7.0
-									max_score = 10.0
-								}
-								scan_date {
-									start = "2020-06-29T12:22:16Z"
-									end = "2020-07-29T12:22:16Z"
-								}
-							}
+					Config: config,
+					Check: func() resource.TestCheckFunc {
+						baseChecks := []resource.TestCheckFunc{
+							resource.TestCheckResourceAttr(fqrn, "name", reportName),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.names.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.names.0", releaseBundle1Name),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.names.1", releaseBundle2Name),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.number_of_latest_versions", "3"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.vulnerable_component", "*log4j*"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.impacted_artifact", "*spring*"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.has_remediation", "true"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.cvss_score.0.min_score", "7"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.cvss_score.0.max_score", "10"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.start", "2020-06-29T12:22:16Z"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.end", "2020-07-29T12:22:16Z"),
 						}
-					`, name, reportName, releaseBundle1Name, releaseBundle2Name),
-					Check: resource.ComposeTestCheckFunc(
-						resource.TestCheckResourceAttr(fqrn, "name", reportName),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.names.#", "2"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.names.0", releaseBundle1Name),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.names.1", releaseBundle2Name),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.number_of_latest_versions", "3"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.vulnerable_component", "*log4j*"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.impacted_artifact", "*spring*"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.has_remediation", "true"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.cvss_score.0.min_score", "7"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.cvss_score.0.max_score", "10"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.start", "2020-06-29T12:22:16Z"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.end", "2020-07-29T12:22:16Z"),
-					),
+
+						extendedChecks := []resource.TestCheckFunc{
+							// Cron schedule checks
+							resource.TestCheckResourceAttr(fqrn, "cron_schedule", "45 00 * * MON"),
+							resource.TestCheckResourceAttr(fqrn, "cron_schedule_timezone", "Europe/Paris"),
+							// Email checks
+							resource.TestCheckResourceAttr(fqrn, "emails.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "emails.0", "release1@example.com"),
+							resource.TestCheckResourceAttr(fqrn, "emails.1", "release2@example.com"),
+							// CA filter checks
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.#", "3"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.0", "applicable"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.1", "not_applicable"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.2", "undetermined"),
+						}
+
+						runtimeChecks := []resource.TestCheckFunc{
+							// Runtime filter checks
+							resource.TestCheckResourceAttr(fqrn, "filters.0.runtime_filter.0.time_period", "24 hours"),
+						}
+
+						if err == nil && version >= MinVersionForCAAndRuntimeFilters {
+							allChecks := append(baseChecks, extendedChecks...)
+							if isRuntimeFilterEnabled() {
+								allChecks = append(allChecks, runtimeChecks...)
+							}
+							return resource.ComposeTestCheckFunc(allChecks...)
+						}
+						return resource.ComposeTestCheckFunc(baseChecks...)
+					}(),
 				},
 			},
 		})
@@ -438,6 +871,32 @@ func TestAccVulnerabilitiesReport_ReleaseBundleV2(t *testing.T) {
 		reportName := fmt.Sprintf("vuln-release-bundle-v2-by-pattern-%d", testutil.RandomInt())
 		_, fqrn, name := testutil.MkNames(reportName, "xray_vulnerabilities_report")
 
+		var extendedFilters string
+		if err == nil && version >= MinVersionForCAAndRuntimeFilters {
+			extendedFilters = `
+						ca_filter {
+							allowed_ca_statuses = ["upgrade_required", "technology_unsupported"]
+						}`
+		}
+
+		var runtimeFilter string
+		if err == nil && version >= MinVersionForCAAndRuntimeFilters {
+			if isRuntimeFilterEnabled() {
+				runtimeFilter = `
+						runtime_filter {
+							time_period = "30 days"
+						}`
+			}
+		}
+
+		var extendedAttrs string
+		if err == nil && version >= MinVersionForCronAndNotify {
+			extendedAttrs = `
+					cron_schedule = "15 03 * * TUE"
+					cron_schedule_timezone = "Asia/Singapore"
+					emails = ["v2-team1@example.com", "v2-team2@example.com"]`
+		}
+
 		resource.Test(t, resource.TestCase{
 			ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 			CheckDestroy:             acctest.VerifyDeleted(fqrn, "report_id", acctest.CheckReport),
@@ -446,7 +905,7 @@ func TestAccVulnerabilitiesReport_ReleaseBundleV2(t *testing.T) {
 					Config: fmt.Sprintf(`
 						# Create vulnerabilities report for release bundles v2 by pattern
 						resource "xray_vulnerabilities_report" "%s" {
-							name = "%s"
+							name = "%s"%s
 							resources {
 								release_bundles_v2 {
 									include_patterns = ["v2.*-release", "v2.*-hotfix"]
@@ -465,27 +924,57 @@ func TestAccVulnerabilitiesReport_ReleaseBundleV2(t *testing.T) {
 								scan_date {
 									start = "2020-07-29T12:22:16Z"
 									end = "2020-08-29T12:22:16Z"
-								}
+								}%s
 							}
 						}
-					`, name, reportName),
-					Check: resource.ComposeTestCheckFunc(
-						resource.TestCheckResourceAttr(fqrn, "name", reportName),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.include_patterns.#", "2"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.include_patterns.0", "v2.*-hotfix"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.include_patterns.1", "v2.*-release"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.exclude_patterns.#", "2"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.exclude_patterns.0", "*-rc"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.exclude_patterns.1", "*-snapshot"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.number_of_latest_versions", "5"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.vulnerable_component", "*log4j*"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.impacted_artifact", "*spring*"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.has_remediation", "false"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.cvss_score.0.min_score", "8"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.cvss_score.0.max_score", "10"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.start", "2020-07-29T12:22:16Z"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.end", "2020-08-29T12:22:16Z"),
-					),
+					`, name, reportName, extendedAttrs, fmt.Sprintf("%s%s", extendedFilters, runtimeFilter)),
+					Check: func() resource.TestCheckFunc {
+						baseChecks := []resource.TestCheckFunc{
+							resource.TestCheckResourceAttr(fqrn, "name", reportName),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.include_patterns.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.include_patterns.0", "v2.*-hotfix"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.include_patterns.1", "v2.*-release"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.exclude_patterns.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.exclude_patterns.0", "*-rc"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.exclude_patterns.1", "*-snapshot"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.release_bundles_v2.0.number_of_latest_versions", "5"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.vulnerable_component", "*log4j*"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.impacted_artifact", "*spring*"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.has_remediation", "false"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.cvss_score.0.min_score", "8"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.cvss_score.0.max_score", "10"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.start", "2020-07-29T12:22:16Z"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.end", "2020-08-29T12:22:16Z"),
+						}
+
+						extendedChecks := []resource.TestCheckFunc{
+							// Cron schedule checks
+							resource.TestCheckResourceAttr(fqrn, "cron_schedule", "15 03 * * TUE"),
+							resource.TestCheckResourceAttr(fqrn, "cron_schedule_timezone", "Asia/Singapore"),
+							// Email checks
+							resource.TestCheckResourceAttr(fqrn, "emails.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "emails.0", "v2-team1@example.com"),
+							resource.TestCheckResourceAttr(fqrn, "emails.1", "v2-team2@example.com"),
+							// CA filter checks
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.0", "technology_unsupported"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.1", "upgrade_required"),
+						}
+
+						runtimeChecks := []resource.TestCheckFunc{
+							// Runtime filter checks
+							resource.TestCheckResourceAttr(fqrn, "filters.0.runtime_filter.0.time_period", "30 days"),
+						}
+
+						if err == nil && version >= MinVersionForCAAndRuntimeFilters {
+							allChecks := append(baseChecks, extendedChecks...)
+							if isRuntimeFilterEnabled() {
+								allChecks = append(allChecks, runtimeChecks...)
+							}
+							return resource.ComposeTestCheckFunc(allChecks...)
+						}
+						return resource.ComposeTestCheckFunc(baseChecks...)
+					}(),
 				},
 			},
 		})
@@ -499,7 +988,7 @@ func TestAccVulnerabilitiesReport_Project(t *testing.T) {
 		_, fqrn, name := testutil.MkNames(reportName, "xray_vulnerabilities_report")
 
 		// Check if Xray version supports extended features
-		version, err := util.CheckXrayVersion(acctest.GetTestResty(t), FixVersionForProjectScopeKey, "")
+		version, err := util.CheckXrayVersion(acctest.GetTestResty(t), MinVersionForCAAndRuntimeFilters, "")
 
 		var projectConfig string
 		if err == nil && version >= FixVersionForProjectScopeKey {
@@ -512,6 +1001,32 @@ func TestAccVulnerabilitiesReport_Project(t *testing.T) {
 							number_of_latest_versions = 2`
 		}
 
+		var extendedFilters string
+		if err == nil && version >= MinVersionForCAAndRuntimeFilters {
+			extendedFilters = `
+						ca_filter {
+							allowed_ca_statuses = ["applicable", "not_applicable", "undetermined"]
+						}`
+		}
+
+		var runtimeFilter string
+		if err == nil && version >= MinVersionForCAAndRuntimeFilters {
+			if isRuntimeFilterEnabled() {
+				runtimeFilter = `
+						runtime_filter {
+							time_period = "24 hours"
+						}`
+			}
+		}
+
+		var extendedAttrs string
+		if err == nil && version >= MinVersionForCronAndNotify {
+			extendedAttrs = `
+					cron_schedule = "00 12 * * MON"
+					cron_schedule_timezone = "America/New_York"
+					emails = ["project1@example.com", "project2@example.com"]`
+		}
+
 		resource.Test(t, resource.TestCase{
 			ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 			CheckDestroy:             acctest.VerifyDeleted(fqrn, "report_id", acctest.CheckReport),
@@ -519,7 +1034,7 @@ func TestAccVulnerabilitiesReport_Project(t *testing.T) {
 				{
 					Config: fmt.Sprintf(`
 						resource "xray_vulnerabilities_report" "%s" {
-							name = "%s"
+							name = "%s"%s
 							resources {
 								projects {%s
 								}
@@ -537,10 +1052,10 @@ func TestAccVulnerabilitiesReport_Project(t *testing.T) {
 								scan_date {
 									start = "2020-06-29T12:22:16Z"
 									end = "2020-07-29T12:22:16Z"
-								}
+								}%s
 							}
 						}
-					`, name, reportName, projectConfig),
+					`, name, reportName, extendedAttrs, projectConfig, fmt.Sprintf("%s%s", extendedFilters, runtimeFilter)),
 					Check: func() resource.TestCheckFunc {
 						baseChecks := []resource.TestCheckFunc{
 							resource.TestCheckResourceAttr(fqrn, "name", reportName),
@@ -568,8 +1083,32 @@ func TestAccVulnerabilitiesReport_Project(t *testing.T) {
 							resource.TestCheckResourceAttr(fqrn, "resources.0.projects.0.keys.1", "key2"),
 						}
 
-						if err == nil && version >= FixVersionForProjectScopeKey {
-							allChecks := append(baseChecks, projectKeysChecks...)
+						extendedChecks := []resource.TestCheckFunc{
+							// Cron schedule checks
+							resource.TestCheckResourceAttr(fqrn, "cron_schedule", "00 12 * * MON"),
+							resource.TestCheckResourceAttr(fqrn, "cron_schedule_timezone", "America/New_York"),
+							// Email checks
+							resource.TestCheckResourceAttr(fqrn, "emails.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "emails.0", "project1@example.com"),
+							resource.TestCheckResourceAttr(fqrn, "emails.1", "project2@example.com"),
+							// CA filter checks
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.#", "3"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.0", "applicable"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.1", "not_applicable"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.2", "undetermined"),
+						}
+
+						runtimeChecks := []resource.TestCheckFunc{
+							// Runtime filter checks
+							resource.TestCheckResourceAttr(fqrn, "filters.0.runtime_filter.0.time_period", "24 hours"),
+						}
+
+						if err == nil && version >= MinVersionForCAAndRuntimeFilters {
+							allChecks := append(baseChecks, extendedChecks...)
+							allChecks = append(allChecks, projectKeysChecks...)
+							if isRuntimeFilterEnabled() {
+								allChecks = append(allChecks, runtimeChecks...)
+							}
 							return resource.ComposeTestCheckFunc(allChecks...)
 						}
 						allChecks := append(baseChecks, projectNamesChecks...)
@@ -585,55 +1124,117 @@ func TestAccVulnerabilitiesReport_Project(t *testing.T) {
 		reportName := fmt.Sprintf("vuln-project-by-pattern-%d", testutil.RandomInt())
 		_, fqrn, name := testutil.MkNames(reportName, "xray_vulnerabilities_report")
 
+		// Check if Xray version supports extended features
+		version, err := util.CheckXrayVersion(acctest.GetTestResty(t), MinVersionForCAAndRuntimeFilters, "")
+
+		var extendedFilters string
+		if err == nil && version >= MinVersionForCAAndRuntimeFilters {
+			extendedFilters = `
+						ca_filter {
+							allowed_ca_statuses = ["not_scanned", "not_covered", "rescan_required"]
+						}`
+		}
+
+		var runtimeFilter string
+		if err == nil && version >= MinVersionForCAAndRuntimeFilters {
+			if isRuntimeFilterEnabled() {
+				runtimeFilter = `
+						runtime_filter {
+							time_period = "10 days"
+						}`
+			}
+		}
+
+		var extendedAttrs string
+		if err == nil && version >= MinVersionForCronAndNotify {
+			extendedAttrs = `
+					cron_schedule = "30 09 * * THU"
+					cron_schedule_timezone = "Europe/London"
+					emails = ["manager1@example.com", "manager2@example.com"]`
+		}
+
+		config := fmt.Sprintf(`
+				resource "xray_vulnerabilities_report" "%s" {
+					name = "%s"%s
+					resources {
+						projects {
+							include_key_patterns = ["dev-*", "test-*"]
+							exclude_key_patterns = ["prod-*", "staging-*"]
+						}
+					}
+					filters {
+						vulnerable_component = "*log4j*"
+						impacted_artifact = "*spring*"
+						has_remediation = false
+						issue_id = "XRAY-87343"
+						severities = ["Critical", "High"]
+						published {
+							start = "2020-06-29T12:22:16Z"
+							end = "2020-07-29T12:22:16Z"
+						}
+						scan_date {
+							start = "2020-06-29T12:22:16Z"
+							end = "2020-07-29T12:22:16Z"
+						}%s
+					}
+				}
+			`, name, reportName, extendedAttrs, fmt.Sprintf("%s%s", extendedFilters, runtimeFilter))
+
 		resource.Test(t, resource.TestCase{
 			ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 			CheckDestroy:             acctest.VerifyDeleted(fqrn, "report_id", acctest.CheckReport),
 			Steps: []resource.TestStep{
 				{
-					Config: fmt.Sprintf(`
-						resource "xray_vulnerabilities_report" "%s" {
-							name = "%s"
-							resources {
-								projects {
-									include_key_patterns = ["dev-*", "test-*"]
-									exclude_key_patterns = ["prod-*", "staging-*"]
-								}
-							}
-							filters {
-								vulnerable_component = "*log4j*"
-								impacted_artifact = "*spring*"
-								has_remediation = false
-								issue_id = "XRAY-87343"
-								severities = ["Critical", "High"]
-								published {
-									start = "2020-06-29T12:22:16Z"
-									end = "2020-07-29T12:22:16Z"
-								}
-								scan_date {
-									start = "2020-06-29T12:22:16Z"
-									end = "2020-07-29T12:22:16Z"
-								}
-							}
+					Config: config,
+					Check: func() resource.TestCheckFunc {
+						baseChecks := []resource.TestCheckFunc{
+							resource.TestCheckResourceAttr(fqrn, "name", reportName),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.projects.0.include_key_patterns.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.projects.0.include_key_patterns.0", "dev-*"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.projects.0.include_key_patterns.1", "test-*"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.projects.0.exclude_key_patterns.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.projects.0.exclude_key_patterns.0", "prod-*"),
+							resource.TestCheckResourceAttr(fqrn, "resources.0.projects.0.exclude_key_patterns.1", "staging-*"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.vulnerable_component", "*log4j*"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.impacted_artifact", "*spring*"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.has_remediation", "false"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.issue_id", "XRAY-87343"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.severities.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.published.0.start", "2020-06-29T12:22:16Z"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.published.0.end", "2020-07-29T12:22:16Z"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.start", "2020-06-29T12:22:16Z"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.end", "2020-07-29T12:22:16Z"),
 						}
-					`, name, reportName),
-					Check: resource.ComposeTestCheckFunc(
-						resource.TestCheckResourceAttr(fqrn, "name", reportName),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.projects.0.include_key_patterns.#", "2"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.projects.0.include_key_patterns.0", "dev-*"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.projects.0.include_key_patterns.1", "test-*"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.projects.0.exclude_key_patterns.#", "2"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.projects.0.exclude_key_patterns.0", "prod-*"),
-						resource.TestCheckResourceAttr(fqrn, "resources.0.projects.0.exclude_key_patterns.1", "staging-*"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.vulnerable_component", "*log4j*"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.impacted_artifact", "*spring*"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.has_remediation", "false"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.issue_id", "XRAY-87343"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.severities.#", "2"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.published.0.start", "2020-06-29T12:22:16Z"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.published.0.end", "2020-07-29T12:22:16Z"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.start", "2020-06-29T12:22:16Z"),
-						resource.TestCheckResourceAttr(fqrn, "filters.0.scan_date.0.end", "2020-07-29T12:22:16Z"),
-					),
+
+						extendedChecks := []resource.TestCheckFunc{
+							// Cron schedule checks
+							resource.TestCheckResourceAttr(fqrn, "cron_schedule", "30 09 * * THU"),
+							resource.TestCheckResourceAttr(fqrn, "cron_schedule_timezone", "Europe/London"),
+							// Email checks
+							resource.TestCheckResourceAttr(fqrn, "emails.#", "2"),
+							resource.TestCheckResourceAttr(fqrn, "emails.0", "manager1@example.com"),
+							resource.TestCheckResourceAttr(fqrn, "emails.1", "manager2@example.com"),
+							// CA filter checks
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.#", "3"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.0", "not_covered"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.1", "not_scanned"),
+							resource.TestCheckResourceAttr(fqrn, "filters.0.ca_filter.0.allowed_ca_statuses.2", "rescan_required"),
+						}
+
+						runtimeChecks := []resource.TestCheckFunc{
+							// Runtime filter checks
+							resource.TestCheckResourceAttr(fqrn, "filters.0.runtime_filter.0.time_period", "10 days"),
+						}
+
+						if err == nil && version >= MinVersionForCAAndRuntimeFilters {
+							allChecks := append(baseChecks, extendedChecks...)
+							if isRuntimeFilterEnabled() {
+								allChecks = append(allChecks, runtimeChecks...)
+							}
+							return resource.ComposeTestCheckFunc(allChecks...)
+						}
+						return resource.ComposeTestCheckFunc(baseChecks...)
+					}(),
 				},
 			},
 		})

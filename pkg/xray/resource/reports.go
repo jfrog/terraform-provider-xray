@@ -773,8 +773,6 @@ type FiltersAPIModel struct {
 	Updated                  *StartAndEndDateAPIModel         `json:"updated,omitempty"`
 	SecurityViolationFilters *SecurityViolationFilterAPIModel `json:"security_filters,omitempty"`
 	LicenseViolationFilters  *LicenseViolationFilterAPIModel  `json:"license_filters,omitempty"`
-	RuntimeFilter            *RuntimeFilterAPIModel           `json:"runtime_filter,omitempty"`
-	CAFilter                 *CAFilterAPIModel                `json:"ca_filter,omitempty"`
 
 	// Exposures report filter
 	Category string `json:"category,omitempty"`
@@ -790,6 +788,8 @@ type FiltersAPIModel struct {
 	Severities       []string                 `json:"severities,omitempty"`
 	ScanDate         *StartAndEndDateAPIModel `json:"scan_date,omitempty"`
 	Published        *StartAndEndDateAPIModel `json:"published,omitempty"`
+	RuntimeFilter    *RuntimeFilterAPIModel   `json:"runtime_filter,omitempty"`
+	CAFilter         *CAFilterAPIModel        `json:"ca_filter,omitempty"`
 }
 
 type CVSSScoreAPIModel struct {

@@ -14,6 +14,11 @@ Creates Xray Vulnerabilities report. The Vulnerabilities report provides informa
 # Example: Create a vulnerabilities report for repositories with CVE
 resource "xray_vulnerabilities_report" "repository-report" {
   name = "repository-vulnerabilities-report"
+
+  # Automated report generation (requires Xray 3.130.0 or higher)
+  cron_schedule          = "30 09 * * MON"
+  cron_schedule_timezone = "America/New_York"
+  emails                 = ["security-team@example.com", "devops@example.com"]
   resources {
     repository {
       name                  = "docker-local"
@@ -42,12 +47,32 @@ resource "xray_vulnerabilities_report" "repository-report" {
       start = "2023-01-01T00:00:00Z"
       end   = "2023-12-31T23:59:59Z"
     }
+
+    # Contextual Analysis Filter (requires Xray 3.130.0 or higher)
+    ca_filter {
+      allowed_ca_statuses = [
+        "applicable",
+        "not_applicable",
+        "undetermined",
+        "not_scanned"
+      ]
+    }
+
+    # Runtime Filter (requires Xray 3.130.0 or higher)
+    runtime_filter {
+      time_period = "7 days"
+    }
   }
 }
 
 # Example: Create a vulnerabilities report for builds with patterns
 resource "xray_vulnerabilities_report" "build-report" {
   name = "build-vulnerabilities-report"
+
+  # Automated report generation (requires Xray 3.130.0 or higher)
+  cron_schedule          = "00 23 * * SUN"
+  cron_schedule_timezone = "Europe/London"
+  emails                 = ["build-team@example.com", "ci-cd@example.com"]
   resources {
     builds {
       include_patterns         = ["build-*", "release-*"]
@@ -69,12 +94,32 @@ resource "xray_vulnerabilities_report" "build-report" {
       start = "2023-01-01T00:00:00Z"
       end   = "2023-12-31T23:59:59Z"
     }
+
+    # Contextual Analysis Filter (requires Xray 3.130.0 or higher)
+    ca_filter {
+      allowed_ca_statuses = [
+        "applicable",
+        "not_applicable",
+        "undetermined",
+        "not_scanned"
+      ]
+    }
+
+    # Runtime Filter (requires Xray 3.130.0 or higher)
+    runtime_filter {
+      time_period = "7 days"
+    }
   }
 }
 
 # Example: Create a vulnerabilities report for projects
 resource "xray_vulnerabilities_report" "project-report" {
   name = "project-vulnerabilities-report"
+
+  # Automated report generation (requires Xray 3.130.0 or higher)
+  cron_schedule          = "15 06 * * *"
+  cron_schedule_timezone = "Asia/Tokyo"
+  emails                 = ["project-team@example.com", "managers@example.com"]
   resources {
     projects {
       keys = ["project-1", "project-2"]
@@ -94,12 +139,32 @@ resource "xray_vulnerabilities_report" "project-report" {
       start = "2023-01-01T00:00:00Z"
       end   = "2023-12-31T23:59:59Z"
     }
+
+    # Contextual Analysis Filter (requires Xray 3.130.0 or higher)
+    ca_filter {
+      allowed_ca_statuses = [
+        "applicable",
+        "not_applicable",
+        "undetermined",
+        "not_scanned"
+      ]
+    }
+
+    # Runtime Filter (requires Xray 3.130.0 or higher)
+    runtime_filter {
+      time_period = "7 days"
+    }
   }
 }
 
 # Example: Create a vulnerabilities report for release bundles
 resource "xray_vulnerabilities_report" "release-bundle-report" {
   name = "release-bundle-vulnerabilities-report"
+
+  # Automated report generation (requires Xray 3.130.0 or higher)
+  cron_schedule          = "45 12 * * FRI"
+  cron_schedule_timezone = "UTC"
+  emails                 = ["release-team@example.com", "qa@example.com"]
   resources {
     release_bundles {
       names                     = ["release-1", "release-2"]
@@ -122,6 +187,21 @@ resource "xray_vulnerabilities_report" "release-bundle-report" {
       start = "2023-01-01T00:00:00Z"
       end   = "2023-12-31T23:59:59Z"
     }
+
+    # Contextual Analysis Filter (requires Xray 3.130.0 or higher)
+    ca_filter {
+      allowed_ca_statuses = [
+        "applicable",
+        "not_applicable",
+        "undetermined",
+        "not_scanned"
+      ]
+    }
+
+    # Runtime Filter (requires Xray 3.130.0 or higher)
+    runtime_filter {
+      time_period = "7 days"
+    }
   }
 }
 ```
@@ -135,6 +215,19 @@ resource "xray_vulnerabilities_report" "release-bundle-report" {
 
 ### Optional
 
+- `cron_schedule` (String) Schedule for automated report generation. Format: 'minute hour day-of-month month day-of-week' where:
+  - minute: must be 00, 15, 30, or 45 (quarter-hourly)
+  - hour: must be 00-23 (2-digit format, e.g., 03 not 3)
+  - day-of-month: 1-31, * (any), or ? (unspecified)
+  - month: 1-12 or JAN-DEC
+  - day-of-week: 0-6 (0=Sunday) or SUN-SAT
+Examples:
+  - '45 03 * * MON' = Every Monday at 03:45 AM
+  - '00 00 1 * ?' = At midnight (00:00) on the first day of every month
+  - '30 12 ? * MON-FRI' = At 12:30 PM every weekday
+Note: Requires Xray 3.130.0 or higher.
+- `cron_schedule_timezone` (String) Timezone for cron schedule. For valid timezone formats, see: [iana-timezones](https://timeapi.io/documentation/iana-timezones). Note: Requires Xray 3.130.0 or higher. Only used when cron_schedule is set.
+- `emails` (Set of String) List of email addresses to notify when report generation is complete. Note: Requires Xray 3.130.0 or higher.
 - `filters` (Block Set) Advanced filters. (see [below for nested schema](#nestedblock--filters))
 - `project_key` (String) Project key for assigning this resource to. Must be 2 - 10 lowercase alphanumeric and hyphen characters.
 - `resources` (Block Set) The list of resources to include into the report. (see [below for nested schema](#nestedblock--resources))
@@ -149,15 +242,25 @@ resource "xray_vulnerabilities_report" "release-bundle-report" {
 
 Optional:
 
+- `ca_filter` (Block Set) Contextual Analysis Filter. Note: Requires Xray 3.130.0 or higher. (see [below for nested schema](#nestedblock--filters--ca_filter))
 - `cve` (String) CVE.
 - `cvss_score` (Block Set) CVSS score. (see [below for nested schema](#nestedblock--filters--cvss_score))
 - `has_remediation` (Boolean) Whether the issue has a fix or not.
 - `impacted_artifact` (String) Filter by artifact name, you can use (*) at the beginning or end of a substring as a wildcard.
 - `issue_id` (String) Issue ID.
 - `published` (Block Set) (see [below for nested schema](#nestedblock--filters--published))
+- `runtime_filter` (Block Set) Runtime Filter. Note: Requires Xray 3.130.0 or higher. (see [below for nested schema](#nestedblock--filters--runtime_filter))
 - `scan_date` (Block Set) (see [below for nested schema](#nestedblock--filters--scan_date))
 - `severities` (Set of String) Severity levels. Allowed values: 'Low', 'Medium', 'High', 'Critical'
 - `vulnerable_component` (String) Filter by component name, you can use (*) at the beginning or end of a substring as a wildcard.
+
+<a id="nestedblock--filters--ca_filter"></a>
+### Nested Schema for `filters.ca_filter`
+
+Optional:
+
+- `allowed_ca_statuses` (Set of String) Allowed CA statuses.
+
 
 <a id="nestedblock--filters--cvss_score"></a>
 ### Nested Schema for `filters.cvss_score`
@@ -175,6 +278,14 @@ Optional:
 
 - `end` (String) Published to date.
 - `start` (String) Published from date.
+
+
+<a id="nestedblock--filters--runtime_filter"></a>
+### Nested Schema for `filters.runtime_filter`
+
+Optional:
+
+- `time_period` (String) Time period to filter by.
 
 
 <a id="nestedblock--filters--scan_date"></a>

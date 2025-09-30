@@ -63,7 +63,7 @@ func (p *XrayProvider) Schema(ctx context.Context, req provider.SchemaRequest, r
 				Description: "This is a bearer token that can be given to you by your admin under `Identity and Access`",
 			},
 			"skip_xray_version_check": schema.BoolAttribute{
-				Optional: true,
+				Optional:    true,
 				Description: "Skip version check. Default to false if not set.",
 			},
 			"oidc_provider_name": schema.StringAttribute{
