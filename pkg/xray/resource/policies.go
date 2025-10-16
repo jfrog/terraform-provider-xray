@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -13,8 +14,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -61,7 +62,7 @@ type PolicyResourceModel struct {
 	Description types.String `tfsdk:"description"`
 	ProjectKey  types.String `tfsdk:"project_key"`
 	Type        types.String `tfsdk:"type"`
-	Rules       types.Set    `tfsdk:"rule"`
+	Rules       types.List   `tfsdk:"rule"`
 	Author      types.String `tfsdk:"author"`
 	Created     types.String `tfsdk:"created"`
 	Modified    types.String `tfsdk:"modified"`
@@ -87,7 +88,7 @@ var toActionsAPIModel = func(ctx context.Context, actionsElems []attr.Value) (Po
 		}
 
 		blockDownload := BlockDownloadSettingsAPIModel{}
-		blockDownloadElems := attrs["block_download"].(types.Set).Elements()
+		blockDownloadElems := attrs["block_download"].(types.List).Elements()
 		if len(blockDownloadElems) > 0 {
 			attrs := blockDownloadElems[0].(types.Object).Attributes()
 
@@ -123,12 +124,12 @@ func (m PolicyResourceModel) toAPIModel(
 		func(elem attr.Value, _ int) PolicyRuleAPIModel {
 			attrs := elem.(types.Object).Attributes()
 
-			criteria, ds := toCriteriaAPIModel(ctx, attrs["criteria"].(types.Set).Elements())
+			criteria, ds := toCriteriaAPIModel(ctx, attrs["criteria"].(types.List).Elements())
 			if ds.HasError() {
 				diags.Append(ds...)
 			}
 
-			actions, ds := toActionsAPIModel(ctx, attrs["actions"].(types.Set).Elements())
+			actions, ds := toActionsAPIModel(ctx, attrs["actions"].(types.List).Elements())
 			if ds.HasError() {
 				diags.Append(ds...)
 			}
@@ -155,7 +156,7 @@ func (m PolicyResourceModel) toAPIModel(
 var actionsAttrTypes = map[string]attr.Type{
 	"webhooks":                           types.SetType{ElemType: types.StringType},
 	"mails":                              types.SetType{ElemType: types.StringType},
-	"block_download":                     types.SetType{ElemType: blockDownloadElementType},
+	"block_download":                     types.ListType{ElemType: blockDownloadElementType},
 	"block_release_bundle_distribution":  types.BoolType,
 	"block_release_bundle_promotion":     types.BoolType,
 	"fail_build":                         types.BoolType,
@@ -165,11 +166,11 @@ var actionsAttrTypes = map[string]attr.Type{
 	"build_failure_grace_period_in_days": types.Int64Type,
 }
 
-var actionsSetElementType = types.ObjectType{
+var actionsListElementType = types.ObjectType{
 	AttrTypes: actionsAttrTypes,
 }
 
-var fromActionsAPIModel = func(ctx context.Context, actionsAPIModel PolicyRuleActionsAPIModel) (types.Set, diag.Diagnostics) {
+var fromActionsAPIModel = func(ctx context.Context, actionsAPIModel PolicyRuleActionsAPIModel) (types.List, diag.Diagnostics) {
 	diags := diag.Diagnostics{}
 
 	webhooks := types.SetNull(types.StringType)
@@ -202,7 +203,7 @@ var fromActionsAPIModel = func(ctx context.Context, actionsAPIModel PolicyRuleAc
 	if d.HasError() {
 		diags.Append(d...)
 	}
-	blockDownloadSet, d := types.SetValue(
+	blockDownloadList, d := types.ListValue(
 		blockDownloadElementType,
 		[]attr.Value{blockDownload},
 	)
@@ -215,7 +216,7 @@ var fromActionsAPIModel = func(ctx context.Context, actionsAPIModel PolicyRuleAc
 		map[string]attr.Value{
 			"webhooks":                           webhooks,
 			"mails":                              mails,
-			"block_download":                     blockDownloadSet,
+			"block_download":                     blockDownloadList,
 			"block_release_bundle_distribution":  types.BoolValue(actionsAPIModel.BlockReleaseBundleDistribution),
 			"block_release_bundle_promotion":     types.BoolValue(actionsAPIModel.BlockReleaseBundlePromotion),
 			"fail_build":                         types.BoolValue(actionsAPIModel.FailBuild),
@@ -229,22 +230,22 @@ var fromActionsAPIModel = func(ctx context.Context, actionsAPIModel PolicyRuleAc
 		diags.Append(d...)
 	}
 
-	actionsSet, d := types.SetValue(
-		actionsSetElementType,
+	actionsList, d := types.ListValue(
+		actionsListElementType,
 		[]attr.Value{actions},
 	)
 	if d.HasError() {
 		diags.Append(d...)
 	}
 
-	return actionsSet, diags
+	return actionsList, diags
 }
 
 func (m *PolicyResourceModel) fromAPIModel(
 	ctx context.Context,
 	apiModel PolicyAPIModel,
-	fromCriteriaAPIModel func(ctx context.Context, criteraAPIModel *PolicyRuleCriteriaAPIModel) (types.Set, diag.Diagnostics),
-	fromActionsAPIModel func(ctx context.Context, actionsAPIModel PolicyRuleActionsAPIModel) (types.Set, diag.Diagnostics),
+	fromCriteriaAPIModel func(ctx context.Context, criteraAPIModel *PolicyRuleCriteriaAPIModel) (types.List, diag.Diagnostics),
+	fromActionsAPIModel func(ctx context.Context, actionsAPIModel PolicyRuleActionsAPIModel) (types.List, diag.Diagnostics),
 ) diag.Diagnostics {
 	diags := diag.Diagnostics{}
 
@@ -271,7 +272,7 @@ func (m *PolicyResourceModel) fromAPIModel(
 				diags.Append(d...)
 			}
 
-			actionsSet, d := fromActionsAPIModel(ctx, rule.Actions)
+			actionsList, d := fromActionsAPIModel(ctx, rule.Actions)
 			if d.HasError() {
 				diags.Append(d...)
 			}
@@ -282,7 +283,7 @@ func (m *PolicyResourceModel) fromAPIModel(
 					"name":     types.StringValue(rule.Name),
 					"priority": types.Int64Value(rule.Priority),
 					"criteria": criteriaSet,
-					"actions":  actionsSet,
+					"actions":  actionsList,
 				},
 			)
 			if d.HasError() {
@@ -293,7 +294,7 @@ func (m *PolicyResourceModel) fromAPIModel(
 		},
 	)
 
-	rulesSet, d := types.SetValue(
+	rulesSet, d := types.ListValue(
 		ruleSetElementType,
 		rules,
 	)
@@ -315,26 +316,30 @@ func (m *PolicyResourceModel) fromAPIModel(
 }
 
 var commonActionsBlocks = map[string]schema.Block{
-	"block_download": schema.SetNestedBlock{
+	"block_download": schema.ListNestedBlock{
 		NestedObject: schema.NestedBlockObject{
 			Attributes: map[string]schema.Attribute{
 				"unscanned": schema.BoolAttribute{
-					Optional:    true,
-					Computed:    true,
-					Default:     booldefault.StaticBool(false),
+					Optional: true,
+					Computed: true,
+					PlanModifiers: []planmodifier.Bool{
+						boolplanmodifier.UseStateForUnknown(),
+					},
 					Description: "Whether or not to block download of artifacts that meet the artifact `filters` for the associated `xray_watch` resource but have not been scanned yet. Can not be set to `true` if attribute `active` is `false`. Default value is `false`.",
 				},
 				"active": schema.BoolAttribute{
-					Optional:    true,
-					Computed:    true,
-					Default:     booldefault.StaticBool(false),
+					Optional: true,
+					Computed: true,
+					PlanModifiers: []planmodifier.Bool{
+						boolplanmodifier.UseStateForUnknown(),
+					},
 					Description: "Whether or not to block download of artifacts that meet the artifact and severity `filters` for the associated `xray_watch` resource. Default value is `false`.",
 				},
 			},
 		},
-		Validators: []validator.Set{
-			setvalidator.IsRequired(),
-			setvalidator.SizeAtMost(1),
+		Validators: []validator.List{
+			listvalidator.IsRequired(),
+			listvalidator.SizeAtMost(1),
 		},
 		Description: "Block download of artifacts that meet the Artifact Filter and Severity Filter specifications for this watch",
 	},
@@ -358,45 +363,59 @@ var commonActionsAttrs = map[string]schema.Attribute{
 		Description: "A list of email addressed that will get emailed when a violation is triggered.",
 	},
 	"block_release_bundle_distribution": schema.BoolAttribute{
-		Optional:    true,
-		Computed:    true,
-		Default:     booldefault.StaticBool(false),
+		Optional: true,
+		Computed: true,
+		PlanModifiers: []planmodifier.Bool{
+			boolplanmodifier.UseStateForUnknown(),
+		},
 		Description: "Blocks Release Bundle distribution to Edge nodes if a violation is found. Default value is `false`.",
 	},
 	"block_release_bundle_promotion": schema.BoolAttribute{
-		Optional:    true,
-		Computed:    true,
-		Default:     booldefault.StaticBool(false),
+		Optional: true,
+		Computed: true,
+		PlanModifiers: []planmodifier.Bool{
+			boolplanmodifier.UseStateForUnknown(),
+		},
 		Description: "Blocks Release Bundle promotion if a violation is found. Default value is `false`.",
 	},
 	"fail_build": schema.BoolAttribute{
-		Optional:    true,
-		Computed:    true,
-		Default:     booldefault.StaticBool(false),
+		Optional: true,
+		Computed: true,
+		PlanModifiers: []planmodifier.Bool{
+			boolplanmodifier.UseStateForUnknown(),
+		},
 		Description: "Whether or not the related CI build should be marked as failed if a violation is triggered. This option is only available when the policy is applied to an `xray_watch` resource with a `type` of `builds`. Default value is `false`.",
 	},
 	"notify_deployer": schema.BoolAttribute{
-		Optional:    true,
-		Computed:    true,
-		Default:     booldefault.StaticBool(false),
+		Optional: true,
+		Computed: true,
+		PlanModifiers: []planmodifier.Bool{
+			boolplanmodifier.UseStateForUnknown(),
+		},
 		Description: "Sends an email message to component deployer with details about the generated Violations. Default value is `false`.",
 	},
 	"notify_watch_recipients": schema.BoolAttribute{
-		Optional:    true,
-		Computed:    true,
-		Default:     booldefault.StaticBool(false),
+		Optional: true,
+		Computed: true,
+		PlanModifiers: []planmodifier.Bool{
+			boolplanmodifier.UseStateForUnknown(),
+		},
 		Description: "Sends an email message to all configured recipients inside a specific watch with details about the generated Violations. Default value is `false`.",
 	},
 	"create_ticket_enabled": schema.BoolAttribute{
-		Optional:    true,
-		Computed:    true,
-		Default:     booldefault.StaticBool(false),
+		Optional: true,
+		Computed: true,
+		PlanModifiers: []planmodifier.Bool{
+			boolplanmodifier.UseStateForUnknown(),
+		},
 		Description: "Create Jira Ticket for this Policy Violation. Requires configured Jira integration. Default value is `false`.",
 	},
 	"build_failure_grace_period_in_days": schema.Int64Attribute{
 		Optional: true,
 		Computed: true,
-		Default:  int64default.StaticInt64(0),
+		PlanModifiers: []planmodifier.Int64{
+			int64planmodifier.UseStateForUnknown(),
+		},
 		Validators: []validator.Int64{
 			int64validator.AtLeast(0),
 		},
@@ -448,7 +467,7 @@ var policySchemaAttrs = lo.Assign(
 
 var policyBlocks = func(criteriaAttrs map[string]schema.Attribute, criteriaBlocks map[string]schema.Block, actionsAttrs map[string]schema.Attribute, actionsBlocks map[string]schema.Block) map[string]schema.Block {
 	return map[string]schema.Block{
-		"rule": schema.SetNestedBlock{
+		"rule": schema.ListNestedBlock{
 			NestedObject: schema.NestedBlockObject{
 				Attributes: map[string]schema.Attribute{
 					"name": schema.StringAttribute{
@@ -467,33 +486,33 @@ var policyBlocks = func(criteriaAttrs map[string]schema.Attribute, criteriaBlock
 					},
 				},
 				Blocks: map[string]schema.Block{
-					"criteria": schema.SetNestedBlock{
+					"criteria": schema.ListNestedBlock{
 						NestedObject: schema.NestedBlockObject{
 							Attributes: criteriaAttrs,
 							Blocks:     criteriaBlocks,
 						},
-						Validators: []validator.Set{
-							setvalidator.IsRequired(),
-							setvalidator.SizeBetween(1, 1),
+						Validators: []validator.List{
+							listvalidator.IsRequired(),
+							listvalidator.SizeBetween(1, 1),
 						},
-						Description: "The set of security conditions to examine when an scanned artifact is scanned.",
+						Description: "The list of security conditions to examine when an scanned artifact is scanned.",
 					},
-					"actions": schema.SetNestedBlock{
+					"actions": schema.ListNestedBlock{
 						NestedObject: schema.NestedBlockObject{
 							Attributes: actionsAttrs,
 							Blocks:     actionsBlocks,
 						},
-						Validators: []validator.Set{
-							setvalidator.IsRequired(),
-							setvalidator.SizeBetween(1, 1),
+						Validators: []validator.List{
+							listvalidator.IsRequired(),
+							listvalidator.SizeBetween(1, 1),
 						},
 						Description: "Specifies the actions to take once a security policy violation has been triggered.",
 					},
 				},
 			},
-			Validators: []validator.Set{
-				setvalidator.IsRequired(),
-				setvalidator.SizeAtLeast(1),
+			Validators: []validator.List{
+				listvalidator.IsRequired(),
+				listvalidator.SizeAtLeast(1),
 			},
 			Description: "A list of user-defined rules allowing you to trigger violations for specific vulnerability or license breaches by setting a license or security criteria, with a corresponding set of automatic actions according to your needs. Rules are processed according to the ascending order in which they are placed in the Rules list on the Policy. If a rule is met, the subsequent rules in the list will not be applied.",
 		},
