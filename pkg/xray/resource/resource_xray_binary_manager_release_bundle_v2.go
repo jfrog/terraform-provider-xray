@@ -58,16 +58,40 @@ func (m BinaryManagerReleaseBundlesV2ResourceModel) toAPIModel(ctx context.Conte
 	return
 }
 
-func (m *BinaryManagerReleaseBundlesV2ResourceModel) fromAPIModel(ctx context.Context, apiModel BinaryManagerReleaseBundlesV2APIModel) (ds diag.Diagnostics) {
+// stripReleaseBundleV2Prefix removes the "[repo-type]/" prefix from release bundle names
+// that the API returns. For example: "[release-bundles-v2]/bundle-name" -> "bundle-name"
+func stripReleaseBundleV2Prefix(name string) string {
+	if idx := strings.Index(name, "]/"); idx != -1 {
+		return name[idx+2:]
+	}
+	return name
+}
+
+func (m *BinaryManagerReleaseBundlesV2ResourceModel) fromAPIModel(ctx context.Context, apiModel BinaryManagerReleaseBundlesV2APIModel, preserveIndexed bool) (ds diag.Diagnostics) {
 	m.ID = types.StringValue(apiModel.BinManagerID)
 
-	indexedReleaseBundlesV2, d := types.SetValueFrom(ctx, types.StringType, apiModel.IndexedReleaseBundlesV2)
-	if d != nil {
-		ds.Append(d...)
+	// Only update IndexedReleaseBundlesV2 from API during Read (not Create/Update)
+	// This avoids "inconsistent result after apply" errors when API returns
+	// different ordering or timing-delayed results
+	if !preserveIndexed {
+		// Strip the "[repo-type]/" prefix from each release bundle name
+		strippedIndexed := make([]string, len(apiModel.IndexedReleaseBundlesV2))
+		for i, name := range apiModel.IndexedReleaseBundlesV2 {
+			strippedIndexed[i] = stripReleaseBundleV2Prefix(name)
+		}
+		indexedReleaseBundlesV2, d := types.SetValueFrom(ctx, types.StringType, strippedIndexed)
+		if d != nil {
+			ds.Append(d...)
+		}
+		m.IndexedReleaseBundlesV2 = indexedReleaseBundlesV2
 	}
-	m.IndexedReleaseBundlesV2 = indexedReleaseBundlesV2
 
-	nonIndexedBuilds, d := types.SetValueFrom(ctx, types.StringType, apiModel.NonIndexedReleaseBundlesV2)
+	// Strip the "[repo-type]/" prefix from each non-indexed release bundle name
+	strippedNonIndexed := make([]string, len(apiModel.NonIndexedReleaseBundlesV2))
+	for i, name := range apiModel.NonIndexedReleaseBundlesV2 {
+		strippedNonIndexed[i] = stripReleaseBundleV2Prefix(name)
+	}
+	nonIndexedBuilds, d := types.SetValueFrom(ctx, types.StringType, strippedNonIndexed)
 	if d != nil {
 		ds.Append(d...)
 	}
@@ -186,7 +210,9 @@ func (r *BinaryManagerReleaseBundlesV2Resource) Create(ctx context.Context, req 
 		return
 	}
 
-	resp.Diagnostics.Append(plan.fromAPIModel(ctx, releaseBundles)...)
+	// Pass true to preserve IndexedReleaseBundlesV2 from plan to avoid
+	// "inconsistent result after apply" when API returns different data
+	resp.Diagnostics.Append(plan.fromAPIModel(ctx, releaseBundles, true)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -231,7 +257,8 @@ func (r *BinaryManagerReleaseBundlesV2Resource) Read(ctx context.Context, req re
 		return
 	}
 
-	resp.Diagnostics.Append(state.fromAPIModel(ctx, releaseBundles)...)
+	// Pass false to use API response during Read
+	resp.Diagnostics.Append(state.fromAPIModel(ctx, releaseBundles, false)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -295,7 +322,9 @@ func (r *BinaryManagerReleaseBundlesV2Resource) Update(ctx context.Context, req 
 		return
 	}
 
-	resp.Diagnostics.Append(plan.fromAPIModel(ctx, releaseBundles)...)
+	// Pass true to preserve IndexedReleaseBundlesV2 from plan to avoid
+	// "inconsistent result after apply" when API returns different data
+	resp.Diagnostics.Append(plan.fromAPIModel(ctx, releaseBundles, true)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}

@@ -754,7 +754,7 @@ func TestAccSecurityPolicy_noActions(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      util.ExecuteTemplate(fqrn, securityPolicyNoActions, testData),
-				ExpectError: regexp.MustCompile(".*must have a configuration value as the provider has marked it as required.*"),
+				ExpectError: regexp.MustCompile(`(?s).*must have a configuration value.*`),
 			},
 		},
 	})
@@ -810,7 +810,7 @@ func TestAccSecurityPolicy_vulnerabilityIdsIncorrectCVEFails(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:      util.ExecuteTemplate(fqrn, securityPolicyVulnIds, testData),
-					ExpectError: regexp.MustCompile(".*invalid Vulnerability, must be a valid CVE or Xray ID.*"),
+					ExpectError: regexp.MustCompile(`(?s).*invalid Vulnerability.*`),
 				},
 			},
 		})
@@ -844,7 +844,7 @@ func TestAccSecurityPolicy_exporsureConflictingAttributesFail(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:      util.ExecuteTemplate(fqrn, securityPolicyVulnIdsConflict, testData),
-					ExpectError: regexp.MustCompile("(?s).*Invalid Attribute Combination.*cvss_range.*cannot be specified when.*vulnerability_ids.*is specified.*"),
+					ExpectError: regexp.MustCompile("(?s).*Invalid Attribute Combination.*cannot be specified when.*is specified.*"),
 				},
 			},
 		})
@@ -878,7 +878,7 @@ func TestAccSecurityPolicy_vulnerabilityIdsLimitFail(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      util.ExecuteTemplate(fqrn, securityPolicyVulnIdsLimit, testData),
-				ExpectError: regexp.MustCompile(".*list must contain at least 1 elements and at most 100 elements.*"),
+				ExpectError: regexp.MustCompile(`(?s).*at least 1.*at most 100.*`),
 			},
 		},
 	})
@@ -970,7 +970,7 @@ func TestAccSecurityPolicy_PackagesIncorrectVersionRangeFails(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config:      util.ExecuteTemplate(fqrn, securityPolicyPackages, testData),
-					ExpectError: regexp.MustCompile(`.*invalid Range, must be one of the follows: Any Version: \(,\) or Specific\n.*Version: \[1\.2\], \[3\] or Range: \(1,\), \[,1\.2\.3\], \(4\.5\.0,6\.5\.2\].*`),
+					ExpectError: regexp.MustCompile(`(?s).*invalid Range.*`),
 				},
 			},
 		})

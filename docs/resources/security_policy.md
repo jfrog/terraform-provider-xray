@@ -132,7 +132,7 @@ resource "xray_security_policy" "malicious_package" {
 
 - `description` (String) More verbose description of the policy
 - `project_key` (String) Project key for assigning this resource to. Must be 2 - 10 lowercase alphanumeric and hyphen characters.
-- `rule` (Block Set) A list of user-defined rules allowing you to trigger violations for specific vulnerability or license breaches by setting a license or security criteria, with a corresponding set of automatic actions according to your needs. Rules are processed according to the ascending order in which they are placed in the Rules list on the Policy. If a rule is met, the subsequent rules in the list will not be applied. (see [below for nested schema](#nestedblock--rule))
+- `rule` (Block List) A list of user-defined rules allowing you to trigger violations for specific vulnerability or license breaches by setting a license or security criteria, with a corresponding set of automatic actions according to your needs. Rules are processed according to the ascending order in which they are placed in the Rules list on the Policy. If a rule is met, the subsequent rules in the list will not be applied. (see [below for nested schema](#nestedblock--rule))
 
 ### Read-Only
 
@@ -151,15 +151,15 @@ Required:
 
 Optional:
 
-- `actions` (Block Set) Specifies the actions to take once a security policy violation has been triggered. (see [below for nested schema](#nestedblock--rule--actions))
-- `criteria` (Block Set) The set of security conditions to examine when an scanned artifact is scanned. (see [below for nested schema](#nestedblock--rule--criteria))
+- `actions` (Block List) Specifies the actions to take once a security policy violation has been triggered. (see [below for nested schema](#nestedblock--rule--actions))
+- `criteria` (Block List) The list of security conditions to examine when an scanned artifact is scanned. (see [below for nested schema](#nestedblock--rule--criteria))
 
 <a id="nestedblock--rule--actions"></a>
 ### Nested Schema for `rule.actions`
 
 Optional:
 
-- `block_download` (Block Set) Block download of artifacts that meet the Artifact Filter and Severity Filter specifications for this watch (see [below for nested schema](#nestedblock--rule--actions--block_download))
+- `block_download` (Block List) Block download of artifacts that meet the Artifact Filter and Severity Filter specifications for this watch (see [below for nested schema](#nestedblock--rule--actions--block_download))
 - `block_release_bundle_distribution` (Boolean) Blocks Release Bundle distribution to Edge nodes if a violation is found. Default value is `false`.
 - `block_release_bundle_promotion` (Boolean) Blocks Release Bundle promotion if a violation is found. Default value is `false`.
 - `build_failure_grace_period_in_days` (Number) Allow grace period for certain number of days. All violations will be ignored during this time. To be used only if `fail_build` is enabled. Default value is `0`
@@ -197,7 +197,7 @@ Optional:
 - `min_severity` (String) The minimum security vulnerability severity that will be impacted by the policy. Valid values: `All Severities`, `Critical`, `High`, `Medium`, `Low`
 - `package_name` (String) The package name to create a rule for
 - `package_type` (String) The package type to create a rule for
-- `package_versions` (Set of String) package versions to apply the rule on can be (,) for any version or an open range (1,4) or closed [1,4] or one version [1]
+- `package_versions` (List of String) package versions to apply the rule on can be (,) for any version or an open range (1,4) or closed [1,4] or one version [1]
 - `vulnerability_ids` (List of String) Creates policy rules for specific vulnerability IDs that you input. You can add multiple vulnerabilities IDs up to 100. CVEs and Xray IDs are supported. Example - CVE-2015-20107, XRAY-2344
 
 <a id="nestedblock--rule--criteria--cvss_range"></a>
