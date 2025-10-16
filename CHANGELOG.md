@@ -1,3 +1,9 @@
+## 3.1.2 (Oct 16, 2025).
+
+IMPROVEMENTS:
+
+* resource/xray_workers_count: Added support for the attributes sbom_enricher, sbom_dependencies, sbom_deleter PR: [#364](https://github.com/jfrog/terraform-provider-xray/pull/364)
+
 ## 3.1.1 (Sep 30, 2025). Tested on JFrog Platform 11.2.3 (Artifactory 7.117.17, Xray 3.124.27, Catalog 1.25.7) with Terraform 1.13.3 and OpenTofu 1.10.6
 
 IMPROVEMENTS:
