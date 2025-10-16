@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -61,7 +62,7 @@ type PolicyResourceModel struct {
 	Description types.String `tfsdk:"description"`
 	ProjectKey  types.String `tfsdk:"project_key"`
 	Type        types.String `tfsdk:"type"`
-	Rules       types.Set    `tfsdk:"rule"`
+	Rules       types.List   `tfsdk:"rule"`
 	Author      types.String `tfsdk:"author"`
 	Created     types.String `tfsdk:"created"`
 	Modified    types.String `tfsdk:"modified"`
@@ -123,7 +124,7 @@ func (m PolicyResourceModel) toAPIModel(
 		func(elem attr.Value, _ int) PolicyRuleAPIModel {
 			attrs := elem.(types.Object).Attributes()
 
-			criteria, ds := toCriteriaAPIModel(ctx, attrs["criteria"].(types.Set).Elements())
+			criteria, ds := toCriteriaAPIModel(ctx, attrs["criteria"].(types.List).Elements())
 			if ds.HasError() {
 				diags.Append(ds...)
 			}
@@ -243,7 +244,7 @@ var fromActionsAPIModel = func(ctx context.Context, actionsAPIModel PolicyRuleAc
 func (m *PolicyResourceModel) fromAPIModel(
 	ctx context.Context,
 	apiModel PolicyAPIModel,
-	fromCriteriaAPIModel func(ctx context.Context, criteraAPIModel *PolicyRuleCriteriaAPIModel) (types.Set, diag.Diagnostics),
+	fromCriteriaAPIModel func(ctx context.Context, criteraAPIModel *PolicyRuleCriteriaAPIModel) (types.List, diag.Diagnostics),
 	fromActionsAPIModel func(ctx context.Context, actionsAPIModel PolicyRuleActionsAPIModel) (types.Set, diag.Diagnostics),
 ) diag.Diagnostics {
 	diags := diag.Diagnostics{}
@@ -293,7 +294,7 @@ func (m *PolicyResourceModel) fromAPIModel(
 		},
 	)
 
-	rulesSet, d := types.SetValue(
+	rulesSet, d := types.ListValue(
 		ruleSetElementType,
 		rules,
 	)
@@ -448,7 +449,7 @@ var policySchemaAttrs = lo.Assign(
 
 var policyBlocks = func(criteriaAttrs map[string]schema.Attribute, criteriaBlocks map[string]schema.Block, actionsAttrs map[string]schema.Attribute, actionsBlocks map[string]schema.Block) map[string]schema.Block {
 	return map[string]schema.Block{
-		"rule": schema.SetNestedBlock{
+		"rule": schema.ListNestedBlock{
 			NestedObject: schema.NestedBlockObject{
 				Attributes: map[string]schema.Attribute{
 					"name": schema.StringAttribute{
@@ -467,16 +468,16 @@ var policyBlocks = func(criteriaAttrs map[string]schema.Attribute, criteriaBlock
 					},
 				},
 				Blocks: map[string]schema.Block{
-					"criteria": schema.SetNestedBlock{
+					"criteria": schema.ListNestedBlock{
 						NestedObject: schema.NestedBlockObject{
 							Attributes: criteriaAttrs,
 							Blocks:     criteriaBlocks,
 						},
-						Validators: []validator.Set{
-							setvalidator.IsRequired(),
-							setvalidator.SizeBetween(1, 1),
+						Validators: []validator.List{
+							listvalidator.IsRequired(),
+							listvalidator.SizeBetween(1, 1),
 						},
-						Description: "The set of security conditions to examine when an scanned artifact is scanned.",
+						Description: "The list of security conditions to examine when an scanned artifact is scanned.",
 					},
 					"actions": schema.SetNestedBlock{
 						NestedObject: schema.NestedBlockObject{
@@ -491,9 +492,9 @@ var policyBlocks = func(criteriaAttrs map[string]schema.Attribute, criteriaBlock
 					},
 				},
 			},
-			Validators: []validator.Set{
-				setvalidator.IsRequired(),
-				setvalidator.SizeAtLeast(1),
+			Validators: []validator.List{
+				listvalidator.IsRequired(),
+				listvalidator.SizeAtLeast(1),
 			},
 			Description: "A list of user-defined rules allowing you to trigger violations for specific vulnerability or license breaches by setting a license or security criteria, with a corresponding set of automatic actions according to your needs. Rules are processed according to the ascending order in which they are placed in the Rules list on the Policy. If a rule is met, the subsequent rules in the list will not be applied.",
 		},

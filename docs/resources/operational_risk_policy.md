@@ -98,7 +98,7 @@ resource "xray_operational_risk_policy" "custom_criteria" {
 
 - `description` (String) More verbose description of the policy
 - `project_key` (String) Project key for assigning this resource to. Must be 2 - 10 lowercase alphanumeric and hyphen characters.
-- `rule` (Block Set) A list of user-defined rules allowing you to trigger violations for specific vulnerability or license breaches by setting a license or security criteria, with a corresponding set of automatic actions according to your needs. Rules are processed according to the ascending order in which they are placed in the Rules list on the Policy. If a rule is met, the subsequent rules in the list will not be applied. (see [below for nested schema](#nestedblock--rule))
+- `rule` (Block List) A list of user-defined rules allowing you to trigger violations for specific vulnerability or license breaches by setting a license or security criteria, with a corresponding set of automatic actions according to your needs. Rules are processed according to the ascending order in which they are placed in the Rules list on the Policy. If a rule is met, the subsequent rules in the list will not be applied. (see [below for nested schema](#nestedblock--rule))
 
 ### Read-Only
 
@@ -118,7 +118,7 @@ Required:
 Optional:
 
 - `actions` (Block Set) Specifies the actions to take once a security policy violation has been triggered. (see [below for nested schema](#nestedblock--rule--actions))
-- `criteria` (Block Set) The set of security conditions to examine when an scanned artifact is scanned. (see [below for nested schema](#nestedblock--rule--criteria))
+- `criteria` (Block List) The list of security conditions to examine when an scanned artifact is scanned. (see [below for nested schema](#nestedblock--rule--criteria))
 
 <a id="nestedblock--rule--actions"></a>
 ### Nested Schema for `rule.actions`

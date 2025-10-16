@@ -94,10 +94,10 @@ var licenseCriteriaSetElementType = types.ObjectType{
 	AttrTypes: licenseCriteriaAttrTypes,
 }
 
-func (r *LicensePolicyResource) fromCriteriaAPIModel(ctx context.Context, criteraAPIModel *PolicyRuleCriteriaAPIModel) (types.Set, diag.Diagnostics) {
+func (r *LicensePolicyResource) fromCriteriaAPIModel(ctx context.Context, criteraAPIModel *PolicyRuleCriteriaAPIModel) (types.List, diag.Diagnostics) {
 	diags := diag.Diagnostics{}
 
-	criteriaSet := types.SetNull(licenseCriteriaSetElementType)
+	criteriaSet := types.ListNull(licenseCriteriaSetElementType)
 	if criteraAPIModel != nil {
 		allowedLicenses, d := types.ListValueFrom(ctx, types.StringType, criteraAPIModel.AllowedLicenses)
 		if d.HasError() {
@@ -121,7 +121,7 @@ func (r *LicensePolicyResource) fromCriteriaAPIModel(ctx context.Context, criter
 		if d.HasError() {
 			diags.Append(d...)
 		}
-		cs, d := types.SetValue(
+		cs, d := types.ListValue(
 			licenseCriteriaSetElementType,
 			[]attr.Value{criteria},
 		)
@@ -225,7 +225,7 @@ func (r LicensePolicyResource) fromAPIModel(ctx context.Context, policy PolicyAP
 var licenseRuleAttrTypes = map[string]attr.Type{
 	"name":     types.StringType,
 	"priority": types.Int64Type,
-	"criteria": types.SetType{ElemType: licenseCriteriaSetElementType},
+	"criteria": types.ListType{ElemType: licenseCriteriaSetElementType},
 	"actions":  types.SetType{ElemType: licenseActionsSetElementType},
 }
 

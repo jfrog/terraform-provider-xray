@@ -2,11 +2,13 @@ package xray
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/float64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+
+	//"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -78,7 +80,7 @@ func (r *SecurityPolicyResource) toCriteriaAPIModel(ctx context.Context, criteri
 		}
 
 		var packageVersions []string
-		d = attrs["package_versions"].(types.Set).ElementsAs(ctx, &packageVersions, false)
+		d = attrs["package_versions"].(types.List).ElementsAs(ctx, &packageVersions, false)
 		if d.HasError() {
 			diags.Append(d...)
 		}
@@ -104,10 +106,10 @@ func (r SecurityPolicyResource) toAPIModel(ctx context.Context, plan PolicyResou
 	return plan.toAPIModel(ctx, policy, r.toCriteriaAPIModel, toActionsAPIModel)
 }
 
-func (r *SecurityPolicyResource) fromCriteriaAPIModel(ctx context.Context, criteriaAPIModel *PolicyRuleCriteriaAPIModel) (types.Set, diag.Diagnostics) {
+func (r *SecurityPolicyResource) fromCriteriaAPIModel(ctx context.Context, criteriaAPIModel *PolicyRuleCriteriaAPIModel) (types.List, diag.Diagnostics) {
 	diags := diag.Diagnostics{}
 
-	criteriaSet := types.SetNull(securityCriteriaSetElementType)
+	criteriaSet := types.ListNull(securityCriteriaSetElementType)
 	if criteriaAPIModel != nil {
 		minimumSeverity := types.StringNull()
 		if criteriaAPIModel.MinimumSeverity != "" {
@@ -186,7 +188,7 @@ func (r *SecurityPolicyResource) fromCriteriaAPIModel(ctx context.Context, crite
 			packageType = types.StringValue(criteriaAPIModel.PackageType)
 		}
 
-		packageVersions, d := types.SetValueFrom(ctx, types.StringType, criteriaAPIModel.PackageVersions)
+		packageVersions, d := types.ListValueFrom(ctx, types.StringType, criteriaAPIModel.PackageVersions)
 		if d.HasError() {
 			diags.Append(d...)
 		}
@@ -209,7 +211,8 @@ func (r *SecurityPolicyResource) fromCriteriaAPIModel(ctx context.Context, crite
 		if d.HasError() {
 			diags.Append(d...)
 		}
-		cs, d := types.SetValue(
+		cs, d := types.ListValueFrom(
+			ctx,
 			securityCriteriaSetElementType,
 			[]attr.Value{criteria},
 		)
@@ -258,7 +261,7 @@ var securityCriteriaAttrTypes = map[string]attr.Type{
 	"exposures":             types.ListType{ElemType: exposuresElementType},
 	"package_name":          types.StringType,
 	"package_type":          types.StringType,
-	"package_versions":      types.SetType{ElemType: types.StringType},
+	"package_versions":      types.ListType{ElemType: types.StringType},
 }
 
 var securityCriteriaSetElementType = types.ObjectType{
@@ -277,7 +280,7 @@ var blockDownloadElementType = types.ObjectType{
 var securityRuleAttrTypes = map[string]attr.Type{
 	"name":     types.StringType,
 	"priority": types.Int64Type,
-	"criteria": types.SetType{ElemType: securityCriteriaSetElementType},
+	"criteria": types.ListType{ElemType: securityCriteriaSetElementType},
 	"actions":  types.SetType{ElemType: actionsSetElementType},
 }
 
@@ -437,11 +440,11 @@ var securityPolicyCriteriaAttrs = map[string]schema.Attribute{
 		},
 		Description: "The package type to create a rule for",
 	},
-	"package_versions": schema.SetAttribute{
+	"package_versions": schema.ListAttribute{
 		ElementType: types.StringType,
 		Optional:    true,
-		Validators: []validator.Set{
-			setvalidator.ValueStringsAre(
+		Validators: []validator.List{
+			listvalidator.ValueStringsAre(
 				stringvalidator.RegexMatches(regexp.MustCompile(`((^(\(|\[)((\d+\.)?(\d+\.)?(\*|\d+)|(\s*))\,((\d+\.)?(\d+\.)?(\*|\d+)|(\s*))(\)|\])$|^\[(\d+\.)?(\d+\.)?(\*|\d+)\]$))`), "invalid Range, must be one of the follows: Any Version: (,) or Specific Version: [1.2], [3] or Range: (1,), [,1.2.3], (4.5.0,6.5.2]"),
 			),
 		},
@@ -480,9 +483,36 @@ func (r SecurityPolicyResource) ValidateConfig(ctx context.Context, req resource
 		return
 	}
 
+	// Check for duplicate rule names
+	ruleNames := make(map[string]int)
+	for idx, rule := range data.Rules.Elements() {
+		ruleAttrs := rule.(types.Object).Attributes()
+		ruleName := ruleAttrs["name"].(types.String)
+
+		// Skip unknown values (e.g., from dynamic blocks with unknown input)
+		if ruleName.IsUnknown() {
+			continue
+		}
+
+		name := ruleName.ValueString()
+		if firstIdx, exists := ruleNames[name]; exists {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("rules").AtListIndex(idx).AtName("name"),
+				"Duplicate Rule Name",
+				fmt.Sprintf("Rule name %q is duplicated. First occurrence at rule index %d. Each rule must have a unique name.", name, firstIdx),
+			)
+		} else {
+			ruleNames[name] = idx
+		}
+	}
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	for _, rule := range data.Rules.Elements() {
 		ruleAttrs := rule.(types.Object).Attributes()
-		criteria := ruleAttrs["criteria"].(types.Set)
+		criteria := ruleAttrs["criteria"].(types.List)
 		attrs := criteria.Elements()[0].(types.Object).Attributes()
 
 		fixVersionDependant := attrs["fix_version_dependant"].(types.Bool).ValueBool()
@@ -492,7 +522,7 @@ func (r SecurityPolicyResource) ValidateConfig(ctx context.Context, req resource
 
 		if maliciousPackage && minSeverity != "" {
 			resp.Diagnostics.AddAttributeError(
-				path.Root("rules").AtSetValue(rule).AtName("criteria").AtSetValue(criteria.Elements()[0]).AtName("malicious_package"),
+				path.Root("rules").AtListIndex(0).AtName("criteria").AtListIndex(0).AtName("malicious_package"),
 				"Invalid Attribute Configuration",
 				"malicious_package cannot be set to 'true' if min_severity is set",
 			)
@@ -501,7 +531,7 @@ func (r SecurityPolicyResource) ValidateConfig(ctx context.Context, req resource
 
 		if maliciousPackage && !cvssRange.IsNull() {
 			resp.Diagnostics.AddAttributeError(
-				path.Root("rules").AtSetValue(rule).AtName("criteria").AtSetValue(criteria.Elements()[0]).AtName("malicious_package"),
+				path.Root("rules").AtListIndex(0).AtName("criteria").AtListIndex(0).AtName("malicious_package"),
 				"Invalid Attribute Configuration",
 				"malicious_package cannot be set to 'true' if cvss_range is set",
 			)
@@ -510,7 +540,7 @@ func (r SecurityPolicyResource) ValidateConfig(ctx context.Context, req resource
 
 		if maliciousPackage && fixVersionDependant {
 			resp.Diagnostics.AddAttributeError(
-				path.Root("rules").AtSetValue(rule).AtName("criteria").AtSetValue(criteria.Elements()[0]).AtName("fix_version_dependant"),
+				path.Root("rules").AtListIndex(0).AtName("criteria").AtListIndex(0).AtName("fix_version_dependant"),
 				"Invalid Attribute Configuration",
 				"fix_version_dependant must be set to 'false' if malicious_package is 'true'",
 			)
@@ -519,11 +549,11 @@ func (r SecurityPolicyResource) ValidateConfig(ctx context.Context, req resource
 
 		packageName := attrs["package_name"].(types.String)
 		packagType := attrs["package_type"].(types.String)
-		packageVersions := attrs["package_versions"].(types.Set)
+		packageVersions := attrs["package_versions"].(types.List)
 
 		if fixVersionDependant && (!packageName.IsNull() || !packagType.IsNull() || !packageVersions.IsNull()) {
 			resp.Diagnostics.AddAttributeError(
-				path.Root("rules").AtSetValue(rule).AtName("criteria").AtSetValue(criteria.Elements()[0]).AtName("fix_version_dependant"),
+				path.Root("rules").AtListIndex(0).AtName("criteria").AtListIndex(0).AtName("fix_version_dependant"),
 				"Invalid Attribute Configuration",
 				"fix_version_dependant must be set to 'false' if any package attribute is set",
 			)
