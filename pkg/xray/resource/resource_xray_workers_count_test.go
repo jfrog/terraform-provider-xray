@@ -55,6 +55,18 @@ func TestAccWorkersCount_full(t *testing.T) {
 		panoramic {
 			new_content = {{ .newContent }}
 		}
+		sbom_enricher {
+			new_content      = {{ .newContent }}
+			existing_content = 8
+		}
+		sbom_dependencies {
+			new_content      = {{ .newContent }}
+			existing_content = 4
+		}
+		sbom_deleter {
+			new_content      = {{ .newContent }}
+			existing_content = 6
+		}
 	}`
 
 	params := map[string]interface{}{
@@ -106,6 +118,15 @@ func TestAccWorkersCount_full(t *testing.T) {
 					resource.TestCheckResourceAttr(fqrn, "notification.0.new_content", "8"),
 					resource.TestCheckResourceAttr(fqrn, "panoramic.#", "1"),
 					resource.TestCheckResourceAttr(fqrn, "panoramic.0.new_content", "8"),
+					resource.TestCheckResourceAttr(fqrn, "sbom_enricher.#", "1"),
+					resource.TestCheckResourceAttr(fqrn, "sbom_enricher.0.new_content", "8"),
+					resource.TestCheckResourceAttr(fqrn, "sbom_enricher.0.existing_content", "8"),
+					resource.TestCheckResourceAttr(fqrn, "sbom_dependencies.#", "1"),
+					resource.TestCheckResourceAttr(fqrn, "sbom_dependencies.0.new_content", "8"),
+					resource.TestCheckResourceAttr(fqrn, "sbom_dependencies.0.existing_content", "4"),
+					resource.TestCheckResourceAttr(fqrn, "sbom_deleter.#", "1"),
+					resource.TestCheckResourceAttr(fqrn, "sbom_deleter.0.new_content", "8"),
+					resource.TestCheckResourceAttr(fqrn, "sbom_deleter.0.existing_content", "6"),
 				),
 			},
 			{
@@ -141,6 +162,15 @@ func TestAccWorkersCount_full(t *testing.T) {
 					resource.TestCheckResourceAttr(fqrn, "notification.0.new_content", updatedParams["newContent"]),
 					resource.TestCheckResourceAttr(fqrn, "panoramic.#", "1"),
 					resource.TestCheckResourceAttr(fqrn, "panoramic.0.new_content", updatedParams["newContent"]),
+					resource.TestCheckResourceAttr(fqrn, "sbom_enricher.#", "1"),
+					resource.TestCheckResourceAttr(fqrn, "sbom_enricher.0.new_content", updatedParams["newContent"]),
+					resource.TestCheckResourceAttr(fqrn, "sbom_enricher.0.existing_content", "8"),
+					resource.TestCheckResourceAttr(fqrn, "sbom_dependencies.#", "1"),
+					resource.TestCheckResourceAttr(fqrn, "sbom_dependencies.0.new_content", updatedParams["newContent"]),
+					resource.TestCheckResourceAttr(fqrn, "sbom_dependencies.0.existing_content", "4"),
+					resource.TestCheckResourceAttr(fqrn, "sbom_deleter.#", "1"),
+					resource.TestCheckResourceAttr(fqrn, "sbom_deleter.0.new_content", updatedParams["newContent"]),
+					resource.TestCheckResourceAttr(fqrn, "sbom_deleter.0.existing_content", "6"),
 				),
 			},
 			{

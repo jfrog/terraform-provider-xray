@@ -64,6 +64,9 @@ type WorkersCountResourceModelV1 struct {
 	ImpactAnalysis     types.Set    `tfsdk:"impact_analysis"`
 	Notification       types.Set    `tfsdk:"notification"`
 	Panoramic          types.Set    `tfsdk:"panoramic"`
+	SBOMEnricher       types.Set    `tfsdk:"sbom_enricher"`
+	SBOMDependencies   types.Set    `tfsdk:"sbom_dependencies"`
+	SBOMDeleter        types.Set    `tfsdk:"sbom_deleter"`
 }
 
 // WorkersCount uses Xray API which returns the follow JSON structure:
@@ -123,6 +126,9 @@ type WorkersCountAPIModel struct {
 	ImpactAnalysis     WorkersCountNewContentAPIModel         `json:"impact_analysis"`
 	Notification       WorkersCountNewContentAPIModel         `json:"notification"`
 	Panoramic          WorkersCountNewContentAPIModel         `json:"panoramic"`
+	SBOMEnricher       WorkersCountNewExistingContentAPIModel `json:"sbomenricher"`
+	SBOMDependencies   WorkersCountNewExistingContentAPIModel `json:"sbomdependencies"`
+	SBOMDeleter        WorkersCountNewExistingContentAPIModel `json:"sbomdeleter"`
 }
 
 func toNewExistingAPIModel(setValue types.Set) WorkersCountNewExistingContentAPIModel {
@@ -156,6 +162,9 @@ func (r WorkersCountResourceModelV1) toAPIModel(workersCount *WorkersCountAPIMod
 	workersCount.ImpactAnalysis = toNewAPIModel(r.ImpactAnalysis)
 	workersCount.Notification = toNewAPIModel(r.Notification)
 	workersCount.Panoramic = toNewAPIModel(r.Panoramic)
+	workersCount.SBOMEnricher = toNewExistingAPIModel(r.SBOMEnricher)
+	workersCount.SBOMDependencies = toNewExistingAPIModel(r.SBOMDependencies)
+	workersCount.SBOMDeleter = toNewExistingAPIModel(r.SBOMDeleter)
 }
 
 var newExistingResourceModelAttributeTypes map[string]attr.Type = lo.Assign(
@@ -280,6 +289,27 @@ func (m WorkersCountAPIModel) toState(r *WorkersCountResourceModelV1) diag.Diagn
 		diags = append(diags, ds...)
 	} else {
 		r.Panoramic = set
+	}
+
+	set, ds = newExistingModelToResourceSet(m.SBOMEnricher)
+	if ds != nil {
+		diags = append(diags, ds...)
+	} else {
+		r.SBOMEnricher = set
+	}
+
+	set, ds = newExistingModelToResourceSet(m.SBOMDependencies)
+	if ds != nil {
+		diags = append(diags, ds...)
+	} else {
+		r.SBOMDependencies = set
+	}
+
+	set, ds = newExistingModelToResourceSet(m.SBOMDeleter)
+	if ds != nil {
+		diags = append(diags, ds...)
+	} else {
+		r.SBOMDeleter = set
 	}
 
 	return diags
@@ -446,6 +476,36 @@ var workersCountSchemaV1 = schema.Schema{
 				},
 				Description: "The number of workers managing panoramic.",
 			},
+			"sbom_enricher": schema.SetNestedBlock{
+				NestedObject: schema.NestedBlockObject{
+					Attributes: newExistingContentAttrs,
+				},
+				Validators: []validator.Set{
+					setvalidator.IsRequired(),
+					setvalidator.SizeBetween(1, 1),
+				},
+				Description: "The number of workers managing SBOM enrichment.",
+			},
+			"sbom_dependencies": schema.SetNestedBlock{
+				NestedObject: schema.NestedBlockObject{
+					Attributes: newExistingContentAttrs,
+				},
+				Validators: []validator.Set{
+					setvalidator.IsRequired(),
+					setvalidator.SizeBetween(1, 1),
+				},
+				Description: "The number of workers managing SBOM dependencies.",
+			},
+			"sbom_deleter": schema.SetNestedBlock{
+				NestedObject: schema.NestedBlockObject{
+					Attributes: newExistingContentAttrs,
+				},
+				Validators: []validator.Set{
+					setvalidator.IsRequired(),
+					setvalidator.SizeBetween(1, 1),
+				},
+				Description: "The number of workers managing SBOM deletion.",
+			},
 		},
 	),
 	Description: workersCountSchemaV0.Description,
@@ -502,6 +562,9 @@ func (r *WorkersCountResource) UpgradeState(ctx context.Context) map[int64]resou
 					ImpactAnalysis:     priorStateData.ImpactAnalysis,
 					Notification:       priorStateData.Notification,
 					Panoramic:          defaultNewContent,
+					SBOMEnricher:       defaultExistingContent,
+					SBOMDependencies:   defaultExistingContent,
+					SBOMDeleter:        defaultExistingContent,
 				}
 
 				resp.Diagnostics.Append(resp.State.Set(ctx, upgradedStateData)...)

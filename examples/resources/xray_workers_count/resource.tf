@@ -40,4 +40,16 @@ resource "xray_workers_count" "workers-count" {
   panoramic {
     new_content      = 4
   }
+  sbom_enricher {
+    new_content      = 4
+    existing_content = 2
+  }
+  sbom_dependencies {
+    new_content      = 4
+    existing_content = 2
+  }
+  sbom_deleter {
+    new_content      = 4
+    existing_content = 2
+  }
 }
