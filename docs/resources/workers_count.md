@@ -59,6 +59,18 @@ resource "xray_workers_count" "workers-count" {
   panoramic {
     new_content      = 4
   }
+  sbom_enricher {
+    new_content      = 4
+    existing_content = 2
+  }
+  sbom_dependencies {
+    new_content      = 4
+    existing_content = 2
+  }
+  sbom_deleter {
+    new_content      = 4
+    existing_content = 2
+  }
 }
 ```
 
@@ -76,6 +88,9 @@ resource "xray_workers_count" "workers-count" {
 - `persist` (Block Set) The number of workers managing persistent storage needed to build the artifact relationship graph. (see [below for nested schema](#nestedblock--persist))
 - `policy_enforcer` (Block Set) The number of workers managing policy enforcer. (see [below for nested schema](#nestedblock--policy_enforcer))
 - `sbom` (Block Set) The number of workers managing SBOM. (see [below for nested schema](#nestedblock--sbom))
+- `sbom_deleter` (Block Set) The number of workers managing SBOM deletion. (see [below for nested schema](#nestedblock--sbom_deleter))
+- `sbom_dependencies` (Block Set) The number of workers managing SBOM dependencies. (see [below for nested schema](#nestedblock--sbom_dependencies))
+- `sbom_enricher` (Block Set) The number of workers managing SBOM enrichment. (see [below for nested schema](#nestedblock--sbom_enricher))
 - `sbom_impact_analysis` (Block Set) The number of workers managing SBOM impact analysis. (see [below for nested schema](#nestedblock--sbom_impact_analysis))
 - `user_catalog` (Block Set) The number of workers managing user catalog. (see [below for nested schema](#nestedblock--user_catalog))
 
@@ -154,6 +169,33 @@ Required:
 
 <a id="nestedblock--sbom"></a>
 ### Nested Schema for `sbom`
+
+Required:
+
+- `existing_content` (Number) Number of workers for existing content
+- `new_content` (Number) Number of workers for new content
+
+
+<a id="nestedblock--sbom_deleter"></a>
+### Nested Schema for `sbom_deleter`
+
+Required:
+
+- `existing_content` (Number) Number of workers for existing content
+- `new_content` (Number) Number of workers for new content
+
+
+<a id="nestedblock--sbom_dependencies"></a>
+### Nested Schema for `sbom_dependencies`
+
+Required:
+
+- `existing_content` (Number) Number of workers for existing content
+- `new_content` (Number) Number of workers for new content
+
+
+<a id="nestedblock--sbom_enricher"></a>
+### Nested Schema for `sbom_enricher`
 
 Required:
 
