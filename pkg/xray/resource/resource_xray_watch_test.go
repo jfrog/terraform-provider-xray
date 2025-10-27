@@ -1298,6 +1298,48 @@ func TestAccWatch_singleReleaseBundle(t *testing.T) {
 	})
 }
 
+func TestAccWatch_gitRepository(t *testing.T) {
+	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
+	testData := sdk.MergeMaps(testDataWatch)
+
+	testData["resource_name"] = resourceName
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", testutil.RandomInt())
+	testData["policy_name_0"] = fmt.Sprintf("xray-policy-%d", testutil.RandomInt())
+	testData["watch_type"] = "gitRepository"
+	testData["git_repo_1"] = "github.com/attiasas/WebGoat.git"
+	testData["git_repo_2"] = "gitlab.com"
+	testData["exclude_patterns_1"] = "github.com/attiasas/flask-webgoat-test.git"
+	testData["exclude_patterns_2"] = "github.com/attiasas/juice-shop.git"
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy: acctest.VerifyDeleted(fqrn, "name", func(id string, request *resty.Request) (*resty.Response, error) {
+			acctest.CheckPolicyDeleted(testData["policy_name_0"], t, request)
+			resp, err := testCheckWatch(id, request)
+			return resp, err
+		}),
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: util.ExecuteTemplate(fqrn, gitRepositoryWatchTemplate, testData),
+				Check: resource.ComposeTestCheckFunc(
+					verifyXrayWatch(fqrn, testData),
+					resource.TestCheckResourceAttr(fqrn, "watch_resource.0.name", testData["git_repo_1"]),
+					resource.TestCheckResourceAttr(fqrn, "watch_resource.1.name", testData["git_repo_2"]),
+					resource.TestCheckTypeSetElemAttr(fqrn, "watch_resource.0.ant_filter.0.exclude_patterns.*", testData["exclude_patterns_1"]),
+					resource.TestCheckTypeSetElemAttr(fqrn, "watch_resource.0.ant_filter.0.exclude_patterns.*", testData["exclude_patterns_2"]),
+				),
+			},
+			{
+				ResourceName:                         fqrn,
+				ImportState:                          true,
+				ImportStateId:                        testData["watch_name"],
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "name",
+			},
+		},
+	})
+}
+
 const allReposSinglePolicyWatchTemplate = `resource "xray_security_policy" "security" {
   name        = "{{ .policy_name_0 }}"
   description = "Security policy description"
@@ -2275,6 +2317,61 @@ resource "xray_watch" "{{ .resource_name }}" {
   	name 	= xray_security_policy.security.name
   	type 	= "security"
   }
+  watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
+}`
+
+const gitRepositoryWatchTemplate = `resource "xray_security_policy" "security" {
+  name        = "{{ .policy_name_0 }}"
+  description = "Security policy description"
+  type        = "security"
+  rule {
+    name     = "rule-name-severity"
+    priority = 1
+    criteria {
+      min_severity = "High"
+    }
+    actions {
+      mails    = ["test@email.com"]
+      block_download {
+        unscanned = true
+        active    = true
+      }
+      block_release_bundle_distribution  = true
+      fail_build                         = true
+      notify_watch_recipients            = true
+      notify_deployer                    = true
+      create_ticket_enabled              = false
+      build_failure_grace_period_in_days = 5
+    }
+  }
+}
+
+resource "xray_watch" "{{ .resource_name }}" {
+  name        = "{{ .watch_name }}"
+  description = "{{ .description }}"
+  active      = {{ .active }}
+
+  watch_resource {
+    type       = "{{ .watch_type }}"
+    bin_mgr_id = "default"
+    name       = "{{ .git_repo_1 }}"
+    
+    ant_filter {
+      exclude_patterns = ["{{ .exclude_patterns_1 }}", "{{ .exclude_patterns_2 }}"]
+    }
+  }
+
+  watch_resource {
+    type       = "{{ .watch_type }}"
+    bin_mgr_id = "default"
+    name       = "{{ .git_repo_2 }}"
+  }
+
+  assigned_policy {
+    name = xray_security_policy.security.name
+    type = "security"
+  }
+
   watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
 }`
 
