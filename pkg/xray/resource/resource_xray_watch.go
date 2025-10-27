@@ -43,6 +43,7 @@ var supportedResourceTypes = []string{
 	"all-releaseBundles",
 	"releaseBundleV2",
 	"all-releaseBundlesV2",
+	"gitRepository",
 }
 
 var _ resource.Resource = &WatchResource{}
@@ -973,12 +974,12 @@ func (r WatchResource) ValidateConfig(ctx context.Context, req resource.Validate
 
 		// validate type with filter and ant_filter
 		antFilters := attrs["ant_filter"].(types.Set).Elements()
-		antPatternsResourceTypes := []string{"all-builds", "all-projects", "all-releaseBundles", "all-releaseBundlesV2"}
+		antPatternsResourceTypes := []string{"all-builds", "all-projects", "all-releaseBundles", "all-releaseBundlesV2", "gitRepository"}
 		if !slices.Contains(antPatternsResourceTypes, resourceType) && len(antFilters) > 0 {
 			resp.Diagnostics.AddAttributeError(
 				path.Root("watch_resources").AtListIndex(idx).AtName("ant_filter"),
 				"Invalid attribute values combination",
-				"attribute 'ant_filter' is set when 'watch_resource.type' is not set to 'all-builds', 'all-projects', 'all-releaseBundles', or 'all-releaseBundlesV2'",
+				"attribute 'ant_filter' is set when 'watch_resource.type' is not set to 'all-builds', 'all-projects', 'all-releaseBundles', 'all-releaseBundlesV2', or 'gitRepository'",
 			)
 			return
 		}

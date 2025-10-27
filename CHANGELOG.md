@@ -1,3 +1,7 @@
+## 3.1.3 (Oct 27, 2025). Tested on JFrog Platform 11.2.5 (Artifactory 7.117.19, Xray 3.124.31, Catalog 1.26.5) with Terraform 1.13.4 and OpenTofu 1.10.6
+
+* resource/xray_watch: Add support for watch type `gitRepository` PR: [#366](https://github.com/jfrog/terraform-provider-xray/pull/366)
+
 ## 3.1.2 (Oct 16, 2025). Tested on JFrog Platform 11.2.4 (Artifactory 7.117.18, Xray 3.124.28, Catalog 1.26.0) with Terraform 1.13.4 and OpenTofu 1.10.6
 
 IMPROVEMENTS:
