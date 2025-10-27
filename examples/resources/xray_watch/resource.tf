@@ -333,3 +333,33 @@ resource "xray_watch" "project" {
 
   watch_recipients = ["test@email.com", "test1@email.com"]
 }
+
+resource "xray_watch" "git_repository" {
+  name        = "git-repository-watch"
+  description = "Watch for Git repositories"
+  active      = true
+  project_key = "testproj"
+
+  watch_resource {
+    type       = "gitRepository"
+    bin_mgr_id = "default"
+    name       = "github.com/attiasas/WebGoat.git"
+
+    ant_filter {
+      exclude_patterns = [
+        "github.com/attiasas/flask-webgoat-test.git",
+        "github.com/attiasas/juice-shop.git",
+        "github.com/attiasas/pentaho-aggdesigner.git",
+        "github.com/attiasas/jfrog-cli-security.git",
+        "github.com/attiasas/committest.git"
+      ]
+    }
+  }
+
+  assigned_policy {
+    name = xray_security_policy.min_severity.name
+    type = "security"
+  }
+
+  watch_recipients = ["test@email.com", "test1@email.com"]
+}
