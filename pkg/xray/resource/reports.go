@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"regexp"
 	"time"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -17,8 +19,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -103,13 +105,13 @@ func (m ReportResourceModel) toAPIModel(
 						attrs := elem.(types.Object).Attributes()
 
 						var includePathPatterns []string
-						d := attrs["include_path_patterns"].(types.Set).ElementsAs(ctx, &includePathPatterns, false)
+						d := attrs["include_path_patterns"].(types.List).ElementsAs(ctx, &includePathPatterns, false)
 						if d.HasError() {
 							diags.Append(d...)
 						}
 
 						var excludePathPatterns []string
-						d = attrs["exclude_path_patterns"].(types.Set).ElementsAs(ctx, &excludePathPatterns, false)
+						d = attrs["exclude_path_patterns"].(types.List).ElementsAs(ctx, &excludePathPatterns, false)
 						if d.HasError() {
 							diags.Append(d...)
 						}
@@ -132,19 +134,19 @@ func (m ReportResourceModel) toAPIModel(
 				attrs := v.(types.Set).Elements()[0].(types.Object).Attributes()
 
 				var names []string
-				d := attrs["names"].(types.Set).ElementsAs(ctx, &names, false)
+				d := attrs["names"].(types.List).ElementsAs(ctx, &names, false)
 				if d.HasError() {
 					diags.Append(d...)
 				}
 
 				var includePatterns []string
-				d = attrs["include_patterns"].(types.Set).ElementsAs(ctx, &includePatterns, false)
+				d = attrs["include_patterns"].(types.List).ElementsAs(ctx, &includePatterns, false)
 				if d.HasError() {
 					diags.Append(d...)
 				}
 
 				var excludePatterns []string
-				d = attrs["exclude_patterns"].(types.Set).ElementsAs(ctx, &excludePatterns, false)
+				d = attrs["exclude_patterns"].(types.List).ElementsAs(ctx, &excludePatterns, false)
 				if d.HasError() {
 					diags.Append(d...)
 				}
@@ -164,19 +166,19 @@ func (m ReportResourceModel) toAPIModel(
 				attrs := v.(types.Set).Elements()[0].(types.Object).Attributes()
 
 				var names []string
-				d := attrs["names"].(types.Set).ElementsAs(ctx, &names, false)
+				d := attrs["names"].(types.List).ElementsAs(ctx, &names, false)
 				if d.HasError() {
 					diags.Append(d...)
 				}
 
 				var includePatterns []string
-				d = attrs["include_patterns"].(types.Set).ElementsAs(ctx, &includePatterns, false)
+				d = attrs["include_patterns"].(types.List).ElementsAs(ctx, &includePatterns, false)
 				if d.HasError() {
 					diags.Append(d...)
 				}
 
 				var excludePatterns []string
-				d = attrs["exclude_patterns"].(types.Set).ElementsAs(ctx, &excludePatterns, false)
+				d = attrs["exclude_patterns"].(types.List).ElementsAs(ctx, &excludePatterns, false)
 				if d.HasError() {
 					diags.Append(d...)
 				}
@@ -196,19 +198,19 @@ func (m ReportResourceModel) toAPIModel(
 				attrs := v.(types.Set).Elements()[0].(types.Object).Attributes()
 
 				var names []string
-				d := attrs["names"].(types.Set).ElementsAs(ctx, &names, false)
+				d := attrs["names"].(types.List).ElementsAs(ctx, &names, false)
 				if d.HasError() {
 					diags.Append(d...)
 				}
 
 				var includePatterns []string
-				d = attrs["include_patterns"].(types.Set).ElementsAs(ctx, &includePatterns, false)
+				d = attrs["include_patterns"].(types.List).ElementsAs(ctx, &includePatterns, false)
 				if d.HasError() {
 					diags.Append(d...)
 				}
 
 				var excludePatterns []string
-				d = attrs["exclude_patterns"].(types.Set).ElementsAs(ctx, &excludePatterns, false)
+				d = attrs["exclude_patterns"].(types.List).ElementsAs(ctx, &excludePatterns, false)
 				if d.HasError() {
 					diags.Append(d...)
 				}
@@ -228,25 +230,25 @@ func (m ReportResourceModel) toAPIModel(
 				attrs := v.(types.Set).Elements()[0].(types.Object).Attributes()
 
 				var names []string
-				d := attrs["names"].(types.Set).ElementsAs(ctx, &names, false)
+				d := attrs["names"].(types.List).ElementsAs(ctx, &names, false)
 				if d.HasError() {
 					diags.Append(d...)
 				}
 
 				var keys []string
-				d = attrs["keys"].(types.Set).ElementsAs(ctx, &keys, false)
+				d = attrs["keys"].(types.List).ElementsAs(ctx, &keys, false)
 				if d.HasError() {
 					diags.Append(d...)
 				}
 
 				var includeKeyPatterns []string
-				d = attrs["include_key_patterns"].(types.Set).ElementsAs(ctx, &includeKeyPatterns, false)
+				d = attrs["include_key_patterns"].(types.List).ElementsAs(ctx, &includeKeyPatterns, false)
 				if d.HasError() {
 					diags.Append(d...)
 				}
 
 				var excludeKeyPatterns []string
-				d = attrs["exclude_key_patterns"].(types.Set).ElementsAs(ctx, &excludeKeyPatterns, false)
+				d = attrs["exclude_key_patterns"].(types.List).ElementsAs(ctx, &excludeKeyPatterns, false)
 				if d.HasError() {
 					diags.Append(d...)
 				}
@@ -384,19 +386,31 @@ var reportsBlocks = func(filtersAttrs map[string]schema.Attribute, filtersBlocks
 									},
 									Description: "Repository name.",
 								},
-								"include_path_patterns": schema.SetAttribute{
+								"include_path_patterns": schema.ListAttribute{
 									ElementType: types.StringType,
 									Optional:    true,
 									Computed:    true,
-									Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
-									Description: "Include path patterns.",
+									Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
+									Validators: []validator.List{
+										listvalidator.ValueStringsAre(
+											stringvalidator.RegexMatches(regexp.MustCompile(`^[^/]`), "pattern must not start with '/'"),
+											stringvalidator.RegexMatches(regexp.MustCompile(`^[^@]*$`), "pattern must not contain '@' symbol"),
+										),
+									},
+									Description: "Include path patterns. Patterns must not start with '/' or contain '@' symbol.",
 								},
-								"exclude_path_patterns": schema.SetAttribute{
+								"exclude_path_patterns": schema.ListAttribute{
 									ElementType: types.StringType,
 									Optional:    true,
 									Computed:    true,
-									Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
-									Description: "Exclude path patterns.",
+									Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
+									Validators: []validator.List{
+										listvalidator.ValueStringsAre(
+											stringvalidator.RegexMatches(regexp.MustCompile(`^[^/]`), "pattern must not start with '/'"),
+											stringvalidator.RegexMatches(regexp.MustCompile(`^[^@]*$`), "pattern must not contain '@' symbol"),
+										),
+									},
+									Description: "Exclude path patterns. Patterns must not start with '/' or contain '@' symbol.",
 								},
 							},
 						},
@@ -414,38 +428,38 @@ var reportsBlocks = func(filtersAttrs map[string]schema.Attribute, filtersBlocks
 					"builds": schema.SetNestedBlock{
 						NestedObject: schema.NestedBlockObject{
 							Attributes: map[string]schema.Attribute{
-								"names": schema.SetAttribute{
+								"names": schema.ListAttribute{
 									ElementType: types.StringType,
 									Optional:    true,
 									Computed:    true,
-									Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
-									Validators: []validator.Set{
-										setvalidator.ConflictsWith(
+									Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
+									Validators: []validator.List{
+										listvalidator.ConflictsWith(
 											path.MatchRelative().AtParent().AtName("include_patterns"),
 											path.MatchRelative().AtParent().AtName("exclude_patterns"),
 										),
 									},
 									Description: "The list of build names. Only one of 'names' or '*_patterns' can be set.",
 								},
-								"include_patterns": schema.SetAttribute{
+								"include_patterns": schema.ListAttribute{
 									ElementType: types.StringType,
 									Optional:    true,
 									Computed:    true,
-									Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
-									Validators: []validator.Set{
-										setvalidator.ConflictsWith(
+									Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
+									Validators: []validator.List{
+										listvalidator.ConflictsWith(
 											path.MatchRelative().AtParent().AtName("names"),
 										),
 									},
 									Description: "The list of include patterns. Only one of 'names' or '*_patterns' can be set.",
 								},
-								"exclude_patterns": schema.SetAttribute{
+								"exclude_patterns": schema.ListAttribute{
 									ElementType: types.StringType,
 									Optional:    true,
 									Computed:    true,
-									Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
-									Validators: []validator.Set{
-										setvalidator.ConflictsWith(
+									Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
+									Validators: []validator.List{
+										listvalidator.ConflictsWith(
 											path.MatchRelative().AtParent().AtName("names"),
 										),
 									},
@@ -476,38 +490,38 @@ var reportsBlocks = func(filtersAttrs map[string]schema.Attribute, filtersBlocks
 					"release_bundles": schema.SetNestedBlock{
 						NestedObject: schema.NestedBlockObject{
 							Attributes: map[string]schema.Attribute{
-								"names": schema.SetAttribute{
+								"names": schema.ListAttribute{
 									ElementType: types.StringType,
 									Optional:    true,
 									Computed:    true,
-									Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
-									Validators: []validator.Set{
-										setvalidator.ConflictsWith(
+									Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
+									Validators: []validator.List{
+										listvalidator.ConflictsWith(
 											path.MatchRelative().AtParent().AtName("include_patterns"),
 											path.MatchRelative().AtParent().AtName("exclude_patterns"),
 										),
 									},
 									Description: "The list of release bundles names.",
 								},
-								"include_patterns": schema.SetAttribute{
+								"include_patterns": schema.ListAttribute{
 									ElementType: types.StringType,
 									Optional:    true,
 									Computed:    true,
-									Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
-									Validators: []validator.Set{
-										setvalidator.ConflictsWith(
+									Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
+									Validators: []validator.List{
+										listvalidator.ConflictsWith(
 											path.MatchRelative().AtParent().AtName("names"),
 										),
 									},
 									Description: "The list of include patterns",
 								},
-								"exclude_patterns": schema.SetAttribute{
+								"exclude_patterns": schema.ListAttribute{
 									ElementType: types.StringType,
 									Optional:    true,
 									Computed:    true,
-									Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
-									Validators: []validator.Set{
-										setvalidator.ConflictsWith(
+									Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
+									Validators: []validator.List{
+										listvalidator.ConflictsWith(
 											path.MatchRelative().AtParent().AtName("names"),
 										),
 									},
@@ -538,38 +552,38 @@ var reportsBlocks = func(filtersAttrs map[string]schema.Attribute, filtersBlocks
 					"release_bundles_v2": schema.SetNestedBlock{
 						NestedObject: schema.NestedBlockObject{
 							Attributes: map[string]schema.Attribute{
-								"names": schema.SetAttribute{
+								"names": schema.ListAttribute{
 									ElementType: types.StringType,
 									Optional:    true,
 									Computed:    true,
-									Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
-									Validators: []validator.Set{
-										setvalidator.ConflictsWith(
+									Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
+									Validators: []validator.List{
+										listvalidator.ConflictsWith(
 											path.MatchRelative().AtParent().AtName("include_patterns"),
 											path.MatchRelative().AtParent().AtName("exclude_patterns"),
 										),
 									},
 									Description: "The list of release bundles names.",
 								},
-								"include_patterns": schema.SetAttribute{
+								"include_patterns": schema.ListAttribute{
 									ElementType: types.StringType,
 									Optional:    true,
 									Computed:    true,
-									Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
-									Validators: []validator.Set{
-										setvalidator.ConflictsWith(
+									Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
+									Validators: []validator.List{
+										listvalidator.ConflictsWith(
 											path.MatchRelative().AtParent().AtName("names"),
 										),
 									},
 									Description: "The list of include patterns",
 								},
-								"exclude_patterns": schema.SetAttribute{
+								"exclude_patterns": schema.ListAttribute{
 									ElementType: types.StringType,
 									Optional:    true,
 									Computed:    true,
-									Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
-									Validators: []validator.Set{
-										setvalidator.ConflictsWith(
+									Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
+									Validators: []validator.List{
+										listvalidator.ConflictsWith(
 											path.MatchRelative().AtParent().AtName("names"),
 										),
 									},
@@ -600,13 +614,13 @@ var reportsBlocks = func(filtersAttrs map[string]schema.Attribute, filtersBlocks
 					"projects": schema.SetNestedBlock{
 						NestedObject: schema.NestedBlockObject{
 							Attributes: map[string]schema.Attribute{
-								"names": schema.SetAttribute{
+								"names": schema.ListAttribute{
 									ElementType: types.StringType,
 									Optional:    true,
 									Computed:    true,
-									Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
-									Validators: []validator.Set{
-										setvalidator.ConflictsWith(
+									Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
+									Validators: []validator.List{
+										listvalidator.ConflictsWith(
 											path.MatchRelative().AtParent().AtName("include_key_patterns"),
 											path.MatchRelative().AtParent().AtName("keys"),
 										),
@@ -614,37 +628,37 @@ var reportsBlocks = func(filtersAttrs map[string]schema.Attribute, filtersBlocks
 									Description:        "The list of project names.",
 									DeprecationMessage: "Use `keys` instead. Note: For Xray version " + FixVersionForProjectScopeKey + " and above, It will be removed in the next minor version release.",
 								},
-								"keys": schema.SetAttribute{
+								"keys": schema.ListAttribute{
 									ElementType: types.StringType,
 									Optional:    true,
-									Validators: []validator.Set{
-										setvalidator.ConflictsWith(
+									Validators: []validator.List{
+										listvalidator.ConflictsWith(
 											path.MatchRelative().AtParent().AtName("include_key_patterns"),
 											path.MatchRelative().AtParent().AtName("names"),
 										),
 									},
 									Description: "The list of project keys. Note: Available from Xray version " + FixVersionForProjectScopeKey + " and higher.",
 								},
-								"include_key_patterns": schema.SetAttribute{
+								"include_key_patterns": schema.ListAttribute{
 									ElementType: types.StringType,
 									Optional:    true,
 									Computed:    true,
-									Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
-									Validators: []validator.Set{
-										setvalidator.ConflictsWith(
+									Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
+									Validators: []validator.List{
+										listvalidator.ConflictsWith(
 											path.MatchRelative().AtParent().AtName("names"),
 										),
 									},
 									Description: "The list of include patterns",
 								},
-								"exclude_key_patterns": schema.SetAttribute{
+								"exclude_key_patterns": schema.ListAttribute{
 									ElementType: types.StringType,
 									Optional:    true,
 									Computed:    true,
-									Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
+									Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
 									Description: "The list of exclude patterns",
-									Validators: []validator.Set{
-										setvalidator.ConflictsWith(
+									Validators: []validator.List{
+										listvalidator.ConflictsWith(
 											path.MatchRelative().AtParent().AtName("names"),
 										),
 									},
