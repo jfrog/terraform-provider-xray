@@ -353,8 +353,8 @@ Optional:
 
 Optional:
 
-- `exclude_patterns` (Set of String) The list of exclude patterns. Only one of 'names' or '*_patterns' can be set.
-- `include_patterns` (Set of String) The list of include patterns. Only one of 'names' or '*_patterns' can be set.
+- `exclude_patterns` (List of String) The list of exclude patterns. Only one of 'names' or '*_patterns' can be set.
+- `include_patterns` (List of String) The list of include patterns. Only one of 'names' or '*_patterns' can be set.
 - `names` (Set of String) The list of build names. Only one of 'names' or '*_patterns' can be set.
 - `number_of_latest_versions` (Number) The number of latest build versions to include to the report.
 
@@ -364,8 +364,8 @@ Optional:
 
 Optional:
 
-- `exclude_key_patterns` (Set of String) The list of exclude patterns
-- `include_key_patterns` (Set of String) The list of include patterns
+- `exclude_key_patterns` (List of String) The list of exclude patterns
+- `include_key_patterns` (List of String) The list of include patterns
 - `keys` (Set of String) The list of project keys. Note: Available from Xray version 3.130.0 and higher.
 - `names` (Set of String, Deprecated) The list of project names.
 - `number_of_latest_versions` (Number) The number of latest release bundle versions to include to the report.
@@ -376,8 +376,8 @@ Optional:
 
 Optional:
 
-- `exclude_patterns` (Set of String) The list of exclude patterns
-- `include_patterns` (Set of String) The list of include patterns
+- `exclude_patterns` (List of String) The list of exclude patterns
+- `include_patterns` (List of String) The list of include patterns
 - `names` (Set of String) The list of release bundles names.
 - `number_of_latest_versions` (Number) The number of latest release bundle versions to include to the report.
 
@@ -387,8 +387,8 @@ Optional:
 
 Optional:
 
-- `exclude_patterns` (Set of String) The list of exclude patterns
-- `include_patterns` (Set of String) The list of include patterns
+- `exclude_patterns` (List of String) The list of exclude patterns
+- `include_patterns` (List of String) The list of include patterns
 - `names` (Set of String) The list of release bundles names.
 - `number_of_latest_versions` (Number) The number of latest release bundle versions to include to the report.
 
@@ -402,5 +402,5 @@ Required:
 
 Optional:
 
-- `exclude_path_patterns` (Set of String) Exclude path patterns.
-- `include_path_patterns` (Set of String) Include path patterns.
+- `exclude_path_patterns` (List of String) Exclude path patterns.
+- `include_path_patterns` (List of String) Include path patterns.

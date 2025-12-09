@@ -6,6 +6,8 @@ IMPROVEMENTS:
 
 * resource/xray_security_policy: Add validation during planning phase to detect duplicate rule names. This provides earlier feedback instead of failing at the API level. Issue: [#348](https://github.com/jfrog/terraform-provider-xray/issues/348) PR: [#372](https://github.com/jfrog/terraform-provider-xray/pull/372)
 
+* resource/xray_vulnerabilities_report, resource/xray_violations_report, resource/xray_licenses_report, resource/xray_operational_risks_report, resource/xray_exposures_report: Switch pattern attributes (`include_path_patterns`, `exclude_path_patterns`, `include_patterns`, `exclude_patterns`, `include_key_patterns`, `exclude_key_patterns`) from `Set` to `List` to improve performance with large number of patterns. Add validation to reject patterns starting with `/` or containing `@` symbol. Issue: [#302](https://github.com/jfrog/terraform-provider-xray/issues/302) PR: [#372](https://github.com/jfrog/terraform-provider-xray/pull/372)
+
 BUG FIXES:
 
 * resource/xray_vulnerabilites_report, resource/xray_violations_report: Fixed timezone validation failing on Windows by embedding IANA timezone database (`time/tzdata`) in `IsCronScheduleTimezone` validator. Fixed via `terraform-provider-shared` v1.30.7. [#365](https://github.com/jfrog/terraform-provider-xray/issues/365) PR: [#372](https://github.com/jfrog/terraform-provider-xray/pull/372)

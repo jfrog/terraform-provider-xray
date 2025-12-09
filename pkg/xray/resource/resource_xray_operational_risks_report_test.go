@@ -193,7 +193,7 @@ func TestAccOperationalRisksReport_Build(t *testing.T) {
 							resources {
 								builds {
 									include_patterns = ["build-*", "release-*"]
-									exclude_patterns = ["test-*", "dev-*"]
+									exclude_patterns = ["dev-*","test-*"]
 									number_of_latest_versions = 5
 								}
 							}
@@ -407,8 +407,8 @@ func TestAccOperationalRisksReport_ReleaseBundleV2(t *testing.T) {
 							name = "%s"
 							resources {
 								release_bundles_v2 {
-									include_patterns = ["v2.*-release", "v2.*-hotfix"]
-									exclude_patterns = ["*-snapshot", "*-rc"]
+									include_patterns = ["v2.*-hotfix","v2.*-release"]
+									exclude_patterns = ["*-rc","*-snapshot"]
 									number_of_latest_versions = 5
 								}
 							}
