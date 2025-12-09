@@ -420,7 +420,7 @@ func TestAccVulnerabilitiesReport_Build(t *testing.T) {
 					resources {
 						builds {
 							include_patterns = ["build-*", "release-*"]
-							exclude_patterns = ["test-*", "dev-*"]
+							exclude_patterns = ["dev-*","test-*"]
 							number_of_latest_versions = 5
 						}
 					}
@@ -908,8 +908,8 @@ func TestAccVulnerabilitiesReport_ReleaseBundleV2(t *testing.T) {
 							name = "%s"%s
 							resources {
 								release_bundles_v2 {
-									include_patterns = ["v2.*-release", "v2.*-hotfix"]
-									exclude_patterns = ["*-snapshot", "*-rc"]
+									include_patterns = ["v2.*-hotfix","v2.*-release"]
+									exclude_patterns = ["*-rc","*-snapshot"]
 									number_of_latest_versions = 5
 								}
 							}
@@ -1493,6 +1493,182 @@ func TestAccVulnerabilitiesReport_Invalid(t *testing.T) {
 						}
 					`, name, reportName),
 					ExpectError: regexp.MustCompile(`(?s).*Invalid published range.*End date must be after start date.*`),
+				},
+			},
+		})
+	})
+}
+
+// TestAccVulnerabilitiesReport_ListOrdering verifies that pattern attributes maintain
+// their order (List behavior) rather than being sorted (Set behavior).
+// This is important for performance with large pattern lists.
+func TestAccVulnerabilitiesReport_ListOrdering(t *testing.T) {
+	reportName := fmt.Sprintf("vuln-list-ordering-%d", testutil.RandomInt())
+	_, fqrn, name := testutil.MkNames(reportName, "xray_vulnerabilities_report")
+
+	// Test repository include_path_patterns ordering
+	t.Run("repository_patterns_ordering", func(t *testing.T) {
+		resource.Test(t, resource.TestCase{
+			ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+			CheckDestroy:             acctest.VerifyDeleted(fqrn, "report_id", acctest.CheckReport),
+			Steps: []resource.TestStep{
+				{
+					Config: fmt.Sprintf(`
+						resource "xray_vulnerabilities_report" "%s" {
+							name = "%s"
+							resources {
+								repository {
+									name = "docker-local"
+									include_path_patterns = ["z-pattern/*", "a-pattern/*", "m-pattern/*"]
+									exclude_path_patterns = ["z-exclude/*", "a-exclude/*", "m-exclude/*"]
+								}
+							}
+							filters {
+								severities = ["Critical"]
+							}
+						}
+					`, name, reportName),
+					Check: resource.ComposeTestCheckFunc(
+						resource.TestCheckResourceAttr(fqrn, "name", reportName),
+						// Verify include_path_patterns maintain insertion order (not alphabetically sorted)
+						resource.TestCheckResourceAttr(fqrn, "resources.0.repository.0.include_path_patterns.#", "3"),
+						resource.TestCheckResourceAttr(fqrn, "resources.0.repository.0.include_path_patterns.0", "z-pattern/*"),
+						resource.TestCheckResourceAttr(fqrn, "resources.0.repository.0.include_path_patterns.1", "a-pattern/*"),
+						resource.TestCheckResourceAttr(fqrn, "resources.0.repository.0.include_path_patterns.2", "m-pattern/*"),
+						// Verify exclude_path_patterns maintain insertion order (not alphabetically sorted)
+						resource.TestCheckResourceAttr(fqrn, "resources.0.repository.0.exclude_path_patterns.#", "3"),
+						resource.TestCheckResourceAttr(fqrn, "resources.0.repository.0.exclude_path_patterns.0", "z-exclude/*"),
+						resource.TestCheckResourceAttr(fqrn, "resources.0.repository.0.exclude_path_patterns.1", "a-exclude/*"),
+						resource.TestCheckResourceAttr(fqrn, "resources.0.repository.0.exclude_path_patterns.2", "m-exclude/*"),
+					),
+				},
+			},
+		})
+	})
+
+	// Test builds patterns ordering
+	t.Run("builds_patterns_ordering", func(t *testing.T) {
+		reportName2 := fmt.Sprintf("vuln-builds-ordering-%d", testutil.RandomInt())
+		_, fqrn2, name2 := testutil.MkNames(reportName2, "xray_vulnerabilities_report")
+
+		resource.Test(t, resource.TestCase{
+			ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+			CheckDestroy:             acctest.VerifyDeleted(fqrn2, "report_id", acctest.CheckReport),
+			Steps: []resource.TestStep{
+				{
+					Config: fmt.Sprintf(`
+						resource "xray_vulnerabilities_report" "%s" {
+							name = "%s"
+							resources {
+								builds {
+									include_patterns = ["zebra-*", "alpha-*", "beta-*"]
+									exclude_patterns = ["zoo-*", "ant-*", "bat-*"]
+									number_of_latest_versions = 3
+								}
+							}
+							filters {
+								severities = ["High"]
+							}
+						}
+					`, name2, reportName2),
+					Check: resource.ComposeTestCheckFunc(
+						resource.TestCheckResourceAttr(fqrn2, "name", reportName2),
+						// Verify include_patterns maintain insertion order
+						resource.TestCheckResourceAttr(fqrn2, "resources.0.builds.0.include_patterns.#", "3"),
+						resource.TestCheckResourceAttr(fqrn2, "resources.0.builds.0.include_patterns.0", "zebra-*"),
+						resource.TestCheckResourceAttr(fqrn2, "resources.0.builds.0.include_patterns.1", "alpha-*"),
+						resource.TestCheckResourceAttr(fqrn2, "resources.0.builds.0.include_patterns.2", "beta-*"),
+						// Verify exclude_patterns maintain insertion order
+						resource.TestCheckResourceAttr(fqrn2, "resources.0.builds.0.exclude_patterns.#", "3"),
+						resource.TestCheckResourceAttr(fqrn2, "resources.0.builds.0.exclude_patterns.0", "zoo-*"),
+						resource.TestCheckResourceAttr(fqrn2, "resources.0.builds.0.exclude_patterns.1", "ant-*"),
+						resource.TestCheckResourceAttr(fqrn2, "resources.0.builds.0.exclude_patterns.2", "bat-*"),
+					),
+				},
+			},
+		})
+	})
+
+	// Test release_bundles patterns ordering
+	t.Run("release_bundles_patterns_ordering", func(t *testing.T) {
+		reportName3 := fmt.Sprintf("vuln-rb-ordering-%d", testutil.RandomInt())
+		_, fqrn3, name3 := testutil.MkNames(reportName3, "xray_vulnerabilities_report")
+
+		resource.Test(t, resource.TestCase{
+			ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+			CheckDestroy:             acctest.VerifyDeleted(fqrn3, "report_id", acctest.CheckReport),
+			Steps: []resource.TestStep{
+				{
+					Config: fmt.Sprintf(`
+						resource "xray_vulnerabilities_report" "%s" {
+							name = "%s"
+							resources {
+								release_bundles {
+									include_patterns = ["zulu-*", "apache-*", "mysql-*"]
+									exclude_patterns = ["zeta-*", "aws-*", "mongo-*"]
+									number_of_latest_versions = 2
+								}
+							}
+							filters {
+								severities = ["Medium"]
+							}
+						}
+					`, name3, reportName3),
+					Check: resource.ComposeTestCheckFunc(
+						resource.TestCheckResourceAttr(fqrn3, "name", reportName3),
+						// Verify include_patterns maintain insertion order
+						resource.TestCheckResourceAttr(fqrn3, "resources.0.release_bundles.0.include_patterns.#", "3"),
+						resource.TestCheckResourceAttr(fqrn3, "resources.0.release_bundles.0.include_patterns.0", "zulu-*"),
+						resource.TestCheckResourceAttr(fqrn3, "resources.0.release_bundles.0.include_patterns.1", "apache-*"),
+						resource.TestCheckResourceAttr(fqrn3, "resources.0.release_bundles.0.include_patterns.2", "mysql-*"),
+						// Verify exclude_patterns maintain insertion order
+						resource.TestCheckResourceAttr(fqrn3, "resources.0.release_bundles.0.exclude_patterns.#", "3"),
+						resource.TestCheckResourceAttr(fqrn3, "resources.0.release_bundles.0.exclude_patterns.0", "zeta-*"),
+						resource.TestCheckResourceAttr(fqrn3, "resources.0.release_bundles.0.exclude_patterns.1", "aws-*"),
+						resource.TestCheckResourceAttr(fqrn3, "resources.0.release_bundles.0.exclude_patterns.2", "mongo-*"),
+					),
+				},
+			},
+		})
+	})
+
+	// Test projects patterns ordering
+	t.Run("projects_patterns_ordering", func(t *testing.T) {
+		reportName4 := fmt.Sprintf("vuln-proj-ordering-%d", testutil.RandomInt())
+		_, fqrn4, name4 := testutil.MkNames(reportName4, "xray_vulnerabilities_report")
+
+		resource.Test(t, resource.TestCase{
+			ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+			CheckDestroy:             acctest.VerifyDeleted(fqrn4, "report_id", acctest.CheckReport),
+			Steps: []resource.TestStep{
+				{
+					Config: fmt.Sprintf(`
+						resource "xray_vulnerabilities_report" "%s" {
+							name = "%s"
+							resources {
+								projects {
+									include_key_patterns = ["z-proj-*", "a-proj-*", "m-proj-*"]
+									exclude_key_patterns = ["z-skip-*", "a-skip-*", "m-skip-*"]
+								}
+							}
+							filters {
+								severities = ["Low"]
+							}
+						}
+					`, name4, reportName4),
+					Check: resource.ComposeTestCheckFunc(
+						resource.TestCheckResourceAttr(fqrn4, "name", reportName4),
+						// Verify include_key_patterns maintain insertion order
+						resource.TestCheckResourceAttr(fqrn4, "resources.0.projects.0.include_key_patterns.#", "3"),
+						resource.TestCheckResourceAttr(fqrn4, "resources.0.projects.0.include_key_patterns.0", "z-proj-*"),
+						resource.TestCheckResourceAttr(fqrn4, "resources.0.projects.0.include_key_patterns.1", "a-proj-*"),
+						resource.TestCheckResourceAttr(fqrn4, "resources.0.projects.0.include_key_patterns.2", "m-proj-*"),
+						// Verify exclude_key_patterns maintain insertion order
+						resource.TestCheckResourceAttr(fqrn4, "resources.0.projects.0.exclude_key_patterns.#", "3"),
+						resource.TestCheckResourceAttr(fqrn4, "resources.0.projects.0.exclude_key_patterns.0", "z-skip-*"),
+						resource.TestCheckResourceAttr(fqrn4, "resources.0.projects.0.exclude_key_patterns.1", "a-skip-*"),
+						resource.TestCheckResourceAttr(fqrn4, "resources.0.projects.0.exclude_key_patterns.2", "m-skip-*"),
+					),
 				},
 			},
 		})

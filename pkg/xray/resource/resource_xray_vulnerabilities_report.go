@@ -12,7 +12,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -205,7 +206,9 @@ var vulnerabilitiesFiltersAttrs = map[string]schema.Attribute{
 		ElementType: types.StringType,
 		Optional:    true,
 		Computed:    true,
-		Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})), // backward compatibility with SDKv2 version
+		PlanModifiers: []planmodifier.Set{
+			setplanmodifier.UseStateForUnknown(),
+		},
 		Validators: []validator.Set{
 			setvalidator.ValueStringsAre(
 				stringvalidator.OneOf("Low", "Medium", "High", "Critical"),

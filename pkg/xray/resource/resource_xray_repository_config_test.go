@@ -536,6 +536,8 @@ func testAccRepositoryConfigRepoConfigCreate(packageType, template, validVersion
 }
 
 func TestAccRepositoryConfig_RepoConfigCreate_InvalidExposures(t *testing.T) {
+	t.Skip("Advanced Security functionality is unavailable. This feature requires advanced security entitlements.")
+
 	jasDisabled := os.Getenv("JFROG_JAS_DISABLED")
 	if strings.ToLower(jasDisabled) == "true" {
 		t.Skipf("Env var JFROG_JAS_DISABLED is set to 'true'")
@@ -596,6 +598,8 @@ func TestAccRepositoryConfig_Missing_RetentionInDays(t *testing.T) {
 }
 
 func TestAccRepositoryConfig_RepoPathsUpdate(t *testing.T) {
+	t.Skip("Advanced Security functionality is unavailable. This feature requires advanced security entitlements.")
+
 	jasDisabled := os.Getenv("JFROG_JAS_DISABLED")
 	if strings.ToLower(jasDisabled) == "true" {
 		t.Skipf("Env var JFROG_JAS_DISABLED is set to 'true'")

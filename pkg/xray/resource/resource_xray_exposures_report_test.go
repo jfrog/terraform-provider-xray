@@ -12,6 +12,8 @@ import (
 )
 
 func TestAccExposuresReport_Repository(t *testing.T) {
+	t.Skip("Advanced Security functionality is unavailable. This feature requires advanced security entitlements.")
+
 	// Test case for repository by name
 	t.Run("exp_repository_by_name", func(t *testing.T) {
 		reportName := fmt.Sprintf("exp-repo-by-name-%d", testutil.RandomInt())
@@ -116,6 +118,8 @@ func TestAccExposuresReport_Repository(t *testing.T) {
 }
 
 func TestAccExposuresReport_Build(t *testing.T) {
+	t.Skip("Advanced Security functionality is unavailable. This feature requires advanced security entitlements.")
+
 	// Test case for builds by name
 	t.Run("exp_builds_by_name", func(t *testing.T) {
 		build1Name := fmt.Sprintf("exp-build-1-%d", testutil.RandomInt())
@@ -210,6 +214,8 @@ func TestAccExposuresReport_Build(t *testing.T) {
 }
 
 func TestAccExposuresReport_ReleaseBundle(t *testing.T) {
+	t.Skip("Advanced Security functionality is unavailable. This feature requires advanced security entitlements.")
+
 	// Test case for release bundles by name
 	t.Run("exp_release_bundles_by_name", func(t *testing.T) {
 		releaseBundle1Name := fmt.Sprintf("exp-release-bundle-1-%d", testutil.RandomInt())
@@ -304,6 +310,8 @@ func TestAccExposuresReport_ReleaseBundle(t *testing.T) {
 }
 
 func TestAccExposuresReport_ReleaseBundleV2(t *testing.T) {
+	t.Skip("Advanced Security functionality is unavailable. This feature requires advanced security entitlements.")
+
 	// Test case for release bundles v2 by name
 	t.Run("exp_release_bundles_v2_by_name", func(t *testing.T) {
 		releaseBundle1Name := fmt.Sprintf("exp-release-bundle-v2-1-%d", testutil.RandomInt())
@@ -409,6 +417,8 @@ func TestAccExposuresReport_ReleaseBundleV2(t *testing.T) {
 }
 
 func TestAccExposuresReport_Project(t *testing.T) {
+	t.Skip("Advanced Security functionality is unavailable. This feature requires advanced security entitlements.")
+
 	// Test case for project by name
 	t.Run("exp_project_by_name", func(t *testing.T) {
 		reportName := fmt.Sprintf("exp-project-by-name-%d", testutil.RandomInt())
