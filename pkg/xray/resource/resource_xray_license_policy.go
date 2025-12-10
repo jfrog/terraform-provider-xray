@@ -94,10 +94,10 @@ var licenseCriteriaSetElementType = types.ObjectType{
 	AttrTypes: licenseCriteriaAttrTypes,
 }
 
-func (r *LicensePolicyResource) fromCriteriaAPIModel(ctx context.Context, criteraAPIModel *PolicyRuleCriteriaAPIModel) (types.Set, diag.Diagnostics) {
+func (r *LicensePolicyResource) fromCriteriaAPIModel(ctx context.Context, criteraAPIModel *PolicyRuleCriteriaAPIModel) (types.List, diag.Diagnostics) {
 	diags := diag.Diagnostics{}
 
-	criteriaSet := types.SetNull(licenseCriteriaSetElementType)
+	criteriaSet := types.ListNull(licenseCriteriaSetElementType)
 	if criteraAPIModel != nil {
 		allowedLicenses, d := types.ListValueFrom(ctx, types.StringType, criteraAPIModel.AllowedLicenses)
 		if d.HasError() {
@@ -121,7 +121,7 @@ func (r *LicensePolicyResource) fromCriteriaAPIModel(ctx context.Context, criter
 		if d.HasError() {
 			diags.Append(d...)
 		}
-		cs, d := types.SetValue(
+		cs, d := types.ListValue(
 			licenseCriteriaSetElementType,
 			[]attr.Value{criteria},
 		)
@@ -142,11 +142,11 @@ var licenseActionsAttrTypes = lo.Assign(
 	},
 )
 
-var licenseActionsSetElementType = types.ObjectType{
+var licenseActionsListElementType = types.ObjectType{
 	AttrTypes: licenseActionsAttrTypes,
 }
 
-func (m *LicensePolicyResource) fromActionsAPIModel(ctx context.Context, actionsAPIModel PolicyRuleActionsAPIModel) (types.Set, diag.Diagnostics) {
+func (m *LicensePolicyResource) fromActionsAPIModel(ctx context.Context, actionsAPIModel PolicyRuleActionsAPIModel) (types.List, diag.Diagnostics) {
 	diags := diag.Diagnostics{}
 
 	webhooks := types.SetNull(types.StringType)
@@ -179,7 +179,7 @@ func (m *LicensePolicyResource) fromActionsAPIModel(ctx context.Context, actions
 	if d.HasError() {
 		diags.Append(d...)
 	}
-	blockDownloadSet, d := types.SetValue(
+	blockDownloadList, d := types.ListValue(
 		blockDownloadElementType,
 		[]attr.Value{blockDownload},
 	)
@@ -192,7 +192,7 @@ func (m *LicensePolicyResource) fromActionsAPIModel(ctx context.Context, actions
 		map[string]attr.Value{
 			"webhooks":                           webhooks,
 			"mails":                              mails,
-			"block_download":                     blockDownloadSet,
+			"block_download":                     blockDownloadList,
 			"block_release_bundle_distribution":  types.BoolValue(actionsAPIModel.BlockReleaseBundleDistribution),
 			"block_release_bundle_promotion":     types.BoolValue(actionsAPIModel.BlockReleaseBundlePromotion),
 			"fail_build":                         types.BoolValue(actionsAPIModel.FailBuild),
@@ -207,15 +207,15 @@ func (m *LicensePolicyResource) fromActionsAPIModel(ctx context.Context, actions
 		diags.Append(d...)
 	}
 
-	actionsSet, d := types.SetValue(
-		licenseActionsSetElementType,
+	actionsList, d := types.ListValue(
+		licenseActionsListElementType,
 		[]attr.Value{actions},
 	)
 	if d.HasError() {
 		diags.Append(d...)
 	}
 
-	return actionsSet, diags
+	return actionsList, diags
 }
 
 func (r LicensePolicyResource) fromAPIModel(ctx context.Context, policy PolicyAPIModel, plan *PolicyResourceModel) diag.Diagnostics {
@@ -225,8 +225,8 @@ func (r LicensePolicyResource) fromAPIModel(ctx context.Context, policy PolicyAP
 var licenseRuleAttrTypes = map[string]attr.Type{
 	"name":     types.StringType,
 	"priority": types.Int64Type,
-	"criteria": types.SetType{ElemType: licenseCriteriaSetElementType},
-	"actions":  types.SetType{ElemType: licenseActionsSetElementType},
+	"criteria": types.ListType{ElemType: licenseCriteriaSetElementType},
+	"actions":  types.ListType{ElemType: licenseActionsListElementType},
 }
 
 var licenseRuleSetElementType = types.ObjectType{
@@ -239,6 +239,7 @@ var licensePolicyCriteriaAttrs = map[string]schema.Attribute{
 		Optional:    true,
 		Validators: []validator.List{
 			listvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("allowed_licenses")),
+			listvalidator.UniqueValues(),
 		},
 		Description: "A list of OSS license names that may not be attached to a component. Supports custom licenses added by the user, but there is no verification if the license exists on the Xray side. If the added license doesn't exist, the policy won't trigger the violation.",
 	},
@@ -247,6 +248,7 @@ var licensePolicyCriteriaAttrs = map[string]schema.Attribute{
 		Optional:    true,
 		Validators: []validator.List{
 			listvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("banned_licenses")),
+			listvalidator.UniqueValues(),
 		},
 		Description: "A list of OSS license names that may be attached to a component. Supports custom licenses added by the user, but there is no verification if the license exists on the Xray side. If the added license doesn't exist, the policy won't trigger the violation.",
 	},

@@ -199,7 +199,7 @@ func TestAccLicensesReport_Build(t *testing.T) {
 							resources {
 								builds {
 									include_patterns = ["build-*", "release-*"]
-									exclude_patterns = ["test-*", "dev-*"]
+									exclude_patterns = ["dev-*","test-*"]
 									number_of_latest_versions = 5
 								}
 							}

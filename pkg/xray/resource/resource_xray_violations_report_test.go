@@ -226,7 +226,7 @@ func TestAccViolationsReport_Repository(t *testing.T) {
 						repository {
 							name = "libs-release-local"
 							include_path_patterns = ["**/*.jar", "**/*.war"]
-							exclude_path_patterns = ["**/test/**", "**/libs/**"]
+							exclude_path_patterns = ["**/libs/**", "**/test/**"]
 						}
 					}
 					filters {

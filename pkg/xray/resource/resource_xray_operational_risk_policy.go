@@ -180,10 +180,10 @@ var opRiskCriteriaSetElementType = types.ObjectType{
 	AttrTypes: opRiskCriteriaAttrTypes,
 }
 
-func (r *OperationalRiskPolicyResource) fromCriteriaAPIModel(ctx context.Context, criteraAPIModel *PolicyRuleCriteriaAPIModel) (types.Set, diag.Diagnostics) {
+func (r *OperationalRiskPolicyResource) fromCriteriaAPIModel(ctx context.Context, criteraAPIModel *PolicyRuleCriteriaAPIModel) (types.List, diag.Diagnostics) {
 	diags := diag.Diagnostics{}
 
-	criteriaSet := types.SetNull(opRiskCriteriaSetElementType)
+	criteriaSet := types.ListNull(opRiskCriteriaSetElementType)
 	if criteraAPIModel != nil {
 		minRisk := types.StringNull()
 		if criteraAPIModel.OperationalRiskMinRisk != "" {
@@ -235,7 +235,7 @@ func (r *OperationalRiskPolicyResource) fromCriteriaAPIModel(ctx context.Context
 		if d.HasError() {
 			diags.Append(d...)
 		}
-		cs, d := types.SetValue(
+		cs, d := types.ListValue(
 			opRiskCriteriaSetElementType,
 			[]attr.Value{criteria},
 		)
@@ -252,8 +252,8 @@ func (r *OperationalRiskPolicyResource) fromCriteriaAPIModel(ctx context.Context
 var opRiskRuleAttrTypes = map[string]attr.Type{
 	"name":     types.StringType,
 	"priority": types.Int64Type,
-	"criteria": types.SetType{ElemType: opRiskCriteriaSetElementType},
-	"actions":  types.SetType{ElemType: actionsSetElementType},
+	"criteria": types.ListType{ElemType: opRiskCriteriaSetElementType},
+	"actions":  types.ListType{ElemType: actionsListElementType},
 }
 
 var opRiskRuleSetElementType = types.ObjectType{
