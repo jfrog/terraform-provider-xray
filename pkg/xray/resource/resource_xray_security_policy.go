@@ -397,7 +397,8 @@ var securityPolicyCriteriaAttrs = map[string]schema.Attribute{
 		ElementType: types.StringType,
 		Optional:    true,
 		Validators: []validator.List{
-			listvalidator.SizeBetween(1, 100),
+			listvalidator.SizeAtLeast(1),
+			listvalidator.UniqueValues(),
 			listvalidator.ValueStringsAre(
 				stringvalidator.RegexMatches(regexp.MustCompile(`(CVE\W*\d{4}\W+\d{4,}|XRAY-\d{4,})`), "invalid Vulnerability, must be a valid CVE or Xray ID, example CVE-2021-12345, XRAY-1234"),
 			),
@@ -419,7 +420,7 @@ var securityPolicyCriteriaAttrs = map[string]schema.Attribute{
 				path.MatchRelative().AtParent().AtName("package_versions"),
 			),
 		},
-		Description: "Creates policy rules for specific vulnerability IDs that you input. You can add multiple vulnerabilities IDs up to 100. CVEs and Xray IDs are supported. Example - CVE-2015-20107, XRAY-2344",
+		Description: "Creates policy rules for specific vulnerability IDs that you input. You can add multiple vulnerabilities IDs. CVEs and Xray IDs are supported. Example - CVE-2015-20107, XRAY-2344",
 	},
 	"package_name": schema.StringAttribute{
 		Optional:    true,
