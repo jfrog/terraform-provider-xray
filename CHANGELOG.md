@@ -1,6 +1,12 @@
 ## 3.1.5 (Dec 11,2025).
 
+BUG FIXES:
+
 * resource/xray_*_policy: Fixed "Provider produced inconsistent result after apply" error by sorting rules by priority when reading from API. This ensures the order of rules in Terraform state matches the order in HCL configuration. Issue: [#348](https://github.com/jfrog/terraform-provider-xray/issues/348) PR: [#374](https://github.com/jfrog/terraform-provider-xray/pull/374)
+
+IMPROVEMENTS:
+
+* resource/xray_security_policy: Add validation to prevent duplicate CVE/Xray IDs in `vulnerability_ids` attribute. Remove 100 CVE limit to allow unlimited vulnerability IDs. Issue: [#336](https://github.com/jfrog/terraform-provider-xray/issues/336) PR: [#374](https://github.com/jfrog/terraform-provider-xray/pull/374)
 
 ## 3.1.4 (Dec 10, 2025). Tested on JFrog Platform 11.3.3 (Artifactory 7.125.8, Xray 3.131.25, Catalog 1.28.3) with Terraform 1.14.1 and OpenTofu 1.11.0
 
