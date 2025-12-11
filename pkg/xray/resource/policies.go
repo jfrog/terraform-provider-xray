@@ -3,6 +3,7 @@ package xray
 import (
 	"context"
 	"net/http"
+	"sort"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
@@ -264,8 +265,14 @@ func (m *PolicyResourceModel) fromAPIModel(
 		ruleSetElementType = opRiskRuleSetElementType
 	}
 
+	// Sort rules by priority to ensure consistent ordering between config and API response
+	apiRules := *apiModel.Rules
+	sort.Slice(apiRules, func(i, j int) bool {
+		return apiRules[i].Priority < apiRules[j].Priority
+	})
+
 	rules := lo.Map(
-		*apiModel.Rules,
+		apiRules,
 		func(rule PolicyRuleAPIModel, _ int) attr.Value {
 			criteriaSet, d := fromCriteriaAPIModel(ctx, rule.Criteria)
 			if d.HasError() {
