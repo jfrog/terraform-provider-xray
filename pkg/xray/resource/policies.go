@@ -2,6 +2,7 @@ package xray
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"sort"
 	"strings"
@@ -58,15 +59,16 @@ type PolicyResource struct {
 }
 
 type PolicyResourceModel struct {
-	ID          types.String `tfsdk:"id"`
-	Name        types.String `tfsdk:"name"`
-	Description types.String `tfsdk:"description"`
-	ProjectKey  types.String `tfsdk:"project_key"`
-	Type        types.String `tfsdk:"type"`
-	Rules       types.List   `tfsdk:"rule"`
-	Author      types.String `tfsdk:"author"`
-	Created     types.String `tfsdk:"created"`
-	Modified    types.String `tfsdk:"modified"`
+	ID              types.String `tfsdk:"id"`
+	Name            types.String `tfsdk:"name"`
+	Description     types.String `tfsdk:"description"`
+	ProjectKey      types.String `tfsdk:"project_key"`
+	Type            types.String `tfsdk:"type"`
+	Rules           types.List   `tfsdk:"rule"`
+	Author          types.String `tfsdk:"author"`
+	Created         types.String `tfsdk:"created"`
+	Modified        types.String `tfsdk:"modified"`
+	DetachOnDestroy types.Bool   `tfsdk:"detach_on_destroy"`
 }
 
 var toActionsAPIModel = func(ctx context.Context, actionsElems []attr.Value) (PolicyRuleActionsAPIModel, diag.Diagnostics) {
@@ -469,6 +471,10 @@ var policySchemaAttrs = lo.Assign(
 			Computed:    true,
 			Description: "Modification timestamp",
 		},
+		"detach_on_destroy": schema.BoolAttribute{
+			Optional:    true,
+			Description: "When set to `true`, the policy will be automatically detached from all watches before it is destroyed. This prevents errors when trying to delete a policy that is still attached to a watch. Default is `false`.",
+		},
 	},
 )
 
@@ -850,6 +856,14 @@ func (r *PolicyResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
+	// Detach from all watches if detach_on_destroy is true
+	if state.DetachOnDestroy.ValueBool() {
+		r.detachFromAllWatches(ctx, state.Name.ValueString(), state.ProjectKey.ValueString(), resp)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	var policyError PolicyError
 	response, err := request.
 		SetPathParam("name", state.Name.ValueString()).
@@ -868,6 +882,92 @@ func (r *PolicyResource) Delete(ctx context.Context, req resource.DeleteRequest,
 
 	// If the logic reaches here, it implicitly succeeded and will remove
 	// the resource from state if there are no other errors.
+}
+
+// detachFromAllWatches removes the policy from all watches that have it assigned.
+// This is called when detach_on_destroy is set to true.
+func (r *PolicyResource) detachFromAllWatches(ctx context.Context, policyName string, projectKey string, resp *resource.DeleteResponse) {
+	request, err := getRestyRequest(r.ProviderData.Client, projectKey)
+	if err != nil {
+		resp.Diagnostics.AddWarning(
+			"Could not get Resty client for watch detachment",
+			fmt.Sprintf("Failed to get client: %s. Manual policy detachment from watches may be required.", err.Error()),
+		)
+		return
+	}
+
+	// List all watches
+	var watches []WatchAPIModel
+	response, err := request.
+		SetResult(&watches).
+		Get(WatchesEndpoint)
+
+	if err != nil {
+		resp.Diagnostics.AddWarning(
+			"Could not list watches for policy detachment",
+			fmt.Sprintf("Failed to list watches: %s. Manual policy detachment may be required.", err.Error()),
+		)
+		return
+	}
+
+	if response.IsError() {
+		resp.Diagnostics.AddWarning(
+			"Could not list watches for policy detachment",
+			fmt.Sprintf("API returned error when listing watches. Manual policy detachment may be required."),
+		)
+		return
+	}
+
+	// Find and update watches that have this policy attached
+	for _, watch := range watches {
+		policyIndex := -1
+		for i, policy := range watch.AssignedPolicies {
+			if policy.Name == policyName {
+				policyIndex = i
+				break
+			}
+		}
+
+		if policyIndex == -1 {
+			continue // Policy not attached to this watch
+		}
+
+		// Remove policy from the watch's assigned policies
+		watch.AssignedPolicies = append(
+			watch.AssignedPolicies[:policyIndex],
+			watch.AssignedPolicies[policyIndex+1:]...,
+		)
+
+		// Update the watch
+		updateRequest, err := getRestyRequest(r.ProviderData.Client, projectKey)
+		if err != nil {
+			resp.Diagnostics.AddWarning(
+				"Failed to detach policy from watch",
+				fmt.Sprintf("Could not get client to update watch '%s': %s", watch.GeneralData.Name, err.Error()),
+			)
+			continue
+		}
+
+		updateResponse, err := updateRequest.
+			SetPathParam("name", watch.GeneralData.Name).
+			SetBody(watch).
+			Put(WatchEndpoint)
+
+		if err != nil {
+			resp.Diagnostics.AddWarning(
+				"Failed to detach policy from watch",
+				fmt.Sprintf("Could not detach policy from watch '%s': %s", watch.GeneralData.Name, err.Error()),
+			)
+			continue
+		}
+
+		if updateResponse.IsError() {
+			resp.Diagnostics.AddWarning(
+				"Failed to detach policy from watch",
+				fmt.Sprintf("API error when detaching policy from watch '%s'", watch.GeneralData.Name),
+			)
+		}
+	}
 }
 
 // ImportState imports the resource into the Terraform state.

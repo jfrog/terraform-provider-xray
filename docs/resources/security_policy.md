@@ -131,6 +131,7 @@ resource "xray_security_policy" "malicious_package" {
 ### Optional
 
 - `description` (String) More verbose description of the policy
+- `detach_on_destroy` (Boolean) When set to `true`, the policy will be automatically detached from all watches before it is destroyed. This prevents errors when trying to delete a policy that is still attached to a watch. Default is `false`.
 - `project_key` (String) Project key for assigning this resource to. Must be 2 - 10 lowercase alphanumeric and hyphen characters.
 - `rule` (Block List) A list of user-defined rules allowing you to trigger violations for specific vulnerability or license breaches by setting a license or security criteria, with a corresponding set of automatic actions according to your needs. Rules are processed according to the ascending order in which they are placed in the Rules list on the Policy. If a rule is met, the subsequent rules in the list will not be applied. (see [below for nested schema](#nestedblock--rule))
 
