@@ -861,29 +861,6 @@ func generateListOfNames(prefix string, number int) string {
 	return fmt.Sprintf("%s", CVEs)
 }
 
-func TestAccSecurityPolicy_vulnerabilityIdsLimitFail(t *testing.T) {
-	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
-	testData := sdk.MergeMaps(testDataSecurity)
-	CVEString := generateListOfNames("CVE-2022-", 101)
-	testData["resource_name"] = resourceName
-	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-9-%d", testutil.RandomInt())
-	testData["rule_name"] = fmt.Sprintf("test-security-rule-9-%d", testutil.RandomInt())
-	testData["block_unscanned"] = "false"
-	testData["block_active"] = "false"
-	testData["CVEs"] = CVEString
-
-	resource.Test(t, resource.TestCase{
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
-		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config:      util.ExecuteTemplate(fqrn, securityPolicyVulnIdsLimit, testData),
-				ExpectError: regexp.MustCompile(`(?s).*at least 1.*at most 100.*`),
-			},
-		},
-	})
-}
-
 func TestAccSecurityPolicy_exposures(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
 	testData := sdk.MergeMaps(testDataSecurity)

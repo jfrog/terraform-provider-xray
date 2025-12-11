@@ -1,10 +1,20 @@
+## 3.1.5 (Dec 11,2025). Tested on JFrog Platform 11.3.3 (Artifactory 7.125.8, Xray 3.131.25, Catalog 1.28.3) with Terraform 1.14.1 and OpenTofu 1.11.1
+
+BUG FIXES:
+
+* resource/xray_*_policy: Fixed "Provider produced inconsistent result after apply" error by sorting rules by priority when reading from API. This ensures the order of rules in Terraform state matches the order in HCL configuration. Issue: [#348](https://github.com/jfrog/terraform-provider-xray/issues/348) PR: [#374](https://github.com/jfrog/terraform-provider-xray/pull/374)
+
+IMPROVEMENTS:
+
+* resource/xray_security_policy: Add validation to prevent duplicate CVE/Xray IDs in `vulnerability_ids` attribute. Remove 100 CVE limit to allow unlimited vulnerability IDs. Issue: [#336](https://github.com/jfrog/terraform-provider-xray/issues/336) PR: [#374](https://github.com/jfrog/terraform-provider-xray/pull/374)
+
 ## 3.1.4 (Dec 10, 2025). Tested on JFrog Platform 11.3.3 (Artifactory 7.125.8, Xray 3.131.25, Catalog 1.28.3) with Terraform 1.14.1 and OpenTofu 1.11.0
 
 IMPROVEMENTS:
 
 * resource/xray_security_policy, resource/xray_license_policy, resource/xray_operational_risk_policy: Switch `rule` and `criteria` attribute types from `Set` to `List` to maintain rule ordering and improve performance with large number of rules. Issue: [#333](https://github.com/jfrog/terraform-provider-xray/issues/333) PR: [#372](https://github.com/jfrog/terraform-provider-xray/pull/372)
 
-* resource/xray_security_policy: Add validation during planning phase to detect duplicate rule names. This provides earlier feedback instead of failing at the API level. Issue: [#348](https://github.com/jfrog/terraform-provider-xray/issues/348) PR: [#372](https://github.com/jfrog/terraform-provider-xray/pull/372)
+* resource/xray_security_policy: Add validation during planning phase to detect duplicate rule names. This provides earlier feedback instead of failing at the API level. PR: [#372](https://github.com/jfrog/terraform-provider-xray/pull/372)
 
 * resource/xray_vulnerabilities_report, resource/xray_violations_report, resource/xray_licenses_report, resource/xray_operational_risks_report, resource/xray_exposures_report: Switch pattern attributes (`include_path_patterns`, `exclude_path_patterns`, `include_patterns`, `exclude_patterns`, `include_key_patterns`, `exclude_key_patterns`) from `Set` to `List` to improve performance with large number of patterns. Add validation to reject patterns starting with `/` or containing `@` symbol. Issue: [#302](https://github.com/jfrog/terraform-provider-xray/issues/302) PR: [#372](https://github.com/jfrog/terraform-provider-xray/pull/372)
 
