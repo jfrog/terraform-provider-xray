@@ -370,7 +370,7 @@ var packFilterMap = map[string]map[string]interface{}{
 	},
 }
 
-var allTypes = []string{"all-repos", "all-builds", "all-projects"}
+var allTypes = []string{"all-repos", "all-builds", "all-projects","all-releaseBundles", "all-releaseBundlesV2"}
 
 func (m *WatchResourceModel) fromAPIModel(ctx context.Context, apiModel WatchAPIModel) diag.Diagnostics {
 	diags := diag.Diagnostics{}
