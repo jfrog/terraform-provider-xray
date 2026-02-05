@@ -1,4 +1,4 @@
-## 3.1.6 (Feb 04,2026).
+## 3.1.6 (Feb 04,2026). Tested on JFrog Platform 11.4.2 (Artifactory 7.133.6, Xray 3.137.16, Catalog 1.31.3) with Terraform 1.14.4 and OpenTofu 1.11.4
 
 IMPROVEMENTS:
 
