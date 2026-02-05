@@ -381,6 +381,96 @@ func TestAccRepositoryConfig_RepoConfigCreate_exposure(t *testing.T) {
 			},
 		},
 		{
+			"gradle",
+			TestDataRepoConfigGradleTemplate,
+			"3.108.0",
+			func(fqrn string, testData map[string]string) resource.TestCheckFunc {
+				return resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "jas_enabled", "true"),
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.#", "1"),
+					resource.TestCheckNoResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.services"),
+					resource.TestCheckNoResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.secrets"),
+					resource.TestCheckNoResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.applications"),
+					resource.TestCheckNoResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.iac"),
+				)
+			},
+		},
+		{
+			"go",
+			TestDataRepoConfigGoTemplate,
+			"3.109.0",
+			func(fqrn string, testData map[string]string) resource.TestCheckFunc {
+				return resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "jas_enabled", "true"),
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.#", "1"),
+					resource.TestCheckNoResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.services"),
+					resource.TestCheckNoResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.secrets"),
+					resource.TestCheckNoResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.applications"),
+					resource.TestCheckNoResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.iac"),
+				)
+			},
+		},
+		{
+			"gems",
+			TestDataRepoConfigGemsTemplate,
+			"3.109.0",
+			func(fqrn string, testData map[string]string) resource.TestCheckFunc {
+				return resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "jas_enabled", "true"),
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.#", "1"),
+					resource.TestCheckNoResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.services"),
+					resource.TestCheckNoResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.secrets"),
+					resource.TestCheckNoResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.applications"),
+					resource.TestCheckNoResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.iac"),
+				)
+			},
+		},
+		{
+			"alpine",
+			TestDataRepoConfigAlpineTemplate,
+			"3.109.0",
+			func(fqrn string, testData map[string]string) resource.TestCheckFunc {
+				return resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "jas_enabled", "true"),
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.#", "1"),
+					resource.TestCheckNoResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.services"),
+					resource.TestCheckNoResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.secrets"),
+					resource.TestCheckNoResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.applications"),
+					resource.TestCheckNoResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.iac"),
+				)
+			},
+		},
+		{
+			"debian",
+			TestDataRepoConfigDebianTemplate,
+			"3.109.0",
+			func(fqrn string, testData map[string]string) resource.TestCheckFunc {
+				return resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "jas_enabled", "true"),
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.#", "1"),
+					resource.TestCheckNoResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.services"),
+					resource.TestCheckNoResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.secrets"),
+					resource.TestCheckNoResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.applications"),
+					resource.TestCheckNoResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.iac"),
+				)
+			},
+		},
+		{
+			"rpm",
+			TestDataRepoConfigRpmTemplate,
+			"3.109.0",
+			func(fqrn string, testData map[string]string) resource.TestCheckFunc {
+				return resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "jas_enabled", "true"),
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.#", "1"),
+					resource.TestCheckNoResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.services"),
+					resource.TestCheckNoResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.secrets"),
+					resource.TestCheckNoResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.applications"),
+					resource.TestCheckNoResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.iac"),
+				)
+			},
+		},
+		{
 			"maven",
 			TestDataRepoConfigMavenTemplate,
 			"3.78.9",
@@ -783,6 +873,132 @@ resource "artifactory_local_nuget_repository" "{{ .repo_name }}" {
 
 resource "xray_repository_config" "{{ .resource_name }}" {
   repo_name = artifactory_local_nuget_repository.{{ .repo_name }}.key
+  jas_enabled = true
+
+  config {
+    retention_in_days        = {{ .retention_in_days }}
+
+	exposures {
+      scanners_category {
+        secrets = true
+      }
+	}
+  }
+}`
+
+const TestDataRepoConfigGradleTemplate = `
+resource "artifactory_local_gradle_repository" "{{ .repo_name }}" {
+	key        = "{{ .repo_name }}"
+	xray_index = true
+}
+
+resource "xray_repository_config" "{{ .resource_name }}" {
+  repo_name = artifactory_local_gradle_repository.{{ .repo_name }}.key
+  jas_enabled = true
+
+  config {
+    retention_in_days        = {{ .retention_in_days }}
+
+	exposures {
+      scanners_category {
+        secrets = true
+      }
+	}
+  }
+}`
+
+const TestDataRepoConfigGoTemplate = `
+resource "artifactory_local_go_repository" "{{ .repo_name }}" {
+	key        = "{{ .repo_name }}"
+	xray_index = true
+}
+
+resource "xray_repository_config" "{{ .resource_name }}" {
+  repo_name = artifactory_local_go_repository.{{ .repo_name }}.key
+  jas_enabled = true
+
+  config {
+    retention_in_days        = {{ .retention_in_days }}
+
+	exposures {
+      scanners_category {
+        secrets = true
+      }
+	}
+  }
+}`
+
+const TestDataRepoConfigGemsTemplate = `
+resource "artifactory_local_gems_repository" "{{ .repo_name }}" {
+	key        = "{{ .repo_name }}"
+	xray_index = true
+}
+
+resource "xray_repository_config" "{{ .resource_name }}" {
+  repo_name = artifactory_local_gems_repository.{{ .repo_name }}.key
+  jas_enabled = true
+
+  config {
+    retention_in_days        = {{ .retention_in_days }}
+
+	exposures {
+      scanners_category {
+        secrets = true
+      }
+	}
+  }
+}`
+
+const TestDataRepoConfigAlpineTemplate = `
+resource "artifactory_local_alpine_repository" "{{ .repo_name }}" {
+	key        = "{{ .repo_name }}"
+	xray_index = true
+}
+
+resource "xray_repository_config" "{{ .resource_name }}" {
+  repo_name = artifactory_local_alpine_repository.{{ .repo_name }}.key
+  jas_enabled = true
+
+  config {
+    retention_in_days        = {{ .retention_in_days }}
+
+	exposures {
+      scanners_category {
+        secrets = true
+      }
+	}
+  }
+}`
+
+const TestDataRepoConfigDebianTemplate = `
+resource "artifactory_local_debian_repository" "{{ .repo_name }}" {
+	key        = "{{ .repo_name }}"
+	xray_index = true
+}
+
+resource "xray_repository_config" "{{ .resource_name }}" {
+  repo_name = artifactory_local_debian_repository.{{ .repo_name }}.key
+  jas_enabled = true
+
+  config {
+    retention_in_days        = {{ .retention_in_days }}
+
+	exposures {
+      scanners_category {
+        secrets = true
+      }
+	}
+  }
+}`
+
+const TestDataRepoConfigRpmTemplate = `
+resource "artifactory_local_rpm_repository" "{{ .repo_name }}" {
+	key        = "{{ .repo_name }}"
+	xray_index = true
+}
+
+resource "xray_repository_config" "{{ .resource_name }}" {
+  repo_name = artifactory_local_rpm_repository.{{ .repo_name }}.key
   jas_enabled = true
 
   config {
