@@ -67,6 +67,22 @@ func stripReleaseBundleV2Prefix(name string) string {
 	return name
 }
 
+// deduplicateStrings removes duplicate strings from a slice while preserving order.
+// This is needed because the same release bundle name can exist in different projects,
+// and after stripping the "[repo-type]/" prefix they become duplicates which would
+// cause errors when creating a Terraform Set (sets require unique elements).
+func deduplicateStrings(input []string) []string {
+	seen := make(map[string]struct{}, len(input))
+	result := make([]string, 0, len(input))
+	for _, s := range input {
+		if _, ok := seen[s]; !ok {
+			seen[s] = struct{}{}
+			result = append(result, s)
+		}
+	}
+	return result
+}
+
 func (m *BinaryManagerReleaseBundlesV2ResourceModel) fromAPIModel(ctx context.Context, apiModel BinaryManagerReleaseBundlesV2APIModel, preserveIndexed bool) (ds diag.Diagnostics) {
 	m.ID = types.StringValue(apiModel.BinManagerID)
 
@@ -74,24 +90,26 @@ func (m *BinaryManagerReleaseBundlesV2ResourceModel) fromAPIModel(ctx context.Co
 	// This avoids "inconsistent result after apply" errors when API returns
 	// different ordering or timing-delayed results
 	if !preserveIndexed {
-		// Strip the "[repo-type]/" prefix from each release bundle name
+		// Strip the "[repo-type]/" prefix from each release bundle name and deduplicate.
+		// Deduplication is needed because the same release bundle name can exist in
+		// different projects, and after prefix stripping they become duplicates.
 		strippedIndexed := make([]string, len(apiModel.IndexedReleaseBundlesV2))
 		for i, name := range apiModel.IndexedReleaseBundlesV2 {
 			strippedIndexed[i] = stripReleaseBundleV2Prefix(name)
 		}
-		indexedReleaseBundlesV2, d := types.SetValueFrom(ctx, types.StringType, strippedIndexed)
+		indexedReleaseBundlesV2, d := types.SetValueFrom(ctx, types.StringType, deduplicateStrings(strippedIndexed))
 		if d != nil {
 			ds.Append(d...)
 		}
 		m.IndexedReleaseBundlesV2 = indexedReleaseBundlesV2
 	}
 
-	// Strip the "[repo-type]/" prefix from each non-indexed release bundle name
+	// Strip the "[repo-type]/" prefix from each non-indexed release bundle name and deduplicate.
 	strippedNonIndexed := make([]string, len(apiModel.NonIndexedReleaseBundlesV2))
 	for i, name := range apiModel.NonIndexedReleaseBundlesV2 {
 		strippedNonIndexed[i] = stripReleaseBundleV2Prefix(name)
 	}
-	nonIndexedBuilds, d := types.SetValueFrom(ctx, types.StringType, strippedNonIndexed)
+	nonIndexedBuilds, d := types.SetValueFrom(ctx, types.StringType, deduplicateStrings(strippedNonIndexed))
 	if d != nil {
 		ds.Append(d...)
 	}

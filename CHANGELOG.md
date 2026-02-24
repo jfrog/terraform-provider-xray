@@ -1,8 +1,21 @@
-## 3.1.6 (Feb 04,2026). Tested on JFrog Platform 11.4.2 (Artifactory 7.133.6, Xray 3.137.16, Catalog 1.31.3) with Terraform 1.14.4 and OpenTofu 1.11.4
+## 3.2.0 (February 24, 2026)
 
-IMPROVEMENTS:
+FEATURES:
 
-* resource/xray_repository_config: Add support for gradle,go,ruby,alpine,deb,rpm package types for exposure analysis. PR: [#378](https://github.com/jfrog/terraform-provider-xray/pull/378)
+* **New Data Source:** `xray_security_policy` Issue: [#330](https://github.com/jfrog/terraform-provider-xray/issues/330)
+* **New Data Source:** `xray_artifacts_scan` Issue: [#330](https://github.com/jfrog/terraform-provider-xray/issues/330)
+* **New Data Source:** `xray_binary_manager_builds` Issue: [#330](https://github.com/jfrog/terraform-provider-xray/issues/330)
+* **New Data Source:** `xray_binary_manager_release_bundle_v2` Issue: [#330](https://github.com/jfrog/terraform-provider-xray/issues/330)
+* **New Data Source:** `xray_binary_manager_repos` Issue: [#330](https://github.com/jfrog/terraform-provider-xray/issues/330)
+* **New Data Source:** `xray_curation_policy` Issue: [#330](https://github.com/jfrog/terraform-provider-xray/issues/330)
+* **New Data Source:** `xray_custom_curation_condition` Issue: [#330](https://github.com/jfrog/terraform-provider-xray/issues/330)
+* **New Data Source:** `xray_custom_issue` Issue: [#330](https://github.com/jfrog/terraform-provider-xray/issues/330)
+* **New Data Source:** `xray_ignore_rule` Issue: [#330](https://github.com/jfrog/terraform-provider-xray/issues/330)
+* **New Data Source:** `xray_repository_config` Issue: [#330](https://github.com/jfrog/terraform-provider-xray/issues/330)
+* **New Data Source:** `xray_settings` Issue: [#330](https://github.com/jfrog/terraform-provider-xray/issues/330)
+* **New Data Source:** `xray_watch` Issue: [#330](https://github.com/jfrog/terraform-provider-xray/issues/330)
+* **New Data Source:** `xray_webhook` Issue: [#330](https://github.com/jfrog/terraform-provider-xray/issues/330)
+* **New Data Source:** `xray_workers_count` Issue: [#330](https://github.com/jfrog/terraform-provider-xray/issues/330)
 
 ## 3.1.5 (Dec 11,2025). Tested on JFrog Platform 11.3.3 (Artifactory 7.125.8, Xray 3.131.25, Catalog 1.28.3) with Terraform 1.14.1 and OpenTofu 1.11.1
 

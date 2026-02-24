@@ -85,8 +85,6 @@ var repoSetResourceModelAttributeTypes types.ObjectType = types.ObjectType{
 func (m *BinaryManagerReposResourceModel) fromAPIModel(apiModel BinaryManagerReposAPIModel) diag.Diagnostics {
 	diags := diag.Diagnostics{}
 
-	m.ID = types.StringValue(apiModel.BinManagerID)
-
 	indexedRepos, ds := m.fromRepoAPIModel(apiModel.IndexedRepos)
 	if ds != nil {
 		diags = append(diags, ds...)
@@ -299,10 +297,16 @@ func (r *BinaryManagerReposResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
-	resp.Diagnostics.Append(plan.fromAPIModel(repos)...)
-	if resp.Diagnostics.HasError() {
+	// Only update non_indexed_repos from API response.
+	// Keep indexed_repos from plan to avoid inconsistency between
+	// planned values and API response (e.g. API may return different
+	// pkg_type casing or silently drop repos that don't exist).
+	nonIndexedRepos, ds := plan.fromRepoAPIModel(repos.NonIndexedRepos)
+	if ds.HasError() {
+		resp.Diagnostics.Append(ds...)
 		return
 	}
+	plan.NonIndexedRepos = nonIndexedRepos
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
@@ -408,10 +412,16 @@ func (r *BinaryManagerReposResource) Update(ctx context.Context, req resource.Up
 		return
 	}
 
-	resp.Diagnostics.Append(plan.fromAPIModel(repos)...)
-	if resp.Diagnostics.HasError() {
+	// Only update non_indexed_repos from API response.
+	// Keep indexed_repos from plan to avoid inconsistency between
+	// planned values and API response (e.g. API may return different
+	// pkg_type casing or silently drop repos that don't exist).
+	nonIndexedRepos, ds := plan.fromRepoAPIModel(repos.NonIndexedRepos)
+	if ds.HasError() {
+		resp.Diagnostics.Append(ds...)
 		return
 	}
+	plan.NonIndexedRepos = nonIndexedRepos
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
