@@ -644,7 +644,7 @@ func (r *CustomIssueResource) Read(ctx context.Context, req resource.ReadRequest
 	var customIssue CustomIssueAPIModel
 
 	response, err := r.ProviderData.Client.R().
-		SetPathParam("id", state.Name.ValueString()).
+		SetPathParam("id", state.ID.ValueString()).
 		SetResult(&customIssue).
 		Get(CustomIssueEndpointV2)
 	if err != nil {
@@ -677,6 +677,13 @@ func (r *CustomIssueResource) Update(ctx context.Context, req resource.UpdateReq
 		return
 	}
 
+	var state CustomIssueResourceModel
+
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	var customIssue CustomIssueAPIModel
 	resp.Diagnostics.Append(plan.toAPIModel(ctx, &customIssue)...)
 	if resp.Diagnostics.HasError() {
@@ -684,7 +691,7 @@ func (r *CustomIssueResource) Update(ctx context.Context, req resource.UpdateReq
 	}
 
 	response, err := r.ProviderData.Client.R().
-		SetPathParam("id", plan.Name.ValueString()).
+		SetPathParam("id", state.ID.ValueString()).
 		SetBody(customIssue).
 		Put(CustomIssueEndpoint)
 	if err != nil {
@@ -696,7 +703,7 @@ func (r *CustomIssueResource) Update(ctx context.Context, req resource.UpdateReq
 		return
 	}
 
-	plan.ID = types.StringValue(customIssue.ID)
+	plan.ID = state.ID
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
@@ -711,7 +718,7 @@ func (r *CustomIssueResource) Delete(ctx context.Context, req resource.DeleteReq
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 
 	response, err := r.ProviderData.Client.R().
-		SetPathParam("id", state.Name.ValueString()).
+		SetPathParam("id", state.ID.ValueString()).
 		Delete(CustomIssueEndpoint)
 
 	if err != nil {
@@ -730,5 +737,5 @@ func (r *CustomIssueResource) Delete(ctx context.Context, req resource.DeleteReq
 
 // ImportState imports the resource into the Terraform state.
 func (r *CustomIssueResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("name"), req, resp)
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
