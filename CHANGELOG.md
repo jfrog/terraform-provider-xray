@@ -1,3 +1,9 @@
+## 3.2.2 (February 25, 2026)
+
+BUG FIXES:
+
+* resource/xray_custom_issue: Fix bugfix issue Issue: [#382](https://github.com/jfrog/terraform-provider-xray/issues/382)
+
 ## 3.2.1 (February 25, 2026)
 
 BUG FIXES:
