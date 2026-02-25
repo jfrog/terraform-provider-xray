@@ -1,3 +1,15 @@
+## 3.1.8 (February 25, 2026)
+
+BUG FIXES:
+
+* resource/xray_catalog_labels: Fix read keeps prior state instead of fetching remote state, breaking refresh/drift detection Issue: [#381](https://github.com/jfrog/terraform-provider-xray/issues/381) PR: [#388](https://github.com/jfrog/terraform-provider-xray/pull/388)
+
+## 3.1.7 (February 25, 2026)
+
+BUG FIXES:
+
+* resource/xray_custom_issue: Fix create stores ID but Read/Update/Delete use name as API path parameter Issue: [#382](https://github.com/jfrog/terraform-provider-xray/issues/382) PR: [#387](https://github.com/jfrog/terraform-provider-xray/pull/387)
+
 ## 3.1.6 (Feb 04,2026). Tested on JFrog Platform 11.4.2 (Artifactory 7.133.6, Xray 3.137.16, Catalog 1.31.3) with Terraform 1.14.4 and OpenTofu 1.11.4
 
 IMPROVEMENTS:
