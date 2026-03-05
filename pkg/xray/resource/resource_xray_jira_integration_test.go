@@ -141,5 +141,5 @@ func TestAccJiraIntegration_full(t *testing.T) {
 func testCheckJiraIntegration(id string, request *resty.Request) (*resty.Response, error) {
 	return request.
 		SetPathParam("connection_name", id).
-		Get("xray/api/v1/ticketing/jira-integrations/{connection_name}/details")
+		Get("xray/api/v1/ticketing/jira-integrations/{connection_name}")
 }

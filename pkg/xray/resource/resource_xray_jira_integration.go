@@ -20,9 +20,8 @@ import (
 )
 
 const (
-	JiraIntegrationsEndpoint       = "xray/api/v1/ticketing/jira-integrations"
-	JiraIntegrationEndpoint        = "xray/api/v1/ticketing/jira-integrations/{connection_name}"
-	JiraIntegrationDetailsEndpoint = "xray/api/v1/ticketing/jira-integrations/{connection_name}/details"
+	JiraIntegrationsEndpoint = "xray/api/v1/ticketing/jira-integrations"
+	JiraIntegrationEndpoint  = "xray/api/v1/ticketing/jira-integrations/{connection_name}"
 )
 
 var _ resource.Resource = &JiraIntegrationResource{}
@@ -63,7 +62,7 @@ type JiraIntegrationAPIModel struct {
 }
 
 type JiraIntegrationGetAPIModel struct {
-	IntegrationName  string `json:"integrationName"`
+	ConnectionName   string `json:"connection_name"`
 	JiraServerURL    string `json:"jira_server_url"`
 	InstallationType string `json:"installation_type"`
 	AuthType         string `json:"auth_type"`
@@ -189,7 +188,7 @@ func (r *JiraIntegrationResource) Read(ctx context.Context, req resource.ReadReq
 	response, err := r.ProviderData.Client.R().
 		SetPathParam("connection_name", state.ConnectionName.ValueString()).
 		SetResult(&integration).
-		Get(JiraIntegrationDetailsEndpoint)
+		Get(JiraIntegrationEndpoint)
 	if err != nil {
 		utilfw.UnableToRefreshResourceError(resp, err.Error())
 		return
@@ -203,7 +202,7 @@ func (r *JiraIntegrationResource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	state.ConnectionName = types.StringValue(integration.IntegrationName)
+	state.ConnectionName = types.StringValue(integration.ConnectionName)
 	state.JiraServerURL = types.StringValue(integration.JiraServerURL)
 	state.InstallationType = types.StringValue(integration.InstallationType)
 	state.AuthType = types.StringValue(integration.AuthType)
@@ -235,9 +234,8 @@ func (r *JiraIntegrationResource) Update(ctx context.Context, req resource.Updat
 	}
 
 	response, err := r.ProviderData.Client.R().
-		SetPathParam("connection_name", plan.ConnectionName.ValueString()).
 		SetBody(integration).
-		Put(JiraIntegrationEndpoint)
+		Put(JiraIntegrationsEndpoint)
 	if err != nil {
 		utilfw.UnableToUpdateResourceError(resp, err.Error())
 		return
