@@ -64,13 +64,16 @@ func (r *WatchResource) Metadata(ctx context.Context, req resource.MetadataReque
 }
 
 type WatchResourceModel struct {
-	Name             types.String `tfsdk:"name"`
-	ProjectKey       types.String `tfsdk:"project_key"`
-	Description      types.String `tfsdk:"description"`
-	Active           types.Bool   `tfsdk:"active"`
-	WatchResource    types.Set    `tfsdk:"watch_resource"`
-	AssignedPolicies types.Set    `tfsdk:"assigned_policy"`
-	WatchRecipients  types.Set    `tfsdk:"watch_recipients"`
+	Name                types.String `tfsdk:"name"`
+	ProjectKey          types.String `tfsdk:"project_key"`
+	Description         types.String `tfsdk:"description"`
+	Active              types.Bool   `tfsdk:"active"`
+	WatchResource       types.Set    `tfsdk:"watch_resource"`
+	AssignedPolicies    types.Set    `tfsdk:"assigned_policy"`
+	WatchRecipients     types.Set    `tfsdk:"watch_recipients"`
+	CreateTicketEnabled types.Bool   `tfsdk:"create_ticket_enabled"`
+	TicketProfile       types.String `tfsdk:"ticket_profile"`
+	TicketGeneration    types.Object `tfsdk:"ticket_generation"`
 }
 
 func unpackAntFilter(ctx context.Context, filterType string, ds *diag.Diagnostics) func(elem attr.Value, _ int) WatchFilterAPIModel {
@@ -195,6 +198,59 @@ func (m WatchResourceModel) toAPIModel(ctx context.Context, apiModel *WatchAPIMo
 		WatchRecipients:  recipients,
 	}
 
+	if !m.CreateTicketEnabled.IsNull() && !m.CreateTicketEnabled.IsUnknown() {
+		apiModel.CreateTicketEnabled = m.CreateTicketEnabled.ValueBoolPointer()
+	}
+
+	if !m.TicketProfile.IsNull() && !m.TicketProfile.IsUnknown() {
+		apiModel.TicketProfile = m.TicketProfile.ValueString()
+	}
+
+	if !m.TicketGeneration.IsNull() && !m.TicketGeneration.IsUnknown() {
+		tgAttrs := m.TicketGeneration.Attributes()
+		tg := &TicketGenerationAPIModel{}
+
+		if v, ok := tgAttrs["create_tickets_for_ignored_violation"]; ok && !v.IsNull() && !v.IsUnknown() {
+			val := v.(types.Bool).ValueBoolPointer()
+			tg.CreateTicketsForIgnoredViolation = val
+		}
+
+		if cdtObj, ok := tgAttrs["create_duplicate_tickets"]; ok && !cdtObj.IsNull() && !cdtObj.IsUnknown() {
+			cdtAttrs := cdtObj.(types.Object).Attributes()
+			if bvObj, ok := cdtAttrs["by_version"]; ok && !bvObj.IsNull() && !bvObj.IsUnknown() {
+				bvAttrs := bvObj.(types.Object).Attributes()
+				tg.CreateDuplicateTickets = &DuplicateTicketCreationAPIModel{
+					ByVersion: VersionTicketSettingsAPIModel{
+						Build:         bvAttrs["build"].(types.Bool).ValueBool(),
+						Package:       bvAttrs["package"].(types.Bool).ValueBool(),
+						ReleaseBundle: bvAttrs["release_bundle"].(types.Bool).ValueBool(),
+					},
+				}
+			}
+		}
+
+		if ipmObj, ok := tgAttrs["impact_path_profiles_mapping"]; ok && !ipmObj.IsNull() && !ipmObj.IsUnknown() {
+			ipmAttrs := ipmObj.(types.Object).Attributes()
+			if includeSet, ok := ipmAttrs["include"]; ok && !includeSet.IsNull() && !includeSet.IsUnknown() {
+				entries := lo.Map(
+					includeSet.(types.Set).Elements(),
+					func(elem attr.Value, _ int) ImpactPathProfileMappingAPIModel {
+						attrs := elem.(types.Object).Attributes()
+						return ImpactPathProfileMappingAPIModel{
+							Profile: attrs["profile"].(types.String).ValueString(),
+							Pattern: attrs["pattern"].(types.String).ValueString(),
+						}
+					},
+				)
+				tg.ImpactPathProfilesMapping = &ImpactPathProfilesMappingAPIModel{
+					Include: entries,
+				}
+			}
+		}
+
+		apiModel.TicketGeneration = tg
+	}
+
 	return
 }
 
@@ -258,7 +314,34 @@ var assignedPolicyObjectResourceModelAttributeTypes types.ObjectType = types.Obj
 	AttrTypes: assignedPolicyResourceModelAttributeTypes,
 }
 
-// type PackFilterFunc func(ctx context.Context, filter WatchFilterAPIModel) (attr.Value, diag.Diagnostics)
+var impactPathMappingEntryAttributeTypes = map[string]attr.Type{
+	"profile": types.StringType,
+	"pattern": types.StringType,
+}
+
+var impactPathMappingEntryObjectType = types.ObjectType{
+	AttrTypes: impactPathMappingEntryAttributeTypes,
+}
+
+var impactPathProfilesMappingAttributeTypes = map[string]attr.Type{
+	"include": types.SetType{ElemType: impactPathMappingEntryObjectType},
+}
+
+var byVersionAttributeTypes = map[string]attr.Type{
+	"build":          types.BoolType,
+	"package":        types.BoolType,
+	"release_bundle": types.BoolType,
+}
+
+var createDuplicateTicketsAttributeTypes = map[string]attr.Type{
+	"by_version": types.ObjectType{AttrTypes: byVersionAttributeTypes},
+}
+
+var ticketGenerationAttributeTypes = map[string]attr.Type{
+	"create_duplicate_tickets":             types.ObjectType{AttrTypes: createDuplicateTicketsAttributeTypes},
+	"impact_path_profiles_mapping":         types.ObjectType{AttrTypes: impactPathProfilesMappingAttributeTypes},
+	"create_tickets_for_ignored_violation": types.BoolType,
+}
 
 func packStringFilter(ctx context.Context, filter WatchFilterAPIModel) (attr.Value, diag.Diagnostics) {
 	var value string
@@ -370,7 +453,7 @@ var packFilterMap = map[string]map[string]interface{}{
 	},
 }
 
-var allTypes = []string{"all-repos", "all-builds", "all-projects","all-releaseBundles", "all-releaseBundlesV2"}
+var allTypes = []string{"all-repos", "all-builds", "all-projects", "all-releaseBundles", "all-releaseBundlesV2"}
 
 func (m *WatchResourceModel) fromAPIModel(ctx context.Context, apiModel WatchAPIModel) diag.Diagnostics {
 	diags := diag.Diagnostics{}
@@ -478,6 +561,91 @@ func (m *WatchResourceModel) fromAPIModel(ctx context.Context, apiModel WatchAPI
 	}
 	m.WatchRecipients = watchRecipients
 
+	if apiModel.CreateTicketEnabled != nil {
+		m.CreateTicketEnabled = types.BoolValue(*apiModel.CreateTicketEnabled)
+	} else {
+		m.CreateTicketEnabled = types.BoolNull()
+	}
+
+	if apiModel.TicketProfile != "" {
+		m.TicketProfile = types.StringValue(apiModel.TicketProfile)
+	} else {
+		m.TicketProfile = types.StringNull()
+	}
+
+	hasTicketProfile := apiModel.TicketProfile != ""
+
+	if hasTicketProfile && apiModel.TicketGeneration != nil {
+		tg := apiModel.TicketGeneration
+
+		ignoredViolation := types.BoolNull()
+		if tg.CreateTicketsForIgnoredViolation != nil {
+			ignoredViolation = types.BoolValue(*tg.CreateTicketsForIgnoredViolation)
+		}
+
+		cdtVal := types.ObjectNull(createDuplicateTicketsAttributeTypes)
+		if tg.CreateDuplicateTickets != nil {
+			byVersion, ds := types.ObjectValue(
+				byVersionAttributeTypes,
+				map[string]attr.Value{
+					"build":          types.BoolValue(tg.CreateDuplicateTickets.ByVersion.Build),
+					"package":        types.BoolValue(tg.CreateDuplicateTickets.ByVersion.Package),
+					"release_bundle": types.BoolValue(tg.CreateDuplicateTickets.ByVersion.ReleaseBundle),
+				},
+			)
+			diags.Append(ds...)
+
+			cdtVal, ds = types.ObjectValue(
+				createDuplicateTicketsAttributeTypes,
+				map[string]attr.Value{
+					"by_version": byVersion,
+				},
+			)
+			diags.Append(ds...)
+		}
+
+		ipmVal := types.ObjectNull(impactPathProfilesMappingAttributeTypes)
+		if tg.ImpactPathProfilesMapping != nil && len(tg.ImpactPathProfilesMapping.Include) > 0 {
+			includeEntries := lo.Map(
+				tg.ImpactPathProfilesMapping.Include,
+				func(entry ImpactPathProfileMappingAPIModel, _ int) attr.Value {
+					obj, ds := types.ObjectValue(
+						impactPathMappingEntryAttributeTypes,
+						map[string]attr.Value{
+							"profile": types.StringValue(entry.Profile),
+							"pattern": types.StringValue(entry.Pattern),
+						},
+					)
+					diags.Append(ds...)
+					return obj
+				},
+			)
+			includeSet, ds := types.SetValue(impactPathMappingEntryObjectType, includeEntries)
+			diags.Append(ds...)
+
+			ipmVal, ds = types.ObjectValue(
+				impactPathProfilesMappingAttributeTypes,
+				map[string]attr.Value{
+					"include": includeSet,
+				},
+			)
+			diags.Append(ds...)
+		}
+
+		tgObj, ds := types.ObjectValue(
+			ticketGenerationAttributeTypes,
+			map[string]attr.Value{
+				"create_duplicate_tickets":             cdtVal,
+				"impact_path_profiles_mapping":         ipmVal,
+				"create_tickets_for_ignored_violation": ignoredViolation,
+			},
+		)
+		diags.Append(ds...)
+		m.TicketGeneration = tgObj
+	} else {
+		m.TicketGeneration = types.ObjectNull(ticketGenerationAttributeTypes)
+	}
+
 	return diags
 }
 
@@ -520,11 +688,39 @@ type WatchAssignedPolicyAPIModel struct {
 	Type string `json:"type"`
 }
 
+type VersionTicketSettingsAPIModel struct {
+	Build         bool `json:"build"`
+	Package       bool `json:"package"`
+	ReleaseBundle bool `json:"release_bundle"`
+}
+
+type DuplicateTicketCreationAPIModel struct {
+	ByVersion VersionTicketSettingsAPIModel `json:"by_version"`
+}
+
+type ImpactPathProfileMappingAPIModel struct {
+	Profile string `json:"profile"`
+	Pattern string `json:"pattern"`
+}
+
+type ImpactPathProfilesMappingAPIModel struct {
+	Include []ImpactPathProfileMappingAPIModel `json:"include"`
+}
+
+type TicketGenerationAPIModel struct {
+	CreateDuplicateTickets           *DuplicateTicketCreationAPIModel   `json:"create_duplicate_tickets,omitempty"`
+	ImpactPathProfilesMapping        *ImpactPathProfilesMappingAPIModel `json:"impact_path_profiles_mapping,omitempty"`
+	CreateTicketsForIgnoredViolation *bool                              `json:"create_tickets_for_ignored_violation,omitempty"`
+}
+
 type WatchAPIModel struct {
-	GeneralData      WatchGeneralDataAPIModel      `json:"general_data"`
-	ProjectResources WatchProjectResourcesAPIModel `json:"project_resources"`
-	AssignedPolicies []WatchAssignedPolicyAPIModel `json:"assigned_policies"`
-	WatchRecipients  []string                      `json:"watch_recipients"`
+	GeneralData         WatchGeneralDataAPIModel      `json:"general_data"`
+	ProjectResources    WatchProjectResourcesAPIModel `json:"project_resources"`
+	AssignedPolicies    []WatchAssignedPolicyAPIModel `json:"assigned_policies"`
+	WatchRecipients     []string                      `json:"watch_recipients"`
+	CreateTicketEnabled *bool                         `json:"create_ticket_enabled,omitempty"`
+	TicketProfile       string                        `json:"ticket_profile,omitempty"`
+	TicketGeneration    *TicketGenerationAPIModel     `json:"ticket_generation,omitempty"`
 }
 
 func (r *WatchResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -567,6 +763,17 @@ func (r *WatchResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 					),
 				},
 				Description: "A list of email addressed that will get emailed when a violation is triggered.",
+			},
+			"create_ticket_enabled": schema.BoolAttribute{
+				Optional:    true,
+				Description: "Indicates whether Jira ticket creation is enabled for this watch. Requires a Jira integration to be configured.",
+			},
+			"ticket_profile": schema.StringAttribute{
+				Optional: true,
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
+				Description: "The Jira profile name for ticket generation. Must match an existing Jira ticket profile.",
 			},
 		},
 		Blocks: map[string]schema.Block{
@@ -696,6 +903,59 @@ func (r *WatchResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 						},
 					},
 				},
+			},
+			"ticket_generation": schema.SingleNestedBlock{
+				Attributes: map[string]schema.Attribute{
+					"create_tickets_for_ignored_violation": schema.BoolAttribute{
+						Optional:    true,
+						Description: "Specifies whether Jira tickets should also be created for policy violations that have been marked as ignored in Xray.",
+					},
+				},
+				Blocks: map[string]schema.Block{
+					"create_duplicate_tickets": schema.SingleNestedBlock{
+						Blocks: map[string]schema.Block{
+							"by_version": schema.SingleNestedBlock{
+								Attributes: map[string]schema.Attribute{
+									"build": schema.BoolAttribute{
+										Optional:    true,
+										Description: "Indicates whether duplicate tickets are created for builds.",
+									},
+									"package": schema.BoolAttribute{
+										Optional:    true,
+										Description: "Indicates whether duplicate tickets are created for packages.",
+									},
+									"release_bundle": schema.BoolAttribute{
+										Optional:    true,
+										Description: "Indicates whether duplicate tickets are created for release bundles.",
+									},
+								},
+								Description: "Settings for creating duplicate tickets by version.",
+							},
+						},
+						Description: "Settings for creating duplicate tickets.",
+					},
+					"impact_path_profiles_mapping": schema.SingleNestedBlock{
+						Blocks: map[string]schema.Block{
+							"include": schema.SetNestedBlock{
+								NestedObject: schema.NestedBlockObject{
+									Attributes: map[string]schema.Attribute{
+										"profile": schema.StringAttribute{
+											Required:    true,
+											Description: "The Jira profile name for this impact path mapping.",
+										},
+										"pattern": schema.StringAttribute{
+											Required:    true,
+											Description: "The pattern for the impact path corresponding to the profile.",
+										},
+									},
+								},
+								Description: "List of impact path profile mappings.",
+							},
+						},
+						Description: "Mapping of impact path profiles to Jira profiles.",
+					},
+				},
+				Description: "Ticket generation settings for the watch. Requires `create_ticket_enabled` to be `true`.",
 			},
 			"assigned_policy": schema.SetNestedBlock{
 				NestedObject: schema.NestedBlockObject{
