@@ -168,11 +168,11 @@ jobs:
       - name: Install JFrog Platform
         id: install_platform
         env:
-          PLATFORM_LICENSE: ${{ secrets.PLATFORM_LICENSE }}
+          PLATFORM_LICENSE: ${{ matrix.cli == 'terraform' && secrets.PLATFORM_LICENSE_TERRAFORM || secrets.PLATFORM_LICENSE_TOFU }}
         run: |
           echo "Creating JFrog Platform License Secret"
-          echo $PLATFORM_LICENSE > ${{ runner.temp }}/platform.cluster.license
-          kubectl create secret generic platform-license --from-file=${{ runner.temp }}/platform.cluster.license
+          echo $PLATFORM_LICENSE > ${{ runner.temp }}/platform.cluster.license.${{ matrix.cli }}
+          kubectl create secret generic platform-license.${{ matrix.cli }} --from-file=${{ runner.temp }}/platform.cluster.license.${{ matrix.cli }}
           MASTER_KEY=$(openssl rand -hex 32)
           echo "::add-mask::$MASTER_KEY"
           echo "MASTER_KEY=$MASTER_KEY" >> "$GITHUB_ENV"
@@ -189,8 +189,8 @@ jobs:
           helm upgrade --install jfrog-platform $MODIFIED_CHART_TGZ \
             --set global.masterKey=$MASTER_KEY \
             --set global.joinKey=$JOIN_KEY \
-            --set artifactory.artifactory.license.secret=platform-license \
-            --set artifactory.artifactory.license.dataKey=platform.cluster.license \
+            --set artifactory.artifactory.license.secret=platform-license.${{ matrix.cli }} \
+            --set artifactory.artifactory.license.dataKey=platform.cluster.license.${{ matrix.cli }} \
             --set artifactory.nginx.service.ssloffload=true \
             --set artifactory.artifactory.persistence.size=50Gi \
             --set postgresql.primary.persistence.size=500Gi \
@@ -232,7 +232,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22.7'
+          go-version: '1.25.0'
       - name: Install Terraform CLI
         uses: hashicorp/setup-terraform@v3
         if: ${{ matrix.cli == 'terraform' }}

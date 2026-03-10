@@ -59,7 +59,7 @@ attach:
 
 acceptance: fmt
 	export TF_ACC=true && \
-		go test -cover -coverprofile=coverage.txt -ldflags="-X '${PKG_VERSION_PATH}/provider.Version=${NEXT_VERSION}-test'" -v -p 1 -parallel 20 -timeout 1h ./pkg/...
+		go test -coverprofile=coverage.txt -ldflags="-X '${PKG_VERSION_PATH}/provider.Version=${NEXT_VERSION}-test'" -v -p 1 -parallel 20 -timeout 1h ./pkg/...
 
 # To generate coverage.txt run `make acceptance` first
 coverage:

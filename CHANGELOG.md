@@ -1,10 +1,16 @@
-## 3.1.6 (Feb 04,2026). Tested on JFrog Platform 11.4.2 (Artifactory 7.133.6, Xray 3.137.16, Catalog 1.31.3) with Terraform 1.14.4 and OpenTofu 1.11.4
+## 3.1.7 (Mar 09, 2026). Tested on JFrog Platform 11.4.4 (Artifactory 7.133.12, Xray 3.137.23, Catalog 1.33.4) with Terraform 1.14.6 and OpenTofu 1.11.5
+
+BUG FIXES:
+
+* resource/xray_custom_issue: Fix create stores ID but Read/Update/Delete use name as API path parameter Issue: [#382](https://github.com/jfrog/terraform-provider-xray/issues/382) PR: [#387](https://github.com/jfrog/terraform-provider-xray/pull/387)
+
+## 3.1.6 (Feb 04, 2026). Tested on JFrog Platform 11.4.2 (Artifactory 7.133.6, Xray 3.137.16, Catalog 1.31.3) with Terraform 1.14.4 and OpenTofu 1.11.4
 
 IMPROVEMENTS:
 
 * resource/xray_repository_config: Add support for gradle,go,ruby,alpine,deb,rpm package types for exposure analysis. PR: [#378](https://github.com/jfrog/terraform-provider-xray/pull/378)
 
-## 3.1.5 (Dec 11,2025). Tested on JFrog Platform 11.3.3 (Artifactory 7.125.8, Xray 3.131.25, Catalog 1.28.3) with Terraform 1.14.1 and OpenTofu 1.11.1
+## 3.1.5 (Dec 11, 2025). Tested on JFrog Platform 11.3.3 (Artifactory 7.125.8, Xray 3.131.25, Catalog 1.28.3) with Terraform 1.14.1 and OpenTofu 1.11.1
 
 BUG FIXES:
 
