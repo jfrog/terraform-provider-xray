@@ -6,6 +6,8 @@ FEATURES:
 
 BUG FIXES:
 
+* resource/xray_catalog_labels: Fix Read method to query Xray for current label state instead of preserving stale Terraform state. Out-of-band changes to label descriptions are now detected during `terraform refresh` and `terraform apply -refresh-only`. Issue: [#381](https://github.com/jfrog/terraform-provider-xray/issues/381) PR: [#397](https://github.com/jfrog/terraform-provider-xray/pull/397)
+
 * resource/xray_custom_issue: Fix create stores ID but Read/Update/Delete use name as API path parameter Issue: [#382](https://github.com/jfrog/terraform-provider-xray/issues/382) PR: [#387](https://github.com/jfrog/terraform-provider-xray/pull/387)
 
 ## 3.1.6 (Feb 04, 2026). Tested on JFrog Platform 11.4.2 (Artifactory 7.133.6, Xray 3.137.16, Catalog 1.31.3) with Terraform 1.14.4 and OpenTofu 1.11.4
