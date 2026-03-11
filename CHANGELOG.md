@@ -1,10 +1,12 @@
-## 3.1.7 (Mar 11, 2026). Tested on JFrog Platform 11.4.4 (Artifactory 7.133.12, Xray 3.137.23, Catalog 1.33.4) with Terraform 1.14.6 and OpenTofu 1.11.5
+## 3.1.7 (Mar 11, 2026).
 
 FEATURES:
 
 * resource/xray_security_policy, resource/xray_license_policy, resource/xray_operational_risk_policy: Add `fail_pull_request` attribute to policy rule actions. Issue: [#383](https://github.com/jfrog/terraform-provider-xray/issues/383) PR: [#396](https://github.com/jfrog/terraform-provider-xray/pull/396)
 
 BUG FIXES:
+
+* resource/xray_catalog_labels: Fix Read method to query Xray for current label state instead of preserving stale Terraform state. Out-of-band changes to label descriptions are now detected during `terraform refresh` and `terraform apply -refresh-only`. Issue: [#381](https://github.com/jfrog/terraform-provider-xray/issues/381) PR: [#397](https://github.com/jfrog/terraform-provider-xray/pull/397)
 
 * resource/xray_custom_issue: Fix create stores ID but Read/Update/Delete use name as API path parameter Issue: [#382](https://github.com/jfrog/terraform-provider-xray/issues/382) PR: [#387](https://github.com/jfrog/terraform-provider-xray/pull/387)
 

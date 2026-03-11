@@ -1415,13 +1415,76 @@ func (r *CatalogLabelsResource) Update(ctx context.Context, req resource.UpdateR
 }
 
 func (r *CatalogLabelsResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	go util.SendUsageResourceRead(ctx, r.ProviderData.Client.R(), r.ProviderData.ProductId, r.JFrogResource.TypeName)
+
 	var state CatalogLabelsResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Keep current state as-is (non-destructive Read to avoid flapping due to eventual consistency)
+	// Reconcile labels against Xray by querying each label individually.
+	// Individual getLabelQuery calls are used instead of searchLabelsQuery
+	// to avoid eventual consistency issues with the search/index endpoint.
+	if !state.Labels.IsNull() && !state.Labels.IsUnknown() {
+		var stateLabels []LabelModel
+		resp.Diagnostics.Append(state.Labels.ElementsAs(ctx, &stateLabels, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		var reconciledLabels []LabelModel
+		for _, l := range stateLabels {
+			name := l.Name.ValueString()
+			query := getLabelQuery(name)
+
+			var graphqlResp GetSingleLabelResponse
+			apiResp, err := r.ProviderData.Client.R().
+				SetHeader("Content-Type", "application/json").
+				SetBody(map[string]interface{}{"query": query}).
+				SetResult(&graphqlResp).
+				Post(CatalogGraphQLEndpoint)
+
+			if err != nil {
+				log.Printf("[DEBUG] Read: failed to query label '%s': %s", name, err.Error())
+				reconciledLabels = append(reconciledLabels, l)
+				continue
+			}
+
+			if apiResp.StatusCode() == 200 && graphqlResp.Data.CustomCatalogLabel.GetLabel.Name != "" {
+				reconciledLabels = append(reconciledLabels, LabelModel{
+					Name:        l.Name,
+					Description: types.StringValue(graphqlResp.Data.CustomCatalogLabel.GetLabel.Description),
+				})
+			} else {
+				log.Printf("[DEBUG] Read: label '%s' no longer exists in Xray, removing from state", name)
+			}
+		}
+
+		if len(reconciledLabels) == 0 && len(stateLabels) > 0 {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+
+		labelsSet, diags := types.SetValueFrom(ctx, types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"name":        types.StringType,
+				"description": types.StringType,
+			},
+		}, reconciledLabels)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		state.Labels = labelsSet
+	}
+
+	// Package and version assignments are kept as-is from current state.
+	// The Catalog API has eventual consistency for assignment operations,
+	// so querying immediately after create/update may return stale results.
+	// Label drift (description changes, deletions) is the primary concern
+	// addressed by this Read implementation.
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
