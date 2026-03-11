@@ -23,6 +23,7 @@ resource "xray_license_policy" "allowed_licenses" {
       notify_watch_recipients            = true
       notify_deployer                    = true
       create_ticket_enabled              = false // set to true only if Jira integration is enabled
+      fail_pull_request                  = true
       custom_severity                    = "High"
       build_failure_grace_period_in_days = 5 // use only if fail_build is enabled
 
@@ -59,6 +60,7 @@ resource "xray_license_policy" "banned_licenses" {
       notify_watch_recipients            = true
       notify_deployer                    = true
       create_ticket_enabled              = false // set to true only if Jira integration is enabled
+      fail_pull_request                  = true
       custom_severity                    = "Medium"
       build_failure_grace_period_in_days = 5 // use only if fail_build is enabled
 

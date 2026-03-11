@@ -1,4 +1,8 @@
-## 3.1.7 (Mar 09, 2026). Tested on JFrog Platform 11.4.4 (Artifactory 7.133.12, Xray 3.137.23, Catalog 1.33.4) with Terraform 1.14.6 and OpenTofu 1.11.5
+## 3.1.7 (Mar 11, 2026).
+
+FEATURES:
+
+* resource/xray_security_policy, resource/xray_license_policy, resource/xray_operational_risk_policy: Add `fail_pull_request` attribute to policy rule actions. Issue: [#383](https://github.com/jfrog/terraform-provider-xray/issues/383) PR: [#396](https://github.com/jfrog/terraform-provider-xray/pull/396)
 
 BUG FIXES:
 

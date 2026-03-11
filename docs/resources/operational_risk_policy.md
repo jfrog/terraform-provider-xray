@@ -34,6 +34,7 @@ resource "xray_operational_risk_policy" "min_risk" {
       notify_watch_recipients            = true
       notify_deployer                    = true
       create_ticket_enabled              = false // set to true only if Jira integration is enabled
+      fail_pull_request                  = true
       build_failure_grace_period_in_days = 5     // use only if fail_build is enabled
 
       block_download {
@@ -75,6 +76,7 @@ resource "xray_operational_risk_policy" "custom_criteria" {
       notify_watch_recipients            = true
       notify_deployer                    = true
       create_ticket_enabled              = false // set to true only if Jira integration is enabled
+      fail_pull_request                  = true
       build_failure_grace_period_in_days = 5     // use only if fail_build is enabled
 
       block_download {
@@ -131,6 +133,7 @@ Optional:
 - `build_failure_grace_period_in_days` (Number) Allow grace period for certain number of days. All violations will be ignored during this time. To be used only if `fail_build` is enabled. Default value is `0`
 - `create_ticket_enabled` (Boolean) Create Jira Ticket for this Policy Violation. Requires configured Jira integration. Default value is `false`.
 - `fail_build` (Boolean) Whether or not the related CI build should be marked as failed if a violation is triggered. This option is only available when the policy is applied to an `xray_watch` resource with a `type` of `builds`. Default value is `false`.
+- `fail_pull_request` (Boolean) Whether or not the related pull request should be marked as failed if a violation is triggered. Default value is `false`.
 - `mails` (Set of String) A list of email addressed that will get emailed when a violation is triggered.
 - `notify_deployer` (Boolean) Sends an email message to component deployer with details about the generated Violations. Default value is `false`.
 - `notify_watch_recipients` (Boolean) Sends an email message to all configured recipients inside a specific watch with details about the generated Violations. Default value is `false`.

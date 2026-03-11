@@ -85,6 +85,7 @@ resource "xray_security_policy" "security1" {
       notify_watch_recipients            = true
       notify_deployer                    = true
       create_ticket_enabled              = false // set to true only if Jira integration is enabled
+      fail_pull_request                  = false
       build_failure_grace_period_in_days = 5     // use only if fail_build is enabled
 
       block_download {
@@ -120,6 +121,7 @@ resource "xray_security_policy" "security2" {
       notify_watch_recipients            = true
       notify_deployer                    = true
       create_ticket_enabled              = false // set to true only if Jira integration is enabled
+      fail_pull_request                  = false
       build_failure_grace_period_in_days = 5     // use only if fail_build is enabled
 
       block_download {
@@ -153,6 +155,7 @@ resource "xray_license_policy" "license1" {
       notify_watch_recipients            = true
       notify_deployer                    = true
       create_ticket_enabled              = false // set to true only if Jira integration is enabled
+      fail_pull_request                  = false
       custom_severity                    = "High"
       build_failure_grace_period_in_days = 5 // use only if fail_build is enabled
 
@@ -187,6 +190,7 @@ resource "xray_license_policy" "license2" {
       notify_watch_recipients            = true
       notify_deployer                    = true
       create_ticket_enabled              = false // set to true only if Jira integration is enabled
+      fail_pull_request                  = false
       custom_severity                    = "Medium"
       build_failure_grace_period_in_days = 5 // use only if fail_build is enabled
 
