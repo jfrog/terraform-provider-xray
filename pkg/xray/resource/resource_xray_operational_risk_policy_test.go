@@ -25,6 +25,7 @@ var testDataOperationalRisk = map[string]string{
 	"notify_watch_recipients":           "true",
 	"notify_deployer":                   "true",
 	"create_ticket_enabled":             "false",
+	"fail_pull_request":                 "true",
 	"grace_period_days":                 "5",
 	"block_unscanned":                   "true",
 	"block_active":                      "true",
@@ -51,8 +52,8 @@ func TestAccOperationalRiskPolicy_UpgradeFromSDKv2(t *testing.T) {
 				fail_build = {{ .fail_build }}
 				notify_watch_recipients = {{ .notify_watch_recipients }}
 				notify_deployer = {{ .notify_deployer }}
-				create_ticket_enabled = {{ .create_ticket_enabled }}
-				build_failure_grace_period_in_days = {{ .grace_period_days }}
+			create_ticket_enabled = {{ .create_ticket_enabled }}
+			build_failure_grace_period_in_days = {{ .grace_period_days }}
 				block_download {
 					unscanned = {{ .block_unscanned }}
 					active = {{ .block_active }}
@@ -65,6 +66,7 @@ func TestAccOperationalRiskPolicy_UpgradeFromSDKv2(t *testing.T) {
 	testData["resource_name"] = resourceName
 	testData["policy_name"] = fmt.Sprintf("terraform-operational-risk-policy-%d", testutil.RandomInt())
 	testData["op_risk_min_risk"] = "Medium"
+	delete(testData, "fail_pull_request")
 
 	config := util.ExecuteTemplate(fqrn, template, testData)
 
@@ -129,8 +131,9 @@ func TestAccOperationalRiskPolicy_withProjectKey(t *testing.T) {
 				fail_build = {{ .fail_build }}
 				notify_watch_recipients = {{ .notify_watch_recipients }}
 				notify_deployer = {{ .notify_deployer }}
-				create_ticket_enabled = {{ .create_ticket_enabled }}
-				build_failure_grace_period_in_days = {{ .grace_period_days }}
+			create_ticket_enabled = {{ .create_ticket_enabled }}
+			fail_pull_request = {{ .fail_pull_request }}
+			build_failure_grace_period_in_days = {{ .grace_period_days }}
 				block_download {
 					unscanned = {{ .block_unscanned }}
 					active = {{ .block_active }}
@@ -172,10 +175,11 @@ func TestAccOperationalRiskPolicy_withProjectKey(t *testing.T) {
 				Check:  verifyOpertionalRiskPolicy(fqrn, updatedTestData),
 			},
 			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateId:     fmt.Sprintf("%s:%s", testData["policy_name"], projectKey),
-				ImportStateVerify: true,
+				ResourceName:            fqrn,
+				ImportState:             true,
+				ImportStateId:           fmt.Sprintf("%s:%s", testData["policy_name"], projectKey),
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"rule.0.actions.0.fail_pull_request"},
 			},
 		},
 	})
@@ -200,8 +204,9 @@ func TestAccOperationalRiskPolicy_minRiskCriteria(t *testing.T) {
 				fail_build = {{ .fail_build }}
 				notify_watch_recipients = {{ .notify_watch_recipients }}
 				notify_deployer = {{ .notify_deployer }}
-				create_ticket_enabled = {{ .create_ticket_enabled }}
-				build_failure_grace_period_in_days = {{ .grace_period_days }}
+			create_ticket_enabled = {{ .create_ticket_enabled }}
+			fail_pull_request = {{ .fail_pull_request }}
+			build_failure_grace_period_in_days = {{ .grace_period_days }}
 				block_download {
 					unscanned = {{ .block_unscanned }}
 					active = {{ .block_active }}
@@ -227,9 +232,10 @@ func TestAccOperationalRiskPolicy_minRiskCriteria(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            fqrn,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"rule.0.actions.0.fail_pull_request"},
 			},
 		},
 	})
@@ -263,8 +269,9 @@ func TestAccOperationalRiskPolicy_customCriteria(t *testing.T) {
 				fail_build = {{ .fail_build }}
 				notify_watch_recipients = {{ .notify_watch_recipients }}
 				notify_deployer = {{ .notify_deployer }}
-				create_ticket_enabled = {{ .create_ticket_enabled }}
-				build_failure_grace_period_in_days = {{ .grace_period_days }}
+			create_ticket_enabled = {{ .create_ticket_enabled }}
+			fail_pull_request = {{ .fail_pull_request }}
+			build_failure_grace_period_in_days = {{ .grace_period_days }}
 				block_download {
 					unscanned = {{ .block_unscanned }}
 					active = {{ .block_active }}
@@ -305,8 +312,9 @@ func TestAccOperationalRiskPolicy_customCriteria(t *testing.T) {
 				fail_build = {{ .fail_build }}
 				notify_watch_recipients = {{ .notify_watch_recipients }}
 				notify_deployer = {{ .notify_deployer }}
-				create_ticket_enabled = {{ .create_ticket_enabled }}
-				build_failure_grace_period_in_days = {{ .grace_period_days }}
+			create_ticket_enabled = {{ .create_ticket_enabled }}
+			fail_pull_request = {{ .fail_pull_request }}
+			build_failure_grace_period_in_days = {{ .grace_period_days }}
 				block_download {
 					unscanned = {{ .block_unscanned }}
 					active = {{ .block_active }}
@@ -348,9 +356,10 @@ func TestAccOperationalRiskPolicy_customCriteria(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            fqrn,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"rule.0.actions.0.fail_pull_request"},
 			},
 		},
 	})
@@ -379,8 +388,8 @@ func TestAccOperationalRiskPolicy_customCriteria_migration(t *testing.T) {
 				fail_build = {{ .fail_build }}
 				notify_watch_recipients = {{ .notify_watch_recipients }}
 				notify_deployer = {{ .notify_deployer }}
-				create_ticket_enabled = {{ .create_ticket_enabled }}
-				build_failure_grace_period_in_days = {{ .grace_period_days }}
+			create_ticket_enabled = {{ .create_ticket_enabled }}
+			build_failure_grace_period_in_days = {{ .grace_period_days }}
 				block_download {
 					unscanned = {{ .block_unscanned }}
 					active = {{ .block_active }}
@@ -396,6 +405,7 @@ func TestAccOperationalRiskPolicy_customCriteria_migration(t *testing.T) {
 	testData["op_risk_custom_is_eol"] = "false"
 	testData["op_risk_custom_risk"] = testutil.RandSelect("High", "Medium", "Low").(string)
 	delete(testData, "block_release_bundle_promotion")
+	delete(testData, "fail_pull_request")
 
 	resource.Test(t, resource.TestCase{
 		CheckDestroy: acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
@@ -438,7 +448,7 @@ func TestAccOperationalRiskPolicy_customCriteria_migration(t *testing.T) {
 }
 
 func verifyOpertionalRiskPolicy(fqrn string, testData map[string]string) resource.TestCheckFunc {
-	checkFunc := resource.ComposeTestCheckFunc(
+	checks := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttr(fqrn, "name", testData["policy_name"]),
 		resource.TestCheckResourceAttr(fqrn, "description", testData["policy_description"]),
 		resource.TestCheckResourceAttr(fqrn, "rule.0.name", testData["rule_name"]),
@@ -450,7 +460,13 @@ func verifyOpertionalRiskPolicy(fqrn string, testData map[string]string) resourc
 		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.build_failure_grace_period_in_days", testData["grace_period_days"]),
 		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.block_download.0.active", testData["block_active"]),
 		resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.block_download.0.unscanned", testData["block_unscanned"]),
-	)
+	}
+
+	if v, ok := testData["fail_pull_request"]; ok && v != "" {
+		checks = append(checks, resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.fail_pull_request", v))
+	}
+
+	checkFunc := resource.ComposeTestCheckFunc(checks...)
 
 	if _, ok := testData["block_release_bundle_promotion"]; ok {
 		checkFunc = resource.ComposeTestCheckFunc(
@@ -490,8 +506,9 @@ func TestAccOperationalRiskPolicy_criteriaValidation(t *testing.T) {
 				fail_build = {{ .fail_build }}
 				notify_watch_recipients = {{ .notify_watch_recipients }}
 				notify_deployer = {{ .notify_deployer }}
-				create_ticket_enabled = {{ .create_ticket_enabled }}
-				build_failure_grace_period_in_days = {{ .grace_period_days }}
+			create_ticket_enabled = {{ .create_ticket_enabled }}
+			fail_pull_request = {{ .fail_pull_request }}
+			build_failure_grace_period_in_days = {{ .grace_period_days }}
 				block_download {
 					unscanned = {{ .block_unscanned }}
 					active = {{ .block_active }}

@@ -22,6 +22,7 @@ resource "xray_security_policy" "min_severity" {
       notify_watch_recipients            = true
       notify_deployer                    = true
       create_ticket_enabled              = false // set to true only if Jira integration is enabled
+      fail_pull_request                  = true
       build_failure_grace_period_in_days = 5     // use only if fail_build is enabled
 
       block_download {
@@ -58,6 +59,7 @@ resource "xray_security_policy" "cvss_score" {
       notify_watch_recipients            = true
       notify_deployer                    = true
       create_ticket_enabled              = false // set to true only if Jira integration is enabled
+      fail_pull_request                  = true
       build_failure_grace_period_in_days = 5     // use only if fail_build is enabled
 
       block_download {
@@ -90,6 +92,7 @@ resource "xray_security_policy" "malicious_package" {
       notify_watch_recipients            = true
       notify_deployer                    = true
       create_ticket_enabled              = false // set to true only if Jira integration is enabled
+      fail_pull_request                  = true
       build_failure_grace_period_in_days = 5     // use only if fail_build is enabled
 
       block_download {

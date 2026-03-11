@@ -42,6 +42,7 @@ resource "xray_license_policy" "allowed_licenses" {
       notify_watch_recipients            = true
       notify_deployer                    = true
       create_ticket_enabled              = false // set to true only if Jira integration is enabled
+      fail_pull_request                  = true
       custom_severity                    = "High"
       build_failure_grace_period_in_days = 5 // use only if fail_build is enabled
 
@@ -78,6 +79,7 @@ resource "xray_license_policy" "banned_licenses" {
       notify_watch_recipients            = true
       notify_deployer                    = true
       create_ticket_enabled              = false // set to true only if Jira integration is enabled
+      fail_pull_request                  = true
       custom_severity                    = "Medium"
       build_failure_grace_period_in_days = 5 // use only if fail_build is enabled
 
@@ -136,6 +138,7 @@ Optional:
 - `create_ticket_enabled` (Boolean) Create Jira Ticket for this Policy Violation. Requires configured Jira integration. Default value is `false`.
 - `custom_severity` (String) The severity of violation to be triggered if the `criteria` are met.
 - `fail_build` (Boolean) Whether or not the related CI build should be marked as failed if a violation is triggered. This option is only available when the policy is applied to an `xray_watch` resource with a `type` of `builds`. Default value is `false`.
+- `fail_pull_request` (Boolean) Whether or not the related pull request should be marked as failed if a violation is triggered. Default value is `false`.
 - `mails` (Set of String) A list of email addressed that will get emailed when a violation is triggered.
 - `notify_deployer` (Boolean) Sends an email message to component deployer with details about the generated Violations. Default value is `false`.
 - `notify_watch_recipients` (Boolean) Sends an email message to all configured recipients inside a specific watch with details about the generated Violations. Default value is `false`.

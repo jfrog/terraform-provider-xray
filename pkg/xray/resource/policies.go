@@ -106,6 +106,9 @@ var toActionsAPIModel = func(ctx context.Context, actionsElems []attr.Value) (Po
 		actions.NotifyWatchRecipients = attrs["notify_watch_recipients"].(types.Bool).ValueBool()
 		actions.NotifyDeployer = attrs["notify_deployer"].(types.Bool).ValueBool()
 		actions.CreateJiraTicketEnabled = attrs["create_ticket_enabled"].(types.Bool).ValueBool()
+		actions.FailPullRequest = &FailPullRequestAPIModel{
+			Active: attrs["fail_pull_request"].(types.Bool).ValueBool(),
+		}
 		actions.FailureGracePeriodDays = attrs["build_failure_grace_period_in_days"].(types.Int64).ValueInt64()
 	}
 
@@ -164,6 +167,7 @@ var actionsAttrTypes = map[string]attr.Type{
 	"notify_deployer":                    types.BoolType,
 	"notify_watch_recipients":            types.BoolType,
 	"create_ticket_enabled":              types.BoolType,
+	"fail_pull_request":                  types.BoolType,
 	"build_failure_grace_period_in_days": types.Int64Type,
 }
 
@@ -224,6 +228,7 @@ var fromActionsAPIModel = func(ctx context.Context, actionsAPIModel PolicyRuleAc
 			"notify_deployer":                    types.BoolValue(actionsAPIModel.NotifyDeployer),
 			"notify_watch_recipients":            types.BoolValue(actionsAPIModel.NotifyWatchRecipients),
 			"create_ticket_enabled":              types.BoolValue(actionsAPIModel.CreateJiraTicketEnabled),
+			"fail_pull_request":                  types.BoolValue(actionsAPIModel.FailPullRequest != nil && actionsAPIModel.FailPullRequest.Active),
 			"build_failure_grace_period_in_days": types.Int64Value(actionsAPIModel.FailureGracePeriodDays),
 		},
 	)
@@ -417,6 +422,14 @@ var commonActionsAttrs = map[string]schema.Attribute{
 		},
 		Description: "Create Jira Ticket for this Policy Violation. Requires configured Jira integration. Default value is `false`.",
 	},
+	"fail_pull_request": schema.BoolAttribute{
+		Optional: true,
+		Computed: true,
+		PlanModifiers: []planmodifier.Bool{
+			boolplanmodifier.UseStateForUnknown(),
+		},
+		Description: "Whether or not the related pull request should be marked as failed if a violation is triggered. Default value is `false`.",
+	},
 	"build_failure_grace_period_in_days": schema.Int64Attribute{
 		Optional: true,
 		Computed: true,
@@ -588,6 +601,10 @@ type BlockDownloadSettingsAPIModel struct {
 	Active    bool `json:"active"`
 }
 
+type FailPullRequestAPIModel struct {
+	Active bool `json:"active"`
+}
+
 type PolicyRuleActionsAPIModel struct {
 	Webhooks                       []string                      `json:"webhooks,omitempty"`
 	Mails                          []string                      `json:"mails,omitempty"`
@@ -598,6 +615,7 @@ type PolicyRuleActionsAPIModel struct {
 	NotifyWatchRecipients          bool                          `json:"notify_watch_recipients"`
 	NotifyDeployer                 bool                          `json:"notify_deployer"`
 	CreateJiraTicketEnabled        bool                          `json:"create_ticket_enabled"`
+	FailPullRequest                *FailPullRequestAPIModel      `json:"fail_pull_request,omitempty"`
 	FailureGracePeriodDays         int64                         `json:"build_failure_grace_period_in_days"`
 	// License Actions
 	CustomSeverity string `json:"custom_severity,omitempty"`
@@ -623,6 +641,69 @@ type PolicyAPIModel struct {
 
 type PolicyError struct {
 	Error string `json:"error"`
+}
+
+// preserveFailPullRequest copies fail_pull_request from the source API model
+// to the target API model. The Xray API accepts fail_pull_request in POST/PUT
+// but does not return it in GET responses, so we must preserve the value from
+// the plan or state to avoid state drift.
+func preserveFailPullRequest(source, target *[]PolicyRuleAPIModel) {
+	if source == nil || target == nil {
+		return
+	}
+	for i := range *target {
+		if i < len(*source) {
+			(*target)[i].Actions.FailPullRequest = (*source)[i].Actions.FailPullRequest
+		}
+	}
+}
+
+// extractFailPullRequestFromState extracts fail_pull_request values from the
+// Terraform state's rules list and applies them to the API model rules.
+func extractFailPullRequestFromState(state PolicyResourceModel, target *[]PolicyRuleAPIModel) {
+	if target == nil {
+		return
+	}
+
+	for i, elem := range state.Rules.Elements() {
+		if i >= len(*target) {
+			break
+		}
+
+		ruleObj, ok := elem.(types.Object)
+		if !ok {
+			continue
+		}
+
+		actionsAttr, ok := ruleObj.Attributes()["actions"]
+		if !ok {
+			continue
+		}
+
+		actionsList, ok := actionsAttr.(types.List)
+		if !ok || len(actionsList.Elements()) == 0 {
+			continue
+		}
+
+		actionsObj, ok := actionsList.Elements()[0].(types.Object)
+		if !ok {
+			continue
+		}
+
+		failPR, ok := actionsObj.Attributes()["fail_pull_request"]
+		if !ok {
+			continue
+		}
+
+		failPRBool, ok := failPR.(types.Bool)
+		if !ok || failPRBool.IsNull() || failPRBool.IsUnknown() {
+			continue
+		}
+
+		(*target)[i].Actions.FailPullRequest = &FailPullRequestAPIModel{
+			Active: failPRBool.ValueBool(),
+		}
+	}
 }
 
 func (r *PolicyResource) Create(
@@ -690,6 +771,8 @@ func (r *PolicyResource) Create(
 		return
 	}
 
+	preserveFailPullRequest(policy.Rules, createdPolicy.Rules)
+
 	resp.Diagnostics.Append(fromAPIModel(ctx, createdPolicy, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -747,6 +830,8 @@ func (r *PolicyResource) Read(
 		utilfw.UnableToRefreshResourceError(resp, policyError.Error)
 		return
 	}
+
+	extractFailPullRequestFromState(state, policy.Rules)
 
 	resp.Diagnostics.Append(fromAPIModel(ctx, policy, &state)...)
 	if resp.Diagnostics.HasError() {
@@ -823,6 +908,8 @@ func (r *PolicyResource) Update(
 		utilfw.UnableToUpdateResourceError(resp, policyError.Error)
 		return
 	}
+
+	preserveFailPullRequest(policy.Rules, updatedPolicy.Rules)
 
 	resp.Diagnostics.Append(fromAPIModel(ctx, updatedPolicy, &plan)...)
 	if resp.Diagnostics.HasError() {
