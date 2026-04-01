@@ -3,6 +3,7 @@ package xray
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"regexp"
 	"strings"
 
@@ -649,6 +650,11 @@ func (r *CustomIssueResource) Read(ctx context.Context, req resource.ReadRequest
 		Get(CustomIssueEndpointV2)
 	if err != nil {
 		utilfw.UnableToRefreshResourceError(resp, err.Error())
+		return
+	}
+
+	if response.StatusCode() == http.StatusNotFound {
+		resp.State.RemoveResource(ctx)
 		return
 	}
 

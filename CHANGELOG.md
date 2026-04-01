@@ -1,3 +1,9 @@
+## 3.1.8 (April 01, 2026)
+
+BUG FIXES:
+
+* resource/xray_custom_issue: Fix `xray_custom_issue` Read returns error instead of removing resource from state when remote resource does not exist (HTTP 404). Issue: [#398](https://github.com/jfrog/terraform-provider-xray/issues/398) PR: [#401](https://github.com/jfrog/terraform-provider-xray/pull/401)
+
 ## 3.1.7 (Mar 11, 2026). Tested on JFrog Platform 11.4.4 (Artifactory 7.133.12, Xray 3.137.23, Catalog 1.33.4) with Terraform 1.14.6 and OpenTofu 1.11.5
 
 FEATURES:
