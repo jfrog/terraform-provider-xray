@@ -98,8 +98,6 @@ func (m RepoConfigResourceModel) toAPIModel(_ context.Context, xrayVersion, pack
 					}
 				}
 			}
-		} else if slices.Contains(exposuresPackageTypes(xrayVersion), packageType) {
-			exposures = defaultExposuresForPackageType(packageType)
 		}
 
 		repoConfig = &RepoConfigurationAPIModel{
@@ -148,36 +146,6 @@ func (m RepoConfigResourceModel) toAPIModel(_ context.Context, xrayVersion, pack
 	}
 
 	return
-}
-
-func defaultExposuresForPackageType(packageType string) *ExposuresAPIModel {
-	exp := ExposuresAPIModel{}
-
-	switch packageType {
-	case "docker", "oci":
-		exp.ScannersCategory = map[string]bool{
-			"services_scan":     false,
-			"secrets_scan":      false,
-			"applications_scan": false,
-		}
-	case "maven", "nuget", "generic", "gradle", "gems", "go", "alpine", "debian", "rpm":
-		exp.ScannersCategory = map[string]bool{
-			"secrets_scan": false,
-		}
-	case "npm", "pypi":
-		exp.ScannersCategory = map[string]bool{
-			"secrets_scan":      false,
-			"applications_scan": false,
-		}
-	case "terraformbackend":
-		exp.ScannersCategory = map[string]bool{
-			"iac_scan": false,
-		}
-	default:
-		return nil
-	}
-
-	return &exp
 }
 
 var configExposuresScannersCategoryResourceModelAttributeTypes map[string]attr.Type = map[string]attr.Type{
