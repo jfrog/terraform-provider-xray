@@ -279,6 +279,85 @@ func TestAccCustomIssue_full(t *testing.T) {
 	})
 }
 
+func TestAccCustomIssue_NotFound(t *testing.T) {
+	_, fqrn, resourceName := testutil.MkNames("custom-issue-", "xray_custom_issue")
+
+	const template = `
+		resource "xray_custom_issue" "{{ .name }}" {
+			name          = "{{ .name }}"
+			description   = "{{ .description }}"
+			summary       = "{{ .summary }}"
+			type          = "{{ .type }}"
+			provider_name = "{{ .provider_name }}"
+			package_type  = "{{ .package_type }}"
+			severity      = "{{ .severity }}"
+
+			component {
+				id                  = "{{ .component_id }}"
+				vulnerable_versions = ["{{ .component_vulnerable_versions }}"]
+				vulnerable_ranges {
+					vulnerable_versions = ["{{ .component_vulnerable_ranges_vulnerable_versions }}"]
+				}
+			}
+
+			cve {
+				cve     = "{{ .cve }}"
+				cvss_v2 = "{{ .cve_cvss_v2 }}"
+			}
+
+			source {
+				id = "{{ .source_id }}"
+			}
+		}
+	`
+
+	testData := map[string]string{
+		"name":                          resourceName,
+		"description":                   "test description",
+		"summary":                       "test summary",
+		"type":                          "security",
+		"provider_name":                 "test",
+		"package_type":                  "generic",
+		"severity":                      "Medium",
+		"component_id":                  "aero:aero",
+		"component_vulnerable_versions": "[0.2.3]",
+		"component_vulnerable_ranges_vulnerable_versions": "[0.2.3]",
+		"cve":         "CVE-2017-1000386",
+		"cve_cvss_v2": "2.4",
+		"source_id":   "CVE-2017-1000386",
+	}
+
+	config := util.ExecuteTemplate("TestAccCustomIssue_NotFound", template, testData)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckCustomIssue),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "id", testData["name"]),
+				),
+			},
+			{
+				PreConfig: func() {
+					client := acctest.GetTestResty(t)
+					resp, err := client.R().
+						SetPathParam("id", resourceName).
+						Delete("xray/api/v1/events/{id}")
+					if err != nil {
+						t.Fatalf("failed to delete custom issue %q out of band: %v", resourceName, err)
+					}
+					if resp.IsError() {
+						t.Fatalf("failed to delete custom issue %q out of band: %s", resourceName, resp.String())
+					}
+				},
+				Config: config,
+			},
+		},
+	})
+}
+
 func TestAccCustomIssue_invalid(t *testing.T) {
 	const template = `
 		resource "xray_custom_issue" "{{ .name }}" {
