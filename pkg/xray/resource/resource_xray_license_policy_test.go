@@ -509,6 +509,111 @@ const licensePolicyTemplate = `resource "xray_license_policy" "{{ .resource_name
 	}
 }`
 
+// Used only by TestAccLicensePolicy_blockDownloadGracePeriodDays_omitThenSet (step 2: non-zero grace).
+const licensePolicyTemplateBlockDownloadGraceSeven = `resource "xray_license_policy" "{{ .resource_name }}" {
+	name = "{{ .policy_name }}"
+	description = "{{ .policy_description }}"
+	type = "license"
+	rule {
+		name = "{{ .rule_name }}"
+		priority = 1
+		criteria {
+          {{ .allowedOrBanned }} = ["{{ .license_0 }}","{{ .license_1 }}"]
+          allow_unknown = {{ .allow_unknown }}
+          multi_license_permissive = {{ .multi_license_permissive }}
+		}
+		actions {
+          mails = ["{{ .mails_0 }}", "{{ .mails_1 }}"]
+          block_download {
+				unscanned = {{ .block_unscanned }}
+				active = {{ .block_active }}
+				grace_period_days = 7
+          }
+          block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+          block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
+          fail_build = {{ .fail_build }}
+          notify_watch_recipients = {{ .notify_watch_recipients }}
+          notify_deployer = {{ .notify_deployer }}
+          create_ticket_enabled = {{ .create_ticket_enabled }}
+          fail_pull_request = {{ .fail_pull_request }}
+          custom_severity = "{{ .custom_severity }}"
+          build_failure_grace_period_in_days = {{ .grace_period_days }}
+		}
+	}
+}`
+
+// block_download without grace_period_days — simulates configs written before the attribute existed.
+const licensePolicyTemplateBlockDownloadGraceOmitted = `resource "xray_license_policy" "{{ .resource_name }}" {
+	name = "{{ .policy_name }}"
+	description = "{{ .policy_description }}"
+	type = "license"
+	rule {
+		name = "{{ .rule_name }}"
+		priority = 1
+		criteria {
+          {{ .allowedOrBanned }} = ["{{ .license_0 }}","{{ .license_1 }}"]
+          allow_unknown = {{ .allow_unknown }}
+          multi_license_permissive = {{ .multi_license_permissive }}
+		}
+		actions {
+          mails = ["{{ .mails_0 }}", "{{ .mails_1 }}"]
+          block_download {
+				unscanned = {{ .block_unscanned }}
+				active = {{ .block_active }}
+          }
+          block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+          block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
+          fail_build = {{ .fail_build }}
+          notify_watch_recipients = {{ .notify_watch_recipients }}
+          notify_deployer = {{ .notify_deployer }}
+          create_ticket_enabled = {{ .create_ticket_enabled }}
+          fail_pull_request = {{ .fail_pull_request }}
+          custom_severity = "{{ .custom_severity }}"
+          build_failure_grace_period_in_days = {{ .grace_period_days }}
+		}
+	}
+}`
+
+func TestAccLicensePolicy_blockDownloadGracePeriodDays_omitThenSet(t *testing.T) {
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_license_policy")
+	testData := sdk.MergeMaps(testDataLicense)
+
+	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-license-policy-grace-omit-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-license-rule-grace-omit-%d", testutil.RandomInt())
+
+	step2Data := sdk.MergeMaps(testData)
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: util.ExecuteTemplate(fqrn, licensePolicyTemplateBlockDownloadGraceOmitted, testData),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "name", testData["policy_name"]),
+					resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.block_download.0.grace_period_days", "0"),
+				),
+			},
+			{
+				Config: util.ExecuteTemplate(fqrn, licensePolicyTemplateBlockDownloadGraceSeven, step2Data),
+				Check: resource.ComposeTestCheckFunc(
+					verifyLicensePolicy(fqrn, step2Data, step2Data["allowedOrBanned"]),
+					resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.block_download.0.grace_period_days", "7"),
+				),
+			},
+			{
+				Config: util.ExecuteTemplate(fqrn, licensePolicyTemplateBlockDownloadGraceSeven, step2Data),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+		},
+	})
+}
+
 func TestAccLicensePolicy_MigrateSetToList(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_license_policy")
 

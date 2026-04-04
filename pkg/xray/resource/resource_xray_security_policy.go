@@ -269,8 +269,9 @@ var securityCriteriaSetElementType = types.ObjectType{
 }
 
 var blockDownloadAttrTypes = map[string]attr.Type{
-	"unscanned": types.BoolType,
-	"active":    types.BoolType,
+	"unscanned":         types.BoolType,
+	"active":            types.BoolType,
+	"grace_period_days": types.Int64Type,
 }
 
 var blockDownloadElementType = types.ObjectType{

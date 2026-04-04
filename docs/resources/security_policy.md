@@ -180,6 +180,7 @@ Optional:
 Optional:
 
 - `active` (Boolean) Whether or not to block download of artifacts that meet the artifact and severity `filters` for the associated `xray_watch` resource. Default value is `false`.
+- `grace_period_days` (Number) Grace period in days before blocking download of artifacts that meet the policy. Matches the Xray Policy REST API `grace_period_days` on `block_download`. Default is `0`.
 - `unscanned` (Boolean) Whether or not to block download of artifacts that meet the artifact `filters` for the associated `xray_watch` resource but have not been scanned yet. Can not be set to `true` if attribute `active` is `false`. Default value is `false`.
 
 

@@ -95,6 +95,12 @@ var toActionsAPIModel = func(ctx context.Context, actionsElems []attr.Value) (Po
 
 			blockDownload.Unscanned = attrs["unscanned"].(types.Bool).ValueBool()
 			blockDownload.Active = attrs["active"].(types.Bool).ValueBool()
+			if gp, ok := attrs["grace_period_days"]; ok {
+				gpInt := gp.(types.Int64)
+				if !gpInt.IsNull() && !gpInt.IsUnknown() {
+					blockDownload.GracePeriodDays = gpInt.ValueInt64()
+				}
+			}
 		}
 
 		actions.Webhooks = webhooks
@@ -201,8 +207,9 @@ var fromActionsAPIModel = func(ctx context.Context, actionsAPIModel PolicyRuleAc
 	blockDownload, d := types.ObjectValue(
 		blockDownloadAttrTypes,
 		map[string]attr.Value{
-			"unscanned": types.BoolValue(actionsAPIModel.BlockDownload.Unscanned),
-			"active":    types.BoolValue(actionsAPIModel.BlockDownload.Active),
+			"unscanned":         types.BoolValue(actionsAPIModel.BlockDownload.Unscanned),
+			"active":            types.BoolValue(actionsAPIModel.BlockDownload.Active),
+			"grace_period_days": types.Int64Value(actionsAPIModel.BlockDownload.GracePeriodDays),
 		},
 	)
 	if d.HasError() {
@@ -346,6 +353,17 @@ var commonActionsBlocks = map[string]schema.Block{
 						boolplanmodifier.UseStateForUnknown(),
 					},
 					Description: "Whether or not to block download of artifacts that meet the artifact and severity `filters` for the associated `xray_watch` resource. Default value is `false`.",
+				},
+				"grace_period_days": schema.Int64Attribute{
+					Optional: true,
+					Computed: true,
+					PlanModifiers: []planmodifier.Int64{
+						int64planmodifier.UseStateForUnknown(),
+					},
+					Validators: []validator.Int64{
+						int64validator.AtLeast(0),
+					},
+					Description: "Grace period in days before blocking download of artifacts that meet the policy. Matches the Xray Policy REST API `grace_period_days` on `block_download`. Default is `0`.",
 				},
 			},
 		},
@@ -597,8 +615,9 @@ type PolicyRuleCriteriaAPIModel struct {
 }
 
 type BlockDownloadSettingsAPIModel struct {
-	Unscanned bool `json:"unscanned"`
-	Active    bool `json:"active"`
+	Unscanned       bool  `json:"unscanned"`
+	Active          bool  `json:"active"`
+	GracePeriodDays int64 `json:"grace_period_days"`
 }
 
 type FailPullRequestAPIModel struct {

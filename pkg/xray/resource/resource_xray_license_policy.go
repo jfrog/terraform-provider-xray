@@ -172,8 +172,9 @@ func (m *LicensePolicyResource) fromActionsAPIModel(ctx context.Context, actions
 	blockDownload, d := types.ObjectValue(
 		blockDownloadAttrTypes,
 		map[string]attr.Value{
-			"unscanned": types.BoolValue(actionsAPIModel.BlockDownload.Unscanned),
-			"active":    types.BoolValue(actionsAPIModel.BlockDownload.Active),
+			"unscanned":         types.BoolValue(actionsAPIModel.BlockDownload.Unscanned),
+			"active":            types.BoolValue(actionsAPIModel.BlockDownload.Active),
+			"grace_period_days": types.Int64Value(actionsAPIModel.BlockDownload.GracePeriodDays),
 		},
 	)
 	if d.HasError() {
