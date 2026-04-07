@@ -1,3 +1,9 @@
+## 3.1.9 (April 07, 2026).
+
+BUG FIXES:
+
+* resource/xray_security_policy: Fix state drift for `criteria.exposures.min_severity` when set to `All severities` caused by casing mismatch between Xray API response and provider validator. PR: [#406](https://github.com/jfrog/terraform-provider-xray/pull/406)
+
 ## 3.1.8 (April 01, 2026). Tested on JFrog Platform 11.4.5 (Artifactory 7.133.15, Xray 3.137.27, Catalog 1.35.0) with Terraform 1.14.8 and OpenTofu 1.11.5
 
 BUG FIXES:
