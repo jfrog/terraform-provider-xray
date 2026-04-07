@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/float64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
@@ -20,7 +21,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/jfrog/terraform-provider-shared/util"
-	"github.com/samber/lo"
 )
 
 var _ resource.Resource = &SecurityPolicyResource{}
@@ -106,6 +106,21 @@ func (r SecurityPolicyResource) toAPIModel(ctx context.Context, plan PolicyResou
 	return plan.toAPIModel(ctx, policy, r.toCriteriaAPIModel, toActionsAPIModel)
 }
 
+var severityNormalizationMap = map[string]string{
+	"all severities": "All severities",
+	"critical":       "Critical",
+	"high":           "High",
+	"medium":         "Medium",
+	"low":            "Low",
+}
+
+func NormalizeSeverity(s string) string {
+	if mapped, ok := severityNormalizationMap[strings.ToLower(s)]; ok {
+		return mapped
+	}
+	return s
+}
+
 func (r *SecurityPolicyResource) fromCriteriaAPIModel(ctx context.Context, criteriaAPIModel *PolicyRuleCriteriaAPIModel) (types.List, diag.Diagnostics) {
 	diags := diag.Diagnostics{}
 
@@ -113,7 +128,7 @@ func (r *SecurityPolicyResource) fromCriteriaAPIModel(ctx context.Context, crite
 	if criteriaAPIModel != nil {
 		minimumSeverity := types.StringNull()
 		if criteriaAPIModel.MinimumSeverity != "" {
-			minimumSeverity = types.StringValue(criteriaAPIModel.MinimumSeverity)
+			minimumSeverity = types.StringValue(NormalizeSeverity(criteriaAPIModel.MinimumSeverity))
 		}
 
 		cvssRangeList := types.ListNull(cvssRangeElementType)
@@ -149,7 +164,7 @@ func (r *SecurityPolicyResource) fromCriteriaAPIModel(ctx context.Context, crite
 		if criteriaAPIModel.Exposures != nil {
 			var minSeverity *string
 			if criteriaAPIModel.Exposures.MinSeverity != nil {
-				s := lo.Capitalize(*criteriaAPIModel.Exposures.MinSeverity)
+				s := NormalizeSeverity(*criteriaAPIModel.Exposures.MinSeverity)
 				minSeverity = &s
 			}
 
@@ -324,7 +339,7 @@ var securityPolicyCriteriaBlocks = map[string]schema.Block{
 					Validators: []validator.String{
 						stringvalidator.OneOf("All severities", "Critical", "High", "Medium", "Low"),
 					},
-					MarkdownDescription: "The minimum security vulnerability severity that will be impacted by the policy. Valid values: `All Severities`, `Critical`, `High`, `Medium`, `Low`",
+					MarkdownDescription: "The minimum security vulnerability severity that will be impacted by the policy. Valid values: `All severities`, `Critical`, `High`, `Medium`, `Low`",
 				},
 				"secrets": schema.BoolAttribute{
 					Optional:    true,
@@ -380,7 +395,7 @@ var securityPolicyCriteriaAttrs = map[string]schema.Attribute{
 				path.MatchRelative().AtParent().AtName("cvss_range"),
 			),
 		},
-		Description: "The minimum security vulnerability severity that will be impacted by the policy. Valid values: `All Severities`, `Critical`, `High`, `Medium`, `Low`",
+		Description: "The minimum security vulnerability severity that will be impacted by the policy. Valid values: `All severities`, `Critical`, `High`, `Medium`, `Low`",
 	},
 	"fix_version_dependant": schema.BoolAttribute{
 		Optional:    true,

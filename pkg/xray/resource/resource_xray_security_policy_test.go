@@ -13,6 +13,7 @@ import (
 	"github.com/jfrog/terraform-provider-shared/util"
 	"github.com/jfrog/terraform-provider-shared/util/sdk"
 	"github.com/jfrog/terraform-provider-xray/v3/pkg/acctest"
+	xray "github.com/jfrog/terraform-provider-xray/v3/pkg/xray/resource"
 )
 
 const criteriaTypeCvss = "cvss"
@@ -41,6 +42,38 @@ var testDataSecurity = map[string]string{
 	"block_unscanned":                   "true",
 	"block_active":                      "true",
 	"criteriaType":                      "cvss",
+}
+
+func TestNormalizeSeverity(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"All Severities", "All severities"},
+		{"All severities", "All severities"},
+		{"all severities", "All severities"},
+		{"ALL SEVERITIES", "All severities"},
+		{"Critical", "Critical"},
+		{"critical", "Critical"},
+		{"CRITICAL", "Critical"},
+		{"High", "High"},
+		{"high", "High"},
+		{"HIGH", "High"},
+		{"Medium", "Medium"},
+		{"medium", "Medium"},
+		{"Low", "Low"},
+		{"low", "Low"},
+		{"unknown_value", "unknown_value"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := xray.NormalizeSeverity(tt.input)
+			if result != tt.expected {
+				t.Errorf("NormalizeSeverity(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
 }
 
 func TestAccSecurityPolicy_UpgradeFromSDKv2(t *testing.T) {
@@ -954,6 +987,45 @@ func TestAccSecurityPolicy_exposures(t *testing.T) {
 			{
 				Config: util.ExecuteTemplate(fqrn, securityPolicyExposures, testData),
 				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeExposures),
+			},
+			{
+				ResourceName:            fqrn,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"author", "created", "modified", "rule.0.actions.0.fail_pull_request"},
+			},
+		},
+	})
+}
+
+func TestAccSecurityPolicy_exposuresAllSeveritiesNoDrift(t *testing.T) {
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
+
+	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-allsev-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-allsev-%d", testutil.RandomInt())
+	testData["exposures_min_severity"] = "All severities"
+	testData["exposures_secrets"] = "true"
+	testData["exposures_applications"] = "true"
+	testData["exposures_services"] = "true"
+	testData["exposures_iac"] = "true"
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: util.ExecuteTemplate(fqrn, securityPolicyExposures, testData),
+				Check:  verifySecurityPolicy(fqrn, testData, criteriaTypeExposures),
+			},
+			{
+				Config: util.ExecuteTemplate(fqrn, securityPolicyExposures, testData),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
 			},
 			{
 				ResourceName:            fqrn,
