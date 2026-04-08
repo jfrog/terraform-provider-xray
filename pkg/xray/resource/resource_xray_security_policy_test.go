@@ -1070,18 +1070,87 @@ func TestAccSecurityPolicy_Packages(t *testing.T) {
 	})
 }
 
+// TestAccSecurityPolicy_PackageVersionsHyphenated validates rule.criteria.package_versions regexp (must match resource_xray_security_policy.go)
+// and end-to-end create/import for hyphenated and related Xray API forms.
+func TestAccSecurityPolicy_PackageVersionsHyphenated(t *testing.T) {
+	pattern := `(^(\(|\[)((\d+\.)?(\d+\.)?(\*|[\dA-Za-z][\dA-Za-z.\-]*)|(\s*))\,((\d+\.)?(\d+\.)?(\*|[\dA-Za-z][\dA-Za-z.\-]*)|(\s*))(\)|\])$|^\[(\d+\.)?(\d+\.)?(\*|[\dA-Za-z][\dA-Za-z.\-]*)\]$|^[\dA-Za-z][\dA-Za-z.\-]*$)`
+	re := regexp.MustCompile(pattern)
+
+	valid := []string{
+		"(,)",
+		"( , )",
+		"2026.3.31-2",
+		"[2026.3.31-2]",
+		"[1.2.3]",
+		"[1.0.0.0]",
+		"3.10.0",
+		"(1,latest)",
+		"(1.2.3,3.10.2)",
+		"[3.11,)",
+		"[4.0.0]",
+		"(3.2.1,)",
+		"[3.2.1,]",
+	}
+	for _, s := range valid {
+		if !re.MatchString(s) {
+			t.Fatalf("expected package_versions pattern to accept %q", s)
+		}
+	}
+	invalid := []string{"", "[3,,4]", "(1,2,3)", "((1,2))", "[foo"}
+	for _, s := range invalid {
+		if re.MatchString(s) {
+			t.Fatalf("expected package_versions pattern to reject %q", s)
+		}
+	}
+
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
+
+	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-hyphen-pkg-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-hyphen-%d", testutil.RandomInt())
+	testData["block_unscanned"] = "false"
+	testData["block_active"] = "false"
+	testData["package_name"] = "@shadanai/openclaw"
+	testData["package_type"] = "Npm"
+	testData["package_version_1"] = "2026.3.31-2"
+	testData["package_version_2"] = "[2026.3.31-2]"
+	testData["package_version_3"] = "(,)"
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: util.ExecuteTemplate(fqrn, securityPolicyPackages, testData),
+				Check: resource.ComposeTestCheckFunc(
+					verifySecurityPolicy(fqrn, testData, criteriaTypePackageName),
+					resource.TestCheckTypeSetElemAttr(fqrn, "rule.0.criteria.0.package_versions.*", testData["package_version_2"]),
+					resource.TestCheckTypeSetElemAttr(fqrn, "rule.0.criteria.0.package_versions.*", testData["package_version_3"]),
+				),
+			},
+			{
+				ResourceName:            fqrn,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"author", "created", "modified", "rule.0.actions.0.fail_pull_request"},
+			},
+		},
+	})
+}
+
 func TestAccSecurityPolicy_PackagesIncorrectVersionRangeFails(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
 	testData := sdk.MergeMaps(testDataSecurity)
 
-	for _, invalidVersionRange := range []string{"3.10.0", "[3,,4]", "(1,latest)", "[1.0.0.0]"} {
+	for _, invalidVersionRange := range []string{"", "[3,,4]", "(1,2,3)", "((1,2))", "[foo"} {
 		testData["resource_name"] = resourceName
 		testData["policy_name"] = fmt.Sprintf("terraform-security-policy-10-%d", testutil.RandomInt())
 		testData["rule_name"] = fmt.Sprintf("test-security-rule-10-%d", testutil.RandomInt())
 		testData["block_unscanned"] = "false"
 		testData["block_active"] = "false"
 		testData["package_name"] = "nuget://RazorEngine"
-		testData["package_type"] = "nuget"
+		testData["package_type"] = "NuGet"
 		testData["package_version_1"] = invalidVersionRange
 		testData["package_version_2"] = "(3.2.1,)"
 		testData["package_version_3"] = "[3.2.1,]"
