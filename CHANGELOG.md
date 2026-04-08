@@ -1,4 +1,8 @@
-## 3.1.9 (April 07, 2026).
+## 3.1.9 (April 07, 2026). Tested on JFrog Platform 11.4.6 (Artifactory 7.133.17, Xray 3.137.27, Catalog 1.35.0) with Terraform 1.14.8 and OpenTofu 1.11.5
+
+IMPROVEMENTS:
+
+* resource/xray_security_policy, resource/xray_license_policy, resource/xray_operational_risk_policy: Add `grace_period_days` to the `rule.actions.block_download` block, matching the Xray Policy REST API `grace_period_days` field on `block_download`. PR: [#404](https://github.com/jfrog/terraform-provider-xray/pull/404)
 
 BUG FIXES:
 

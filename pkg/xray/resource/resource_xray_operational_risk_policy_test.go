@@ -241,6 +241,103 @@ func TestAccOperationalRiskPolicy_minRiskCriteria(t *testing.T) {
 	})
 }
 
+func TestAccOperationalRiskPolicy_blockDownloadGracePeriodDays_omitThenSet(t *testing.T) {
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_operational_risk_policy")
+
+	const opertionalRiskPolicyMinRiskBlockDownloadGraceOmitted = `resource "xray_operational_risk_policy" "{{ .resource_name }}" {
+		name = "{{ .policy_name }}"
+		description = "{{ .policy_description }}"
+		type = "operational_risk"
+		rule {
+			name = "{{ .rule_name }}"
+			priority = 1
+			criteria {
+				op_risk_min_risk = "{{ .op_risk_min_risk }}"
+			}
+			actions {
+				block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+				block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
+				fail_build = {{ .fail_build }}
+				notify_watch_recipients = {{ .notify_watch_recipients }}
+				notify_deployer = {{ .notify_deployer }}
+			create_ticket_enabled = {{ .create_ticket_enabled }}
+			fail_pull_request = {{ .fail_pull_request }}
+			build_failure_grace_period_in_days = {{ .grace_period_days }}
+				block_download {
+					unscanned = {{ .block_unscanned }}
+					active = {{ .block_active }}
+				}
+			}
+		}
+	}`
+
+	const opertionalRiskPolicyMinRiskBlockDownloadGraceSeven = `resource "xray_operational_risk_policy" "{{ .resource_name }}" {
+		name = "{{ .policy_name }}"
+		description = "{{ .policy_description }}"
+		type = "operational_risk"
+		rule {
+			name = "{{ .rule_name }}"
+			priority = 1
+			criteria {
+				op_risk_min_risk = "{{ .op_risk_min_risk }}"
+			}
+			actions {
+				block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+				block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
+				fail_build = {{ .fail_build }}
+				notify_watch_recipients = {{ .notify_watch_recipients }}
+				notify_deployer = {{ .notify_deployer }}
+			create_ticket_enabled = {{ .create_ticket_enabled }}
+			fail_pull_request = {{ .fail_pull_request }}
+			build_failure_grace_period_in_days = {{ .grace_period_days }}
+				block_download {
+					unscanned = {{ .block_unscanned }}
+					active = {{ .block_active }}
+					grace_period_days = 7
+				}
+			}
+		}
+	}`
+
+	testData := sdk.MergeMaps(testDataOperationalRisk)
+	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-operational-risk-policy-grace-omit-%d", testutil.RandomInt())
+	testData["op_risk_min_risk"] = "Medium"
+
+	step2Data := sdk.MergeMaps(testData)
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: util.ExecuteTemplate(fqrn, opertionalRiskPolicyMinRiskBlockDownloadGraceOmitted, testData),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "name", testData["policy_name"]),
+					resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.block_download.0.grace_period_days", "0"),
+					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_min_risk", testData["op_risk_min_risk"]),
+				),
+			},
+			{
+				Config: util.ExecuteTemplate(fqrn, opertionalRiskPolicyMinRiskBlockDownloadGraceSeven, step2Data),
+				Check: resource.ComposeTestCheckFunc(
+					verifyOpertionalRiskPolicy(fqrn, step2Data),
+					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.op_risk_min_risk", step2Data["op_risk_min_risk"]),
+					resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.block_download.0.grace_period_days", "7"),
+				),
+			},
+			{
+				Config: util.ExecuteTemplate(fqrn, opertionalRiskPolicyMinRiskBlockDownloadGraceSeven, step2Data),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+		},
+	})
+}
+
 func TestAccOperationalRiskPolicy_customCriteria(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_operational_risk_policy")
 

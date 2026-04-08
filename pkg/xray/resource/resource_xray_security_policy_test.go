@@ -443,6 +443,71 @@ func TestAccSecurityPolicy_withProjectKey(t *testing.T) {
 	})
 }
 
+// Non-zero block_download.grace_period_days round-trip (Xray Policy API)
+func TestAccSecurityPolicy_blockDownloadGracePeriodDays(t *testing.T) {
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
+
+	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-grace-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-grace-%d", testutil.RandomInt())
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: util.ExecuteTemplate(fqrn, securityPolicyCVSSBlockDownloadGraceSeven, testData),
+				Check: resource.ComposeTestCheckFunc(
+					verifySecurityPolicy(fqrn, testData, criteriaTypeCvss),
+					resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.block_download.0.grace_period_days", "7"),
+				),
+			},
+		},
+	})
+}
+
+// Practitioners who omitted block_download.grace_period_days in older configs can add it after upgrading the provider; this verifies create then in-place update.
+func TestAccSecurityPolicy_blockDownloadGracePeriodDays_omitThenSet(t *testing.T) {
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
+
+	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-grace-omit-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-grace-omit-%d", testutil.RandomInt())
+
+	step2Data := sdk.MergeMaps(testData)
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: util.ExecuteTemplate(fqrn, securityPolicyCVSSBlockDownloadGraceOmitted, testData),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "name", testData["policy_name"]),
+					resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.block_download.0.grace_period_days", "0"),
+				),
+			},
+			{
+				Config: util.ExecuteTemplate(fqrn, securityPolicyCVSSBlockDownloadGraceSeven, step2Data),
+				Check: resource.ComposeTestCheckFunc(
+					verifySecurityPolicy(fqrn, step2Data, criteriaTypeCvss),
+					resource.TestCheckResourceAttr(fqrn, "rule.0.actions.0.block_download.0.grace_period_days", "7"),
+				),
+			},
+			{
+				Config: util.ExecuteTemplate(fqrn, securityPolicyCVSSBlockDownloadGraceSeven, step2Data),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+		},
+	})
+}
+
 // CVSS criteria, block downloading of unscanned and active
 func TestAccSecurityPolicy_createBlockDownloadTrueCVSS(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
@@ -1280,6 +1345,69 @@ const securityPolicyVulnIdsConflict = `resource "xray_security_policy" "{{ .reso
 }`
 
 const securityPolicyCVSS = `resource "xray_security_policy" "{{ .resource_name }}" {
+	name = "{{ .policy_name }}"
+	description = "{{ .policy_description }}"
+	type = "security"
+	rule {
+		name = "{{ .rule_name }}"
+		priority = 1
+		criteria {
+			cvss_range {
+				from = {{ .cvss_from }}
+				to = {{ .cvss_to }}
+			}
+		}
+		actions {
+			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
+			fail_build = {{ .fail_build }}
+			notify_watch_recipients = {{ .notify_watch_recipients }}
+			notify_deployer = {{ .notify_deployer }}
+			create_ticket_enabled = {{ .create_ticket_enabled }}
+			fail_pull_request = {{ .fail_pull_request }}
+			build_failure_grace_period_in_days = {{ .grace_period_days }}
+			block_download {
+				unscanned = {{ .block_unscanned }}
+				active = {{ .block_active }}
+			}
+		}
+	}
+}`
+
+// Used only by TestAccSecurityPolicy_blockDownloadGracePeriodDays* (non-zero grace round-trip / omit-then-set).
+const securityPolicyCVSSBlockDownloadGraceSeven = `resource "xray_security_policy" "{{ .resource_name }}" {
+	name = "{{ .policy_name }}"
+	description = "{{ .policy_description }}"
+	type = "security"
+	rule {
+		name = "{{ .rule_name }}"
+		priority = 1
+		criteria {
+			cvss_range {
+				from = {{ .cvss_from }}
+				to = {{ .cvss_to }}
+			}
+		}
+		actions {
+			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
+			fail_build = {{ .fail_build }}
+			notify_watch_recipients = {{ .notify_watch_recipients }}
+			notify_deployer = {{ .notify_deployer }}
+			create_ticket_enabled = {{ .create_ticket_enabled }}
+			fail_pull_request = {{ .fail_pull_request }}
+			build_failure_grace_period_in_days = {{ .grace_period_days }}
+			block_download {
+				unscanned = {{ .block_unscanned }}
+				active = {{ .block_active }}
+				grace_period_days = 7
+			}
+		}
+	}
+}`
+
+// block_download without grace_period_days — simulates configs written before the attribute existed.
+const securityPolicyCVSSBlockDownloadGraceOmitted = `resource "xray_security_policy" "{{ .resource_name }}" {
 	name = "{{ .policy_name }}"
 	description = "{{ .policy_description }}"
 	type = "security"
