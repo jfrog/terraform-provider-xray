@@ -462,10 +462,10 @@ var securityPolicyCriteriaAttrs = map[string]schema.Attribute{
 		Optional:    true,
 		Validators: []validator.List{
 			listvalidator.ValueStringsAre(
-				stringvalidator.RegexMatches(regexp.MustCompile(`((^(\(|\[)((\d+\.)?(\d+\.)?(\*|\d+)|(\s*))\,((\d+\.)?(\d+\.)?(\*|\d+)|(\s*))(\)|\])$|^\[(\d+\.)?(\d+\.)?(\*|\d+)\]$))`), "invalid Range, must be one of the follows: Any Version: (,) or Specific Version: [1.2], [3] or Range: (1,), [,1.2.3], (4.5.0,6.5.2]"),
+				stringvalidator.RegexMatches(regexp.MustCompile(`(^(\(|\[)((\d+\.)?(\d+\.)?(\*|[\dA-Za-z][\dA-Za-z.\-]*)|(\s*))\,((\d+\.)?(\d+\.)?(\*|[\dA-Za-z][\dA-Za-z.\-]*)|(\s*))(\)|\])$|^\[(\d+\.)?(\d+\.)?(\*|[\dA-Za-z][\dA-Za-z.\-]*)\]$|^[\dA-Za-z][\dA-Za-z.\-]*$)`), "invalid Range, must be one of the follows: Any Version: (,) or Specific Version: [1.2], [3], a bare version (e.g. 2026.3.31-2), or Range: (1,), [,1.2.3], (4.5.0,6.5.2]"),
 			),
 		},
-		Description: "package versions to apply the rule on can be (,) for any version or an open range (1,4) or closed [1,4] or one version [1]",
+		Description: "package versions to apply the rule on can be (,) for any version or an open range (1,4) or closed [1,4], one version in brackets, or a bare version string",
 	},
 }
 
