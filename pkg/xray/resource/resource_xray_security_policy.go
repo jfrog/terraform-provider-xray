@@ -79,6 +79,15 @@ func (r *SecurityPolicyResource) toCriteriaAPIModel(ctx context.Context, criteri
 			}
 		}
 
+		var sast *PolicySASTAPIModel
+		sastElem := attrs["sast"].(types.List).Elements()
+		if len(sastElem) > 0 {
+			sastAttrs := sastElem[0].(types.Object).Attributes()
+			sast = &PolicySASTAPIModel{
+				MinSeverity: sastAttrs["min_severity"].(types.String).ValueString(),
+			}
+		}
+
 		var packageVersions []string
 		d = attrs["package_versions"].(types.List).ElementsAs(ctx, &packageVersions, false)
 		if d.HasError() {
@@ -93,6 +102,7 @@ func (r *SecurityPolicyResource) toCriteriaAPIModel(ctx context.Context, criteri
 			MaliciousPackage:    attrs["malicious_package"].(types.Bool).ValueBoolPointer(),
 			VulnerabilityIds:    vulnerabilityIds,
 			Exposures:           exposures,
+			SAST:                sast,
 			PackageName:         attrs["package_name"].(types.String).ValueString(),
 			PackageType:         attrs["package_type"].(types.String).ValueString(),
 			PackageVersions:     packageVersions,
@@ -193,6 +203,29 @@ func (r *SecurityPolicyResource) fromCriteriaAPIModel(ctx context.Context, crite
 			exposuresList = es
 		}
 
+		sastList := types.ListNull(sastElementType)
+		if criteriaAPIModel.SAST != nil {
+			sast, d := types.ObjectValue(
+				sastAttrType,
+				map[string]attr.Value{
+					"min_severity": types.StringValue(NormalizeSeverity(criteriaAPIModel.SAST.MinSeverity)),
+				},
+			)
+			if d.HasError() {
+				diags.Append(d...)
+			}
+
+			sl, d := types.ListValue(
+				sastElementType,
+				[]attr.Value{sast},
+			)
+			if d.HasError() {
+				diags.Append(d...)
+			}
+
+			sastList = sl
+		}
+
 		packageName := types.StringNull()
 		if criteriaAPIModel.PackageName != "" {
 			packageName = types.StringValue(criteriaAPIModel.PackageName)
@@ -218,6 +251,7 @@ func (r *SecurityPolicyResource) fromCriteriaAPIModel(ctx context.Context, crite
 				"cvss_range":            cvssRangeList,
 				"vulnerability_ids":     vulnerabilityIDs,
 				"exposures":             exposuresList,
+				"sast":                  sastList,
 				"package_name":          packageName,
 				"package_type":          packageType,
 				"package_versions":      packageVersions,
@@ -266,6 +300,14 @@ var exposuresElementType = types.ObjectType{
 	AttrTypes: exposuresAttrType,
 }
 
+var sastAttrType = map[string]attr.Type{
+	"min_severity": types.StringType,
+}
+
+var sastElementType = types.ObjectType{
+	AttrTypes: sastAttrType,
+}
+
 var securityCriteriaAttrTypes = map[string]attr.Type{
 	"min_severity":          types.StringType,
 	"fix_version_dependant": types.BoolType,
@@ -274,6 +316,7 @@ var securityCriteriaAttrTypes = map[string]attr.Type{
 	"cvss_range":            types.ListType{ElemType: cvssRangeElementType},
 	"vulnerability_ids":     types.ListType{ElemType: types.StringType},
 	"exposures":             types.ListType{ElemType: exposuresElementType},
+	"sast":                  types.ListType{ElemType: sastElementType},
 	"package_name":          types.StringType,
 	"package_type":          types.StringType,
 	"package_versions":      types.ListType{ElemType: types.StringType},
@@ -381,8 +424,48 @@ var securityPolicyCriteriaBlocks = map[string]schema.Block{
 			listvalidator.ConflictsWith(
 				path.MatchRelative().AtParent().AtName("vulnerability_ids"),
 			),
+			listvalidator.ConflictsWith(
+				path.MatchRelative().AtParent().AtName("sast"),
+			),
 		},
 		Description: "Creates policy rules for specific exposures.\n\n~>Only supported by JFrog Advanced Security",
+	},
+	"sast": schema.ListNestedBlock{
+		NestedObject: schema.NestedBlockObject{
+			Attributes: map[string]schema.Attribute{
+				"min_severity": schema.StringAttribute{
+					Required: true,
+					Validators: []validator.String{
+						stringvalidator.OneOf("All severities", "Critical", "High", "Medium", "Low"),
+					},
+					MarkdownDescription: "The minimum SAST vulnerability severity that will be impacted by the policy. Valid values: `All severities`, `Critical`, `High`, `Medium`, `Low`",
+				},
+			},
+		},
+		Validators: []validator.List{
+			listvalidator.SizeAtMost(1),
+			listvalidator.ConflictsWith(
+				path.MatchRelative().AtParent().AtName("cvss_range"),
+			),
+			listvalidator.ConflictsWith(
+				path.MatchRelative().AtParent().AtName("min_severity"),
+			),
+			listvalidator.ConflictsWith(
+				path.MatchRelative().AtParent().AtName("malicious_package"),
+			),
+			listvalidator.ConflictsWith(
+				path.MatchRelative().AtParent().AtName("vulnerability_ids"),
+			),
+			listvalidator.ConflictsWith(
+				path.MatchRelative().AtParent().AtName("exposures"),
+			),
+			listvalidator.ConflictsWith(
+				path.MatchRelative().AtParent().AtName("package_name"),
+				path.MatchRelative().AtParent().AtName("package_type"),
+				path.MatchRelative().AtParent().AtName("package_versions"),
+			),
+		},
+		Description: "Creates policy rules for SAST (Static Application Security Testing) findings.\n\n~>Only supported by JFrog Advanced Security",
 	},
 }
 
@@ -429,6 +512,9 @@ var securityPolicyCriteriaAttrs = map[string]schema.Attribute{
 			),
 			listvalidator.ConflictsWith(
 				path.MatchRelative().AtParent().AtName("exposures"),
+			),
+			listvalidator.ConflictsWith(
+				path.MatchRelative().AtParent().AtName("sast"),
 			),
 			listvalidator.ConflictsWith(
 				path.MatchRelative().AtParent().AtName("package_name"),

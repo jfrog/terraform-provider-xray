@@ -570,6 +570,10 @@ type PolicyExposuresAPIModel struct {
 	Iac          *bool   `json:"iac,omitempty"`
 }
 
+type PolicySASTAPIModel struct {
+	MinSeverity string `json:"min_severity,omitempty"`
+}
+
 type OperationalRiskCriteriaAPIModel struct {
 	UseAndCondition               bool   `json:"use_and_condition"`
 	IsEOL                         bool   `json:"is_eol"`
@@ -591,6 +595,7 @@ type PolicyRuleCriteriaAPIModel struct {
 	MaliciousPackage    *bool                    `json:"malicious_package,omitempty"`
 	VulnerabilityIds    []string                 `json:"vulnerability_ids,omitempty"`
 	Exposures           *PolicyExposuresAPIModel `json:"exposures,omitempty"`
+	SAST                *PolicySASTAPIModel      `json:"sast,omitempty"`
 	PackageName         string                   `json:"package_name,omitempty"`
 	PackageType         string                   `json:"package_type,omitempty"`
 	PackageVersions     []string                 `json:"package_versions,omitempty"`
