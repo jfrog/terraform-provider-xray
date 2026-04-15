@@ -151,7 +151,7 @@ func TestAccCatalogLabels_LabelNameValidation(t *testing.T) {
 	_, _, resName := testutil.MkNames("catalog-labels-nameval-", "xray_catalog_labels")
 	cfg := util.ExecuteTemplate("TestAccCatalogLabels_LabelNameValidation", `
 resource "xray_catalog_labels" "{{ .name }}" {
-  labels = [ { name = "this-name-is-way-too-long", description = "d1" } ]
+  labels = [ { name = "this-label-name-is-way-too-long-and-exceeds-the-maximum-allowed-length-of-one-hundred-characters-limit", description = "d1" } ]
 }
 `, map[string]string{"name": resName})
 	resource.Test(t, resource.TestCase{

@@ -6,6 +6,8 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+* resource/xray_catalog_labels: Fix maximum label name length from 15 to 100 characters to match Xray API/UI. Issue: [#403](https://github.com/jfrog/terraform-provider-xray/issues/403)
+
 * resource/xray_security_policy: Fix state drift for `criteria.exposures.min_severity` when set to `All severities` caused by casing mismatch between Xray API response and provider validator. PR: [#406](https://github.com/jfrog/terraform-provider-xray/pull/406)
 
 * resource/xray_security_policy: Relax `package_versions` validation so hyphenated and other Xray-supported version strings match the API. Issue: [#402](https://github.com/jfrog/terraform-provider-xray/issues/402) PR: [#405](https://github.com/jfrog/terraform-provider-xray/pull/405)

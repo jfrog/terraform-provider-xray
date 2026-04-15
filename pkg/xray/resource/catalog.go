@@ -8,7 +8,7 @@ import (
 const (
 	CatalogGraphQLEndpoint    = "catalog/api/v1/custom/graphql"
 	MaxLabelsPerOperation     = 500
-	MaxLabelNameLength        = 15  // User requirement: max 15 characters
+	MaxLabelNameLength        = 100 // Xray API/UI allows up to 100 characters
 	MaxLabelDescriptionLength = 300 // User requirement: max 300 characters
 )
 
