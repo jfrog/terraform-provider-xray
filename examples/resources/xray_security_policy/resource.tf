@@ -70,6 +70,41 @@ resource "xray_security_policy" "cvss_score" {
   }
 }
 
+resource "xray_security_policy" "sast" {
+  name        = "test-security-policy-sast"
+  description = "Security policy description"
+  type        = "security"
+  project_key = "testproj"
+
+  rule {
+    name     = "rule-name-sast"
+    priority = 1
+
+    criteria {
+      sast {
+        min_severity = "Low"
+      }
+    }
+
+    actions {
+      webhooks                           = []
+      mails                              = ["test@email.com"]
+      block_release_bundle_distribution  = true
+      fail_build                         = true
+      notify_watch_recipients            = true
+      notify_deployer                    = true
+      create_ticket_enabled              = false // set to true only if Jira integration is enabled
+      fail_pull_request                  = true
+      build_failure_grace_period_in_days = 5     // use only if fail_build is enabled
+
+      block_download {
+        unscanned = true
+        active    = true
+      }
+    }
+  }
+}
+
 resource "xray_security_policy" "malicious_package" {
   name        = "test-security-policy-mal-pkg"
   description = "Security policy description"
