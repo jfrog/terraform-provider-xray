@@ -151,7 +151,7 @@ func TestAccCatalogLabels_LabelNameValidation(t *testing.T) {
 	_, _, resName := testutil.MkNames("catalog-labels-nameval-", "xray_catalog_labels")
 	cfg := util.ExecuteTemplate("TestAccCatalogLabels_LabelNameValidation", `
 resource "xray_catalog_labels" "{{ .name }}" {
-  labels = [ { name = "this-name-is-way-too-long", description = "d1" } ]
+  labels = [ { name = "this-label-name-is-absolutely-too-long-exceeding-the-max-name-length-according-to-the-jfrog-api-and-docs", description = "d1" } ]
 }
 `, map[string]string{"name": resName})
 	resource.Test(t, resource.TestCase{
@@ -165,9 +165,10 @@ resource "xray_catalog_labels" "{{ .name }}" {
 
 func TestAccCatalogLabels_LabelDescriptionValidation(t *testing.T) {
 	_, _, resName := testutil.MkNames("catalog-labels-descval-", "xray_catalog_labels")
-	// description > 300
-	d := make([]byte, 0, 310)
-	for i := 0; i < 310; i++ {
+	// description > 10,000
+	length := 10010
+	d := make([]byte, 0, length)
+	for i := 0; i < length; i++ {
 		d = append(d, 'a')
 	}
 	cfg := util.ExecuteTemplate("TestAccCatalogLabels_LabelDescriptionValidation", `
