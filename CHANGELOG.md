@@ -4,6 +4,10 @@ FEATURES:
 
 * resource/xray_security_policy: Add `sast` block to `rule.criteria` for SAST policy rules with `min_severity` support. Only supported by JFrog Advanced Security. PR: [#407](https://github.com/jfrog/terraform-provider-xray/pull/407)
 
+BUG FIXES:
+
+* resource/xray_catalog_labels: Fix `name` and `description` field length validations. Issue: [#403](https://github.com/jfrog/terraform-provider-xray/issues/403) PR: [#413](https://github.com/jfrog/terraform-provider-xray/pull/413)
+
 ## 3.1.9 (April 07, 2026). Tested on JFrog Platform 11.4.6 (Artifactory 7.133.17, Xray 3.137.27, Catalog 1.35.0) with Terraform 1.14.8 and OpenTofu 1.11.5
 
 IMPROVEMENTS:
