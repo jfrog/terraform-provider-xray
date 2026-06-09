@@ -8,8 +8,8 @@ import (
 const (
 	CatalogGraphQLEndpoint    = "catalog/api/v1/custom/graphql"
 	MaxLabelsPerOperation     = 500
-	MaxLabelNameLength        = 15  // User requirement: max 15 characters
-	MaxLabelDescriptionLength = 300 // User requirement: max 300 characters
+	MaxLabelNameLength        = 1000  // User requirement: max 1,000 characters
+	MaxLabelDescriptionLength = 10000 // User requirement: max 10,000 characters
 )
 
 // parseGraphQLError extracts meaningful error messages from GraphQL responses
