@@ -149,11 +149,17 @@ resource "xray_catalog_labels" "{{ .name }}" {
 
 func TestAccCatalogLabels_LabelNameValidation(t *testing.T) {
 	_, _, resName := testutil.MkNames("catalog-labels-nameval-", "xray_catalog_labels")
+	// name > 1,000
+	length := 1010
+	n := make([]byte, 0, length)
+	for i := 0; i < length; i++ {
+		n = append(n, 'a')
+	}
 	cfg := util.ExecuteTemplate("TestAccCatalogLabels_LabelNameValidation", `
 resource "xray_catalog_labels" "{{ .name }}" {
-  labels = [ { name = "this-label-name-is-absolutely-too-long-exceeding-the-max-name-length-according-to-the-jfrog-api-and-docs", description = "d1" } ]
+  labels = [ { name = "{{ .longName }}", description = "d1" } ]
 }
-`, map[string]string{"name": resName})
+`, map[string]string{"name": resName, "longName": string(n)})
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{{
