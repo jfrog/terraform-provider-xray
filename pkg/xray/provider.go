@@ -217,6 +217,7 @@ func (p *XrayProvider) Resources(ctx context.Context) []func() resource.Resource
 		xray_resource.NewViolationsReportResource,
 		xray_resource.NewVulnerabilitiesReportResource,
 		xray_resource.NewWatchResource,
+		xray_resource.NewWatchPolicyAttachmentResource,
 		xray_resource.NewWebhookResource,
 		xray_resource.NewWorkersCountResource,
 	}

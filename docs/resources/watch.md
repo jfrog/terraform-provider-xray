@@ -393,7 +393,7 @@ resource "xray_watch" "git_repository" {
 ### Optional
 
 - `active` (Boolean) Whether or not the watch is active
-- `assigned_policy` (Block Set) Nested argument describing policies that will be applied. Defined below. (see [below for nested schema](#nestedblock--assigned_policy))
+- `assigned_policy` (Block Set) Nested argument describing policies that will be applied. Defined below. Leave empty to manage policy assignments via the `xray_watch_policy_attachment` resource instead. (see [below for nested schema](#nestedblock--assigned_policy))
 - `description` (String) Description of the watch
 - `project_key` (String) Project key for assigning this resource to. Must be 2 - 10 lowercase alphanumeric and hyphen characters. Support repository and build watch resource types. When specifying individual repository or build they must be already assigned to the project. Build must be added as indexed resources.
 - `watch_recipients` (Set of String) A list of email addressed that will get emailed when a violation is triggered.

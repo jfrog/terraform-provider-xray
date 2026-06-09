@@ -1,3 +1,9 @@
+## 3.1.10 (Jun 9, 2026).
+
+FEATURES:
+
+* **New Resource:** `xray_watch_policy_attachment` - Attaches a single policy to a watch as a standalone resource, decoupling the policy-to-watch relationship from the `xray_watch` and policy resources. This lets a policy be detached and deleted without destroying the watch, resolving the circular dependency that otherwise causes `policy cannot be removed because it is attached to a watch` on destroy. The `assigned_policy` block on `xray_watch` is now optional so a watch can be created with no inline policies and managed via attachments instead. Issue: [#358](https://github.com/jfrog/terraform-provider-xray/issues/358)
+
 ## 3.1.10 (April 13, 2026). Tested on JFrog Platform 11.4.6 (Artifactory 7.133.18, Xray 3.137.27, Catalog 1.35.2) with Terraform 1.14.8 and OpenTofu 1.11.6
 
 FEATURES:

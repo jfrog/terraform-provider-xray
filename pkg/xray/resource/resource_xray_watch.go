@@ -714,10 +714,8 @@ func (r *WatchResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 						},
 					},
 				},
-				Validators: []validator.Set{
-					setvalidator.SizeAtLeast(1),
-				},
-				Description: "Nested argument describing policies that will be applied. Defined below.",
+				Description: "Nested argument describing policies that will be applied. Defined below. " +
+					"Leave empty to manage policy assignments via the `xray_watch_policy_attachment` resource instead.",
 			},
 		},
 	}
