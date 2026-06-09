@@ -932,6 +932,73 @@ func TestAccIgnoreRule_release_bundle(t *testing.T) {
 	})
 }
 
+// TestAccIgnoreRule_SoftDeleted verifies that the provider detects
+// soft-deleted ignore rules and removes them from state. Xray soft-deletes
+// ignore rules: the API returns HTTP 200 with deleted_at and deleted_by
+// fields instead of 404. Without handling this, the provider never detects
+// the deletion and Terraform state drifts from reality.
+func TestAccIgnoreRule_SoftDeleted(t *testing.T) {
+	_, fqrn, name := testutil.MkNames("ignore-rule-", "xray_ignore_rule")
+	expirationDate := time.Now().Add(time.Hour * 48)
+
+	config := util.ExecuteTemplate("TestAccIgnoreRule_SoftDeleted", `
+		resource "xray_ignore_rule" "{{ .name }}" {
+		  notes            = "test soft-delete detection"
+		  expiration_date  = "{{ .expirationDate }}"
+		  vulnerabilities  = ["any"]
+		  cves             = ["any"]
+
+		  artifact {
+		    name    = "fake-name"
+		    version = "fake-version"
+		    path    = "fake-path/"
+		  }
+		}
+	`, map[string]interface{}{
+		"name":           name,
+		"expirationDate": expirationDate.Format("2006-01-02"),
+	})
+
+	var ruleID string
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", testCheckIgnoreRule),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet(fqrn, "id"),
+					resource.TestCheckResourceAttrWith(fqrn, "id", func(value string) error {
+						ruleID = value
+						return nil
+					}),
+				),
+			},
+			{
+				PreConfig: func() {
+					// Delete the ignore rule out of band via API.
+					// Xray soft-deletes: the GET will return 200 with
+					// deleted_at/deleted_by instead of 404.
+					restyClient := acctest.GetTestResty(t)
+					resp, err := restyClient.R().
+						SetPathParam("id", ruleID).
+						Delete("xray/api/v1/ignore_rules/{id}")
+					if err != nil {
+						t.Fatalf("failed to delete ignore rule %q out of band: %v", ruleID, err)
+					}
+					if resp.IsError() {
+						t.Fatalf("failed to delete ignore rule %q out of band: %s", ruleID, resp.String())
+					}
+				},
+				Config:             config,
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+		},
+	})
+}
+
 // testCheckIgnoreRule fetches the supposingly deleted ignore rule and verify it has been deleted
 // Xray applies soft delete to ignore rule and adds 'deleted_by' and 'deleted_at'
 // fields to the payload after a rule is deleted
