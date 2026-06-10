@@ -104,6 +104,20 @@ type versionAssignmentExpanded struct {
 	version     string
 }
 
+type versionAssignmentKey struct {
+	packageName string
+	packageType string
+	version     string
+}
+
+func newVersionAssignmentKey(packageName, packageType, version string) versionAssignmentKey {
+	return versionAssignmentKey{
+		packageName: packageName,
+		packageType: packageType,
+		version:     version,
+	}
+}
+
 func (r *CatalogLabelsResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
@@ -383,7 +397,7 @@ func (r *CatalogLabelsResource) validatePackageVersionAssignmentRedundancyInPlan
 	}
 
 	// Build set of versions present in state (if provided)
-	stateKeys := make(map[string]struct{})
+	stateKeys := make(map[versionAssignmentKey]struct{})
 	if state != nil && !state.VersionAssignments.IsNull() && !state.VersionAssignments.IsUnknown() {
 		var sassign []VersionAssignmentModel
 		if diags := state.VersionAssignments.ElementsAs(ctx, &sassign, false); !diags.HasError() {
@@ -392,7 +406,7 @@ func (r *CatalogLabelsResource) validatePackageVersionAssignmentRedundancyInPlan
 				if !a.Versions.IsNull() && !a.Versions.IsUnknown() && len(a.Versions.Elements()) > 0 {
 					if d2 := a.Versions.ElementsAs(ctx, &vs, false); !d2.HasError() {
 						for _, v := range vs {
-							key := fmt.Sprintf("%s:%s:%s", a.PackageName.ValueString(), a.PackageType.ValueString(), v)
+							key := newVersionAssignmentKey(a.PackageName.ValueString(), a.PackageType.ValueString(), v)
 							stateKeys[key] = struct{}{}
 						}
 					}
@@ -419,7 +433,7 @@ func (r *CatalogLabelsResource) validatePackageVersionAssignmentRedundancyInPlan
 			}
 			if len(assigned) > 0 {
 				// Skip error if this exact package:version is already tracked in state
-				key := fmt.Sprintf("%s:%s:%s", a.PackageName.ValueString(), a.PackageType.ValueString(), v)
+				key := newVersionAssignmentKey(a.PackageName.ValueString(), a.PackageType.ValueString(), v)
 				if _, ok := stateKeys[key]; ok {
 					continue
 				}
@@ -1327,25 +1341,25 @@ func (r *CatalogLabelsResource) Update(ctx context.Context, req resource.UpdateR
 	}
 
 	// Expand to per-version mapping
-	planVerMap := map[string]string{} // key -> label
+	planVerMap := map[versionAssignmentKey]string{} // key -> label
 	for _, a := range planVers {
 		var vs []string
 		if !a.Versions.IsNull() && !a.Versions.IsUnknown() && len(a.Versions.Elements()) > 0 {
 			if diags := a.Versions.ElementsAs(ctx, &vs, false); !diags.HasError() {
 				for _, v := range vs {
-					key := fmt.Sprintf("%s:%s:%s", a.PackageName.ValueString(), a.PackageType.ValueString(), v)
+					key := newVersionAssignmentKey(a.PackageName.ValueString(), a.PackageType.ValueString(), v)
 					planVerMap[key] = a.LabelName.ValueString()
 				}
 			}
 		}
 	}
-	stateVerMap := map[string]string{}
+	stateVerMap := map[versionAssignmentKey]string{}
 	for _, a := range stateVers {
 		var vs []string
 		if !a.Versions.IsNull() && !a.Versions.IsUnknown() && len(a.Versions.Elements()) > 0 {
 			if diags := a.Versions.ElementsAs(ctx, &vs, false); !diags.HasError() {
 				for _, v := range vs {
-					key := fmt.Sprintf("%s:%s:%s", a.PackageName.ValueString(), a.PackageType.ValueString(), v)
+					key := newVersionAssignmentKey(a.PackageName.ValueString(), a.PackageType.ValueString(), v)
 					stateVerMap[key] = a.LabelName.ValueString()
 				}
 			}
@@ -1358,14 +1372,12 @@ func (r *CatalogLabelsResource) Update(ctx context.Context, req resource.UpdateR
 		var toRemove []VersionAssignmentModel
 		for key, stateLabel := range stateVerMap {
 			if _, ok := planVerMap[key]; !ok {
-				parts := strings.SplitN(key, ":", 3)
-				pkgName, pkgType, version := parts[0], parts[1], parts[2]
 				vm := VersionAssignmentModel{
 					LabelName:   types.StringValue(stateLabel),
-					PackageName: types.StringValue(pkgName),
-					PackageType: types.StringValue(pkgType),
+					PackageName: types.StringValue(key.packageName),
+					PackageType: types.StringValue(key.packageType),
 				}
-				versSet, _ := types.SetValueFrom(ctx, types.StringType, []string{version})
+				versSet, _ := types.SetValueFrom(ctx, types.StringType, []string{key.version})
 				vm.Versions = versSet
 				toRemove = append(toRemove, vm)
 			}
@@ -1386,15 +1398,13 @@ func (r *CatalogLabelsResource) Update(ctx context.Context, req resource.UpdateR
 		var toAdd []VersionAssignmentModel
 		for key, planLabel := range planVerMap {
 			stateLabel, ok := stateVerMap[key]
-			parts := strings.SplitN(key, ":", 3)
-			pkgName, pkgType, version := parts[0], parts[1], parts[2]
 			if !ok || stateLabel != planLabel {
 				vm := VersionAssignmentModel{
 					LabelName:   types.StringValue(planLabel),
-					PackageName: types.StringValue(pkgName),
-					PackageType: types.StringValue(pkgType),
+					PackageName: types.StringValue(key.packageName),
+					PackageType: types.StringValue(key.packageType),
 				}
-				versSet, _ := types.SetValueFrom(ctx, types.StringType, []string{version})
+				versSet, _ := types.SetValueFrom(ctx, types.StringType, []string{key.version})
 				vm.Versions = versSet
 				toAdd = append(toAdd, vm)
 			}
