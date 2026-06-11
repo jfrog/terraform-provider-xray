@@ -113,6 +113,51 @@ func TestAccSettings_basic(t *testing.T) {
 	})
 }
 
+func TestAccSettings_noDbSyncTime(t *testing.T) {
+	_, fqrn, resourceName := testutil.MkNames("test-settings", "xray_settings")
+
+	tmpl := `
+	resource "xray_settings" "{{ .name }}" {
+		enabled                        = true
+		allow_blocked                  = {{ .allowBlocked }}
+		allow_when_unavailable         = {{ .allowWhenUnavailable }}
+		block_unscanned_timeout        = {{ .blockUnscannedTimeout }}
+		block_unfinished_scans_timeout = {{ .blockUnfinishedScansTimeout }}
+	}`
+
+	testData := map[string]any{
+		"name":                        resourceName,
+		"allowBlocked":                testutil.RandBool(),
+		"allowWhenUnavailable":        testutil.RandBool(),
+		"blockUnscannedTimeout":       120,
+		"blockUnfinishedScansTimeout": 3600,
+	}
+
+	config := util.ExecuteTemplate(fqrn, tmpl, testData)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "enabled", "true"),
+					resource.TestCheckResourceAttr(fqrn, "allow_blocked", fmt.Sprintf("%t", testData["allowBlocked"])),
+					resource.TestCheckResourceAttr(fqrn, "allow_when_unavailable", fmt.Sprintf("%t", testData["allowWhenUnavailable"])),
+					resource.TestCheckResourceAttr(fqrn, "block_unscanned_timeout", fmt.Sprintf("%d", testData["blockUnscannedTimeout"])),
+					resource.TestCheckResourceAttr(fqrn, "block_unfinished_scans_timeout", fmt.Sprintf("%d", testData["blockUnfinishedScansTimeout"])),
+					resource.TestCheckResourceAttrSet(fqrn, "db_sync_updates_time"),
+				),
+			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
 func TestAccSettings_DbSyncTime(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("db_sync-", "xray_settings")
 	time := "18:45"

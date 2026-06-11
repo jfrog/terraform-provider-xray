@@ -86,11 +86,12 @@ func (r *SettingsResource) Schema(ctx context.Context, req resource.SchemaReques
 				},
 			},
 			"db_sync_updates_time": schema.StringAttribute{
-				Required: true,
+				Optional: true,
+				Computed: true,
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(regexp.MustCompile(`^([0-1][0-9]|[2][0-3]):([0-5][0-9])$`), "Wrong format input, expected valid hour:minutes (HH:mm) form"),
 				},
-				Description: "The time of the Xray DB sync daily update job. Format `HH:mm`",
+				Description: "The time of the Xray DB sync daily update job. Format `HH:mm`. If not set, the existing server value is preserved.",
 			},
 			"enabled": schema.BoolAttribute{
 				Optional:    true,
@@ -167,6 +168,27 @@ func (r *SettingsResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
+	// If db_sync_updates_time is not in config, read the current server value
+	// so the Computed attribute is populated in state.
+	if plan.DBSyncUpdateTime.IsNull() || plan.DBSyncUpdateTime.IsUnknown() {
+		var currentDbSyncTime DbSyncDailyUpdatesTimeAPIModel
+		response, err = request.
+			SetResult(&currentDbSyncTime).
+			Get(DBSyncEndPoint)
+		if err != nil {
+			utilfw.UnableToCreateResourceError(resp, err.Error())
+			return
+		}
+		if response.IsError() {
+			utilfw.UnableToCreateResourceError(resp, response.String())
+			return
+		}
+		plan.DBSyncUpdateTime = types.StringValue(currentDbSyncTime.DbSyncTime)
+		plan.ID = types.StringValue("settings")
+		resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+		return
+	}
+
 	dbSyncTime := DbSyncDailyUpdatesTimeAPIModel{
 		DbSyncTime: plan.DBSyncUpdateTime.ValueString(),
 	}
@@ -184,7 +206,7 @@ func (r *SettingsResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	plan.ID = types.StringValue(dbSyncTime.DbSyncTime)
+	plan.ID = types.StringValue("settings")
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
@@ -274,6 +296,27 @@ func (r *SettingsResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
+	// If db_sync_updates_time is not in config, read the current server value
+	// so the Computed attribute is populated in state.
+	if plan.DBSyncUpdateTime.IsNull() || plan.DBSyncUpdateTime.IsUnknown() {
+		var currentDbSyncTime DbSyncDailyUpdatesTimeAPIModel
+		response, err = request.
+			SetResult(&currentDbSyncTime).
+			Get(DBSyncEndPoint)
+		if err != nil {
+			utilfw.UnableToUpdateResourceError(resp, err.Error())
+			return
+		}
+		if response.IsError() {
+			utilfw.UnableToUpdateResourceError(resp, response.String())
+			return
+		}
+		plan.DBSyncUpdateTime = types.StringValue(currentDbSyncTime.DbSyncTime)
+		plan.ID = types.StringValue("settings")
+		resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+		return
+	}
+
 	dbSyncTime := DbSyncDailyUpdatesTimeAPIModel{
 		DbSyncTime: plan.DBSyncUpdateTime.ValueString(),
 	}
@@ -289,7 +332,7 @@ func (r *SettingsResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	plan.ID = types.StringValue(dbSyncTime.DbSyncTime)
+	plan.ID = types.StringValue("settings")
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)

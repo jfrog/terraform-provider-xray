@@ -55,6 +55,8 @@ BUG FIXES:
 
 * resource/xray_repository_config: Fix perpetual diff on the `paths_config` block when `pattern.exclude` is not set. The API returns an empty string for an unset exclusion, which was stored in state as an empty string instead of null, so every `terraform plan` showed the whole `paths_config` block being removed and re-added.
 
+* resource/xray_settings: Make `db_sync_updates_time` attribute optional so users can configure Artifactory/Xray integration settings without being forced to specify the internal DB sync schedule. When omitted, the provider preserves the existing server value. Issue: [#425](https://github.com/jfrog/terraform-provider-xray/issues/425) PR: [#426](https://github.com/jfrog/terraform-provider-xray/pull/426)
+
 * resource/xray_curation_policy: Fix false `Decision owners required` validation error when `decision_owners` is sourced from another resource, module variable, or other value that is unknown until apply, while `waiver_request_config = "manual"`. The `decisionOwnersRequiredValidator` now skips unknown values and defers validation to the plan phase. Issue: [#433](https://github.com/jfrog/terraform-provider-xray/issues/433)
 
 * resource/xray_curation_policy: Add `block_from_cache` attribute so the "Enforce policy on cached packages" setting is read from and written to the API instead of being silently reset to `false` on every update. Issue: [#431](https://github.com/jfrog/terraform-provider-xray/issues/431) PR: [#435](https://github.com/jfrog/terraform-provider-xray/pull/435)
