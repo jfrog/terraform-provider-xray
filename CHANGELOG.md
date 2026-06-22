@@ -1,8 +1,10 @@
-## 3.1.11 (Jun 9, 2026).
+## 3.1.11 (Jun 22, 2026). 
 
 BUG FIXES:
 
 * resource/xray_catalog_labels: Fix `name` and `description` field length validations. Issue: [#403](https://github.com/jfrog/terraform-provider-xray/issues/403) PR: [#420](https://github.com/jfrog/terraform-provider-xray/pull/420)
+
+* resource/xray_security_policy, resource/xray_license_policy, resource/xray_operational_risk_policy: Automatically detach policy from watches before deletion to resolve circular dependency error when destroying policies that are still referenced by watches. Detach is attempted only when the initial delete fails (HTTP 409/attached error), and watch updates run in parallel for efficiency. Issue: [#358](https://github.com/jfrog/terraform-provider-xray/issues/358) PR: [#428](https://github.com/jfrog/terraform-provider-xray/pull/428)
 
 ## 3.1.10 (April 13, 2026). Tested on JFrog Platform 11.4.6 (Artifactory 7.133.18, Xray 3.137.27, Catalog 1.35.2) with Terraform 1.14.8 and OpenTofu 1.11.6
 

@@ -1476,6 +1476,142 @@ const securityPolicyVulnIdsConflict = `resource "xray_security_policy" "{{ .reso
 	}
 }`
 
+func TestAccSecurityPolicy_deleteDetachesFromWatch(t *testing.T) {
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
+
+	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-detach-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-detach-%d", testutil.RandomInt())
+	testData["watch_name"] = fmt.Sprintf("xray-watch-detach-%d", testutil.RandomInt())
+	testData["replacement_policy_name"] = fmt.Sprintf("terraform-security-policy-repl-%d", testutil.RandomInt())
+	testData["replacement_rule_name"] = fmt.Sprintf("test-security-rule-repl-%d", testutil.RandomInt())
+
+	replacementFqrn := "xray_security_policy.replacement"
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy:             acctest.VerifyDeleted(replacementFqrn, "", acctest.CheckPolicy),
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: util.ExecuteTemplate(fqrn, policyWithWatchTemplate, testData),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "name", testData["policy_name"]),
+					resource.TestCheckResourceAttr("xray_watch.test", "assigned_policy.0.name", testData["policy_name"]),
+				),
+			},
+			{
+				Config: util.ExecuteTemplate(fqrn, watchWithReplacementPolicyTemplate, testData),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("xray_watch.test", "assigned_policy.0.name", testData["replacement_policy_name"]),
+				),
+			},
+		},
+	})
+}
+
+const policyWithWatchTemplate = `resource "xray_security_policy" "{{ .resource_name }}" {
+	name        = "{{ .policy_name }}"
+	description = "{{ .policy_description }}"
+	type        = "security"
+	rule {
+		name     = "{{ .rule_name }}"
+		priority = 1
+		criteria {
+			cvss_range {
+				from = {{ .cvss_from }}
+				to   = {{ .cvss_to }}
+			}
+		}
+		actions {
+			block_release_bundle_distribution  = {{ .block_release_bundle_distribution }}
+			block_release_bundle_promotion     = {{ .block_release_bundle_promotion }}
+			fail_build                         = {{ .fail_build }}
+			notify_watch_recipients            = {{ .notify_watch_recipients }}
+			notify_deployer                    = {{ .notify_deployer }}
+			create_ticket_enabled              = {{ .create_ticket_enabled }}
+			fail_pull_request                  = {{ .fail_pull_request }}
+			build_failure_grace_period_in_days = {{ .grace_period_days }}
+			block_download {
+				unscanned = {{ .block_unscanned }}
+				active    = {{ .block_active }}
+			}
+		}
+	}
+}
+
+resource "xray_watch" "test" {
+	name        = "{{ .watch_name }}"
+	description = "Watch for detach test"
+	active      = true
+
+	watch_resource {
+		type = "all-repos"
+		filter {
+			type  = "regex"
+			value = ".*"
+		}
+	}
+
+	assigned_policy {
+		name = xray_security_policy.{{ .resource_name }}.name
+		type = "security"
+	}
+
+	watch_recipients = ["test@email.com"]
+}`
+
+const watchWithReplacementPolicyTemplate = `resource "xray_security_policy" "replacement" {
+	name        = "{{ .replacement_policy_name }}"
+	description = "Replacement policy"
+	type        = "security"
+	rule {
+		name     = "{{ .replacement_rule_name }}"
+		priority = 1
+		criteria {
+			cvss_range {
+				from = {{ .cvss_from }}
+				to   = {{ .cvss_to }}
+			}
+		}
+		actions {
+			block_release_bundle_distribution  = {{ .block_release_bundle_distribution }}
+			block_release_bundle_promotion     = {{ .block_release_bundle_promotion }}
+			fail_build                         = {{ .fail_build }}
+			notify_watch_recipients            = {{ .notify_watch_recipients }}
+			notify_deployer                    = {{ .notify_deployer }}
+			create_ticket_enabled              = {{ .create_ticket_enabled }}
+			fail_pull_request                  = {{ .fail_pull_request }}
+			build_failure_grace_period_in_days = {{ .grace_period_days }}
+			block_download {
+				unscanned = {{ .block_unscanned }}
+				active    = {{ .block_active }}
+			}
+		}
+	}
+}
+
+resource "xray_watch" "test" {
+	name        = "{{ .watch_name }}"
+	description = "Watch for detach test"
+	active      = true
+
+	watch_resource {
+		type = "all-repos"
+		filter {
+			type  = "regex"
+			value = ".*"
+		}
+	}
+
+	assigned_policy {
+		name = xray_security_policy.replacement.name
+		type = "security"
+	}
+
+	watch_recipients = ["test@email.com"]
+}`
+
 const securityPolicyCVSS = `resource "xray_security_policy" "{{ .resource_name }}" {
 	name = "{{ .policy_name }}"
 	description = "{{ .policy_description }}"

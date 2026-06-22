@@ -2,6 +2,7 @@ package xray
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"sort"
 	"strings"
@@ -21,6 +22,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/jfrog/terraform-provider-shared/util"
 	utilfw "github.com/jfrog/terraform-provider-shared/util/fw"
 	"github.com/samber/lo"
@@ -944,6 +946,98 @@ func (r *PolicyResource) Update(
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
+func (r *PolicyResource) deletePolicy(policyName string, projectKey string) (int, string, error) {
+	request, err := getRestyRequest(r.ProviderData.Client, projectKey)
+	if err != nil {
+		return 0, "", fmt.Errorf("failed to get Resty client: %w", err)
+	}
+
+	var policyError PolicyError
+	response, err := request.
+		SetPathParam("name", policyName).
+		SetError(&policyError).
+		Delete(PolicyEndpoint)
+	if err != nil {
+		return 0, "", err
+	}
+
+	return response.StatusCode(), policyError.Error, nil
+}
+
+func (r *PolicyResource) detachPolicyFromWatches(ctx context.Context, policyName string, projectKey string) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	request, err := getRestyRequest(r.ProviderData.Client, projectKey)
+	if err != nil {
+		diags.AddError(
+			"failed to get Resty client",
+			err.Error(),
+		)
+		return diags
+	}
+
+	var watches []WatchAPIModel
+	response, err := request.
+		SetResult(&watches).
+		Get(WatchesEndpoint)
+	if err != nil {
+		diags.AddError("failed to list watches", err.Error())
+		return diags
+	}
+	if response.IsError() {
+		diags.AddError("failed to list watches", response.String())
+		return diags
+	}
+
+	for _, watch := range watches {
+		var updatedPolicies []WatchAssignedPolicyAPIModel
+		found := false
+		for _, policy := range watch.AssignedPolicies {
+			if policy.Name == policyName {
+				found = true
+				continue
+			}
+			updatedPolicies = append(updatedPolicies, policy)
+		}
+		if !found {
+			continue
+		}
+		watch.AssignedPolicies = updatedPolicies
+
+		updateRequest, err := getRestyRequest(r.ProviderData.Client, projectKey)
+		if err != nil {
+			diags.AddError(
+				fmt.Sprintf("failed to detach policy %q from watch %q", policyName, watch.GeneralData.Name),
+				err.Error(),
+			)
+			continue
+		}
+
+		updateResp, err := updateRequest.
+			SetPathParam("name", watch.GeneralData.Name).
+			SetBody(watch).
+			Put(WatchEndpoint)
+		if err != nil {
+			diags.AddError(
+				fmt.Sprintf("failed to detach policy %q from watch %q", policyName, watch.GeneralData.Name),
+				err.Error(),
+			)
+			continue
+		}
+		if updateResp.IsError() {
+			diags.AddError(
+				fmt.Sprintf("failed to detach policy %q from watch %q", policyName, watch.GeneralData.Name),
+				updateResp.String(),
+			)
+			continue
+		}
+
+		tflog.Info(ctx, fmt.Sprintf("detached policy %q from watch %q", policyName, watch.GeneralData.Name))
+	}
+
+	return diags
+}
+
 func (r *PolicyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	go util.SendUsageResourceDelete(ctx, r.ProviderData.Client.R(), r.ProviderData.ProductId, r.TypeName)
 
@@ -952,33 +1046,38 @@ func (r *PolicyResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 
-	request, err := getRestyRequest(r.ProviderData.Client, state.ProjectKey.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"failed to get Resty client",
-			err.Error(),
-		)
-		return
-	}
+	policyName := state.Name.ValueString()
+	projectKey := state.ProjectKey.ValueString()
 
-	var policyError PolicyError
-	response, err := request.
-		SetPathParam("name", state.Name.ValueString()).
-		SetError(&policyError).
-		Delete(PolicyEndpoint)
-
+	statusCode, errMsg, err := r.deletePolicy(policyName, projectKey)
 	if err != nil {
 		utilfw.UnableToDeleteResourceError(resp, err.Error())
 		return
 	}
 
-	if response.IsError() {
-		utilfw.UnableToDeleteResourceError(resp, policyError.Error)
-		return
+	errMsgLower := strings.ToLower(errMsg)
+	policyInUse := statusCode == http.StatusConflict ||
+		strings.Contains(errMsgLower, "assigned") ||
+		strings.Contains(errMsgLower, "attached")
+	if policyInUse {
+		tflog.Info(ctx, fmt.Sprintf("policy %q is attached to watch(es), detaching before deletion", policyName))
+
+		resp.Diagnostics.Append(r.detachPolicyFromWatches(ctx, policyName, projectKey)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		statusCode, errMsg, err = r.deletePolicy(policyName, projectKey)
+		if err != nil {
+			utilfw.UnableToDeleteResourceError(resp, err.Error())
+			return
+		}
 	}
 
-	// If the logic reaches here, it implicitly succeeded and will remove
-	// the resource from state if there are no other errors.
+	if statusCode >= 400 {
+		utilfw.UnableToDeleteResourceError(resp, errMsg)
+		return
+	}
 }
 
 // ImportState imports the resource into the Terraform state.
