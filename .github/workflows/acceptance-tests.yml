@@ -6,6 +6,11 @@ on:
     paths:
       - '**.go'
   workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to test (use for fork PRs; leave empty to test the checked-out default branch)'
+        required: false
+        type: string
 
 name: Terraform & OpenTofu Acceptance Tests
 
@@ -14,6 +19,10 @@ jobs:
     name: ${{ matrix.cli }}
     runs-on: ubuntu-latest
     environment: development
+    # Fork PRs are tested manually via workflow_dispatch (secrets are not available on pull_request from forks).
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false)
     strategy:
       fail-fast: true
       matrix:
@@ -28,6 +37,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Checkout PR branch
+        if: github.event_name == 'workflow_dispatch' && inputs.pr_number != ''
+        run: |
+          echo "Manual run: checking out PR #${{ inputs.pr_number }}"
+          git fetch origin pull/${{ inputs.pr_number }}/head:temp-branch
+          git checkout temp-branch
       - name: Unshallow
         run: git fetch --prune --unshallow
       - name: Install Helm
