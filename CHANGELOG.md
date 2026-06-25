@@ -4,6 +4,10 @@ BUG FIXES:
 
 * resource/xray_catalog_labels: Fix `name` and `description` field length validations. Issue: [#403](https://github.com/jfrog/terraform-provider-xray/issues/403) PR: [#420](https://github.com/jfrog/terraform-provider-xray/pull/420)
 
+IMPROVEMENTS:
+
+* resource/xray_security_policy: Include the policy name in the error message when a policy delete fails, making it easier to identify which policy could not be removed.
+
 ## 3.1.10 (April 13, 2026). Tested on JFrog Platform 11.4.6 (Artifactory 7.133.18, Xray 3.137.27, Catalog 1.35.2) with Terraform 1.14.8 and OpenTofu 1.11.6
 
 FEATURES:

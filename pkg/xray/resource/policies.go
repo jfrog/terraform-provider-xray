@@ -973,7 +973,7 @@ func (r *PolicyResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	}
 
 	if response.IsError() {
-		utilfw.UnableToDeleteResourceError(resp, policyError.Error)
+		utilfw.UnableToDeleteResourceError(resp, fmt.Sprintf("failed to delete policy %q: %s", state.Name.ValueString(), policyError.Error))
 		return
 	}
 
