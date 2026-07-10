@@ -169,7 +169,8 @@ func (v scopeRequirementsValidator) ValidateString(ctx context.Context, req vali
 	switch scope {
 	case "specific_repos":
 		// repo_include is mandatory
-		if repoIncludeValue.IsNull() || (repoIncludeValue.(types.Set)).IsNull() || len((repoIncludeValue.(types.Set)).Elements()) == 0 {
+		// Skip validation if the value is unknown (e.g., computed from module variables)
+		if !repoIncludeValue.IsUnknown() && (repoIncludeValue.IsNull() || (repoIncludeValue.(types.Set)).IsNull() || len((repoIncludeValue.(types.Set)).Elements()) == 0) {
 			resp.Diagnostics.AddAttributeError(
 				path.Root("repo_include"),
 				"Repository include required",
@@ -178,14 +179,14 @@ func (v scopeRequirementsValidator) ValidateString(ctx context.Context, req vali
 		}
 
 		// pkg_types_include and repo_exclude should not be used
-		if !pkgTypesIncludeValue.IsNull() && len((pkgTypesIncludeValue.(types.Set)).Elements()) > 0 {
+		if !pkgTypesIncludeValue.IsNull() && !pkgTypesIncludeValue.IsUnknown() && len((pkgTypesIncludeValue.(types.Set)).Elements()) > 0 {
 			resp.Diagnostics.AddAttributeError(
 				path.Root("pkg_types_include"),
 				"Package types include not allowed",
 				"pkg_types_include cannot be used when scope is 'specific_repos'",
 			)
 		}
-		if !repoExcludeValue.IsNull() && len((repoExcludeValue.(types.Set)).Elements()) > 0 {
+		if !repoExcludeValue.IsNull() && !repoExcludeValue.IsUnknown() && len((repoExcludeValue.(types.Set)).Elements()) > 0 {
 			resp.Diagnostics.AddAttributeError(
 				path.Root("repo_exclude"),
 				"Repository exclude not allowed",
@@ -195,7 +196,8 @@ func (v scopeRequirementsValidator) ValidateString(ctx context.Context, req vali
 
 	case "pkg_types":
 		// pkg_types_include is mandatory
-		if pkgTypesIncludeValue.IsNull() || (pkgTypesIncludeValue.(types.Set)).IsNull() || len((pkgTypesIncludeValue.(types.Set)).Elements()) == 0 {
+		// Skip validation if the value is unknown (e.g., computed from module variables)
+		if !pkgTypesIncludeValue.IsUnknown() && (pkgTypesIncludeValue.IsNull() || (pkgTypesIncludeValue.(types.Set)).IsNull() || len((pkgTypesIncludeValue.(types.Set)).Elements()) == 0) {
 			resp.Diagnostics.AddAttributeError(
 				path.Root("pkg_types_include"),
 				"Package types include required",
@@ -204,14 +206,14 @@ func (v scopeRequirementsValidator) ValidateString(ctx context.Context, req vali
 		}
 
 		// repo_include and repo_exclude should not be used
-		if !repoIncludeValue.IsNull() && len((repoIncludeValue.(types.Set)).Elements()) > 0 {
+		if !repoIncludeValue.IsNull() && !repoIncludeValue.IsUnknown() && len((repoIncludeValue.(types.Set)).Elements()) > 0 {
 			resp.Diagnostics.AddAttributeError(
 				path.Root("repo_include"),
 				"Repository include not allowed",
 				"repo_include cannot be used when scope is 'pkg_types'",
 			)
 		}
-		if !repoExcludeValue.IsNull() && len((repoExcludeValue.(types.Set)).Elements()) > 0 {
+		if !repoExcludeValue.IsNull() && !repoExcludeValue.IsUnknown() && len((repoExcludeValue.(types.Set)).Elements()) > 0 {
 			resp.Diagnostics.AddAttributeError(
 				path.Root("repo_exclude"),
 				"Repository exclude not allowed",
@@ -221,14 +223,14 @@ func (v scopeRequirementsValidator) ValidateString(ctx context.Context, req vali
 
 	case "all_repos":
 		// repo_include and pkg_types_include should not be used
-		if !repoIncludeValue.IsNull() && len((repoIncludeValue.(types.Set)).Elements()) > 0 {
+		if !repoIncludeValue.IsNull() && !repoIncludeValue.IsUnknown() && len((repoIncludeValue.(types.Set)).Elements()) > 0 {
 			resp.Diagnostics.AddAttributeError(
 				path.Root("repo_include"),
 				"Repository include not allowed",
 				"repo_include cannot be used when scope is 'all_repos'",
 			)
 		}
-		if !pkgTypesIncludeValue.IsNull() && len((pkgTypesIncludeValue.(types.Set)).Elements()) > 0 {
+		if !pkgTypesIncludeValue.IsNull() && !pkgTypesIncludeValue.IsUnknown() && len((pkgTypesIncludeValue.(types.Set)).Elements()) > 0 {
 			resp.Diagnostics.AddAttributeError(
 				path.Root("pkg_types_include"),
 				"Package types include not allowed",
@@ -237,7 +239,7 @@ func (v scopeRequirementsValidator) ValidateString(ctx context.Context, req vali
 		}
 
 		// repo_exclude is optional but if provided, cannot be empty
-		if !repoExcludeValue.IsNull() && len((repoExcludeValue.(types.Set)).Elements()) == 0 {
+		if !repoExcludeValue.IsNull() && !repoExcludeValue.IsUnknown() && len((repoExcludeValue.(types.Set)).Elements()) == 0 {
 			resp.Diagnostics.AddAttributeError(
 				path.Root("repo_exclude"),
 				"Repository exclude cannot be empty",
