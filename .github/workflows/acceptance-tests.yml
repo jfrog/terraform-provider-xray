@@ -229,6 +229,31 @@ jobs:
           echo "::add-mask::$JFROG_ACCESS_TOKEN"
           echo "JFROG_ACCESS_TOKEN=$JFROG_ACCESS_TOKEN" >> "$GITHUB_ENV"
 
+      - name: Wait for Catalog API to be ready
+        run: |
+          # `kubectl rollout status` only confirms the Catalog pod passed its
+          # readiness probe. The provider's catalog resources additionally
+          # require /catalog/api/v1/system/app_health to report code "OK" (DB
+          # connection, entitlements, etc.), which lags well behind pod-ready.
+          # Poll that same endpoint so catalog tests don't run before it's healthy.
+          echo "Waiting for Catalog app_health to report OK..."
+          for i in $(seq 1 30); do
+            CODE=$(curl -s "${JFROG_URL}/catalog/api/v1/system/app_health" \
+              --header "Authorization: Bearer ${JFROG_ACCESS_TOKEN}" \
+              | jq -r '.code // empty' 2>/dev/null)
+            if [ "$CODE" = "OK" ]; then
+              echo "Catalog is healthy (attempt $i/30)"
+              break
+            fi
+            if [ "$i" = "30" ]; then
+              echo "Catalog did not become healthy in time (last code: '$CODE')"
+              exit 1
+            fi
+            echo "Attempt $i/30: catalog health code '$CODE'. Waiting 20s..."
+            sleep 20
+          done
+
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
