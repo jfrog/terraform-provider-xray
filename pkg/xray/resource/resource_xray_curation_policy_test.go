@@ -2591,3 +2591,58 @@ func TestAccCurationPolicy_EdgeCases(t *testing.T) {
 		},
 	})
 }
+
+// TestAccCurationPolicy_ComputedRepoInclude tests the bug fix for unknown values.
+// Issue: Validator was incorrectly rejecting unknown values as empty during plan
+// Fix: Added IsUnknown() checks to defer validation until apply phase
+func TestAccCurationPolicy_ComputedRepoInclude(t *testing.T) {
+	_, fqrn, name := testutil.MkNames("test-computed-repo", "xray_curation_policy")
+	conditionName := fmt.Sprintf("test-computed-condition-%d", testutil.RandomInt())
+	repoName1 := fmt.Sprintf("computed-test-%d-a", testutil.RandomInt())
+	repoName2 := fmt.Sprintf("computed-test-%d-b", testutil.RandomInt())
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		ExternalProviders:        commonExternalProviders,
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckCurationPolicy),
+		Steps: []resource.TestStep{
+			{
+				Config: createCVSSCondition(conditionName) + fmt.Sprintf(`
+					resource "artifactory_remote_npm_repository" "repo_a" {
+						key             = "%s"
+						url             = "https://registry.npmjs.org/"
+						repo_layout_ref = "npm-default"
+						curated         = true
+					}
+
+					resource "artifactory_remote_npm_repository" "repo_b" {
+						key             = "%s"
+						url             = "https://registry.npmjs.org/"
+						repo_layout_ref = "npm-default"
+						curated         = true
+					}
+
+					resource "xray_curation_policy" "%s" {
+						name         = "%s"
+						condition_id = xray_custom_curation_condition.%s.id
+						scope        = "specific_repos"
+						repo_include = [
+							artifactory_remote_npm_repository.repo_a.key,
+							artifactory_remote_npm_repository.repo_b.key,
+						]
+						policy_action         = "block"
+						waiver_request_config = "forbidden"
+					}
+				`, repoName1, repoName2, name, name, conditionName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "name", name),
+					resource.TestCheckResourceAttr(fqrn, "scope", "specific_repos"),
+					resource.TestCheckResourceAttr(fqrn, "repo_include.#", "2"),
+					resource.TestCheckResourceAttr(fqrn, "policy_action", "block"),
+					resource.TestCheckResourceAttr(fqrn, "waiver_request_config", "forbidden"),
+				),
+			},
+		},
+	})
+}
