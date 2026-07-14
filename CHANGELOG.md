@@ -6,7 +6,7 @@ BUG FIXES:
 
 * resource/xray_catalog_labels: Fix `name` and `description` field length validations. Issue: [#403](https://github.com/jfrog/terraform-provider-xray/issues/403) PR: [#420](https://github.com/jfrog/terraform-provider-xray/pull/420)
 
-## 3.1.10 (April 13, 2026). Tested on JFrog Platform 11.4.6 (Artifactory 7.133.18, Xray 3.137.27, Catalog 1.35.2). Tested on JFrog Platform 11.5.4 (Artifactory 7.146.15, Xray 3.143.26, Catalog 1.40.0). Tested on JFrog Platform 11.5.5 (Artifactory 7.146.17, Xray 3.143.27, Catalog 1.40.3). Tested on JFrog Platform 11.5.5 (Artifactory 7.146.17, Xray 3.143.27, Catalog 1.40.3). Tested on JFrog Platform 11.5.7 (Artifactory 7.146.25, Xray 3.143.30, Catalog 1.42.0) with Terraform 1.15.8 and OpenTofu 1.12.3
+## 3.1.10 (April 13, 2026). Tested on JFrog Platform 11.4.6 (Artifactory 7.133.18, Xray 3.137.27, Catalog 1.35.2). 
 
 BUG FIXES:
 
