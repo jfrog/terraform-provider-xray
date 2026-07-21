@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/jfrog/terraform-provider-shared/testutil"
 	"github.com/jfrog/terraform-provider-xray/v3/pkg/acctest"
 )
@@ -2747,6 +2748,18 @@ func TestAccCurationPolicy_BlockFromCacheTrue(t *testing.T) {
 	// Repository configuration
 	repoConfig := createCuratedRepoConfig("npm", repoName)
 
+	policyConfig := repoConfig + createMaturityCondition(conditionName) + fmt.Sprintf(`
+	resource "xray_curation_policy" "%s" {
+		name                  = "%s"
+		condition_id          = xray_custom_curation_condition.%s.id
+		scope                 = "all_repos"
+		policy_action         = "block"
+		waiver_request_config = "forbidden"
+		block_from_cache      = true
+		notify_emails         = ["audit-team@company.com"]
+	}
+	`, name, name, conditionName)
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
@@ -2763,22 +2776,26 @@ func TestAccCurationPolicy_BlockFromCacheTrue(t *testing.T) {
 			},
 			{
 				// Step 2: Create policy with the block_from_cache attribute set to true, and verify it is true
-				Config: repoConfig +
-					createMaturityCondition(conditionName) + fmt.Sprintf(`
-					resource "xray_curation_policy" "%s" {
-						name                  = "%s"
-						condition_id          = xray_custom_curation_condition.%s.id
-						scope                 = "all_repos"
-						policy_action         = "block"
-						waiver_request_config = "forbidden"
-						block_from_cache      = true
-						notify_emails         = ["audit-team@company.com"]
-					}
-					`, name, name, conditionName),
+				Config: policyConfig,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(fqrn, "policy_action", "block"),
 					resource.TestCheckResourceAttr(fqrn, "block_from_cache", "true"),
 				),
+			},
+			{
+				// Step 3: Re-apply same config, and verify no drift
+				Config: policyConfig,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+			{
+				// Step 4: Verify import round-trip preserves block_from_cache
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
