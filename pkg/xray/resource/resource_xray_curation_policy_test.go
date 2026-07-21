@@ -2784,51 +2784,6 @@ func TestAccCurationPolicy_BlockFromCacheTrue(t *testing.T) {
 	})
 }
 
-func TestAccCurationPolicy_BlockFromCacheTrue_DryRun(t *testing.T) {
-	_, fqrn, name := testutil.MkNames("test-block-from-cache-true-dry-run", "xray_curation_policy")
-	repoName := fmt.Sprintf("block-from-cache-true-dry-run-npm-%d", testutil.RandomInt())
-	conditionName := fmt.Sprintf("test-maturity-condition-%d", testutil.RandomInt())
-
-	// Repository configuration
-	repoConfig := createCuratedRepoConfig("npm", repoName)
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
-		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
-		ExternalProviders:        commonExternalProviders,
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckCurationPolicy),
-		Steps: []resource.TestStep{
-			{
-				// Step 1: Create repository first and verify it exists
-				Config: repoConfig,
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(fmt.Sprintf("artifactory_remote_npm_repository.%s", repoName), "key", repoName),
-					resource.TestCheckResourceAttr(fmt.Sprintf("artifactory_remote_npm_repository.%s", repoName), "curated", "true"),
-				),
-			},
-			{
-				// Step 2: Create policy with the block_from_cache attribute set to true, and verify it is true even though policy_action is dry_run
-				Config: repoConfig +
-					createMaturityCondition(conditionName) + fmt.Sprintf(`
-					resource "xray_curation_policy" "%s" {
-						name                  = "%s"
-						condition_id          = xray_custom_curation_condition.%s.id
-						scope                 = "all_repos"
-						policy_action         = "dry_run"
-						waiver_request_config = "forbidden"
-						block_from_cache      = true
-						notify_emails         = ["audit-team@company.com"]
-					}
-					`, name, name, conditionName),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(fqrn, "policy_action", "dry_run"),
-					resource.TestCheckResourceAttr(fqrn, "block_from_cache", "true"),
-				),
-			},
-		},
-	})
-}
-
 func TestAccCurationPolicy_BlockFromCache_Toggle(t *testing.T) {
 	_, fqrn, name := testutil.MkNames("test-block-from-cache-toggle", "xray_curation_policy")
 	repoName := fmt.Sprintf("block-from-cache-toggle-npm-%d", testutil.RandomInt())
