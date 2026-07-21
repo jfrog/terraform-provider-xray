@@ -463,7 +463,7 @@ func (r *CurationPolicyResource) Schema(ctx context.Context, req resource.Schema
 			"block_from_cache": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "When true, the policy also blocks packages served from Artifactory's cache.",
+				Description: "When true, the policy also blocks packages served from Artifactory's cache. Defaults to false.",
 			},
 		},
 		MarkdownDescription: "Provides an Xray curation policy resource. This resource allows you to create, read, update, and delete curation policies in Xray. See [JFrog Curation REST APIs](https://jfrog.com/help/r/jfrog-rest-apis/create-curation-policy) [Official documentation](https://jfrog.com/help/r/jfrog-security-user-guide/products/curation/configure-curation/create-policies) for more details. \n\n" +
