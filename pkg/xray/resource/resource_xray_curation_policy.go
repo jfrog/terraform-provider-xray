@@ -322,7 +322,7 @@ type CurationPolicyAPIModel struct {
 	NotifyEmails        []string                `json:"notify_emails,omitempty"`
 	WaiverRequestConfig string                  `json:"waiver_request_config,omitempty"`
 	DecisionOwners      []string                `json:"decision_owners,omitempty"`
-	BlockFromCache      bool                    `json:"block_from_cache,omitempty"`
+	BlockFromCache      bool                    `json:"block_from_cache"`
 }
 
 const (

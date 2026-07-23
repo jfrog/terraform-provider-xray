@@ -2740,7 +2740,20 @@ func TestAccCurationPolicy_BlockFromCacheFalse(t *testing.T) {
 	})
 }
 
+// skipIfBlockFromCacheDisabled skips tests that set block_from_cache = true.
+// That requires the platform-level "Enable Curation for Cached Packages" feature
+// (backed by a Valkey cache), which is absent on most environments and cannot be
+// toggled via a public API. Without it the Xray API rejects the policy with
+// "block from cache is not enabled in curation config". These tests are therefore
+// opt-in: set XRAY_CURATION_BLOCK_FROM_CACHE_ENABLED=true on a capable platform.
+func skipIfBlockFromCacheDisabled(t *testing.T) {
+	if os.Getenv("XRAY_CURATION_BLOCK_FROM_CACHE_ENABLED") == "" {
+		t.Skip("Skipping block_from_cache=true test: set XRAY_CURATION_BLOCK_FROM_CACHE_ENABLED=true on a platform with the 'Enable Curation for Cached Packages' feature enabled to run it")
+	}
+}
+
 func TestAccCurationPolicy_BlockFromCacheTrue(t *testing.T) {
+	skipIfBlockFromCacheDisabled(t)
 	_, fqrn, name := testutil.MkNames("test-block-from-cache-true", "xray_curation_policy")
 	repoName := fmt.Sprintf("block-from-cache-true-npm-%d", testutil.RandomInt())
 	conditionName := fmt.Sprintf("test-maturity-condition-%d", testutil.RandomInt())
@@ -2802,6 +2815,7 @@ func TestAccCurationPolicy_BlockFromCacheTrue(t *testing.T) {
 }
 
 func TestAccCurationPolicy_BlockFromCache_Toggle(t *testing.T) {
+	skipIfBlockFromCacheDisabled(t)
 	_, fqrn, name := testutil.MkNames("test-block-from-cache-toggle", "xray_curation_policy")
 	repoName := fmt.Sprintf("block-from-cache-toggle-npm-%d", testutil.RandomInt())
 	conditionName := fmt.Sprintf("test-maturity-condition-%d", testutil.RandomInt())

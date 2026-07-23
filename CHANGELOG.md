@@ -1,3 +1,9 @@
+## 3.1.12 (Unreleased)
+
+BUG FIXES:
+
+* resource/xray_curation_policy: Add `block_from_cache` attribute so the "Enforce policy on cached packages" setting is read from and written to the API instead of being silently reset to `false` on every update. Issue: [#431](https://github.com/jfrog/terraform-provider-xray/issues/431) PR: [#435](https://github.com/jfrog/terraform-provider-xray/pull/435)
+
 ## 3.1.11(Jun 9, 2026).
 
 BUG FIXES:
