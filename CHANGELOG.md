@@ -1,3 +1,9 @@
+## 3.1.12 (Jul 23,2026)
+
+BUG FIXES:
+
+* resource/xray_custom_curation_condition: Remove the hard-coded `condition_template_id` allow-list that rejected valid platform-supported templates (e.g. `isMalicious`, `NoLicense`, aged-package variants) before the request reached the API. The set of available templates depends on the JFrog Platform version and enabled features, so `condition_template_id` is no longer restricted client-side and parameter validation is deferred to the Xray API for templates the provider does not recognize. Issue: [#432](https://github.com/jfrog/terraform-provider-xray/issues/432)
+
 ## 3.1.11(Jun 9, 2026).
 
 BUG FIXES:

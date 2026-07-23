@@ -100,7 +100,18 @@ func (v paramValuesJSONValidator) ValidateString(ctx context.Context, req valida
 		}
 	}
 
-	// Check for empty parameters (required for all templates)
+	// For templates the provider doesn't know about (e.g. platform/version-specific
+	// templates such as isMalicious, NoLicense, or aged-package variants), defer
+	// parameter validation to the Xray API, which is the source of truth for both
+	// the allowed template IDs and their parameters. The JSON syntax has already
+	// been validated above.
+	if conditionTemplateID != "" {
+		if _, known := conditionTemplateParams[conditionTemplateID]; !known {
+			return
+		}
+	}
+
+	// Check for empty parameters (required for all known templates)
 	if len(paramValues) == 0 {
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
@@ -1105,21 +1116,13 @@ func (r *CustomCurationConditionResource) Schema(ctx context.Context, req resour
 				},
 			},
 			"condition_template_id": schema.StringAttribute{
-				Required:    true,
-				Description: "One of the IDs of the supported condition templates returned by the list condition templates API.",
+				Required: true,
+				Description: "One of the IDs of the supported condition templates returned by the list condition templates API. " +
+					"The set of available templates depends on the JFrog Platform version and enabled features " +
+					"(e.g. `isMalicious`, `NoLicense`, aged-package variants), so the value is not restricted to a " +
+					"fixed list client-side; unsupported templates are rejected by the Xray API.",
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
-					stringvalidator.OneOf(
-						"OpenSSF",
-						"BannedLabels",
-						"AllowedLabels",
-						"SpecificVersions",
-						"AllowedLicenses",
-						"BannedLicenses",
-						"CVECVSSRange",
-						"isImmature",
-						"CVEName",
-					),
 				},
 			},
 			"param_values": schema.StringAttribute{

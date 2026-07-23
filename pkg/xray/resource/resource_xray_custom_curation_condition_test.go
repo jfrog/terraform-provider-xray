@@ -29,6 +29,34 @@ func TestAccCustomCurationCondition_CVEName_Smoke(t *testing.T) {
 	})
 }
 
+// TestAccCustomCurationCondition_PlatformSpecificTemplate_NotRejectedClientSide is a
+// regression test for https://github.com/jfrog/terraform-provider-xray/issues/432
+//
+// The provider previously restricted condition_template_id to a hard-coded OneOf list,
+// rejecting valid platform/version-specific templates (e.g. isMalicious, NoLicense,
+// aged-package variants) at plan time before the request ever reached the Xray API.
+// The set of supported templates is dynamic (returned by the condition_templates API),
+// so the provider must not gate it client-side.
+//
+// This uses PlanOnly so it exercises the config-level validators without requiring the
+// backend to actually support the template. Before the fix the plan fails with
+// "Invalid Attribute Value Match"; after the fix the config plans successfully.
+func TestAccCustomCurationCondition_PlatformSpecificTemplate_NotRejectedClientSide(t *testing.T) {
+	_, _, name := testutil.MkNames("test-platform-template", "xray_custom_curation_condition")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:             testAccCustomCurationConditionPlatformTemplate(name),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+		},
+	})
+}
+
 // CVEName Tests
 func TestAccCustomCurationCondition_CVEName_Basic(t *testing.T) {
 	_, fqrn, name := testutil.MkNames("test-cve-condition", "xray_custom_curation_condition")
@@ -436,6 +464,21 @@ resource "xray_custom_curation_condition" "{{ .name }}" {
       value    = "CVE-2021-45105"
     }
   ])
+}
+`, map[string]interface{}{
+		"name": name,
+	})
+}
+
+// testAccCustomCurationConditionPlatformTemplate uses a template ID that is not in the
+// provider's previously hard-coded list, to verify it is no longer rejected client-side.
+func testAccCustomCurationConditionPlatformTemplate(name string) string {
+	return util.ExecuteTemplate("TestAccCustomCurationConditionPlatformTemplate", `
+resource "xray_custom_curation_condition" "{{ .name }}" {
+  name                 = "{{ .name }}"
+  condition_template_id = "isMalicious"
+
+  param_values = jsonencode([])
 }
 `, map[string]interface{}{
 		"name": name,
