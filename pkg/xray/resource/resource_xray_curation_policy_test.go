@@ -2656,6 +2656,7 @@ func TestAccCurationPolicy_ComputedRepoInclude(t *testing.T) {
 func TestAccCurationPolicy_ComputedDecisionOwners(t *testing.T) {
 	_, fqrn, name := testutil.MkNames("test-computed-owners", "xray_curation_policy")
 	conditionName := fmt.Sprintf("test-computed-owners-condition-%d", testutil.RandomInt())
+	repoName := fmt.Sprintf("computed-owners-repo-%d", testutil.RandomInt())
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
@@ -2665,6 +2666,13 @@ func TestAccCurationPolicy_ComputedDecisionOwners(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: createCVSSCondition(conditionName) + fmt.Sprintf(`
+					resource "artifactory_remote_npm_repository" "repo" {
+						key             = "%s"
+						url             = "https://registry.npmjs.org/"
+						repo_layout_ref = "npm-default"
+						curated         = true
+					}
+
 					# output is computed, so decision_owners is unknown at plan time
 					resource "terraform_data" "owners" {
 						input = ["readers"]
@@ -2673,15 +2681,16 @@ func TestAccCurationPolicy_ComputedDecisionOwners(t *testing.T) {
 					resource "xray_curation_policy" "%s" {
 						name                  = "%s"
 						condition_id          = xray_custom_curation_condition.%s.id
-						scope                 = "all_repos"
+						scope                 = "specific_repos"
+						repo_include          = [artifactory_remote_npm_repository.repo.key]
 						policy_action         = "block"
 						waiver_request_config = "manual"
 						decision_owners       = terraform_data.owners.output
 					}
-				`, name, name, conditionName),
+				`, repoName, name, name, conditionName),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(fqrn, "name", name),
-					resource.TestCheckResourceAttr(fqrn, "scope", "all_repos"),
+					resource.TestCheckResourceAttr(fqrn, "scope", "specific_repos"),
 					resource.TestCheckResourceAttr(fqrn, "waiver_request_config", "manual"),
 					resource.TestCheckResourceAttr(fqrn, "decision_owners.#", "1"),
 					resource.TestCheckTypeSetElemAttr(fqrn, "decision_owners.*", "readers"),
