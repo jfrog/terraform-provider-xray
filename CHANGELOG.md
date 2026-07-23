@@ -1,3 +1,9 @@
+## 3.1.12 (Jul 23, 2026)
+
+BUG FIXES:
+
+* resource/xray_curation_policy: Fix false `Decision owners required` validation error when `decision_owners` is sourced from another resource, module variable, or other value that is unknown until apply, while `waiver_request_config = "manual"`. The `decisionOwnersRequiredValidator` now skips unknown values and defers validation to the plan phase. Issue: [#433](https://github.com/jfrog/terraform-provider-xray/issues/433)
+
 ## 3.1.11(Jun 9, 2026).
 
 BUG FIXES:
