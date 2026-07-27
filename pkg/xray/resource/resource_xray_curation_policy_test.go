@@ -2646,3 +2646,56 @@ func TestAccCurationPolicy_ComputedRepoInclude(t *testing.T) {
 		},
 	})
 }
+
+// When decision_owners is sourced from
+// another resource (so the whole set is unknown until apply), the
+// decisionOwnersRequiredValidator used to raise a false "Decision owners
+// required" error during plan instead of deferring validation. Here
+// decision_owners is fed from terraform_data.owners.output, whose value is
+// unknown at plan time; the validator must skip it and let apply resolve it.
+func TestAccCurationPolicy_ComputedDecisionOwners(t *testing.T) {
+	_, fqrn, name := testutil.MkNames("test-computed-owners", "xray_curation_policy")
+	conditionName := fmt.Sprintf("test-computed-owners-condition-%d", testutil.RandomInt())
+	repoName := fmt.Sprintf("computed-owners-repo-%d", testutil.RandomInt())
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		ExternalProviders:        commonExternalProviders,
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckCurationPolicy),
+		Steps: []resource.TestStep{
+			{
+				Config: createCVSSCondition(conditionName) + fmt.Sprintf(`
+					resource "artifactory_remote_npm_repository" "repo" {
+						key             = "%s"
+						url             = "https://registry.npmjs.org/"
+						repo_layout_ref = "npm-default"
+						curated         = true
+					}
+
+					# output is computed, so decision_owners is unknown at plan time
+					resource "terraform_data" "owners" {
+						input = ["readers"]
+					}
+
+					resource "xray_curation_policy" "%s" {
+						name                  = "%s"
+						condition_id          = xray_custom_curation_condition.%s.id
+						scope                 = "specific_repos"
+						repo_include          = [artifactory_remote_npm_repository.repo.key]
+						policy_action         = "block"
+						waiver_request_config = "manual"
+						decision_owners       = terraform_data.owners.output
+					}
+				`, repoName, name, name, conditionName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "name", name),
+					resource.TestCheckResourceAttr(fqrn, "scope", "specific_repos"),
+					resource.TestCheckResourceAttr(fqrn, "waiver_request_config", "manual"),
+					resource.TestCheckResourceAttr(fqrn, "decision_owners.#", "1"),
+					resource.TestCheckTypeSetElemAttr(fqrn, "decision_owners.*", "readers"),
+				),
+			},
+		},
+	})
+}

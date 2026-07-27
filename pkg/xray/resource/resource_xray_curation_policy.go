@@ -45,8 +45,14 @@ func (v decisionOwnersRequiredValidator) ValidateString(ctx context.Context, req
 			return
 		}
 
-		// Check if decision_owners is null, unknown, or empty
-		if decisionOwnersValue.IsNull() || decisionOwnersValue.IsUnknown() {
+		// Skip validation for unknown values (e.g. references to other resources
+		// that aren't resolved until plan/apply); defer to the plan phase.
+		if decisionOwnersValue.IsUnknown() {
+			return
+		}
+
+		// Check if decision_owners is null or empty
+		if decisionOwnersValue.IsNull() {
 			resp.Diagnostics.AddAttributeError(
 				path.Root("decision_owners"),
 				"Decision owners required",
