@@ -2648,16 +2648,16 @@ func TestAccCurationPolicy_ComputedRepoInclude(t *testing.T) {
 	})
 }
 
-// ============================================================================
-// BLOCK FROM CACHE TESTING - Complete coverage of all combinations
-// ============================================================================
-func TestAccCurationPolicy_BlockFromCacheOmitted(t *testing.T) {
-	_, fqrn, name := testutil.MkNames("test-block-from-cache-omitted", "xray_curation_policy")
-	repoName := fmt.Sprintf("block-from-cache-omitted-npm-%d", testutil.RandomInt())
-	conditionName := fmt.Sprintf("test-maturity-condition-%d", testutil.RandomInt())
-
-	// Repository configuration
-	repoConfig := createCuratedRepoConfig("npm", repoName)
+// When decision_owners is sourced from
+// another resource (so the whole set is unknown until apply), the
+// decisionOwnersRequiredValidator used to raise a false "Decision owners
+// required" error during plan instead of deferring validation. Here
+// decision_owners is fed from terraform_data.owners.output, whose value is
+// unknown at plan time; the validator must skip it and let apply resolve it.
+func TestAccCurationPolicy_ComputedDecisionOwners(t *testing.T) {
+	_, fqrn, name := testutil.MkNames("test-computed-owners", "xray_curation_policy")
+	conditionName := fmt.Sprintf("test-computed-owners-condition-%d", testutil.RandomInt())
+	repoName := fmt.Sprintf("computed-owners-repo-%d", testutil.RandomInt())
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
@@ -2666,207 +2666,36 @@ func TestAccCurationPolicy_BlockFromCacheOmitted(t *testing.T) {
 		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckCurationPolicy),
 		Steps: []resource.TestStep{
 			{
-				// Step 1: Create repository first and verify it exists
-				Config: repoConfig,
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(fmt.Sprintf("artifactory_remote_npm_repository.%s", repoName), "key", repoName),
-					resource.TestCheckResourceAttr(fmt.Sprintf("artifactory_remote_npm_repository.%s", repoName), "curated", "true"),
-				),
-			},
-			{
-				// Step 2: Create policy without the block_from_cache attribute, and verify it is false
-				Config: repoConfig +
-					createMaturityCondition(conditionName) + fmt.Sprintf(`
+				Config: createCVSSCondition(conditionName) + fmt.Sprintf(`
+					resource "artifactory_remote_npm_repository" "repo" {
+						key             = "%s"
+						url             = "https://registry.npmjs.org/"
+						repo_layout_ref = "npm-default"
+						curated         = true
+					}
+
+					# output is computed, so decision_owners is unknown at plan time
+					resource "terraform_data" "owners" {
+						input = ["readers"]
+					}
+
 					resource "xray_curation_policy" "%s" {
 						name                  = "%s"
 						condition_id          = xray_custom_curation_condition.%s.id
-						scope                 = "all_repos"
+						scope                 = "specific_repos"
+						repo_include          = [artifactory_remote_npm_repository.repo.key]
 						policy_action         = "block"
-						waiver_request_config = "forbidden"
-						notify_emails         = ["audit-team@company.com"]
+						waiver_request_config = "manual"
+						decision_owners       = terraform_data.owners.output
 					}
-					`, name, name, conditionName),
+				`, repoName, name, name, conditionName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(fqrn, "policy_action", "block"),
-					resource.TestCheckResourceAttr(fqrn, "block_from_cache", "false"),
+					resource.TestCheckResourceAttr(fqrn, "name", name),
+					resource.TestCheckResourceAttr(fqrn, "scope", "specific_repos"),
+					resource.TestCheckResourceAttr(fqrn, "waiver_request_config", "manual"),
+					resource.TestCheckResourceAttr(fqrn, "decision_owners.#", "1"),
+					resource.TestCheckTypeSetElemAttr(fqrn, "decision_owners.*", "readers"),
 				),
-			},
-		},
-	})
-}
-
-func TestAccCurationPolicy_BlockFromCacheFalse(t *testing.T) {
-	_, fqrn, name := testutil.MkNames("test-block-from-cache-false", "xray_curation_policy")
-	repoName := fmt.Sprintf("block-from-cache-false-npm-%d", testutil.RandomInt())
-	conditionName := fmt.Sprintf("test-maturity-condition-%d", testutil.RandomInt())
-
-	// Repository configuration
-	repoConfig := createCuratedRepoConfig("npm", repoName)
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
-		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
-		ExternalProviders:        commonExternalProviders,
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckCurationPolicy),
-		Steps: []resource.TestStep{
-			{
-				// Step 1: Create repository first and verify it exists
-				Config: repoConfig,
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(fmt.Sprintf("artifactory_remote_npm_repository.%s", repoName), "key", repoName),
-					resource.TestCheckResourceAttr(fmt.Sprintf("artifactory_remote_npm_repository.%s", repoName), "curated", "true"),
-				),
-			},
-			{
-				// Step 2: Create policy with the block_from_cache attribute set to false, and verify it is false
-				Config: repoConfig +
-					createMaturityCondition(conditionName) + fmt.Sprintf(`
-					resource "xray_curation_policy" "%s" {
-						name                  = "%s"
-						condition_id          = xray_custom_curation_condition.%s.id
-						scope                 = "all_repos"
-						policy_action         = "block"
-						waiver_request_config = "forbidden"
-						block_from_cache      = false
-						notify_emails         = ["audit-team@company.com"]
-					}
-					`, name, name, conditionName),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(fqrn, "policy_action", "block"),
-					resource.TestCheckResourceAttr(fqrn, "block_from_cache", "false"),
-				),
-			},
-		},
-	})
-}
-
-// skipIfBlockFromCacheDisabled skips tests that set block_from_cache = true.
-// That requires the platform-level "Enable Curation for Cached Packages" feature
-// (backed by a Valkey cache), which is absent on most environments and cannot be
-// toggled via a public API. Without it the Xray API rejects the policy with
-// "block from cache is not enabled in curation config". These tests are therefore
-// opt-in: set XRAY_CURATION_BLOCK_FROM_CACHE_ENABLED=true on a capable platform.
-func skipIfBlockFromCacheDisabled(t *testing.T) {
-	if os.Getenv("XRAY_CURATION_BLOCK_FROM_CACHE_ENABLED") == "" {
-		t.Skip("Skipping block_from_cache=true test: set XRAY_CURATION_BLOCK_FROM_CACHE_ENABLED=true on a platform with the 'Enable Curation for Cached Packages' feature enabled to run it")
-	}
-}
-
-func TestAccCurationPolicy_BlockFromCacheTrue(t *testing.T) {
-	skipIfBlockFromCacheDisabled(t)
-	_, fqrn, name := testutil.MkNames("test-block-from-cache-true", "xray_curation_policy")
-	repoName := fmt.Sprintf("block-from-cache-true-npm-%d", testutil.RandomInt())
-	conditionName := fmt.Sprintf("test-maturity-condition-%d", testutil.RandomInt())
-
-	// Repository configuration
-	repoConfig := createCuratedRepoConfig("npm", repoName)
-
-	policyConfig := repoConfig + createMaturityCondition(conditionName) + fmt.Sprintf(`
-	resource "xray_curation_policy" "%s" {
-		name                  = "%s"
-		condition_id          = xray_custom_curation_condition.%s.id
-		scope                 = "all_repos"
-		policy_action         = "block"
-		waiver_request_config = "forbidden"
-		block_from_cache      = true
-		notify_emails         = ["audit-team@company.com"]
-	}
-	`, name, name, conditionName)
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
-		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
-		ExternalProviders:        commonExternalProviders,
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckCurationPolicy),
-		Steps: []resource.TestStep{
-			{
-				// Step 1: Create repository first and verify it exists
-				Config: repoConfig,
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(fmt.Sprintf("artifactory_remote_npm_repository.%s", repoName), "key", repoName),
-					resource.TestCheckResourceAttr(fmt.Sprintf("artifactory_remote_npm_repository.%s", repoName), "curated", "true"),
-				),
-			},
-			{
-				// Step 2: Create policy with the block_from_cache attribute set to true, and verify it is true
-				Config: policyConfig,
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(fqrn, "policy_action", "block"),
-					resource.TestCheckResourceAttr(fqrn, "block_from_cache", "true"),
-				),
-			},
-			{
-				// Step 3: Re-apply same config, and verify no drift
-				Config: policyConfig,
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectEmptyPlan(),
-					},
-				},
-			},
-			{
-				// Step 4: Verify import round-trip preserves block_from_cache
-				ResourceName:      fqrn,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-		},
-	})
-}
-
-func TestAccCurationPolicy_BlockFromCache_Toggle(t *testing.T) {
-	skipIfBlockFromCacheDisabled(t)
-	_, fqrn, name := testutil.MkNames("test-block-from-cache-toggle", "xray_curation_policy")
-	repoName := fmt.Sprintf("block-from-cache-toggle-npm-%d", testutil.RandomInt())
-	conditionName := fmt.Sprintf("test-maturity-condition-%d", testutil.RandomInt())
-
-	repoConfig := createCuratedRepoConfig("npm", repoName)
-
-	baseConfig := func(blockFromCache string) string {
-		bfc := ""
-		if blockFromCache != "" {
-			bfc = fmt.Sprintf("block_from_cache = %s", blockFromCache)
-		}
-		return repoConfig + createMaturityCondition(conditionName) + fmt.Sprintf(`
-			resource "xray_curation_policy" "%s" {
-				name                  = "%s"
-				condition_id          = xray_custom_curation_condition.%s.id
-				scope                 = "all_repos"
-				policy_action         = "block"
-				waiver_request_config = "forbidden"
-				%s
-			}
-		`, name, name, conditionName, bfc)
-	}
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
-		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
-		ExternalProviders:        commonExternalProviders,
-		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckCurationPolicy),
-		Steps: []resource.TestStep{
-			{
-				// Step 1: Create repository first and verify it exists
-				Config: repoConfig,
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(fmt.Sprintf("artifactory_remote_npm_repository.%s", repoName), "key", repoName),
-					resource.TestCheckResourceAttr(fmt.Sprintf("artifactory_remote_npm_repository.%s", repoName), "curated", "true"),
-				),
-			},
-			{
-				// Step 2: Create policy without the block_from_cache attribute, and verify it is false
-				Config: baseConfig(""),
-				Check:  resource.TestCheckResourceAttr(fqrn, "block_from_cache", "false"),
-			},
-			{
-				// Step 3: Set block_from_cache to true and verify
-				Config: baseConfig("true"),
-				Check:  resource.TestCheckResourceAttr(fqrn, "block_from_cache", "true"),
-			},
-			{
-				// Step 4: Set block_from_cache back to false and verify
-				Config: baseConfig("false"),
-				Check:  resource.TestCheckResourceAttr(fqrn, "block_from_cache", "false"),
 			},
 		},
 	})

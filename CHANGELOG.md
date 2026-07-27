@@ -1,8 +1,10 @@
-## 3.1.12 (Unreleased). Tested on JFrog Platform 11.5.11 (Artifactory 7.146.29, Xray 3.143.31, Catalog 1.43.1) with Terraform 1.15.8 and OpenTofu 1.12.5
+## 3.1.12 (Jul 27, 2026).
 
 BUG FIXES:
 
 * resource/xray_curation_policy: Add `block_from_cache` attribute so the "Enforce policy on cached packages" setting is read from and written to the API instead of being silently reset to `false` on every update. Issue: [#431](https://github.com/jfrog/terraform-provider-xray/issues/431) PR: [#435](https://github.com/jfrog/terraform-provider-xray/pull/435)
+
+* resource/xray_curation_policy: Fix false `Decision owners required` validation error when `decision_owners` is sourced from another resource, module variable, or other value that is unknown until apply, while `waiver_request_config = "manual"`. The `decisionOwnersRequiredValidator` now skips unknown values and defers validation to the plan phase. Issue: [#433](https://github.com/jfrog/terraform-provider-xray/issues/433)
 
 ## 3.1.11(Jun 9, 2026).
 
