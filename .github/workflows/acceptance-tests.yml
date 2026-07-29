@@ -288,6 +288,23 @@ jobs:
           install-only: true
       - name: Execute acceptance tests
         run: make acceptance -e TARGET_ARCH=linux_amd64
+      - name: Cleanup Kubernetes persistent volumes
+        # Runs BEFORE cluster delete so the PD CSI driver can cascade
+        # PVC delete → PV delete → GCE Persistent Disk delete while the
+        # cluster is still alive. gcloud container clusters delete does
+        # NOT delete dynamically-provisioned PDs on its own, so skipping
+        # this step leaks ~650 GiB of orphaned disks per run.
+        if: always() && steps.install_platform.conclusion == 'success'
+        continue-on-error: true
+        run: |
+          echo "Uninstalling jfrog-platform Helm release..."
+          helm uninstall jfrog-platform --wait --timeout 5m --ignore-not-found || true
+          echo "Deleting any remaining PVCs (belt-and-braces)..."
+          kubectl delete pvc --all --all-namespaces --wait=true --timeout=5m --ignore-not-found || true
+          # Give the PD CSI driver a moment to complete delete-disk calls.
+          sleep 20
+          echo "Remaining PVs (should be empty):"
+          kubectl get pv 2>/dev/null || true
       - name: Install provider
         run: |
           export PROVIDER_VERSION=$(git describe --tags --abbrev=0 | sed  -n 's/v\([0-9]*\).\([0-9]*\).\([0-9]*\)/\1.\2.\3/p')
