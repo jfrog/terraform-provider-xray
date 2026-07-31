@@ -1,18 +1,31 @@
-## 3.1.11 (Jun 9, 2026).
+## 3.1.12 (Jul 23, 2026). Tested on JFrog Platform 11.5.11 (Artifactory 7.146.29, Xray 3.143.31, Catalog 1.43.1) with Terraform 1.15.8 and OpenTofu 1.12.5
 
 BUG FIXES:
 
-* resource/xray_catalog_labels: Fix `name` and `description` field length validations. Issue: [#403](https://github.com/jfrog/terraform-provider-xray/issues/403) PR: [#420](https://github.com/jfrog/terraform-provider-xray/pull/420)
+* resource/xray_curation_policy: Fix false `Decision owners required` validation error when `decision_owners` is sourced from another resource, module variable, or other value that is unknown until apply, while `waiver_request_config = "manual"`. The `decisionOwnersRequiredValidator` now skips unknown values and defers validation to the plan phase. Issue: [#433](https://github.com/jfrog/terraform-provider-xray/issues/433)
 
 IMPROVEMENTS:
 
 * resource/xray_security_policy: Include the policy name in the error message when a policy delete fails, making it easier to identify which policy could not be removed.
 
-## 3.1.10 (April 13, 2026). Tested on JFrog Platform 11.4.6 (Artifactory 7.133.18, Xray 3.137.27, Catalog 1.35.2) with Terraform 1.14.8 and OpenTofu 1.11.6
+## 3.1.11(Jun 9, 2026).
+
+BUG FIXES:
+
+* resource/xray_catalog_labels: Preserve package names containing `:` when updating package version assignments. Issue: [#415](https://github.com/jfrog/terraform-provider-xray/issues/415) PR: [#417](https://github.com/jfrog/terraform-provider-xray/pull/417)
+
+* resource/xray_catalog_labels: Fix `name` and `description` field length validations. Issue: [#403](https://github.com/jfrog/terraform-provider-xray/issues/403) PR: [#420](https://github.com/jfrog/terraform-provider-xray/pull/420)
+
+## 3.1.10 (April 13, 2026). Tested on JFrog Platform 11.4.6 (Artifactory 7.133.18, Xray 3.137.27, Catalog 1.35.2). 
+
+BUG FIXES:
+
+* resource/xray_curation_policy: Fix validation error when `repo_include`, `repo_exclude`, or `pkg_types_include` are passed through module variables or computed from `for_each` expressions. The validator now correctly skips validation for unknown values during Terraform's plan phase.
 
 FEATURES:
 
 * resource/xray_security_policy: Add `sast` block to `rule.criteria` for SAST policy rules with `min_severity` support. Only supported by JFrog Advanced Security. PR: [#407](https://github.com/jfrog/terraform-provider-xray/pull/407)
+
 
 ## 3.1.9 (April 07, 2026). Tested on JFrog Platform 11.4.6 (Artifactory 7.133.17, Xray 3.137.27, Catalog 1.35.0) with Terraform 1.14.8 and OpenTofu 1.11.5
 

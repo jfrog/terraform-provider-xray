@@ -199,6 +199,7 @@ jobs:
             --set xray.rbac.create=true \
             --set jas.healthcheck.enabled=true \
             --set catalog.enabled=true \
+            --set artifactory.nginx.generateSelfSignedCert=true
             # --set artifactory.nginx.service.loadBalancerSourceRanges="{$WHITELIST_CIDR}" \
           echo "Waiting for JFrog Platform services roll out"
           kubectl rollout status statefulset/jfrog-platform-postgresql
@@ -228,6 +229,30 @@ jobs:
             --header "cookie: ACCESSTOKEN=${ACCESSTOKEN}; REFRESHTOKEN=${REFRESHTOKEN}")
           echo "::add-mask::$JFROG_ACCESS_TOKEN"
           echo "JFROG_ACCESS_TOKEN=$JFROG_ACCESS_TOKEN" >> "$GITHUB_ENV"
+
+      - name: Wait for Catalog API to be ready
+        run: |
+          # `kubectl rollout status` only confirms the Catalog pod passed its
+          # readiness probe. The provider's catalog resources additionally
+          # require /catalog/api/v1/system/app_health to report code "OK" (DB
+          # connection, entitlements, etc.), which lags well behind pod-ready.
+          # Poll that same endpoint so catalog tests don't run before it's healthy.
+          echo "Waiting for Catalog app_health to report OK..."
+          for i in $(seq 1 30); do
+            CODE=$(curl -s "${JFROG_URL}/catalog/api/v1/system/app_health" \
+              --header "Authorization: Bearer ${JFROG_ACCESS_TOKEN}" \
+              | jq -r '.code // empty' 2>/dev/null)
+            if [ "$CODE" = "OK" ]; then
+              echo "Catalog is healthy (attempt $i/30)"
+              break
+            fi
+            if [ "$i" = "30" ]; then
+              echo "Catalog did not become healthy in time (last code: '$CODE')"
+              exit 1
+            fi
+            echo "Attempt $i/30: catalog health code '$CODE'. Waiting 20s..."
+            sleep 20
+          done
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -264,6 +289,23 @@ jobs:
           install-only: true
       - name: Execute acceptance tests
         run: make acceptance -e TARGET_ARCH=linux_amd64
+      - name: Cleanup Kubernetes persistent volumes
+        # Runs BEFORE cluster delete so the PD CSI driver can cascade
+        # PVC delete → PV delete → GCE Persistent Disk delete while the
+        # cluster is still alive. gcloud container clusters delete does
+        # NOT delete dynamically-provisioned PDs on its own, so skipping
+        # this step leaks ~650 GiB of orphaned disks per run.
+        if: always() && steps.install_platform.conclusion == 'success'
+        continue-on-error: true
+        run: |
+          echo "Uninstalling jfrog-platform Helm release..."
+          helm uninstall jfrog-platform --wait --timeout 5m --ignore-not-found || true
+          echo "Deleting any remaining PVCs (belt-and-braces)..."
+          kubectl delete pvc --all --all-namespaces --wait=true --timeout=5m --ignore-not-found || true
+          # Give the PD CSI driver a moment to complete delete-disk calls.
+          sleep 20
+          echo "Remaining PVs (should be empty):"
+          kubectl get pv 2>/dev/null || true
       - name: Install provider
         run: |
           export PROVIDER_VERSION=$(git describe --tags --abbrev=0 | sed  -n 's/v\([0-9]*\).\([0-9]*\).\([0-9]*\)/\1.\2.\3/p')
