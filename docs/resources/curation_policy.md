@@ -256,6 +256,7 @@ resource "xray_curation_policy" "example_comprehensive" {
 
 ### Optional
 
+- `block_from_cache` (Boolean) When true, the policy also blocks packages served from Artifactory's cache. Defaults to false.
 - `decision_owners` (Set of String) List of JFrog Access groups used by waiver_request_config=manual
 - `label_waivers` (Attributes Set) List of label waivers. (see [below for nested schema](#nestedatt--label_waivers))
 - `notify_emails` (Set of String) List of email addresses that receive notifications when the policy causes a package to be blocked.

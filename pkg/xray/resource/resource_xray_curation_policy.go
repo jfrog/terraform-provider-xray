@@ -285,6 +285,7 @@ type CurationPolicyResourceModel struct {
 	NotifyEmails        types.Set    `tfsdk:"notify_emails"`
 	WaiverRequestConfig types.String `tfsdk:"waiver_request_config"`
 	DecisionOwners      types.Set    `tfsdk:"decision_owners"`
+	BlockFromCache      types.Bool   `tfsdk:"block_from_cache"`
 }
 
 type PackageWaiverModel struct {
@@ -327,6 +328,7 @@ type CurationPolicyAPIModel struct {
 	NotifyEmails        []string                `json:"notify_emails,omitempty"`
 	WaiverRequestConfig string                  `json:"waiver_request_config,omitempty"`
 	DecisionOwners      []string                `json:"decision_owners,omitempty"`
+	BlockFromCache      bool                    `json:"block_from_cache"`
 }
 
 const (
@@ -463,6 +465,11 @@ func (r *CurationPolicyResource) Schema(ctx context.Context, req resource.Schema
 				Optional:    true,
 				ElementType: types.StringType,
 				Description: "List of JFrog Access groups used by waiver_request_config=manual",
+			},
+			"block_from_cache": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "When true, the policy also blocks packages served from Artifactory's cache. Defaults to false.",
 			},
 		},
 		MarkdownDescription: "Provides an Xray curation policy resource. This resource allows you to create, read, update, and delete curation policies in Xray. See [JFrog Curation REST APIs](https://jfrog.com/help/r/jfrog-rest-apis/create-curation-policy) [Official documentation](https://jfrog.com/help/r/jfrog-security-user-guide/products/curation/configure-curation/create-policies) for more details. \n\n" +
@@ -608,6 +615,11 @@ func (r *CurationPolicyResource) toAPIModel(ctx context.Context, plan CurationPo
 	}
 	// If no label_waivers, leave plan.LabelWaivers as null (don't force empty set)
 
+	// Convert block_from_cache
+	if !plan.BlockFromCache.IsNull() && !plan.BlockFromCache.IsUnknown() {
+		policy.BlockFromCache = plan.BlockFromCache.ValueBool()
+	}
+
 	return nil
 }
 
@@ -618,6 +630,7 @@ func (r *CurationPolicyResource) fromAPIModel(ctx context.Context, policy Curati
 	plan.Scope = types.StringValue(policy.Scope)
 	plan.PolicyAction = types.StringValue(policy.PolicyAction)
 	plan.WaiverRequestConfig = types.StringValue(policy.WaiverRequestConfig)
+	plan.BlockFromCache = types.BoolValue(policy.BlockFromCache)
 
 	// Convert string arrays to sets
 	if len(policy.RepoExclude) > 0 {
