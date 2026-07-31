@@ -1,6 +1,8 @@
-## 3.1.12 (Jul 31, 2026). Tested on JFrog Platform 11.6.0 (Artifactory 7.161.15, Xray 3.150.17, Catalog 1.43.2) with Terraform 1.15.8 and OpenTofu 1.12.5
+## 3.1.12 (Jul 31, 2026). 
 
 BUG FIXES:
+
+* resource/xray_repository_config: Fix perpetual diff on the `paths_config` block when `pattern.exclude` is not set. The API returns an empty string for an unset exclusion, which was stored in state as an empty string instead of null, so every `terraform plan` showed the whole `paths_config` block being removed and re-added.
 
 * resource/xray_curation_policy: Fix false `Decision owners required` validation error when `decision_owners` is sourced from another resource, module variable, or other value that is unknown until apply, while `waiver_request_config = "manual"`. The `decisionOwnersRequiredValidator` now skips unknown values and defers validation to the plan phase. Issue: [#433](https://github.com/jfrog/terraform-provider-xray/issues/433)
 
