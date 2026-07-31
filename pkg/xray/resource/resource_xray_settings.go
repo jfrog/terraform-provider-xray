@@ -2,9 +2,11 @@ package xray
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 
+	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -76,6 +78,22 @@ type DbSyncDailyUpdatesTimeErrorAPIModel struct {
 	Error string `json:"error"`
 }
 
+// readDBSyncUpdateTime retrieves the current DB synchronization schedule from Xray.
+func readDBSyncUpdateTime(request *resty.Request) (string, error) {
+	var dbSyncTime DbSyncDailyUpdatesTimeAPIModel
+	response, err := request.
+		SetResult(&dbSyncTime).
+		Get(DBSyncEndPoint)
+	if err != nil {
+		return "", err
+	}
+	if response.IsError() {
+		return "", errors.New(response.String())
+	}
+
+	return dbSyncTime.DbSyncTime, nil
+}
+
 func (r *SettingsResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
@@ -136,6 +154,7 @@ func (r *SettingsResource) Configure(ctx context.Context, req resource.Configure
 	r.ProviderData = req.ProviderData.(util.ProviderMetadata)
 }
 
+// Create configures Xray settings and records their current state.
 func (r *SettingsResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	go util.SendUsageResourceCreate(ctx, r.ProviderData.Client.R(), r.ProviderData.ProductId, r.TypeName)
 
@@ -171,19 +190,12 @@ func (r *SettingsResource) Create(ctx context.Context, req resource.CreateReques
 	// If db_sync_updates_time is not in config, read the current server value
 	// so the Computed attribute is populated in state.
 	if plan.DBSyncUpdateTime.IsNull() || plan.DBSyncUpdateTime.IsUnknown() {
-		var currentDbSyncTime DbSyncDailyUpdatesTimeAPIModel
-		response, err = request.
-			SetResult(&currentDbSyncTime).
-			Get(DBSyncEndPoint)
+		currentDbSyncTime, err := readDBSyncUpdateTime(request)
 		if err != nil {
 			utilfw.UnableToCreateResourceError(resp, err.Error())
 			return
 		}
-		if response.IsError() {
-			utilfw.UnableToCreateResourceError(resp, response.String())
-			return
-		}
-		plan.DBSyncUpdateTime = types.StringValue(currentDbSyncTime.DbSyncTime)
+		plan.DBSyncUpdateTime = types.StringValue(currentDbSyncTime)
 		plan.ID = types.StringValue("settings")
 		resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 		return
@@ -212,6 +224,7 @@ func (r *SettingsResource) Create(ctx context.Context, req resource.CreateReques
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
+// Read refreshes Xray settings in Terraform state.
 func (r *SettingsResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	go util.SendUsageResourceRead(ctx, r.ProviderData.Client.R(), r.ProviderData.ProductId, r.TypeName)
 
@@ -245,25 +258,19 @@ func (r *SettingsResource) Read(ctx context.Context, req resource.ReadRequest, r
 	state.BlockUnfinishedScansTimeout = types.Int64Value(settings.BlockUnfinishedScansTimeout)
 	state.BlockUnscannedTimeout = types.Int64Value(settings.BlockUnscannedTimeout)
 
-	var dbSyncTime DbSyncDailyUpdatesTimeAPIModel
-	response, err = request.
-		SetResult(&dbSyncTime).
-		Get(DBSyncEndPoint)
+	dbSyncTime, err := readDBSyncUpdateTime(request)
 	if err != nil {
 		utilfw.UnableToRefreshResourceError(resp, fmt.Sprintf("failed to retrieve data from API during Read: %s", err.Error()))
 		return
 	}
-	if response.IsError() {
-		utilfw.UnableToRefreshResourceError(resp, fmt.Sprintf("failed to retrieve data from API during Read: %s", response.String()))
-		return
-	}
 
-	state.DBSyncUpdateTime = types.StringValue(dbSyncTime.DbSyncTime)
+	state.DBSyncUpdateTime = types.StringValue(dbSyncTime)
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 
+// Update applies planned changes to Xray settings and records their resulting state.
 func (r *SettingsResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	go util.SendUsageResourceUpdate(ctx, r.ProviderData.Client.R(), r.ProviderData.ProductId, r.TypeName)
 
@@ -299,19 +306,12 @@ func (r *SettingsResource) Update(ctx context.Context, req resource.UpdateReques
 	// If db_sync_updates_time is not in config, read the current server value
 	// so the Computed attribute is populated in state.
 	if plan.DBSyncUpdateTime.IsNull() || plan.DBSyncUpdateTime.IsUnknown() {
-		var currentDbSyncTime DbSyncDailyUpdatesTimeAPIModel
-		response, err = request.
-			SetResult(&currentDbSyncTime).
-			Get(DBSyncEndPoint)
+		currentDbSyncTime, err := readDBSyncUpdateTime(request)
 		if err != nil {
 			utilfw.UnableToUpdateResourceError(resp, err.Error())
 			return
 		}
-		if response.IsError() {
-			utilfw.UnableToUpdateResourceError(resp, response.String())
-			return
-		}
-		plan.DBSyncUpdateTime = types.StringValue(currentDbSyncTime.DbSyncTime)
+		plan.DBSyncUpdateTime = types.StringValue(currentDbSyncTime)
 		plan.ID = types.StringValue("settings")
 		resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 		return

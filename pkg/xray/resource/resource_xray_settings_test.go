@@ -113,6 +113,7 @@ func TestAccSettings_basic(t *testing.T) {
 	})
 }
 
+// TestAccSettings_noDbSyncTime verifies that omitting the DB sync schedule preserves the server value.
 func TestAccSettings_noDbSyncTime(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("test-settings", "xray_settings")
 
@@ -148,6 +149,14 @@ func TestAccSettings_noDbSyncTime(t *testing.T) {
 					resource.TestCheckResourceAttr(fqrn, "block_unfinished_scans_timeout", fmt.Sprintf("%d", testData["blockUnfinishedScansTimeout"])),
 					resource.TestCheckResourceAttrSet(fqrn, "db_sync_updates_time"),
 				),
+			},
+			{
+				Config: config,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
 			},
 			{
 				ResourceName:      fqrn,
