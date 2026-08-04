@@ -371,11 +371,19 @@ func (m *RepoConfigResourceModel) fromAPIModel(_ context.Context, xrayVersion, p
 		patterns := lo.Map(
 			apiModel.RepoPathsConfig.Patterns,
 			func(pattern PatternAPIModel, _ int) attr.Value {
+				// The API always returns 'exclude' and uses an empty string when no exclusion
+				// is set. 'exclude' is optional and cannot be set to an empty string, so it
+				// must map back to null to avoid a perpetual diff when it is omitted.
+				exclude := types.StringNull()
+				if pattern.Exclude != "" {
+					exclude = types.StringValue(pattern.Exclude)
+				}
+
 				p, d := types.ObjectValue(
 					pathsConfigPatternResourceModelAttributeTypes,
 					map[string]attr.Value{
 						"include":             types.StringValue(pattern.Include),
-						"exclude":             types.StringValue(pattern.Exclude),
+						"exclude":             exclude,
 						"index_new_artifacts": types.BoolValue(pattern.IndexNewArtifacts),
 						"retention_in_days":   types.Int64Value(pattern.RetentionInDays),
 					},

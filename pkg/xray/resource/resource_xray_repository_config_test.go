@@ -752,6 +752,61 @@ func TestAccRepositoryConfig_RepoPathsUpdate(t *testing.T) {
 	})
 }
 
+func TestAccRepositoryConfig_RepoPathsNoExclude(t *testing.T) {
+	jasDisabled := os.Getenv("JFROG_JAS_DISABLED")
+	if strings.ToLower(jasDisabled) == "true" {
+		t.Skipf("Env var JFROG_JAS_DISABLED is set to 'true'")
+	}
+
+	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
+	_, _, repoName := testutil.MkNames("generic-local", "artifactory_local_generic_repository")
+
+	var testData = map[string]string{
+		"resource_name":                resourceName,
+		"repo_name":                    repoName,
+		"package_type":                 "generic",
+		"pattern0_include":             "core/**",
+		"pattern0_index_new_artifacts": "true",
+		"pattern0_retention_in_days":   "45",
+		"other_index_new_artifacts":    "true",
+		"other_retention_in_days":      "60",
+	}
+
+	config := util.ExecuteTemplate(fqrn, TestDataRepoPathsConfigNoExcludeTemplate, testData)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		ExternalProviders: map[string]resource.ExternalProvider{
+			"artifactory": {
+				Source:            "jfrog/artifactory",
+				VersionConstraint: "12.9.1",
+			},
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "paths_config.#", "1"),
+					resource.TestCheckResourceAttr(fqrn, "paths_config.0.pattern.#", "1"),
+					resource.TestCheckTypeSetElemNestedAttrs(fqrn, "paths_config.0.pattern.*", map[string]string{
+						"include":             testData["pattern0_include"],
+						"index_new_artifacts": testData["pattern0_index_new_artifacts"],
+						"retention_in_days":   testData["pattern0_retention_in_days"],
+					}),
+				),
+			},
+			{
+				Config: config,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+		},
+	})
+}
+
 func verifyRepositoryConfig(fqrn string, testData map[string]string) resource.TestCheckFunc {
 	return resource.ComposeTestCheckFunc(
 		resource.TestCheckResourceAttr(fqrn, "repo_name", testData["repo_name"]),
@@ -1110,6 +1165,38 @@ resource "xray_repository_config" "{{ .resource_name }}" {
       exclude             = "{{ .pattern1_exclude }}"
       index_new_artifacts = {{ .pattern1_index_new_artifacts }}
       retention_in_days   = {{ .pattern1_retention_in_days }}
+    }
+
+    all_other_artifacts {
+      index_new_artifacts = {{ .other_index_new_artifacts }}
+      retention_in_days   = {{ .other_retention_in_days }}
+    }
+  }
+}`
+
+const TestDataRepoPathsConfigNoExcludeTemplate = `
+resource "artifactory_local_{{ .package_type }}_repository" "{{ .repo_name }}" {
+	key        = "{{ .repo_name }}"
+	xray_index = true
+}
+
+resource "xray_repository_config" "{{ .resource_name }}" {
+  repo_name   = artifactory_local_{{ .package_type }}_repository.{{ .repo_name }}.key
+  jas_enabled = true
+
+  config {
+    exposures {
+      scanners_category {
+        secrets = true
+      }
+    }
+  }
+
+  paths_config {
+    pattern {
+      include             = "{{ .pattern0_include }}"
+      index_new_artifacts = {{ .pattern0_index_new_artifacts }}
+      retention_in_days   = {{ .pattern0_retention_in_days }}
     }
 
     all_other_artifacts {
