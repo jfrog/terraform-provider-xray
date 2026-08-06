@@ -1,16 +1,20 @@
 package xray_test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"regexp"
 	"testing"
 	"time"
 
+	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
+	resourceschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/jfrog/terraform-provider-shared/testutil"
 	"github.com/jfrog/terraform-provider-xray/v3/pkg/acctest"
+	xray "github.com/jfrog/terraform-provider-xray/v3/pkg/xray/resource"
 )
 
 // Shared repositories for all curation policy tests
@@ -52,6 +56,53 @@ func setupSharedRepositories() {
 	sharedNpmRepo3 = fmt.Sprintf("shared-npm-repo3-%s", testSuiteId)
 	sharedMavenRepo = fmt.Sprintf("shared-maven-repo-%s", testSuiteId)
 	sharedDockerRepo = fmt.Sprintf("shared-docker-repo-%s", testSuiteId)
+}
+
+func TestCurationPolicyShareWithFederationSchema(t *testing.T) {
+	var response fwresource.SchemaResponse
+	xray.NewCurationPolicyResource().Schema(
+		context.Background(),
+		fwresource.SchemaRequest{},
+		&response,
+	)
+
+	attribute, ok := response.Schema.Attributes["share_with_federation"]
+	if !ok {
+		t.Fatal("share_with_federation schema attribute is missing")
+	}
+
+	boolAttribute, ok := attribute.(resourceschema.BoolAttribute)
+	if !ok {
+		t.Fatalf("share_with_federation schema attribute has type %T, want schema.BoolAttribute", attribute)
+	}
+	if !boolAttribute.Optional {
+		t.Error("share_with_federation schema attribute must be optional")
+	}
+	if !boolAttribute.Computed {
+		t.Error("share_with_federation schema attribute must be computed")
+	}
+}
+
+func TestCurationPolicyShareWithFederationRejectsSpecificRepos(t *testing.T) {
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: `
+					resource "xray_curation_policy" "test" {
+						name                  = "federated-specific-repos"
+						condition_id          = "3"
+						scope                = "specific_repos"
+						repo_include         = ["npm-remote"]
+						policy_action        = "block"
+						share_with_federation = true
+					}
+				`,
+				PlanOnly:    true,
+				ExpectError: regexp.MustCompile("Federation sharing not allowed"),
+			},
+		},
+	})
 }
 
 // getSharedRepoConfig returns the configuration for all shared repositories
@@ -345,6 +396,100 @@ func createAllowedLabelsCondition(conditionName string, labelNames []string, lab
 // ============================================================================
 // SCOPE TESTING - Test all scope combinations with different conditions
 // ============================================================================
+
+// share_with_federation = true requires a federation-capable Xray environment.
+// The default state is always tested, while federation lifecycle steps only run
+// when XRAY_CURATION_FEDERATION_ENABLED is set.
+func TestAccCurationPolicy_ShareWithFederationLifecycle(t *testing.T) {
+	_, fqrn, name := testutil.MkNames("test-federation", "xray_curation_policy")
+	conditionName := fmt.Sprintf("test-federation-condition-%d", testutil.RandomInt())
+	conditionConfig := createMaturityCondition(conditionName)
+
+	policyConfig := func(scope, shareWithFederation string) string {
+		pkgTypesInclude := ""
+		if scope == "pkg_types" {
+			pkgTypesInclude = `pkg_types_include = ["npm"]`
+		}
+
+		federation := ""
+		if shareWithFederation != "" {
+			federation = fmt.Sprintf("share_with_federation = %s", shareWithFederation)
+		}
+
+		return conditionConfig + fmt.Sprintf(`
+			resource "xray_curation_policy" "%s" {
+				name                  = "%s"
+				condition_id          = xray_custom_curation_condition.%s.id
+				scope                 = "%s"
+				%s
+				policy_action         = "block"
+				waiver_request_config = "forbidden"
+				%s
+			}
+		`, name, name, conditionName, scope, pkgTypesInclude, federation)
+	}
+
+	steps := []resource.TestStep{
+		{
+			Config: policyConfig("all_repos", ""),
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(fqrn, "share_with_federation", "false"),
+			),
+		},
+		{
+			Config: policyConfig("all_repos", ""),
+			ConfigPlanChecks: resource.ConfigPlanChecks{
+				PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectEmptyPlan(),
+				},
+			},
+		},
+	}
+
+	if os.Getenv("XRAY_CURATION_FEDERATION_ENABLED") != "" {
+		steps = append(steps,
+			resource.TestStep{
+				Config: policyConfig("all_repos", "true"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "share_with_federation", "true"),
+				),
+			},
+			resource.TestStep{
+				Config: policyConfig("all_repos", "true"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+			resource.TestStep{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			resource.TestStep{
+				Config: policyConfig("pkg_types", "true"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "scope", "pkg_types"),
+					resource.TestCheckResourceAttr(fqrn, "share_with_federation", "true"),
+				),
+			},
+			resource.TestStep{
+				Config: policyConfig("pkg_types", "false"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "share_with_federation", "false"),
+				),
+			},
+		)
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckCurationPolicy),
+		Steps:                    steps,
+	})
+}
 
 // Test all_repos scope with block action and forbidden waivers
 func TestAccCurationPolicy_AllRepos_Block_Forbidden(t *testing.T) {

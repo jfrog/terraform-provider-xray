@@ -13,6 +13,8 @@ Provides an Xray curation policy resource. This resource allows you to create, r
 
 {{tffile "examples/resources/xray_curation_policy/resource.tf"}}
 
+`share_with_federation` can be enabled only when `scope` is `all_repos` or `pkg_types` and requires Curation Federation (Xray 3.143.x and Artifactory 7.146.x).
+
 {{ .SchemaMarkdown | trimspace }}
 
 ## Import

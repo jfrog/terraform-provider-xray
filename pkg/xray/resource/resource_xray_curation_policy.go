@@ -171,6 +171,14 @@ func (v scopeRequirementsValidator) ValidateString(ctx context.Context, req vali
 		return
 	}
 
+	// Get the share_with_federation value
+	var shareWithFederationValue attr.Value
+	diags = req.Config.GetAttribute(ctx, path.Root("share_with_federation"), &shareWithFederationValue)
+	if diags.HasError() {
+		resp.Diagnostics.Append(diags...)
+		return
+	}
+
 	// Check requirements based on scope
 	switch scope {
 	case "specific_repos":
@@ -197,6 +205,13 @@ func (v scopeRequirementsValidator) ValidateString(ctx context.Context, req vali
 				path.Root("repo_exclude"),
 				"Repository exclude not allowed",
 				"repo_exclude cannot be used when scope is 'specific_repos'",
+			)
+		}
+		if !shareWithFederationValue.IsNull() && !shareWithFederationValue.IsUnknown() && shareWithFederationValue.(types.Bool).ValueBool() {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("share_with_federation"),
+				"Federation sharing not allowed",
+				"share_with_federation cannot be true when scope is 'specific_repos'; use 'all_repos' or 'pkg_types'",
 			)
 		}
 
@@ -286,6 +301,7 @@ type CurationPolicyResourceModel struct {
 	WaiverRequestConfig types.String `tfsdk:"waiver_request_config"`
 	DecisionOwners      types.Set    `tfsdk:"decision_owners"`
 	BlockFromCache      types.Bool   `tfsdk:"block_from_cache"`
+	ShareWithFederation types.Bool   `tfsdk:"share_with_federation"`
 }
 
 type PackageWaiverModel struct {
@@ -329,6 +345,12 @@ type CurationPolicyAPIModel struct {
 	WaiverRequestConfig string                  `json:"waiver_request_config,omitempty"`
 	DecisionOwners      []string                `json:"decision_owners,omitempty"`
 	BlockFromCache      bool                    `json:"block_from_cache"`
+	ShareWithFederation bool                    `json:"share_with_federation"`
+}
+
+type curationPolicyAPIRequestModel struct {
+	CurationPolicyAPIModel
+	ShareWithFederation *bool `json:"share_with_federation,omitempty"`
 }
 
 const (
@@ -470,6 +492,11 @@ func (r *CurationPolicyResource) Schema(ctx context.Context, req resource.Schema
 				Optional:    true,
 				Computed:    true,
 				Description: "When true, the policy also blocks packages served from Artifactory's cache. Defaults to false.",
+			},
+			"share_with_federation": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "When true, shares the policy with federated Xray controllers. Supported only for all_repos and pkg_types scopes. Requires Curation Federation (Xray 3.143.x and Artifactory 7.146.x). Defaults to false.",
 			},
 		},
 		MarkdownDescription: "Provides an Xray curation policy resource. This resource allows you to create, read, update, and delete curation policies in Xray. See [JFrog Curation REST APIs](https://jfrog.com/help/r/jfrog-rest-apis/create-curation-policy) [Official documentation](https://jfrog.com/help/r/jfrog-security-user-guide/products/curation/configure-curation/create-policies) for more details. \n\n" +
@@ -623,6 +650,40 @@ func (r *CurationPolicyResource) toAPIModel(ctx context.Context, plan CurationPo
 	return nil
 }
 
+func (r *CurationPolicyResource) toAPIRequest(
+	ctx context.Context,
+	plan CurationPolicyResourceModel,
+	configShareWithFederation types.Bool,
+) (curationPolicyAPIRequestModel, diag.Diagnostics) {
+	var request curationPolicyAPIRequestModel
+
+	diags := r.toAPIModel(ctx, plan, &request.CurationPolicyAPIModel)
+	if diags.HasError() {
+		return request, diags
+	}
+
+	if plan.Scope.ValueString() == "specific_repos" &&
+		!plan.ShareWithFederation.IsNull() &&
+		!plan.ShareWithFederation.IsUnknown() &&
+		plan.ShareWithFederation.ValueBool() {
+		diags.AddAttributeError(
+			path.Root("share_with_federation"),
+			"Federation sharing not allowed",
+			"share_with_federation cannot be true when scope is 'specific_repos'; use 'all_repos' or 'pkg_types'",
+		)
+		return request, diags
+	}
+
+	if !configShareWithFederation.IsNull() &&
+		!plan.ShareWithFederation.IsNull() &&
+		!plan.ShareWithFederation.IsUnknown() {
+		shareWithFederation := plan.ShareWithFederation.ValueBool()
+		request.ShareWithFederation = &shareWithFederation
+	}
+
+	return request, diags
+}
+
 func (r *CurationPolicyResource) fromAPIModel(ctx context.Context, policy CurationPolicyAPIModel, plan *CurationPolicyResourceModel) diag.Diagnostics {
 	plan.ID = types.StringValue(policy.ID)
 	plan.Name = types.StringValue(policy.Name)
@@ -631,6 +692,7 @@ func (r *CurationPolicyResource) fromAPIModel(ctx context.Context, policy Curati
 	plan.PolicyAction = types.StringValue(policy.PolicyAction)
 	plan.WaiverRequestConfig = types.StringValue(policy.WaiverRequestConfig)
 	plan.BlockFromCache = types.BoolValue(policy.BlockFromCache)
+	plan.ShareWithFederation = types.BoolValue(policy.ShareWithFederation)
 
 	// Convert string arrays to sets
 	if len(policy.RepoExclude) > 0 {
@@ -784,6 +846,7 @@ func (r *CurationPolicyResource) Create(ctx context.Context, req resource.Create
 	go util.SendUsageResourceCreate(ctx, r.ProviderData.Client.R(), r.ProviderData.ProductId, r.TypeName)
 
 	var plan CurationPolicyResourceModel
+	var config CurationPolicyResourceModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -791,15 +854,24 @@ func (r *CurationPolicyResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	var policy CurationPolicyAPIModel
-	resp.Diagnostics.Append(r.toAPIModel(ctx, plan, &policy)...)
+	// Read configuration separately so request serialization can distinguish an
+	// omitted Optional+Computed attribute from its resolved state value.
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
+	request, diags := r.toAPIRequest(ctx, plan, config.ShareWithFederation)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var policy CurationPolicyAPIModel
+
 	// Create the curation policy
 	response, err := r.ProviderData.Client.R().
-		SetBody(policy).
+		SetBody(request).
 		SetResult(&policy).
 		Post(CurationPolicyEndpoint)
 
@@ -868,6 +940,7 @@ func (r *CurationPolicyResource) Update(ctx context.Context, req resource.Update
 	go util.SendUsageResourceUpdate(ctx, r.ProviderData.Client.R(), r.ProviderData.ProductId, r.TypeName)
 
 	var plan CurationPolicyResourceModel
+	var config CurationPolicyResourceModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -875,15 +948,24 @@ func (r *CurationPolicyResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	var policy CurationPolicyAPIModel
-	resp.Diagnostics.Append(r.toAPIModel(ctx, plan, &policy)...)
+	// Read configuration separately so request serialization can distinguish an
+	// omitted Optional+Computed attribute from its resolved state value.
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
+	request, diags := r.toAPIRequest(ctx, plan, config.ShareWithFederation)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var policy CurationPolicyAPIModel
+
 	// Update the curation policy
 	response, err := r.ProviderData.Client.R().
-		SetBody(policy).
+		SetBody(request).
 		SetResult(&policy).
 		Put(fmt.Sprintf("%s/%s", CurationPolicyEndpoint, plan.ID.ValueString()))
 

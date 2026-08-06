@@ -12,6 +12,15 @@ provider "xray" {
   access_token = "your-access-token"
 }
 
+# Policy shared with federated Xray controllers
+resource "xray_curation_policy" "federated" {
+  name                  = "federated-policy"
+  condition_id          = "3"
+  scope                 = "all_repos"
+  policy_action         = "block"
+  share_with_federation = true
+}
+
 # Valid curation policy with manual waiver requests
 resource "xray_curation_policy" "example_manual" {
   name                  = "example-manual-policy"
@@ -26,13 +35,13 @@ resource "xray_curation_policy" "example_manual" {
       pkg_type      = "npm"
       pkg_name      = "lodash"
       all_versions  = false
-      pkg_versions  = ["4.17.20", "4.17.21"]  # Required when all_versions = false
+      pkg_versions  = ["4.17.20", "4.17.21"] # Required when all_versions = false
       justification = "Required for legacy system compatibility"
     },
     {
       pkg_type      = "npm"
       pkg_name      = "moment"
-      all_versions  = true  # When true, pkg_versions can be omitted
+      all_versions  = true # When true, pkg_versions can be omitted
       justification = "Legacy dependency - all versions allowed"
     }
   ]
@@ -72,7 +81,7 @@ resource "xray_curation_policy" "example_auto_approved" {
       pkg_type      = "Maven"
       pkg_name      = "log4j-core"
       all_versions  = false
-      pkg_versions  = ["2.17.0", "2.17.1", "2.17.2"]  # Only allow specific safe versions
+      pkg_versions  = ["2.17.0", "2.17.1", "2.17.2"] # Only allow specific safe versions
       justification = "Approved safe versions after security review"
     },
     {
@@ -93,12 +102,12 @@ resource "xray_curation_policy" "example_auto_approved" {
 
 # Dry run policy for testing
 resource "xray_curation_policy" "example_dry_run" {
-  name          = "dry-run-test-policy"
-  condition_id  = "7"
-  scope         = "pkg_types"
+  name              = "dry-run-test-policy"
+  condition_id      = "7"
+  scope             = "pkg_types"
   pkg_types_include = ["Docker", "Gems"]
-  policy_action = "dry_run"  # Only logs, doesn't block
-  notify_emails = ["audit@company.com"]
+  policy_action     = "dry_run" # Only logs, doesn't block
+  notify_emails     = ["audit@company.com"]
 }
 
 # Policy targeting specific repositories
@@ -110,7 +119,7 @@ resource "xray_curation_policy" "example_specific_repos" {
   policy_action         = "block"
   waiver_request_config = "manual"
   decision_owners       = ["prod-security-team", "release-managers"]
-  
+
   waivers = [
     {
       pkg_type      = "npm"
