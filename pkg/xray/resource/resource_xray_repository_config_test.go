@@ -580,6 +580,94 @@ func TestAccRepositoryConfig_RepoConfigCreate_no_exposure(t *testing.T) {
 	}
 }
 
+// TestAccRepositoryConfig_RepoConfigCreate_exposure_no_drift is a regression test for the
+// state-drift bug where configured retention_in_days and explicit scanner booleans that the
+// Xray API does not round-trip (e.g. services/iac for npm) were read back as null, producing
+// a perpetual "update in-place" diff on the plan immediately following a successful apply.
+func TestAccRepositoryConfig_RepoConfigCreate_exposure_no_drift(t *testing.T) {
+	jasDisabled := os.Getenv("JFROG_JAS_DISABLED")
+	if strings.ToLower(jasDisabled) != "false" {
+		t.Skipf("Env var JFROG_JAS_DISABLED is not set to 'false'")
+	}
+
+	version, err := util.GetXrayVersion(acctest.GetTestResty(t))
+	if err != nil {
+		t.Fail()
+		return
+	}
+
+	if valid, _ := util.CheckVersion(version, "3.78.9"); !valid {
+		t.Skipf("xray version %s does not support npm exposures scanning", version)
+		return
+	}
+
+	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
+	_, _, repoName := testutil.MkNames("test-local", "artifactory_local_npm_repository")
+
+	testData := map[string]string{
+		"resource_name": resourceName,
+		"repo_name":     repoName,
+	}
+
+	template := `
+	resource "artifactory_local_npm_repository" "{{ .repo_name }}" {
+		key        = "{{ .repo_name }}"
+		xray_index = true
+	}
+
+	resource "xray_repository_config" "{{ .resource_name }}" {
+		repo_name   = artifactory_local_npm_repository.{{ .repo_name }}.key
+		jas_enabled = true
+
+		config {
+			retention_in_days        = 92
+			vuln_contextual_analysis = false
+
+			exposures {
+				scanners_category {
+					services     = false
+					secrets      = false
+					applications = false
+					iac          = false
+				}
+			}
+		}
+	}`
+
+	config := util.ExecuteTemplate(fqrn, template, testData)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		ExternalProviders: map[string]resource.ExternalProvider{
+			"artifactory": {
+				Source: "jfrog/artifactory",
+			},
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "config.0.retention_in_days", "92"),
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.services", "false"),
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.secrets", "false"),
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.applications", "false"),
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.iac", "false"),
+				),
+			},
+			{
+				// Re-plan against the same config immediately after apply. With the drift
+				// fixed, Read carries the configured values forward and the plan is empty.
+				Config: config,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+		},
+	})
+}
+
 func testAccRepositoryConfigRepoConfigCreate(packageType, template, validVersion, xrayVersion string, checkFunc func(fqrn string, testData map[string]string) resource.TestCheckFunc) func(t *testing.T) {
 	return func(t *testing.T) {
 		_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
