@@ -80,8 +80,8 @@ resource "xray_catalog_labels" "combined" {
 
 Required:
 
-- `description` (String) Description of the catalog label. Must have at most 300 characters.
-- `name` (String) The name of the catalog label. Must be unique and have at most 15 characters.
+- `description` (String) Description of the catalog label. Must have at most 10000 characters.
+- `name` (String) The name of the catalog label. Must be unique and have at most 1000 characters.
 
 
 <a id="nestedatt--package_assignments"></a>

@@ -1,4 +1,4 @@
-## 3.1.12 (Jul 31, 2026). Tested on JFrog Platform 11.6.0 (Artifactory 7.161.15, Xray 3.150.19, Catalog 1.43.3) with Terraform 1.15.8 and OpenTofu 1.12.5
+## 3.1.12 (Jul 31, 2026). Tested on JFrog Platform 11.6.0 (Artifactory 7.161.15, Xray 3.150.19, Catalog 1.43.3). Tested on JFrog Platform 11.6.0 (Artifactory 7.161.15, Xray 3.150.20, Catalog 1.44.0) with Terraform 1.15.8 and OpenTofu 1.12.5
 
 BUG FIXES:
 

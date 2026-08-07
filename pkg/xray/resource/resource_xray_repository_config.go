@@ -269,13 +269,43 @@ func (m *RepoConfigResourceModel) fromAPIModel(_ context.Context, xrayVersion, p
 	m.Config = types.SetNull(configSetResourceModelElementTypes)
 
 	if apiModel.RepoConfig != nil {
-		retentionInDays := types.Int64PointerValue(nil)
+		// The Xray API does not always round-trip every configured value: retention_in_days
+		// may be omitted from the response, and scanner categories / vuln_contextual_analysis
+		// that are not valid for the package type are never echoed back. These attributes are
+		// Optional (not Computed), so replacing a user-configured value with null on Read
+		// produces a perpetual "update in-place" diff. Carry forward the prior state values
+		// as fallbacks so Read is idempotent.
+		priorRetentionInDays := types.Int64Null()
+		priorVulnContextualAnalysis := types.BoolNull()
+		priorScanners := map[string]attr.Value{
+			"services":     types.BoolNull(),
+			"secrets":      types.BoolNull(),
+			"iac":          types.BoolNull(),
+			"applications": types.BoolNull(),
+		}
+
+		if !m.Config.IsNull() && len(m.Config.Elements()) > 0 {
+			priorConfigAttrs := m.Config.Elements()[0].(types.Object).Attributes()
+			priorRetentionInDays = priorConfigAttrs["retention_in_days"].(types.Int64)
+			priorVulnContextualAnalysis = priorConfigAttrs["vuln_contextual_analysis"].(types.Bool)
+
+			if priorExposures, ok := priorConfigAttrs["exposures"].(types.Set); ok && !priorExposures.IsNull() && len(priorExposures.Elements()) > 0 {
+				priorExposuresAttrs := priorExposures.Elements()[0].(types.Object).Attributes()
+				if priorScannersSet, ok := priorExposuresAttrs["scanners_category"].(types.Set); ok && !priorScannersSet.IsNull() && len(priorScannersSet.Elements()) > 0 {
+					for k, v := range priorScannersSet.Elements()[0].(types.Object).Attributes() {
+						priorScanners[k] = v
+					}
+				}
+			}
+		}
+
+		retentionInDays := priorRetentionInDays
 
 		if apiModel.RepoConfig.RetentionInDays != nil {
 			retentionInDays = types.Int64PointerValue(apiModel.RepoConfig.RetentionInDays)
 		}
 
-		vulnContextualAnalysis := types.BoolNull()
+		vulnContextualAnalysis := priorVulnContextualAnalysis
 		exposures := types.SetNull(configExposuresSetResourceModelElementTypes)
 
 		if m.JASEnabled.ValueBool() {
@@ -285,10 +315,10 @@ func (m *RepoConfigResourceModel) fromAPIModel(_ context.Context, xrayVersion, p
 
 			if apiModel.RepoConfig.Exposures != nil && slices.Contains(exposuresPackageTypes(xrayVersion), packageType) {
 				scannersCategoryAttrValues := map[string]attr.Value{
-					"services":     types.BoolNull(),
-					"secrets":      types.BoolNull(),
-					"iac":          types.BoolNull(),
-					"applications": types.BoolNull(),
+					"services":     priorScanners["services"],
+					"secrets":      priorScanners["secrets"],
+					"iac":          priorScanners["iac"],
+					"applications": priorScanners["applications"],
 				}
 
 				switch packageType {

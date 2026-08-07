@@ -107,6 +107,19 @@ resource "xray_operational_risks_report" "release-bundle-report" {
 
 ### Optional
 
+- `cron_schedule` (String) Schedule for automated report generation. Format: 'minute hour day-of-month month day-of-week' where:
+  - minute: must be 00, 15, 30, or 45 (quarter-hourly)
+  - hour: must be 00-23 (2-digit format, e.g., 03 not 3)
+  - day-of-month: 1-31, * (any), or ? (unspecified)
+  - month: 1-12 or JAN-DEC
+  - day-of-week: 0-6 (0=Sunday) or SUN-SAT
+Examples:
+  - '45 03 * * MON' = Every Monday at 03:45 AM
+  - '00 00 1 * ?' = At midnight (00:00) on the first day of every month
+  - '30 12 ? * MON-FRI' = At 12:30 PM every weekday
+Note: Requires Xray 3.130.0 or higher.
+- `cron_schedule_timezone` (String) Timezone for cron schedule. For valid timezone formats, see: [iana-timezones](https://timeapi.io/documentation/iana-timezones). Note: Requires Xray 3.130.0 or higher. Only used when cron_schedule is set.
+- `emails` (Set of String) List of email addresses to notify when report generation is complete. Note: Requires Xray 3.130.0 or higher.
 - `filters` (Block Set) Advanced filters. (see [below for nested schema](#nestedblock--filters))
 - `project_key` (String) Project key for assigning this resource to. Must be 2 - 10 lowercase alphanumeric and hyphen characters.
 - `resources` (Block Set) The list of resources to include into the report. (see [below for nested schema](#nestedblock--resources))
