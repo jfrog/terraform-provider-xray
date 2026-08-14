@@ -1,3 +1,9 @@
+## 3.1.13 (Aug 13, 2026). Tested on JFrog Platform 11.6.1 (Artifactory 7.161.16, Xray 3.150.24, Catalog 1.44.0) with Terraform 1.15.8 and OpenTofu 1.12.5
+
+BUG FIXES:
+
+* resource/xray_security_policy: Fix `Found Invalid Policy: All severities is not a valid severity in sast condition` when creating or updating a policy with `sast.min_severity = "All severities"`. Xray rejects that literal value in a `sast` condition and also rejects the field being omitted, so it is now sent as the API's `Unknown` sentinel and mapped back to `All severities` on read to avoid drift. Also accept the UI label `All Severities` (and other case variants) via case-insensitive validation and preserve the configured casing in state. Issue: [#445](https://github.com/jfrog/terraform-provider-xray/issues/445) PR: [#446](https://github.com/jfrog/terraform-provider-xray/pull/446)
+
 ## 3.1.12 (Jul 31, 2026). Tested on JFrog Platform 11.6.0 (Artifactory 7.161.15, Xray 3.150.19, Catalog 1.43.3) with Terraform 1.15.8 and OpenTofu 1.12.5
 
 BUG FIXES:
