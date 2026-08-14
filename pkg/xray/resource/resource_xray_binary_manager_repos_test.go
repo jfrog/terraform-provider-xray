@@ -57,6 +57,9 @@ func TestAccBinaryManagerRepos_full(t *testing.T) {
 					{{if eq .packageType "Debian"}}
 					index_compression_formats = ["bz2"]
 					{{end}}
+					{{if eq .packageType "Cargo"}}
+					enable_sparse_index = true
+					{{end}}
 					
 					lifecycle {
 						ignore_changes = ["project_key"]
@@ -91,6 +94,9 @@ func TestAccBinaryManagerRepos_full(t *testing.T) {
 					project_key = "default"
 					{{if eq .packageType "Debian"}}
 					index_compression_formats = ["bz2"]
+					{{end}}
+					{{if eq .packageType "Cargo"}}
+					enable_sparse_index = true
 					{{end}}
 
 					lifecycle {
