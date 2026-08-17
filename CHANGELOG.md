@@ -1,3 +1,9 @@
+## 3.1.13 (Aug 18, 2026)
+
+FEATURES:
+
+* resource/xray_curation_policy: Add `share_with_federation` attribute so Curation Federation policies can be declared and managed with Terraform. The flag is read from and written to the API, and is only allowed when `scope` is `all_repos` or `pkg_types`. Issue: [#437](https://github.com/jfrog/terraform-provider-xray/issues/437) PR: [#444](https://github.com/jfrog/terraform-provider-xray/pull/444)
+
 ## 3.1.13 (Aug 13, 2026). Tested on JFrog Platform 11.6.1 (Artifactory 7.161.16, Xray 3.150.24, Catalog 1.44.0) with Terraform 1.15.8 and OpenTofu 1.12.5
 
 BUG FIXES:

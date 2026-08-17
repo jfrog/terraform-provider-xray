@@ -2785,3 +2785,87 @@ func TestAccCurationPolicy_BlockFromCache(t *testing.T) {
 		Steps:                    steps,
 	})
 }
+
+// share_with_federation is only valid for all_repos or pkg_types scopes. This test
+// verifies the flag round-trips through Create/Read/Update/Import for an all_repos
+// policy and defaults to false when omitted.
+func TestAccCurationPolicy_ShareWithFederation(t *testing.T) {
+	_, fqrn, name := testutil.MkNames("test-share-with-federation", "xray_curation_policy")
+	conditionName := fmt.Sprintf("test-maturity-condition-%d", testutil.RandomInt())
+	sharedRepoConfig := getSharedRepoConfig()
+
+	policyConfig := func(shareWithFederation string) string {
+		swf := ""
+		if shareWithFederation != "" {
+			swf = fmt.Sprintf("share_with_federation = %s", shareWithFederation)
+		}
+		// all_repos policies are rejected when no curated remotes exist
+		// ("policy cannot have empty effective scope"). Create them first.
+		return sharedRepoConfig +
+			createMaturityCondition(conditionName) + fmt.Sprintf(`
+			resource "xray_curation_policy" "%s" {
+				name                  = "%s"
+				condition_id          = xray_custom_curation_condition.%s.id
+				scope                 = "all_repos"
+				policy_action         = "block"
+				waiver_request_config = "forbidden"
+				notify_emails         = ["audit-team@company.com"]
+				%s
+			}
+		`, name, name, conditionName, swf)
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		ExternalProviders:        commonExternalProviders,
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckCurationPolicy),
+		Steps: []resource.TestStep{
+			{
+				// Create curated remotes so all_repos has a non-empty effective scope
+				Config: sharedRepoConfig,
+				Check:  resource.ComposeTestCheckFunc(getSharedRepoVerification()...),
+			},
+			{
+				// Omitting the attribute defaults it to false
+				Config: policyConfig(""),
+				Check: resource.ComposeTestCheckFunc(
+					append(getSharedRepoVerification(),
+						resource.TestCheckResourceAttr(fqrn, "policy_action", "block"),
+						resource.TestCheckResourceAttr(fqrn, "share_with_federation", "false"),
+					)...,
+				),
+			},
+			{
+				Config: policyConfig("true"),
+				Check: resource.ComposeTestCheckFunc(
+					append(getSharedRepoVerification(),
+						resource.TestCheckResourceAttr(fqrn, "share_with_federation", "true"),
+					)...,
+				),
+			},
+			{
+				// Updating the policy must not silently reset the flag
+				Config: policyConfig("true"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: policyConfig("false"),
+				Check: resource.ComposeTestCheckFunc(
+					append(getSharedRepoVerification(),
+						resource.TestCheckResourceAttr(fqrn, "share_with_federation", "false"),
+					)...,
+				),
+			},
+		},
+	})
+}
