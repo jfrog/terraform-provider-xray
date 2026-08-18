@@ -228,3 +228,28 @@ resource "xray_curation_policy" "example_comprehensive" {
 
   notify_emails = ["architecture@company.com", "devsecops@company.com"]
 }
+
+# Policy shared across federated instances (all_repos scope)
+# share_with_federation is only allowed when scope is "all_repos" or "pkg_types"
+resource "xray_curation_policy" "example_federation_all_repos" {
+  name                  = "federated-all-repos-policy"
+  condition_id          = "3"
+  scope                 = "all_repos"
+  policy_action         = "block"
+  waiver_request_config = "forbidden"
+  share_with_federation = true
+  notify_emails         = ["federation-security@company.com"]
+}
+
+# Policy shared across federated instances (pkg_types scope)
+resource "xray_curation_policy" "example_federation_pkg_types" {
+  name                  = "federated-pkg-types-policy"
+  condition_id          = "3"
+  scope                 = "pkg_types"
+  pkg_types_include     = ["npm", "PyPI"]
+  policy_action         = "block"
+  waiver_request_config = "manual"
+  decision_owners       = ["security-team"]
+  share_with_federation = true
+  notify_emails         = ["federation-security@company.com"]
+}
