@@ -1,4 +1,16 @@
-## 3.1.14 (August 20, 2026)
+## 3.1.13 (Aug 21, 2026). Tested on JFrog Platform 11.6.1 (Artifactory 7.161.16, Xray 3.150.24, Catalog 1.44.0) with Terraform 1.15.8 and OpenTofu 1.12.5
+
+FEATURES:
+
+* resource/xray_curation_policy: Add `share_with_federation` attribute so Curation Federation policies can be declared and managed with Terraform. The flag is read from and written to the API, and is only allowed when `scope` is `all_repos` or `pkg_types`. Issue: [#437](https://github.com/jfrog/terraform-provider-xray/issues/437) PR: [#444](https://github.com/jfrog/terraform-provider-xray/pull/444)
+
+IMPROVEMENTS:
+
+* provider: Upgrade `github.com/jfrog/terraform-provider-shared` to v1.30.8.
+
+BUG FIXES:
+
+* resource/xray_security_policy: Fix `Found Invalid Policy: All severities is not a valid severity in sast condition` when creating or updating a policy with `sast.min_severity = "All severities"`. Xray rejects that literal value in a `sast` condition and also rejects the field being omitted, so it is now sent as the API's `Unknown` sentinel and mapped back to `All severities` on read to avoid drift. Also accept the UI label `All Severities` (and other case variants) via case-insensitive validation and preserve the configured casing in state. Issue: [#445](https://github.com/jfrog/terraform-provider-xray/issues/445) PR: [#446](https://github.com/jfrog/terraform-provider-xray/pull/446)
 
 SECURITY:
 
@@ -30,18 +42,6 @@ SECURITY:
 * provider: Address CVE-2026-39827 by upgrading golang.org/x/crypto to v0.55.0. CVSS 6.5 Medium.
 * provider: Address CVE-2026-39835 by upgrading golang.org/x/crypto to v0.55.0. CVSS 5.3 Medium.
 * provider: Address CVE-2026-46598 by upgrading golang.org/x/crypto to v0.55.0. CVSS 5.3 Medium.
-
-## 3.1.13 (Aug 18, 2026)
-
-FEATURES:
-
-* resource/xray_curation_policy: Add `share_with_federation` attribute so Curation Federation policies can be declared and managed with Terraform. The flag is read from and written to the API, and is only allowed when `scope` is `all_repos` or `pkg_types`. Issue: [#437](https://github.com/jfrog/terraform-provider-xray/issues/437) PR: [#444](https://github.com/jfrog/terraform-provider-xray/pull/444)
-
-## 3.1.13 (Aug 13, 2026). Tested on JFrog Platform 11.6.1 (Artifactory 7.161.16, Xray 3.150.24, Catalog 1.44.0) with Terraform 1.15.8 and OpenTofu 1.12.5
-
-BUG FIXES:
-
-* resource/xray_security_policy: Fix `Found Invalid Policy: All severities is not a valid severity in sast condition` when creating or updating a policy with `sast.min_severity = "All severities"`. Xray rejects that literal value in a `sast` condition and also rejects the field being omitted, so it is now sent as the API's `Unknown` sentinel and mapped back to `All severities` on read to avoid drift. Also accept the UI label `All Severities` (and other case variants) via case-insensitive validation and preserve the configured casing in state. Issue: [#445](https://github.com/jfrog/terraform-provider-xray/issues/445) PR: [#446](https://github.com/jfrog/terraform-provider-xray/pull/446)
 
 ## 3.1.12 (Jul 31, 2026). Tested on JFrog Platform 11.6.0 (Artifactory 7.161.15, Xray 3.150.19, Catalog 1.43.3) with Terraform 1.15.8 and OpenTofu 1.12.5
 
