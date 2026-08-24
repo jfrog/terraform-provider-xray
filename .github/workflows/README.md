@@ -44,6 +44,13 @@ build-gate-success  ── single required status check
 | Tests are reusable only (`workflow_call`) | [`acceptance-tests.yml`](acceptance-tests.yml) |
 | Checkout customer SHA after the gate; no git write token on that tree | `persist-credentials: false` |
 | Changelog `git push` only for same-repo PRs | `update-changelog` job |
+| Opt in to fetching fork PR code under `pull_request_target` | `allow-unsafe-pr-checkout: true` |
+
+### Why `allow-unsafe-pr-checkout: true` is set
+
+Since July 2026, `actions/checkout` refuses by default to fetch fork pull request code in a `pull_request_target` workflow ([changelog](https://github.blog/changelog/2026-06-18-safer-pull_request_target-defaults-for-github-actions-checkout/)). Without the opt-in, the suite fails at the Checkout step with *"Refusing to check out fork pull request code"* — this is the same protection whether or not a gate exists, because the action cannot see our gate.
+
+GitHub's guidance is to opt in only when the fork code is never executed. That does not hold here: this suite exists to `go build` and `go test` the customer's provider. The risk is instead carried by the `build-gate` environment — no fork code is fetched at all until a maintainer approves, so approval is the review step the flag assumes. Keep treating approval as a trust decision, and do not move this checkout to a job that runs before `gate`.
 
 Do **not** add `pull_request`, ungated `pull_request_target`, or `workflow_dispatch` back onto `acceptance-tests.yml`. That either withholds secrets or runs untrusted code with secrets and no approval.
 
