@@ -1065,6 +1065,78 @@ func TestAccSecurityPolicy_sast(t *testing.T) {
 	})
 }
 
+func TestAccSecurityPolicy_sastAllSeverities(t *testing.T) {
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
+
+	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-sast-all-%d", testutil.RandomInt())
+	testData["rule_name"] = fmt.Sprintf("test-security-rule-sast-all-%d", testutil.RandomInt())
+	// "All severities" is a provider-level convenience value. Xray rejects it
+	// verbatim ("All severities is not a valid severity in sast condition") and
+	// also rejects the field being absent ("min_severity is missing in sast
+	// conditions"), so it is sent as the "Unknown" sentinel and read back as
+	// "All severities". The Xray UI label "All Severities" is also accepted;
+	// SeverityStringType treats the two spellings as semantically equal.
+	testData["sast_min_severity"] = "All Severities"
+
+	// Same policy with a concrete severity, used to exercise the update path in
+	// both directions. Create and update build the payload through the same
+	// mapping, but only create was ever covered.
+	updatedTestData := sdk.MergeMaps(testData)
+	updatedTestData["sast_min_severity"] = "High"
+
+	// Canonical spelling used for a no-drift check against UI-cased state/config.
+	canonicalTestData := sdk.MergeMaps(testData)
+	canonicalTestData["sast_min_severity"] = "All severities"
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: util.ExecuteTemplate(fqrn, securityPolicySAST, testData),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "name", testData["policy_name"]),
+					resource.TestCheckResourceAttr(fqrn, "rule.0.criteria.0.sast.0.min_severity", "All Severities"),
+				),
+			},
+			{
+				// UI spelling in config must not drift after the Unknown round-trip.
+				Config: util.ExecuteTemplate(fqrn, securityPolicySAST, testData),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+			{
+				Config: util.ExecuteTemplate(fqrn, securityPolicySAST, updatedTestData),
+				Check:  verifySecurityPolicy(fqrn, updatedTestData, criteriaTypeSAST),
+			},
+			{
+				Config: util.ExecuteTemplate(fqrn, securityPolicySAST, canonicalTestData),
+				Check:  verifySecurityPolicy(fqrn, canonicalTestData, criteriaTypeSAST),
+			},
+			{
+				// Canonical spelling also round-trips with no drift.
+				Config: util.ExecuteTemplate(fqrn, securityPolicySAST, canonicalTestData),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+			{
+				ResourceName:            fqrn,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"author", "created", "modified", "rule.0.actions.0.fail_pull_request"},
+			},
+		},
+	})
+}
+
 func TestAccSecurityPolicy_sastNoDrift(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
 	testData := sdk.MergeMaps(testDataSecurity)

@@ -23,6 +23,11 @@ import (
 	"github.com/jfrog/terraform-provider-shared/util"
 )
 
+// sastMinSeverityAll is the value Xray expects in a sast condition to mean "no
+// severity floor". The API rejects both the literal "All severities" and an
+// absent min_severity, so this sentinel is the only accepted encoding.
+const sastMinSeverityAll = "Unknown"
+
 var _ resource.Resource = &SecurityPolicyResource{}
 
 func NewSecurityPolicyResource() resource.Resource {
@@ -70,8 +75,15 @@ func (r *SecurityPolicyResource) toCriteriaAPIModel(ctx context.Context, criteri
 		if len(exposuresElem) > 0 {
 			attrs := exposuresElem[0].(types.Object).Attributes()
 
+			minSeverity := attrStringValue(attrs["min_severity"])
+			var minSeverityPtr *string
+			if minSeverity != "" {
+				normalized := NormalizeSeverity(minSeverity)
+				minSeverityPtr = &normalized
+			}
+
 			exposures = &PolicyExposuresAPIModel{
-				MinSeverity:  attrs["min_severity"].(types.String).ValueStringPointer(),
+				MinSeverity:  minSeverityPtr,
 				Secrets:      attrs["secrets"].(types.Bool).ValueBoolPointer(),
 				Applications: attrs["applications"].(types.Bool).ValueBoolPointer(),
 				Services:     attrs["services"].(types.Bool).ValueBoolPointer(),
@@ -83,8 +95,19 @@ func (r *SecurityPolicyResource) toCriteriaAPIModel(ctx context.Context, criteri
 		sastElem := attrs["sast"].(types.List).Elements()
 		if len(sastElem) > 0 {
 			sastAttrs := sastElem[0].(types.Object).Attributes()
+			minSeverity := attrStringValue(sastAttrs["min_severity"])
+			// Xray rejects the literal "All severities" in a sast condition, but
+			// also rejects the field being absent ("min_severity is missing in
+			// sast conditions"). "Unknown" is its sentinel for "no severity
+			// floor", matching how exposures already behaves. UI spelling
+			// ("All Severities") is accepted via EqualFold / NormalizeSeverity.
+			if strings.EqualFold(minSeverity, "All severities") {
+				minSeverity = sastMinSeverityAll
+			} else {
+				minSeverity = NormalizeSeverity(minSeverity)
+			}
 			sast = &PolicySASTAPIModel{
-				MinSeverity: sastAttrs["min_severity"].(types.String).ValueString(),
+				MinSeverity: minSeverity,
 			}
 		}
 
@@ -94,8 +117,13 @@ func (r *SecurityPolicyResource) toCriteriaAPIModel(ctx context.Context, criteri
 			diags.Append(d...)
 		}
 
+		minimumSeverity := attrStringValue(attrs["min_severity"])
+		if minimumSeverity != "" {
+			minimumSeverity = NormalizeSeverity(minimumSeverity)
+		}
+
 		criteria = &PolicyRuleCriteriaAPIModel{
-			MinimumSeverity:     attrs["min_severity"].(types.String).ValueString(),
+			MinimumSeverity:     minimumSeverity,
 			CVSSRange:           cvssRange,
 			FixVersionDependant: attrs["fix_version_dependant"].(types.Bool).ValueBoolPointer(),
 			ApplicableCVEsOnly:  attrs["applicable_cves_only"].(types.Bool).ValueBoolPointer(),
@@ -129,6 +157,164 @@ func NormalizeSeverity(s string) string {
 		return mapped
 	}
 	return s
+}
+
+// securitySeverityValues are the canonical HCL spellings. The Xray UI labels
+// the catch-all option "All Severities"; OneOfCaseInsensitive accepts that
+// spelling (and other case variants). After read we prefer the configured
+// casing when it matches case-insensitively, so UI and docs spellings do not
+// drift against each other.
+var securitySeverityValues = []string{"All severities", "Critical", "High", "Medium", "Low"}
+
+var securitySeverityValidators = []validator.String{
+	stringvalidator.OneOfCaseInsensitive(securitySeverityValues...),
+}
+
+func attrStringValue(v attr.Value) string {
+	s, ok := v.(types.String)
+	if !ok || s.IsNull() || s.IsUnknown() {
+		return ""
+	}
+	return s.ValueString()
+}
+
+// preferSeverityCasing keeps the practitioner's configured spelling when it is
+// the same severity as the API-mapped value under EqualFold. Without this,
+// accepting the UI label "All Severities" would perpetual-diff against the
+// provider canonical "All severities" written by fromCriteriaAPIModel.
+func preferSeverityCasing(configured, fromAPI types.String) types.String {
+	if configured.IsNull() || configured.IsUnknown() || fromAPI.IsNull() || fromAPI.IsUnknown() {
+		return fromAPI
+	}
+	if strings.EqualFold(configured.ValueString(), fromAPI.ValueString()) {
+		return configured
+	}
+	return fromAPI
+}
+
+func preserveSecuritySeverityCasing(ctx context.Context, preferred, state *PolicyResourceModel) bool {
+	if preferred == nil || state == nil || preferred.Rules.IsNull() || state.Rules.IsNull() {
+		return false
+	}
+	prefRules := preferred.Rules.Elements()
+	stateRules := state.Rules.Elements()
+	if len(prefRules) != len(stateRules) {
+		return false
+	}
+
+	changed := false
+	newRules := make([]attr.Value, len(stateRules))
+	for i := range stateRules {
+		prefRule := prefRules[i].(types.Object).Attributes()
+		stateRule := stateRules[i].(types.Object).Attributes()
+
+		prefCriteriaList := prefRule["criteria"].(types.List)
+		stateCriteriaList := stateRule["criteria"].(types.List)
+		if prefCriteriaList.IsNull() || stateCriteriaList.IsNull() ||
+			len(prefCriteriaList.Elements()) == 0 || len(stateCriteriaList.Elements()) == 0 {
+			newRules[i] = stateRules[i]
+			continue
+		}
+
+		prefAttrs := prefCriteriaList.Elements()[0].(types.Object).Attributes()
+		stateAttrs := stateCriteriaList.Elements()[0].(types.Object).Attributes()
+
+		attrs := make(map[string]attr.Value, len(stateAttrs))
+		for k, v := range stateAttrs {
+			attrs[k] = v
+		}
+
+		attrs["min_severity"] = preferSeverityCasing(
+			prefAttrs["min_severity"].(types.String),
+			stateAttrs["min_severity"].(types.String),
+		)
+		if !attrs["min_severity"].(types.String).Equal(stateAttrs["min_severity"].(types.String)) {
+			changed = true
+		}
+
+		// exposures.0.min_severity
+		prefEx := prefAttrs["exposures"].(types.List)
+		stateEx := stateAttrs["exposures"].(types.List)
+		if !prefEx.IsNull() && !stateEx.IsNull() && len(prefEx.Elements()) > 0 && len(stateEx.Elements()) > 0 {
+			prefExAttrs := prefEx.Elements()[0].(types.Object).Attributes()
+			stateExAttrs := stateEx.Elements()[0].(types.Object).Attributes()
+			exAttrs := make(map[string]attr.Value, len(stateExAttrs))
+			for k, v := range stateExAttrs {
+				exAttrs[k] = v
+			}
+			exAttrs["min_severity"] = preferSeverityCasing(
+				prefExAttrs["min_severity"].(types.String),
+				stateExAttrs["min_severity"].(types.String),
+			)
+			if !exAttrs["min_severity"].(types.String).Equal(stateExAttrs["min_severity"].(types.String)) {
+				changed = true
+			}
+			exObj, d := types.ObjectValue(exposuresAttrType, exAttrs)
+			if !d.HasError() {
+				exList, d := types.ListValue(exposuresElementType, []attr.Value{exObj})
+				if !d.HasError() {
+					attrs["exposures"] = exList
+				}
+			}
+		}
+
+		// sast.0.min_severity
+		prefSast := prefAttrs["sast"].(types.List)
+		stateSast := stateAttrs["sast"].(types.List)
+		if !prefSast.IsNull() && !stateSast.IsNull() && len(prefSast.Elements()) > 0 && len(stateSast.Elements()) > 0 {
+			prefSastAttrs := prefSast.Elements()[0].(types.Object).Attributes()
+			stateSastAttrs := stateSast.Elements()[0].(types.Object).Attributes()
+			sastAttrs := map[string]attr.Value{
+				"min_severity": preferSeverityCasing(
+					prefSastAttrs["min_severity"].(types.String),
+					stateSastAttrs["min_severity"].(types.String),
+				),
+			}
+			if !sastAttrs["min_severity"].(types.String).Equal(stateSastAttrs["min_severity"].(types.String)) {
+				changed = true
+			}
+			sastObj, d := types.ObjectValue(sastAttrType, sastAttrs)
+			if !d.HasError() {
+				sastList, d := types.ListValue(sastElementType, []attr.Value{sastObj})
+				if !d.HasError() {
+					attrs["sast"] = sastList
+				}
+			}
+		}
+
+		critObj, d := types.ObjectValue(securityCriteriaAttrTypes, attrs)
+		if d.HasError() {
+			newRules[i] = stateRules[i]
+			continue
+		}
+		critList, d := types.ListValue(securityCriteriaSetElementType, []attr.Value{critObj})
+		if d.HasError() {
+			newRules[i] = stateRules[i]
+			continue
+		}
+
+		ruleAttrs := make(map[string]attr.Value, len(stateRule))
+		for k, v := range stateRule {
+			ruleAttrs[k] = v
+		}
+		ruleAttrs["criteria"] = critList
+		ruleObj, d := types.ObjectValue(securityRuleAttrTypes, ruleAttrs)
+		if d.HasError() {
+			newRules[i] = stateRules[i]
+			continue
+		}
+		newRules[i] = ruleObj
+	}
+
+	if !changed {
+		return false
+	}
+	rulesList, d := types.ListValue(securityRuleSetElementType, newRules)
+	if d.HasError() {
+		return false
+	}
+	state.Rules = rulesList
+	return true
 }
 
 func (r *SecurityPolicyResource) fromCriteriaAPIModel(ctx context.Context, criteriaAPIModel *PolicyRuleCriteriaAPIModel) (types.List, diag.Diagnostics) {
@@ -205,10 +391,18 @@ func (r *SecurityPolicyResource) fromCriteriaAPIModel(ctx context.Context, crite
 
 		sastList := types.ListNull(sastElementType)
 		if criteriaAPIModel.SAST != nil {
+			// Reverse the write-side mapping: Xray's "Unknown" sentinel (and an
+			// empty value, defensively) means "all severities". Without this the
+			// state would hold "Unknown", which the schema validator rejects and
+			// which would show as permanent drift against the configured value.
+			sastMinSeverity := "All severities"
+			if ms := criteriaAPIModel.SAST.MinSeverity; ms != "" && !strings.EqualFold(ms, sastMinSeverityAll) {
+				sastMinSeverity = NormalizeSeverity(ms)
+			}
 			sast, d := types.ObjectValue(
 				sastAttrType,
 				map[string]attr.Value{
-					"min_severity": types.StringValue(NormalizeSeverity(criteriaAPIModel.SAST.MinSeverity)),
+					"min_severity": types.StringValue(sastMinSeverity),
 				},
 			)
 			if d.HasError() {
@@ -376,13 +570,12 @@ var securityPolicyCriteriaBlocks = map[string]schema.Block{
 		NestedObject: schema.NestedBlockObject{
 			Attributes: map[string]schema.Attribute{
 				"min_severity": schema.StringAttribute{
-					Optional: true,
-					Computed: true,
-					Default:  stringdefault.StaticString("All severities"),
-					Validators: []validator.String{
-						stringvalidator.OneOf("All severities", "Critical", "High", "Medium", "Low"),
-					},
-					MarkdownDescription: "The minimum security vulnerability severity that will be impacted by the policy. Valid values: `All severities`, `Critical`, `High`, `Medium`, `Low`",
+					Optional:   true,
+					Computed:   true,
+					Default:    stringdefault.StaticString("All severities"),
+					Validators: securitySeverityValidators,
+					MarkdownDescription: "The minimum security vulnerability severity that will be impacted by the policy. " +
+						"Valid values: `All severities`, `Critical`, `High`, `Medium`, `Low` (case-insensitive; the UI label `All Severities` is accepted).",
 				},
 				"secrets": schema.BoolAttribute{
 					Optional:    true,
@@ -434,11 +627,10 @@ var securityPolicyCriteriaBlocks = map[string]schema.Block{
 		NestedObject: schema.NestedBlockObject{
 			Attributes: map[string]schema.Attribute{
 				"min_severity": schema.StringAttribute{
-					Required: true,
-					Validators: []validator.String{
-						stringvalidator.OneOf("All severities", "Critical", "High", "Medium", "Low"),
-					},
-					MarkdownDescription: "The minimum SAST vulnerability severity that will be impacted by the policy. Valid values: `All severities`, `Critical`, `High`, `Medium`, `Low`",
+					Required:   true,
+					Validators: securitySeverityValidators,
+					MarkdownDescription: "The minimum SAST vulnerability severity that will be impacted by the policy. " +
+						"Valid values: `All severities`, `Critical`, `High`, `Medium`, `Low` (case-insensitive; the UI label `All Severities` is accepted).",
 				},
 			},
 		},
@@ -472,13 +664,13 @@ var securityPolicyCriteriaBlocks = map[string]schema.Block{
 var securityPolicyCriteriaAttrs = map[string]schema.Attribute{
 	"min_severity": schema.StringAttribute{
 		Optional: true,
-		Validators: []validator.String{
-			stringvalidator.OneOf("All severities", "Critical", "High", "Medium", "Low"),
+		Validators: append(securitySeverityValidators,
 			stringvalidator.ConflictsWith(
 				path.MatchRelative().AtParent().AtName("cvss_range"),
 			),
-		},
-		Description: "The minimum security vulnerability severity that will be impacted by the policy. Valid values: `All severities`, `Critical`, `High`, `Medium`, `Low`",
+		),
+		Description: "The minimum security vulnerability severity that will be impacted by the policy. " +
+			"Valid values: `All severities`, `Critical`, `High`, `Medium`, `Low` (case-insensitive; the UI label `All Severities` is accepted).",
 	},
 	"fix_version_dependant": schema.BoolAttribute{
 		Optional:    true,
@@ -619,7 +811,7 @@ func (r SecurityPolicyResource) ValidateConfig(ctx context.Context, req resource
 		attrs := criteria.Elements()[0].(types.Object).Attributes()
 
 		fixVersionDependant := attrs["fix_version_dependant"].(types.Bool).ValueBool()
-		minSeverity := attrs["min_severity"].(types.String).ValueString()
+		minSeverity := attrStringValue(attrs["min_severity"])
 		cvssRange := attrs["cvss_range"].(types.List)
 		maliciousPackage := attrs["malicious_package"].(types.Bool).ValueBool()
 
@@ -666,15 +858,69 @@ func (r SecurityPolicyResource) ValidateConfig(ctx context.Context, req resource
 }
 
 func (r *SecurityPolicyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan PolicyResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	r.PolicyResource.Create(ctx, r.toAPIModel, r.fromAPIModel, req, resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var state PolicyResourceModel
+	resp.Diagnostics.Append(resp.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if preserveSecuritySeverityCasing(ctx, &plan, &state) {
+		resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	}
 }
 
 func (r *SecurityPolicyResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var prior PolicyResourceModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &prior)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	r.PolicyResource.Read(ctx, r.fromAPIModel, req, resp)
+	if resp.Diagnostics.HasError() || resp.State.Raw.IsNull() {
+		return
+	}
+
+	var state PolicyResourceModel
+	resp.Diagnostics.Append(resp.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if preserveSecuritySeverityCasing(ctx, &prior, &state) {
+		resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	}
 }
 
 func (r *SecurityPolicyResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan PolicyResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	r.PolicyResource.Update(ctx, r.toAPIModel, r.fromAPIModel, req, resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var state PolicyResourceModel
+	resp.Diagnostics.Append(resp.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if preserveSecuritySeverityCasing(ctx, &plan, &state) {
+		resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	}
 }
 
 func (r *SecurityPolicyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

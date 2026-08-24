@@ -1,12 +1,63 @@
-## 3.1.12 (Jul 23, 2026). Tested on JFrog Platform 11.5.11 (Artifactory 7.146.29, Xray 3.143.31, Catalog 1.43.1) with Terraform 1.15.8 and OpenTofu 1.12.5
-
-BUG FIXES:
-
-* resource/xray_curation_policy: Fix false `Decision owners required` validation error when `decision_owners` is sourced from another resource, module variable, or other value that is unknown until apply, while `waiver_request_config = "manual"`. The `decisionOwnersRequiredValidator` now skips unknown values and defers validation to the plan phase. Issue: [#433](https://github.com/jfrog/terraform-provider-xray/issues/433)
+## 3.1.12 ( Aug 24, 2026).
 
 IMPROVEMENTS:
 
 * resource/xray_security_policy: Include the policy name in the error message when a policy delete fails, making it easier to identify which policy could not be removed.
+
+## 3.1.13 (Aug 21, 2026). Tested on JFrog Platform 11.6.1 (Artifactory 7.161.16, Xray 3.150.24, Catalog 1.44.0) with Terraform 1.15.8 and OpenTofu 1.12.5
+
+FEATURES:
+
+* resource/xray_curation_policy: Add `share_with_federation` attribute so Curation Federation policies can be declared and managed with Terraform. The flag is read from and written to the API, and is only allowed when `scope` is `all_repos` or `pkg_types`. Issue: [#437](https://github.com/jfrog/terraform-provider-xray/issues/437) PR: [#444](https://github.com/jfrog/terraform-provider-xray/pull/444)
+
+IMPROVEMENTS:
+
+* provider: Upgrade `github.com/jfrog/terraform-provider-shared` to v1.30.8.
+
+BUG FIXES:
+
+* resource/xray_security_policy: Fix `Found Invalid Policy: All severities is not a valid severity in sast condition` when creating or updating a policy with `sast.min_severity = "All severities"`. Xray rejects that literal value in a `sast` condition and also rejects the field being omitted, so it is now sent as the API's `Unknown` sentinel and mapped back to `All severities` on read to avoid drift. Also accept the UI label `All Severities` (and other case variants) via case-insensitive validation and preserve the configured casing in state. Issue: [#445](https://github.com/jfrog/terraform-provider-xray/issues/445) PR: [#446](https://github.com/jfrog/terraform-provider-xray/pull/446)
+
+SECURITY:
+
+* provider: Address CVE-2026-39821 by upgrading Go to 1.25.13 and golang.org/x/net to v0.58.0. CVSS 9.6 Critical.
+* provider: Address CVE-2026-56865 by upgrading Go to 1.25.13. CVSS 8.4 High.
+* provider: Address CVE-2026-56864 by upgrading Go to 1.25.13. CVSS 7.5 High.
+* provider: Address CVE-2026-33818 by upgrading Go to 1.25.13. CVSS 7.5 High.
+* provider: Address CVE-2026-46600 by upgrading Go to 1.25.13. CVSS 7.5 High.
+* provider: Address CVE-2026-56862 by upgrading Go to 1.25.13. CVSS 7.5 High.
+* provider: Address CVE-2026-56859 by upgrading Go to 1.25.13. CVSS 7.5 High.
+* provider: Address CVE-2026-56860 by upgrading Go to 1.25.13. CVSS 7.5 High.
+* provider: Address CVE-2026-56858 by upgrading Go to 1.25.13. CVSS 6.1 Medium.
+* provider: Address CVE-2026-56853 by upgrading Go to 1.25.13. CVSS 5.3 Medium.
+* provider: Address CVE-2026-25680 by upgrading golang.org/x/net to v0.58.0. CVSS 6.5 Medium.
+* provider: Address CVE-2026-42506 by upgrading golang.org/x/net to v0.58.0. CVSS 6.1 Medium.
+* provider: Address CVE-2026-42502 by upgrading golang.org/x/net to v0.58.0. CVSS 6.1 Medium.
+* provider: Address CVE-2026-25681 by upgrading golang.org/x/net to v0.58.0. CVSS 6.1 Medium.
+* provider: Address CVE-2026-27136 by upgrading golang.org/x/net to v0.58.0. CVSS 6.1 Medium.
+* provider: Address CVE-2026-46595 by upgrading golang.org/x/crypto to v0.55.0. CVSS 10.0 Critical.
+* provider: Address CVE-2026-42508 by upgrading golang.org/x/crypto to v0.55.0. CVSS 9.1 Critical.
+* provider: Address CVE-2026-39834 by upgrading golang.org/x/crypto to v0.55.0. CVSS 9.1 Critical.
+* provider: Address CVE-2026-39833 by upgrading golang.org/x/crypto to v0.55.0. CVSS 9.1 Critical.
+* provider: Address CVE-2026-39832 by upgrading golang.org/x/crypto to v0.55.0. CVSS 9.1 Critical.
+* provider: Address CVE-2026-39831 by upgrading golang.org/x/crypto to v0.55.0. CVSS 9.1 Critical.
+* provider: Address CVE-2026-39830 by upgrading golang.org/x/crypto to v0.55.0. CVSS 9.1 Critical.
+* provider: Address CVE-2026-39829 by upgrading golang.org/x/crypto to v0.55.0. CVSS 7.5 High.
+* provider: Address CVE-2026-46597 by upgrading golang.org/x/crypto to v0.55.0. CVSS 7.5 High.
+* provider: Address CVE-2026-39828 by upgrading golang.org/x/crypto to v0.55.0. CVSS 6.3 Medium.
+* provider: Address CVE-2026-39827 by upgrading golang.org/x/crypto to v0.55.0. CVSS 6.5 Medium.
+* provider: Address CVE-2026-39835 by upgrading golang.org/x/crypto to v0.55.0. CVSS 5.3 Medium.
+* provider: Address CVE-2026-46598 by upgrading golang.org/x/crypto to v0.55.0. CVSS 5.3 Medium.
+
+## 3.1.12 (Jul 31, 2026). Tested on JFrog Platform 11.6.0 (Artifactory 7.161.15, Xray 3.150.19, Catalog 1.43.3) with Terraform 1.15.8 and OpenTofu 1.12.5
+
+BUG FIXES:
+
+* resource/xray_repository_config: Fix perpetual diff on the `paths_config` block when `pattern.exclude` is not set. The API returns an empty string for an unset exclusion, which was stored in state as an empty string instead of null, so every `terraform plan` showed the whole `paths_config` block being removed and re-added.
+
+* resource/xray_curation_policy: Fix false `Decision owners required` validation error when `decision_owners` is sourced from another resource, module variable, or other value that is unknown until apply, while `waiver_request_config = "manual"`. The `decisionOwnersRequiredValidator` now skips unknown values and defers validation to the plan phase. Issue: [#433](https://github.com/jfrog/terraform-provider-xray/issues/433)
+
+* resource/xray_curation_policy: Add `block_from_cache` attribute so the "Enforce policy on cached packages" setting is read from and written to the API instead of being silently reset to `false` on every update. Issue: [#431](https://github.com/jfrog/terraform-provider-xray/issues/431) PR: [#435](https://github.com/jfrog/terraform-provider-xray/pull/435)
 
 ## 3.1.11(Jun 9, 2026).
 
