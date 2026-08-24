@@ -2,7 +2,7 @@
 
 IMPROVEMENTS:
 
-* resource/xray_security_policy: Include the policy name in the error message when a policy delete fails, making it easier to identify which policy could not be removed.
+* resource/xray_security_policy: Include the policy name in the error message when a policy delete fails, making it easier to identify which policy could not be removed. PR: [#430](https://github.com/jfrog/terraform-provider-xray/pull/430)
 
 ## 3.1.13 (Aug 21, 2026). Tested on JFrog Platform 11.6.1 (Artifactory 7.161.16, Xray 3.150.24, Catalog 1.44.0) with Terraform 1.15.8 and OpenTofu 1.12.5
 
