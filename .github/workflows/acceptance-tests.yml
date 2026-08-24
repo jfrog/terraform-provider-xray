@@ -38,6 +38,11 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
           persist-credentials: false
+          # checkout refuses fork PR code under pull_request_target by default.
+          # Building and running the customer's code is the whole point of this
+          # suite, so the untrusted-code risk is carried by the build-gate
+          # approval instead: no fork code is fetched before a maintainer approves.
+          allow-unsafe-pr-checkout: true
       - name: Install Helm
         uses: azure/setup-helm@v4.2.0
       - name: Get JFrog Platform component versions
