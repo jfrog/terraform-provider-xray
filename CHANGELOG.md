@@ -4,6 +4,10 @@ FEATURES:
 
 * data/xray_curation_condition: Add a new data source which looks up a built-in or custom Curation condition by its exact name (case-sensitive) and exposes its numeric `id`, so `xray_curation_policy.condition_id` no longer has to be hard-coded to a raw numeric ID. Issue: JTFPR-341 PR: [#452](https://github.com/jfrog/terraform-provider-xray/pull/452)
 
+BUG FIXES:
+
+* resource/xray_repository_config: Fix xray_repository_config -JAS configuration required for non-JAS environments PR: [#453](https://github.com/jfrog/terraform-provider-xray/pull/453)
+
 ## 3.1.13 (Aug 21, 2026). Tested on JFrog Platform 11.6.1 (Artifactory 7.161.16, Xray 3.150.24, Catalog 1.44.0) with Terraform 1.15.8 and OpenTofu 1.12.5
 
 FEATURES:

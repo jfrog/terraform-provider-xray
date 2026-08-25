@@ -175,6 +175,8 @@ func testAccRepositoryConfig(packageType string) func(t *testing.T) {
 
 // TestAccRepositoryConfig_JasDisabled_vulnContextualAnalysis_set needs to be run against a JPD that does not have JAS enabled
 // Set JFROG_URL to this instance and set env var JFROG_JAS_DISABLED=true
+// After the fix, setting vuln_contextual_analysis with jas_enabled=false must be allowed
+// because the Xray API requires those fields in the payload regardless of JAS state.
 func TestAccRepositoryConfig_JasDisabled_vulnContextualAnalysis_set(t *testing.T) {
 	jasDisabled := os.Getenv("JFROG_JAS_DISABLED")
 	if strings.ToLower(jasDisabled) != "true" {
@@ -182,12 +184,17 @@ func TestAccRepositoryConfig_JasDisabled_vulnContextualAnalysis_set(t *testing.T
 	}
 
 	_, fqrn, resourceName := testutil.MkNames("xray-repo-config-", "xray_repository_config")
-	_, _, repoName := testutil.MkNames("local-generic", "artifactory_local_generic_repository")
+	_, _, repoName := testutil.MkNames("local-maven", "artifactory_local_maven_repository")
 
 	config := util.ExecuteTemplate(
 		fqrn,
-		`resource "xray_repository_config" "{{ .resource_name }}" {
-			repo_name   = "{{ .repo_name }}"
+		`resource "artifactory_local_maven_repository" "{{ .repo_name }}" {
+			key        = "{{ .repo_name }}"
+			xray_index = true
+		}
+
+		resource "xray_repository_config" "{{ .resource_name }}" {
+			repo_name   = artifactory_local_maven_repository.{{ .repo_name }}.key
 			jas_enabled = false
 
 			config {
@@ -203,11 +210,20 @@ func TestAccRepositoryConfig_JasDisabled_vulnContextualAnalysis_set(t *testing.T
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
-
+		ExternalProviders: map[string]resource.ExternalProvider{
+			"artifactory": {
+				Source: "jfrog/artifactory",
+			},
+		},
 		Steps: []resource.TestStep{
 			{
-				Config:      config,
-				ExpectError: regexp.MustCompile(`.*config\.vuln_contextual_analysis can not be set when jas_enabled is set to\n'false'.*`),
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "repo_name", repoName),
+					resource.TestCheckResourceAttr(fqrn, "jas_enabled", "false"),
+					resource.TestCheckResourceAttr(fqrn, "config.0.vuln_contextual_analysis", "true"),
+					resource.TestCheckResourceAttr(fqrn, "config.0.retention_in_days", "90"),
+				),
 			},
 		},
 	})
@@ -238,7 +254,7 @@ func TestAccRepositoryConfig_JasDisabled_exposures_set(t *testing.T) {
 				retention_in_days = 90
 				exposures {
 					scanners_category {
-						iac = true
+						secrets = true
 					}
 				}
 			}
@@ -257,8 +273,12 @@ func TestAccRepositoryConfig_JasDisabled_exposures_set(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config:      config,
-				ExpectError: regexp.MustCompile(`.*can not be set when jas_enabled is set to 'false'.*`),
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "jas_enabled", "false"),
+					resource.TestCheckResourceAttr(fqrn, "config.0.retention_in_days", "90"),
+					resource.TestCheckResourceAttr(fqrn, "config.0.exposures.0.scanners_category.0.secrets", "true"),
+				),
 			},
 		},
 	})
