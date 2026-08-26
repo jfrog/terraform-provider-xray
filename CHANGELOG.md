@@ -6,6 +6,7 @@ FEATURES:
 
 IMPROVEMENTS:
 
+* resource/xray_repository_config: Add Gradle support for `vuln_contextual_analysis` on SaaS instances running Xray 3.108.0 or later. PR: [#418](https://github.com/jfrog/terraform-provider-xray/pull/418)
 * provider: Upgrade `github.com/jfrog/terraform-provider-shared` to v1.30.8.
 
 BUG FIXES:
