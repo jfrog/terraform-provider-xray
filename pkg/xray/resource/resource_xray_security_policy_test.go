@@ -233,6 +233,49 @@ func TestAccSecurityPolicy_multipleRules(t *testing.T) {
 	})
 }
 
+// TestAccSecurityPolicy_rulesPreserveConfigOrder is a regression test for the
+// "Provider produced inconsistent result after apply" bug: when rules are declared
+// in an order that does NOT match ascending priority, the provider must keep the
+// config declaration order in state instead of sorting by priority. The first
+// declared rule has a HIGHER priority than the second, so a priority-based sort would
+// reorder the list and violate the plan/apply consistency contract.
+func TestAccSecurityPolicy_rulesPreserveConfigOrder(t *testing.T) {
+	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
+	testData := sdk.MergeMaps(testDataSecurity)
+
+	testData["resource_name"] = resourceName
+	testData["policy_name"] = fmt.Sprintf("terraform-security-policy-order-%d", testutil.RandomInt())
+	testData["rule_name_1"] = fmt.Sprintf("test-security-rule-order-a-%d", testutil.RandomInt())
+	testData["rule_name_2"] = fmt.Sprintf("test-security-rule-order-b-%d", testutil.RandomInt())
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckPolicy),
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: util.ExecuteTemplate(fqrn, securityPolicyTwoRulesUnorderedPriority, testData),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn, "rule.#", "2"),
+					// Indexed (order-sensitive) checks: declaration order must be preserved
+					// even though rule.0 has a higher priority than rule.1.
+					resource.TestCheckResourceAttr(fqrn, "rule.0.name", testData["rule_name_1"]),
+					resource.TestCheckResourceAttr(fqrn, "rule.0.priority", "2"),
+					resource.TestCheckResourceAttr(fqrn, "rule.1.name", testData["rule_name_2"]),
+					resource.TestCheckResourceAttr(fqrn, "rule.1.priority", "1"),
+				),
+			},
+			{
+				Config: util.ExecuteTemplate(fqrn, securityPolicyTwoRulesUnorderedPriority, testData),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+		},
+	})
+}
+
 func TestAccSecurityPolicy_unknownMinSeveritySecurityPolicy_beforeVersion3602(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("policy-", "xray_security_policy")
 
@@ -1671,6 +1714,59 @@ const securityPolicyTwoRules = `resource "xray_security_policy" "{{ .resource_na
 	rule {
 		name = "{{ .rule_name_2 }}"
 		priority = 2
+		criteria {
+			cvss_range {
+				from = {{ .cvss_from }}
+				to = {{ .cvss_to }}
+			}
+		}
+		actions {
+			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
+			fail_build = {{ .fail_build }}
+			notify_watch_recipients = {{ .notify_watch_recipients }}
+			notify_deployer = {{ .notify_deployer }}
+			create_ticket_enabled = {{ .create_ticket_enabled }}
+			fail_pull_request = {{ .fail_pull_request }}
+			build_failure_grace_period_in_days = {{ .grace_period_days }}
+			block_download {
+				unscanned = {{ .block_unscanned }}
+				active = {{ .block_active }}
+			}
+		}
+	}
+}`
+
+const securityPolicyTwoRulesUnorderedPriority = `resource "xray_security_policy" "{{ .resource_name }}" {
+	name = "{{ .policy_name }}"
+	description = "{{ .policy_description }}"
+	type = "security"
+
+	rule {
+		name = "{{ .rule_name_1 }}"
+		priority = 2
+		criteria {
+			min_severity = "{{ .min_severity }}"
+		}
+		actions {
+			block_release_bundle_distribution = {{ .block_release_bundle_distribution }}
+			block_release_bundle_promotion = {{ .block_release_bundle_promotion }}
+			fail_build = {{ .fail_build }}
+			notify_watch_recipients = {{ .notify_watch_recipients }}
+			notify_deployer = {{ .notify_deployer }}
+			create_ticket_enabled = {{ .create_ticket_enabled }}
+			fail_pull_request = {{ .fail_pull_request }}
+			build_failure_grace_period_in_days = {{ .grace_period_days }}
+			block_download {
+				unscanned = {{ .block_unscanned }}
+				active = {{ .block_active }}
+			}
+		}
+	}
+
+	rule {
+		name = "{{ .rule_name_2 }}"
+		priority = 1
 		criteria {
 			cvss_range {
 				from = {{ .cvss_from }}

@@ -277,11 +277,39 @@ func (m *PolicyResourceModel) fromAPIModel(
 		ruleSetElementType = opRiskRuleSetElementType
 	}
 
-	// Sort rules by priority to ensure consistent ordering between config and API response
+	// Preserve the rule order from the prior plan/state (m.Rules) so the list written
+	// to state is positionally consistent with what Terraform planned. Sorting by
+	// priority is wrong: priority is not unique and has no relationship to config
+	// declaration order, which causes "Provider produced inconsistent result after
+	// apply" when config order differs from ascending-priority order. Rule names are
+	// unique (enforced by ValidateConfig), so name is a safe reordering key. Rules not
+	// present in the prior order (e.g. during import, where m.Rules is null) fall back
+	// to the API response order.
 	apiRules := *apiModel.Rules
-	sort.Slice(apiRules, func(i, j int) bool {
-		return apiRules[i].Priority < apiRules[j].Priority
-	})
+	if !m.Rules.IsNull() && !m.Rules.IsUnknown() {
+		order := make(map[string]int, len(m.Rules.Elements()))
+		for idx, elem := range m.Rules.Elements() {
+			if obj, ok := elem.(types.Object); ok {
+				if nameAttr, ok := obj.Attributes()["name"].(types.String); ok {
+					order[nameAttr.ValueString()] = idx
+				}
+			}
+		}
+		sort.SliceStable(apiRules, func(i, j int) bool {
+			oi, oki := order[apiRules[i].Name]
+			oj, okj := order[apiRules[j].Name]
+			switch {
+			case oki && okj:
+				return oi < oj
+			case oki:
+				return true
+			case okj:
+				return false
+			default:
+				return false
+			}
+		})
+	}
 
 	rules := lo.Map(
 		apiRules,
