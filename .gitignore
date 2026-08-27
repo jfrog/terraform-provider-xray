@@ -11,3 +11,4 @@ lib/
 /resources/
 coverage.txt
 .scannerwork
+.env
