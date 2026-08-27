@@ -254,6 +254,12 @@ var fromActionsAPIModel = func(ctx context.Context, actionsAPIModel PolicyRuleAc
 	return actionsList, diags
 }
 
+// fromAPIModel populates the resource model from an Xray policy API response,
+// delegating the per-rule criteria and actions conversion to the callbacks
+// supplied by each policy resource. The rules returned by the API are realigned
+// to the order already held in m.Rules (the plan on Create/Update, the prior
+// state on Read) before being written back, so the `rule` list stays positionally
+// consistent with what Terraform planned.
 func (m *PolicyResourceModel) fromAPIModel(
 	ctx context.Context,
 	apiModel PolicyAPIModel,
@@ -698,12 +704,26 @@ type PolicyError struct {
 // preserveFailPullRequest copies fail_pull_request from the source API model
 // to the target API model. The Xray API accepts fail_pull_request in POST/PUT
 // but does not return it in GET responses, so we must preserve the value from
-// the plan or state to avoid state drift.
+// the plan or state to avoid state drift. Rules are matched by name, since the
+// API does not guarantee it echoes rules back in the order they were sent and
+// matching by position would attach the value to the wrong rule.
 func preserveFailPullRequest(source, target *[]PolicyRuleAPIModel) {
 	if source == nil || target == nil {
 		return
 	}
+
+	failPRByName := make(map[string]*FailPullRequestAPIModel, len(*source))
+	for _, rule := range *source {
+		failPRByName[rule.Name] = rule.Actions.FailPullRequest
+	}
+
 	for i := range *target {
+		if failPR, ok := failPRByName[(*target)[i].Name]; ok {
+			(*target)[i].Actions.FailPullRequest = failPR
+			continue
+		}
+		// No rule with a matching name (e.g. the rule was renamed); fall back to
+		// positional matching rather than dropping the value entirely.
 		if i < len(*source) {
 			(*target)[i].Actions.FailPullRequest = (*source)[i].Actions.FailPullRequest
 		}
@@ -711,28 +731,27 @@ func preserveFailPullRequest(source, target *[]PolicyRuleAPIModel) {
 }
 
 // extractFailPullRequestFromState extracts fail_pull_request values from the
-// Terraform state's rules list and applies them to the API model rules.
+// Terraform state's rules list and applies them to the API model rules, matching
+// rules by name rather than by position for the same reason as
+// preserveFailPullRequest.
 func extractFailPullRequestFromState(state PolicyResourceModel, target *[]PolicyRuleAPIModel) {
 	if target == nil {
 		return
 	}
 
-	for i, elem := range state.Rules.Elements() {
-		if i >= len(*target) {
-			break
-		}
-
+	failPRByName := make(map[string]bool, len(state.Rules.Elements()))
+	for _, elem := range state.Rules.Elements() {
 		ruleObj, ok := elem.(types.Object)
 		if !ok {
 			continue
 		}
 
-		actionsAttr, ok := ruleObj.Attributes()["actions"]
-		if !ok {
+		nameAttr, ok := ruleObj.Attributes()["name"].(types.String)
+		if !ok || nameAttr.IsNull() || nameAttr.IsUnknown() {
 			continue
 		}
 
-		actionsList, ok := actionsAttr.(types.List)
+		actionsList, ok := ruleObj.Attributes()["actions"].(types.List)
 		if !ok || len(actionsList.Elements()) == 0 {
 			continue
 		}
@@ -742,18 +761,19 @@ func extractFailPullRequestFromState(state PolicyResourceModel, target *[]Policy
 			continue
 		}
 
-		failPR, ok := actionsObj.Attributes()["fail_pull_request"]
-		if !ok {
-			continue
-		}
-
-		failPRBool, ok := failPR.(types.Bool)
+		failPRBool, ok := actionsObj.Attributes()["fail_pull_request"].(types.Bool)
 		if !ok || failPRBool.IsNull() || failPRBool.IsUnknown() {
 			continue
 		}
 
-		(*target)[i].Actions.FailPullRequest = &FailPullRequestAPIModel{
-			Active: failPRBool.ValueBool(),
+		failPRByName[nameAttr.ValueString()] = failPRBool.ValueBool()
+	}
+
+	for i := range *target {
+		if active, ok := failPRByName[(*target)[i].Name]; ok {
+			(*target)[i].Actions.FailPullRequest = &FailPullRequestAPIModel{
+				Active: active,
+			}
 		}
 	}
 }
