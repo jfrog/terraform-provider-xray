@@ -226,6 +226,7 @@ func (p *XrayProvider) Resources(ctx context.Context) []func() resource.Resource
 func (p *XrayProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		xray_datasource.NewArtifactsScanDataSource,
+		xray_datasource.NewCurationConditionDataSource,
 	}
 }
 
