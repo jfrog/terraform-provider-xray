@@ -1,8 +1,12 @@
-## 3.1.14 (August 25, 2026). Tested on JFrog Platform 11.6.2 (Artifactory 7.161.19, Xray 3.150.33, Catalog 1.46.1) with Terraform 1.16.0 and OpenTofu 1.12.6
+## 3.1.14 (August 25, 2026). Tested on JFrog Platform 11.6.2 (Artifactory 7.161.19, Xray 3.150.33, Catalog 1.46.1). Tested on JFrog Platform 11.6.2 (Artifactory 7.161.19, Xray 3.150.33, Catalog 1.46.1) with Terraform 1.16.0 and OpenTofu 1.12.6
 
 FEATURES:
 
 * data/xray_curation_condition: Add a new data source which looks up a built-in or custom Curation condition by its exact name (case-sensitive) and exposes its numeric `id`, so `xray_curation_policy.condition_id` no longer has to be hard-coded to a raw numeric ID. Issue: JTFPR-341 PR: [#452](https://github.com/jfrog/terraform-provider-xray/pull/452)
+
+BUG FIXES:
+
+* resource/xray_security_policy, resource/xray_license_policy, resource/xray_operational_risk_policy: Fix `Provider produced inconsistent result after apply ... produced an unexpected new value: .rule[N].name` when planning changes to the rules of an existing policy. The provider re-sorted the rules returned by the API by `priority` before writing them to state, which reordered the `rule` list whenever the configuration was not authored in ascending-priority order. Rules are now written back in the order they appear in the plan or prior state, keyed by rule name, and `fail_pull_request` is carried over by rule name instead of by list position. Issue: JTFPR-371 PR: [#454](https://github.com/jfrog/terraform-provider-xray/pull/454)
 
 ## 3.1.13 (Aug 21, 2026). Tested on JFrog Platform 11.6.1 (Artifactory 7.161.16, Xray 3.150.24, Catalog 1.44.0) with Terraform 1.15.8 and OpenTofu 1.12.5
 
