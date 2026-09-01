@@ -564,6 +564,8 @@ type IgnoreRuleAPIModel struct {
 	IsExpired     bool                  `json:"is_expired,omitempty"`
 	Notes         string                `json:"notes"`
 	ExpiresAt     *time.Time            `json:"expires_at,omitempty"`
+	DeletedBy     string                `json:"deleted_by,omitempty"`
+	DeletedAt     *time.Time            `json:"deleted_at,omitempty"`
 	IgnoreFilters IgnoreFiltersAPIModel `json:"ignore_filters"`
 }
 
@@ -1058,6 +1060,13 @@ func (r *IgnoreRuleResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	if response.IsError() {
 		utilfw.UnableToRefreshResourceError(resp, response.String())
+		return
+	}
+
+	// Xray soft-deletes ignore rules: the API returns 200 with deleted_at
+	// and deleted_by fields instead of 404. Treat as deleted.
+	if ignoreRule.DeletedAt != nil {
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
