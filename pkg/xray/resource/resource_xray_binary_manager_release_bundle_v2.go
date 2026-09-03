@@ -2,6 +2,7 @@ package xray
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/jfrog/terraform-provider-shared/util"
 	utilfw "github.com/jfrog/terraform-provider-shared/util/fw"
 	validatorfw_string "github.com/jfrog/terraform-provider-shared/validator/fw/string"
+	"github.com/samber/lo"
 )
 
 const BinaryManagerReleaseBundleV2Endpoint = "xray/api/v1/binMgr/{id}/release_bundle_v2"
@@ -58,40 +60,87 @@ func (m BinaryManagerReleaseBundlesV2ResourceModel) toAPIModel(ctx context.Conte
 	return
 }
 
-// stripReleaseBundleV2Prefix removes the "[repo-type]/" prefix from release bundle names
-// that the API returns. For example: "[release-bundles-v2]/bundle-name" -> "bundle-name"
-func stripReleaseBundleV2Prefix(name string) string {
-	if idx := strings.Index(name, "]/"); idx != -1 {
-		return name[idx+2:]
+// releaseBundleV2RepoKey returns the repository key holding Release Bundles V2 for
+// a project scope. Project bundles live in "<project-key>-release-bundles-v2", while
+// the default scope uses "release-bundles-v2".
+func releaseBundleV2RepoKey(projectKey string) string {
+	if projectKey == "" {
+		return "release-bundles-v2"
 	}
-	return name
+
+	return fmt.Sprintf("%s-release-bundles-v2", projectKey)
+}
+
+// SplitReleaseBundleV2Name splits a name returned by the API, e.g.
+// "[suriya-release-bundles-v2]/bundle-name", into its repository key and bundle name.
+// Names without the prefix yield an empty repository key.
+func SplitReleaseBundleV2Name(name string) (string, string) {
+	if strings.HasPrefix(name, "[") {
+		if idx := strings.Index(name, "]/"); idx != -1 {
+			return name[1:idx], name[idx+2:]
+		}
+	}
+
+	return "", name
+}
+
+// isDefaultScopeReleaseBundleV2Response reports whether every name belongs to the
+// default scope, i.e. carries no repository prefix or the default repository key.
+func isDefaultScopeReleaseBundleV2Response(names []string) bool {
+	defaultRepoKey := releaseBundleV2RepoKey("")
+
+	return lo.EveryBy(names, func(name string) bool {
+		nameRepoKey, _ := SplitReleaseBundleV2Name(name)
+		return nameRepoKey == "" || nameRepoKey == defaultRepoKey
+	})
+}
+
+// ReleaseBundleV2NamesFromAPI converts API names into bundle names for the given
+// project scope. Bundle names are unique per project, so identically named bundles
+// from other projects would otherwise collapse into duplicate set elements.
+func ReleaseBundleV2NamesFromAPI(names []string, projectKey string) []string {
+	repoKey := releaseBundleV2RepoKey(projectKey)
+
+	inScope := lo.Filter(names, func(name string, _ int) bool {
+		nameRepoKey, _ := SplitReleaseBundleV2Name(name)
+		return nameRepoKey == "" || nameRepoKey == repoKey
+	})
+
+	// Xray versions without Projects support on this endpoint ignore the projectKey
+	// query parameter and report every bundle under the default scope, so a
+	// project-scoped resource accepts those names rather than reading back an empty
+	// configuration. Names from other projects are never in scope.
+	if projectKey != "" && isDefaultScopeReleaseBundleV2Response(names) {
+		inScope = names
+	}
+
+	return lo.Uniq(
+		lo.Map(inScope, func(name string, _ int) string {
+			_, bundleName := SplitReleaseBundleV2Name(name)
+			return bundleName
+		}),
+	)
 }
 
 func (m *BinaryManagerReleaseBundlesV2ResourceModel) fromAPIModel(ctx context.Context, apiModel BinaryManagerReleaseBundlesV2APIModel, preserveIndexed bool) (ds diag.Diagnostics) {
 	m.ID = types.StringValue(apiModel.BinManagerID)
 
+	projectKey := m.ProjectKey.ValueString()
+
 	// Only update IndexedReleaseBundlesV2 from API during Read (not Create/Update)
 	// This avoids "inconsistent result after apply" errors when API returns
 	// different ordering or timing-delayed results
 	if !preserveIndexed {
-		// Strip the "[repo-type]/" prefix from each release bundle name
-		strippedIndexed := make([]string, len(apiModel.IndexedReleaseBundlesV2))
-		for i, name := range apiModel.IndexedReleaseBundlesV2 {
-			strippedIndexed[i] = stripReleaseBundleV2Prefix(name)
-		}
-		indexedReleaseBundlesV2, d := types.SetValueFrom(ctx, types.StringType, strippedIndexed)
+		indexed := ReleaseBundleV2NamesFromAPI(apiModel.IndexedReleaseBundlesV2, projectKey)
+		indexedReleaseBundlesV2, d := types.SetValueFrom(ctx, types.StringType, indexed)
 		if d != nil {
 			ds.Append(d...)
 		}
 		m.IndexedReleaseBundlesV2 = indexedReleaseBundlesV2
 	}
 
-	// Strip the "[repo-type]/" prefix from each non-indexed release bundle name
-	strippedNonIndexed := make([]string, len(apiModel.NonIndexedReleaseBundlesV2))
-	for i, name := range apiModel.NonIndexedReleaseBundlesV2 {
-		strippedNonIndexed[i] = stripReleaseBundleV2Prefix(name)
-	}
-	nonIndexedBuilds, d := types.SetValueFrom(ctx, types.StringType, strippedNonIndexed)
+	nonIndexed := ReleaseBundleV2NamesFromAPI(apiModel.NonIndexedReleaseBundlesV2, projectKey)
+	nonIndexedBuilds, d := types.SetValueFrom(ctx, types.StringType, nonIndexed)
 	if d != nil {
 		ds.Append(d...)
 	}

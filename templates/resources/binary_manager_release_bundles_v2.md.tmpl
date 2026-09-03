@@ -8,6 +8,8 @@ subcategory: "Binary Manager"
 
 Provides an Xray Binary Manager Release Bundles V2 Indexing configuration resource. See [Indexing Xray Resources](https://jfrog.com/help/r/jfrog-security-documentation/add-or-remove-resources-from-indexing) and [REST API](https://jfrog.com/help/r/xray-rest-apis/add-release-bundles-v2-indexing-configuration) for more details.
 
+~> Release Bundle V2 names are unique per project. The same name in two projects requires a separate resource with `project_key` for each project. A resource without `project_key` only manages default-scope bundles (`[release-bundles-v2]/<name>`), not project-scoped ones.
+
 ## Example Usage
 
 {{tffile "examples/resources/xray_binary_manager_release_bundles_v2/resource.tf"}}
