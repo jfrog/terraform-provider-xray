@@ -1,4 +1,4 @@
-## 3.1.14 (August 25, 2026). Tested on JFrog Platform 11.6.2 (Artifactory 7.161.19, Xray 3.150.33, Catalog 1.46.1) with Terraform 1.16.0 and OpenTofu 1.12.6
+## 3.1.14 (September 3, 2026). Tested on JFrog Platform 11.6.3 (Artifactory 7.161.20, Xray 3.150.34, Catalog 1.46.1) with Terraform 1.16.1 and OpenTofu 1.12.6
 
 FEATURES:
 
@@ -17,6 +17,7 @@ IMPROVEMENTS:
 BUG FIXES:
 
 * resource/xray_security_policy: Fix `Found Invalid Policy: All severities is not a valid severity in sast condition` when creating or updating a policy with `sast.min_severity = "All severities"`. Xray rejects that literal value in a `sast` condition and also rejects the field being omitted, so it is now sent as the API's `Unknown` sentinel and mapped back to `All severities` on read to avoid drift. Also accept the UI label `All Severities` (and other case variants) via case-insensitive validation and preserve the configured casing in state. Issue: [#445](https://github.com/jfrog/terraform-provider-xray/issues/445) PR: [#446](https://github.com/jfrog/terraform-provider-xray/pull/446)
+* resource/xray_security_policy, resource/xray_license_policy: Fix blank `Unable to Create/Update Resource` error on `terraform apply` when a proxy or load balancer in front of Xray (e.g. a Google load balancer) rejects the read-back `GET` request. The provider was reusing the same HTTP request object for the create/update `POST`/`PUT` and the follow-up `GET`, so the `GET` was sent with the write's leftover JSON body and `Content-Type` header, which such proxies treat as malformed and reject with a non-JSON `400` response. The read-back now uses a fresh request without a body. Additionally, when the API (or an intermediate proxy) returns a non-JSON error response, the provider now surfaces the HTTP status code and raw response body instead of a blank error message. Issue: JTFPR-276
 
 SECURITY:
 

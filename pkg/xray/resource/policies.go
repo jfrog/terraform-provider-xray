@@ -2,10 +2,12 @@ package xray
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"sort"
 	"strings"
 
+	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
@@ -323,7 +325,10 @@ func (m *PolicyResourceModel) fromAPIModel(
 
 	m.ID = types.StringValue(apiModel.Name)
 	m.Name = types.StringValue(apiModel.Name)
-	m.Description = types.StringValue(apiModel.Description)
+	m.Description = types.StringNull()
+	if len(apiModel.Description) > 0 {
+		m.Description = types.StringValue(apiModel.Description)
+	}
 	m.Type = types.StringValue(apiModel.Type)
 	m.Author = types.StringValue(apiModel.Author)
 	m.Created = types.StringValue(apiModel.Created)
@@ -667,6 +672,25 @@ type PolicyError struct {
 	Error string `json:"error"`
 }
 
+func policyReadBackRequest(client *resty.Client, projectKey string) (*resty.Request, error) {
+	request, err := getRestyRequest(client, projectKey)
+	if err != nil {
+		return nil, err
+	}
+	request.Header.Set("Content-Type", "")
+	return request, nil
+}
+
+func policyErrorMessage(response *resty.Response, policyError PolicyError) string {
+	if policyError.Error != "" {
+		return policyError.Error
+	}
+	if response == nil {
+		return ""
+	}
+	return fmt.Sprintf("unexpected response, status: %d, body: %s", response.StatusCode(), response.String())
+}
+
 // preserveFailPullRequest copies fail_pull_request from the source API model
 // to the target API model. The Xray API accepts fail_pull_request in POST/PUT
 // but does not return it in GET responses, so we must preserve the value from
@@ -774,12 +798,21 @@ func (r *PolicyResource) Create(
 	}
 
 	if response.IsError() {
-		utilfw.UnableToCreateResourceError(resp, policyError.Error)
+		utilfw.UnableToCreateResourceError(resp, policyErrorMessage(response, policyError))
+		return
+	}
+
+	readRequest, err := policyReadBackRequest(r.ProviderData.Client, plan.ProjectKey.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"failed to get Resty client",
+			err.Error(),
+		)
 		return
 	}
 
 	var createdPolicy PolicyAPIModel
-	response, err = request.
+	response, err = readRequest.
 		SetResult(&createdPolicy).
 		SetPathParam("name", plan.Name.ValueString()).
 		SetError(&policyError).
@@ -791,7 +824,7 @@ func (r *PolicyResource) Create(
 	}
 
 	if response.IsError() {
-		utilfw.UnableToCreateResourceError(resp, policyError.Error)
+		utilfw.UnableToCreateResourceError(resp, policyErrorMessage(response, policyError))
 		return
 	}
 
@@ -851,7 +884,7 @@ func (r *PolicyResource) Read(
 	}
 
 	if response.IsError() {
-		utilfw.UnableToRefreshResourceError(resp, policyError.Error)
+		utilfw.UnableToRefreshResourceError(resp, policyErrorMessage(response, policyError))
 		return
 	}
 
@@ -912,12 +945,21 @@ func (r *PolicyResource) Update(
 	}
 
 	if response.IsError() {
-		utilfw.UnableToUpdateResourceError(resp, policyError.Error)
+		utilfw.UnableToUpdateResourceError(resp, policyErrorMessage(response, policyError))
+		return
+	}
+
+	readRequest, err := policyReadBackRequest(r.ProviderData.Client, plan.ProjectKey.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"failed to get Resty client",
+			err.Error(),
+		)
 		return
 	}
 
 	var updatedPolicy PolicyAPIModel
-	response, err = request.
+	response, err = readRequest.
 		SetResult(&updatedPolicy).
 		SetPathParam("name", plan.Name.ValueString()).
 		SetError(&policyError).
@@ -929,7 +971,7 @@ func (r *PolicyResource) Update(
 	}
 
 	if response.IsError() {
-		utilfw.UnableToUpdateResourceError(resp, policyError.Error)
+		utilfw.UnableToUpdateResourceError(resp, policyErrorMessage(response, policyError))
 		return
 	}
 
@@ -973,7 +1015,7 @@ func (r *PolicyResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	}
 
 	if response.IsError() {
-		utilfw.UnableToDeleteResourceError(resp, policyError.Error)
+		utilfw.UnableToDeleteResourceError(resp, policyErrorMessage(response, policyError))
 		return
 	}
 
