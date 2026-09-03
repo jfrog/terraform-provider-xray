@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -727,6 +730,28 @@ func (r *CurationPolicyResource) fromAPIModel(ctx context.Context, policy Curati
 
 	// Convert waivers from API to Terraform model (only if present)
 	if len(policy.Waivers) > 0 {
+		// Deduplicate content-identical waivers. The Curation API can return
+		// multiple waiver records with the same package/justification but
+		// distinct server-assigned ids (not modeled here). Waivers is a Set, so
+		// identical elements are invalid and the provider rejects them with
+		// "Duplicate Set Element" on read/import. To work around this, we deduplicate
+		// the waivers by their package type, name, all versions, versions, and justification.
+		seen := make(map[string]struct{}, len(policy.Waivers))
+		uniqueWaivers := make([]PackageWaiverAPIModel, 0, len(policy.Waivers))
+		for _, w := range policy.Waivers {
+			versions := append([]string(nil), w.PkgVersions...)
+			sort.Strings(versions)
+			key := strings.Join([]string{
+				w.PkgType, w.PkgName, strconv.FormatBool(w.AllVersions),
+				strings.Join(versions, ","), w.Justification,
+			}, "\x00")
+			if _, ok := seen[key]; ok {
+				continue
+			}
+			seen[key] = struct{}{}
+			uniqueWaivers = append(uniqueWaivers, w)
+		}
+
 		waiverAttrs := map[string]attr.Type{
 			"pkg_type":      types.StringType,
 			"pkg_name":      types.StringType,
@@ -735,8 +760,8 @@ func (r *CurationPolicyResource) fromAPIModel(ctx context.Context, policy Curati
 			"justification": types.StringType,
 		}
 
-		waiverValues := make([]attr.Value, len(policy.Waivers))
-		for i, waiver := range policy.Waivers {
+		waiverValues := make([]attr.Value, len(uniqueWaivers))
+		for i, waiver := range uniqueWaivers {
 			// Convert pkg_versions to set or null
 			var pkgVersionsSet types.Set
 			if waiver.AllVersions {
@@ -784,13 +809,28 @@ func (r *CurationPolicyResource) fromAPIModel(ctx context.Context, policy Curati
 
 	// Convert label_waivers from API to Terraform model (only if present)
 	if len(policy.LabelWaivers) > 0 {
+		// Deduplicate content-identical label waivers for the same reason as
+		// waivers above: label_waivers is a Set and duplicate server records
+		// (same label/justification, distinct ids) trigger "Duplicate Set
+		// Element" on read/import.
+		seen := make(map[string]struct{}, len(policy.LabelWaivers))
+		uniqueLabelWaivers := make([]LabelWaiverAPIModel, 0, len(policy.LabelWaivers))
+		for _, w := range policy.LabelWaivers {
+			key := w.Label + "\x00" + w.Justification
+			if _, ok := seen[key]; ok {
+				continue
+			}
+			seen[key] = struct{}{}
+			uniqueLabelWaivers = append(uniqueLabelWaivers, w)
+		}
+
 		labelWaiverAttrs := map[string]attr.Type{
 			"label":         types.StringType,
 			"justification": types.StringType,
 		}
 
-		labelWaiverValues := make([]attr.Value, len(policy.LabelWaivers))
-		for i, labelWaiver := range policy.LabelWaivers {
+		labelWaiverValues := make([]attr.Value, len(uniqueLabelWaivers))
+		for i, labelWaiver := range uniqueLabelWaivers {
 			labelWaiverValue, diags := types.ObjectValue(labelWaiverAttrs, map[string]attr.Value{
 				"label":         types.StringValue(labelWaiver.Label),
 				"justification": types.StringValue(labelWaiver.Justification),
