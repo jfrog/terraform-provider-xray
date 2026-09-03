@@ -1,6 +1,7 @@
 package xray_test
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -11,6 +12,7 @@ import (
 	"github.com/jfrog/terraform-provider-shared/testutil"
 	"github.com/jfrog/terraform-provider-shared/util"
 	"github.com/jfrog/terraform-provider-xray/v3/pkg/acctest"
+	xrayresource "github.com/jfrog/terraform-provider-xray/v3/pkg/xray/resource"
 	"github.com/samber/lo"
 )
 
@@ -268,21 +270,23 @@ func TestAccBinaryManagerReleaseBundlesV2_full(t *testing.T) {
 		},
 		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		CheckDestroy: func(*terraform.State) error {
+			var errs []error
+
 			if err := deleteReleaseBundleV2Version(t, releaseBundle1Name, ""); err != nil {
-				return nil
+				errs = append(errs, err)
 			}
 
 			if err := deleteReleaseBundleV2Version(t, releaseBundle2Name, ""); err != nil {
-				return nil
+				errs = append(errs, err)
 			}
 
 			if err := deleteKeyPair(t, keyPairName); err != nil {
-				return nil
+				errs = append(errs, err)
 			}
 
 			acctest.DeleteRepo(t, repoName)
 
-			return nil
+			return errors.Join(errs...)
 		},
 		Steps: []resource.TestStep{
 			{
@@ -382,23 +386,25 @@ func TestAccBinaryManagerReleaseBundlesV2_project_full(t *testing.T) {
 		},
 		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		CheckDestroy: func(*terraform.State) error {
+			var errs []error
+
 			if err := deleteReleaseBundleV2Version(t, releaseBundle1Name, projectKey); err != nil {
-				return nil
+				errs = append(errs, err)
 			}
 
 			if err := deleteReleaseBundleV2Version(t, releaseBundle2Name, projectKey); err != nil {
-				return nil
+				errs = append(errs, err)
 			}
 
 			if err := deleteKeyPair(t, keyPairName); err != nil {
-				return nil
+				errs = append(errs, err)
 			}
 
 			acctest.DeleteProject(t, projectKey)
 
 			acctest.DeleteRepo(t, repoName)
 
-			return nil
+			return errors.Join(errs...)
 		},
 		Steps: []resource.TestStep{
 			{
@@ -426,6 +432,112 @@ func TestAccBinaryManagerReleaseBundlesV2_project_full(t *testing.T) {
 				ImportStateId:                        fmt.Sprintf("%s:%s", resourceName, projectKey),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: "id",
+			},
+		},
+	})
+}
+
+func TestAccBinaryManagerReleaseBundlesV2_same_name_different_projects(t *testing.T) {
+	_, fqrn1, resourceName1 := testutil.MkNames("test-bin-mgr-release-bundles-v2", "xray_binary_manager_release_bundles_v2")
+	_, fqrn2, resourceName2 := testutil.MkNames("test-bin-mgr-release-bundles-v2", "xray_binary_manager_release_bundles_v2")
+
+	projectKey1 := lo.RandomString(6, lo.LowerCaseLettersCharset)
+	projectKey2 := lo.RandomString(6, lo.LowerCaseLettersCharset)
+
+	keyPairName := fmt.Sprintf("test-keypair-%d", testutil.RandomInt())
+
+	repoName := fmt.Sprintf("test-repo-%d", testutil.RandomInt())
+
+	// Release Bundle V2 names are scoped per project, so the same name in two
+	// projects must not be treated as a duplicate set element.
+	releaseBundleName := fmt.Sprintf("test-release-bundles-v2-%d", testutil.RandomInt())
+
+	const template = `
+		resource "xray_binary_manager_release_bundles_v2" "{{ .name1 }}" {
+			id = "default"
+			project_key = "{{ .projectKey1 }}"
+			indexed_release_bundle_v2 = ["{{ .releaseBundleName }}"]
+		}
+
+		resource "xray_binary_manager_release_bundles_v2" "{{ .name2 }}" {
+			id = "default"
+			project_key = "{{ .projectKey2 }}"
+			indexed_release_bundle_v2 = ["{{ .releaseBundleName }}"]
+		}
+	`
+
+	testData := map[string]string{
+		"name1":             resourceName1,
+		"name2":             resourceName2,
+		"projectKey1":       projectKey1,
+		"projectKey2":       projectKey2,
+		"releaseBundleName": releaseBundleName,
+	}
+
+	config := util.ExecuteTemplate("TestAccBinaryManagerReleaseBundlesV2_same_name_different_projects", template, testData)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctest.CreateRepos(t, repoName, "local", "", "maven")
+
+			path, sha256, err := uploadTestFile(t, repoName)
+			if err != nil {
+				t.Fatalf("failed to upload file: %s", err)
+			}
+
+			acctest.CreateProject(t, projectKey1)
+			acctest.CreateProject(t, projectKey2)
+
+			if err := createKeyPair(t, keyPairName); err != nil {
+				t.Fatalf("failed to create key pair: %s", err)
+			}
+
+			if err := createReleaseBundleV2(t, releaseBundleName, keyPairName, repoName, projectKey1, path, sha256); err != nil {
+				t.Fatalf("failed to create release bundle: %s", err)
+			}
+
+			if err := createReleaseBundleV2(t, releaseBundleName, keyPairName, repoName, projectKey2, path, sha256); err != nil {
+				t.Fatalf("failed to create release bundle: %s", err)
+			}
+		},
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		CheckDestroy: func(*terraform.State) error {
+			var errs []error
+
+			if err := deleteReleaseBundleV2Version(t, releaseBundleName, projectKey1); err != nil {
+				errs = append(errs, err)
+			}
+
+			if err := deleteReleaseBundleV2Version(t, releaseBundleName, projectKey2); err != nil {
+				errs = append(errs, err)
+			}
+
+			if err := deleteKeyPair(t, keyPairName); err != nil {
+				errs = append(errs, err)
+			}
+
+			acctest.DeleteProject(t, projectKey1)
+			acctest.DeleteProject(t, projectKey2)
+
+			acctest.DeleteRepo(t, repoName)
+
+			return errors.Join(errs...)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fqrn1, "project_key", projectKey1),
+					resource.TestCheckResourceAttr(fqrn1, "indexed_release_bundle_v2.#", "1"),
+					resource.TestCheckResourceAttr(fqrn1, "indexed_release_bundle_v2.0", releaseBundleName),
+					resource.TestCheckResourceAttr(fqrn2, "project_key", projectKey2),
+					resource.TestCheckResourceAttr(fqrn2, "indexed_release_bundle_v2.#", "1"),
+					resource.TestCheckResourceAttr(fqrn2, "indexed_release_bundle_v2.0", releaseBundleName),
+				),
+			},
+			{
+				Config:   config,
+				PlanOnly: true,
 			},
 		},
 	})
@@ -461,6 +573,116 @@ func TestAccBinaryManagerReleaseBundlesV2_invalid_patterns(t *testing.T) {
 					},
 				},
 			})
+		})
+	}
+}
+
+func TestReleaseBundleV2NamesFromAPI(t *testing.T) {
+	testCases := []struct {
+		name       string
+		apiNames   []string
+		projectKey string
+		expected   []string
+	}{
+		{
+			name:       "scopes names to the project",
+			apiNames:   []string{"[suriya-release-bundles-v2]/demo1", "[suriyams-release-bundles-v2]/demo1"},
+			projectKey: "suriya",
+			expected:   []string{"demo1"},
+		},
+		{
+			name:       "scopes names to the other project",
+			apiNames:   []string{"[suriya-release-bundles-v2]/demo1", "[suriyams-release-bundles-v2]/demo2"},
+			projectKey: "suriyams",
+			expected:   []string{"demo2"},
+		},
+		{
+			name:       "excludes names from foreign project repositories",
+			apiNames:   []string{"[suriya-release-bundles-v2]/demo1", "[suriyams-release-bundles-v2]/demo1"},
+			projectKey: "",
+			expected:   []string{},
+		},
+		{
+			name:       "keeps default scope names",
+			apiNames:   []string{"[release-bundles-v2]/demo1", "[suriya-release-bundles-v2]/demo2"},
+			projectKey: "",
+			expected:   []string{"demo1"},
+		},
+		{
+			name:       "keeps names without a repository prefix",
+			apiNames:   []string{"demo1", "demo2"},
+			projectKey: "suriya",
+			expected:   []string{"demo1", "demo2"},
+		},
+		{
+			name:       "handles empty response",
+			apiNames:   []string{},
+			projectKey: "suriya",
+			expected:   []string{},
+		},
+		{
+			name:       "preserves empty result for only foreign project entries",
+			apiNames:   []string{"[other-release-bundles-v2]/demo1", "[suriyams-release-bundles-v2]/demo2"},
+			projectKey: "suriya",
+			expected:   []string{},
+		},
+		{
+			name:       "falls back to all names for default-scoped API response",
+			apiNames:   []string{"[release-bundles-v2]/demo1", "demo2"},
+			projectKey: "suriya",
+			expected:   []string{"demo1", "demo2"},
+		},
+		{
+			name:       "does not fall back for mixed default and foreign entries",
+			apiNames:   []string{"[release-bundles-v2]/demo1", "[other-release-bundles-v2]/demo2"},
+			projectKey: "suriya",
+			expected:   []string{},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			actual := xrayresource.ReleaseBundleV2NamesFromAPI(testCase.apiNames, testCase.projectKey)
+
+			if len(actual) != len(testCase.expected) {
+				t.Fatalf("expected %v, got %v", testCase.expected, actual)
+			}
+
+			for _, expectedName := range testCase.expected {
+				if !lo.Contains(actual, expectedName) {
+					t.Errorf("expected %v to contain %q", actual, expectedName)
+				}
+			}
+
+			if len(lo.Uniq(actual)) != len(actual) {
+				t.Errorf("expected unique names, got %v", actual)
+			}
+		})
+	}
+}
+
+func TestSplitReleaseBundleV2Name(t *testing.T) {
+	testCases := []struct {
+		apiName         string
+		expectedRepoKey string
+		expectedName    string
+	}{
+		{apiName: "[suriya-release-bundles-v2]/demo1", expectedRepoKey: "suriya-release-bundles-v2", expectedName: "demo1"},
+		{apiName: "[release-bundles-v2]/demo1", expectedRepoKey: "release-bundles-v2", expectedName: "demo1"},
+		{apiName: "demo1", expectedRepoKey: "", expectedName: "demo1"},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.apiName, func(t *testing.T) {
+			repoKey, name := xrayresource.SplitReleaseBundleV2Name(testCase.apiName)
+
+			if repoKey != testCase.expectedRepoKey {
+				t.Errorf("expected repository key %q, got %q", testCase.expectedRepoKey, repoKey)
+			}
+
+			if name != testCase.expectedName {
+				t.Errorf("expected name %q, got %q", testCase.expectedName, name)
+			}
 		})
 	}
 }
