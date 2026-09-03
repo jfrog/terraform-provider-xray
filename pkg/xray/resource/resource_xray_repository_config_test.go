@@ -277,6 +277,7 @@ func TestAccRepositoryConfig_RepoConfig_Create_VulnContextualAnalysis(t *testing
 	}{
 		{"docker", TestDataRepoConfigDockerTemplate, "3.67.9"},
 		{"maven", TestDataRepoConfigMavenTemplate, "3.77.4"},
+		{"gradle", TestDataRepoConfigGradleTemplate, "3.108.0"},
 	}
 
 	version, err := util.GetXrayVersion(acctest.GetTestResty(t))
@@ -867,6 +868,7 @@ resource "xray_repository_config" "{{ .resource_name }}" {
 
   config {
     retention_in_days        = {{ .retention_in_days }}
+    vuln_contextual_analysis = {{ .vuln_contextual_analysis }}
 
 	exposures {
       scanners_category {

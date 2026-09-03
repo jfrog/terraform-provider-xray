@@ -259,6 +259,10 @@ var vulnContextualAnalysisPackageTypes = func(xrayVersion string) []string {
 		packageTypes = append(packageTypes, "maven")
 	}
 
+	if ok, err := util.CheckVersion(xrayVersion, "3.108.0"); err == nil && ok {
+		packageTypes = append(packageTypes, "gradle")
+	}
+
 	return packageTypes
 }
 
@@ -508,7 +512,7 @@ var schemaV0 = schema.Schema{
 				Attributes: map[string]schema.Attribute{
 					"vuln_contextual_analysis": schema.BoolAttribute{
 						Optional:    true,
-						Description: "Only for SaaS instances, will be available after Xray 3.59. Enables vulnerability contextual analysis. Must be set together with `exposures`. Supported for Docker, OCI, and Maven package types.",
+						Description: "Only for SaaS instances, will be available after Xray 3.59. Enables vulnerability contextual analysis. Must be set together with `exposures`. Supported for Docker, OCI, Maven, and Gradle package types.",
 					},
 					"retention_in_days": schema.Int64Attribute{
 						Optional: true,
@@ -669,7 +673,7 @@ var schemaV1 = schema.Schema{
 				Attributes: map[string]schema.Attribute{
 					"vuln_contextual_analysis": schema.BoolAttribute{
 						Optional:    true,
-						Description: "Enables or disables vulnerability contextual analysis. Only for SaaS instances, will be available after Xray 3.59. Must be set for Docker, OCI, and Maven package types.",
+						Description: "Enables or disables vulnerability contextual analysis. Only for SaaS instances, will be available after Xray 3.59. Must be set for Docker, OCI, Maven, and Gradle package types.",
 					},
 					"retention_in_days": schema.Int64Attribute{
 						Optional: true,

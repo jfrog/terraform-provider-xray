@@ -72,7 +72,7 @@ Optional:
 
 - `exposures` (Block Set) Enables Xray to perform scans for multiple categories that cover security issues in your configurations and the usage of open source libraries in your code. Available only to CLOUD (SaaS)/SELF HOSTED for ENTERPRISE X and ENTERPRISE+ with Advanced DevSecOps. Must be set for Docker, Maven, NPM, PyPi, and Terraform Backend package type. (see [below for nested schema](#nestedblock--config--exposures))
 - `retention_in_days` (Number) The artifact will be retained for the number of days you set here, after the artifact is scanned. This will apply to all artifacts in the repository. Can be omitted when `paths_config` is set.
-- `vuln_contextual_analysis` (Boolean) Enables or disables vulnerability contextual analysis. Only for SaaS instances, will be available after Xray 3.59. Must be set for Docker, OCI, and Maven package types.
+- `vuln_contextual_analysis` (Boolean) Enables or disables vulnerability contextual analysis. Only for SaaS instances, will be available after Xray 3.59. Must be set for Docker, OCI, Maven, and Gradle package types.
 
 <a id="nestedblock--config--exposures"></a>
 ### Nested Schema for `config.exposures`
