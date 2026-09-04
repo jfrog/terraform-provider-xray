@@ -304,6 +304,8 @@ type CurationPolicyResourceModel struct {
 	NotifyEmails        types.Set    `tfsdk:"notify_emails"`
 	WaiverRequestConfig types.String `tfsdk:"waiver_request_config"`
 	DecisionOwners      types.Set    `tfsdk:"decision_owners"`
+	GroupExclude        types.Set    `tfsdk:"group_exclude"`
+	GroupInclude        types.Set    `tfsdk:"group_include"`
 	BlockFromCache      types.Bool   `tfsdk:"block_from_cache"`
 	ShareWithFederation types.Bool   `tfsdk:"share_with_federation"`
 }
@@ -348,6 +350,8 @@ type CurationPolicyAPIModel struct {
 	NotifyEmails        []string                `json:"notify_emails,omitempty"`
 	WaiverRequestConfig string                  `json:"waiver_request_config,omitempty"`
 	DecisionOwners      []string                `json:"decision_owners,omitempty"`
+	GroupExclude        []string                `json:"group_exclude,omitempty"`
+	GroupInclude        []string                `json:"group_include,omitempty"`
 	BlockFromCache      bool                    `json:"block_from_cache"`
 	ShareWithFederation bool                    `json:"share_with_federation"`
 }
@@ -487,6 +491,16 @@ func (r *CurationPolicyResource) Schema(ctx context.Context, req resource.Schema
 				ElementType: types.StringType,
 				Description: "List of JFrog Access groups used by waiver_request_config=manual",
 			},
+			"group_exclude": schema.SetAttribute{
+				Optional:    true,
+				ElementType: types.StringType,
+				Description: "List of user groups to exclude from the policy scope.",
+			},
+			"group_include": schema.SetAttribute{
+				Optional:    true,
+				ElementType: types.StringType,
+				Description: "List of user groups to include in the policy scope.",
+			},
 			"block_from_cache": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
@@ -586,6 +600,26 @@ func (r *CurationPolicyResource) toAPIModel(ctx context.Context, plan CurationPo
 			return diags
 		}
 		policy.DecisionOwners = decisionOwners
+	}
+
+	// Convert group_exclude
+	if !plan.GroupExclude.IsNull() {
+		var groupExclude []string
+		diags := plan.GroupExclude.ElementsAs(ctx, &groupExclude, false)
+		if diags.HasError() {
+			return diags
+		}
+		policy.GroupExclude = groupExclude
+	}
+
+	// Convert group_include
+	if !plan.GroupInclude.IsNull() {
+		var groupInclude []string
+		diags := plan.GroupInclude.ElementsAs(ctx, &groupInclude, false)
+		if diags.HasError() {
+			return diags
+		}
+		policy.GroupInclude = groupInclude
 	}
 
 	// Convert waivers
@@ -723,6 +757,30 @@ func (r *CurationPolicyResource) fromAPIModel(ctx context.Context, policy Curati
 			return diags
 		}
 		plan.DecisionOwners = ownersSet
+	}
+
+	if len(policy.GroupExclude) > 0 {
+		groups := make([]attr.Value, len(policy.GroupExclude))
+		for i, group := range policy.GroupExclude {
+			groups[i] = types.StringValue(group)
+		}
+		groupsSet, diags := types.SetValue(types.StringType, groups)
+		if diags.HasError() {
+			return diags
+		}
+		plan.GroupExclude = groupsSet
+	}
+
+	if len(policy.GroupInclude) > 0 {
+		groups := make([]attr.Value, len(policy.GroupInclude))
+		for i, group := range policy.GroupInclude {
+			groups[i] = types.StringValue(group)
+		}
+		groupsSet, diags := types.SetValue(types.StringType, groups)
+		if diags.HasError() {
+			return diags
+		}
+		plan.GroupInclude = groupsSet
 	}
 
 	// Convert waivers from API to Terraform model (only if present)

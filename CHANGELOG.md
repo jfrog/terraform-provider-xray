@@ -4,6 +4,10 @@ FEATURES:
 
 * data/xray_curation_condition: Add a new data source which looks up a built-in or custom Curation condition by its exact name (case-sensitive) and exposes its numeric `id`, so `xray_curation_policy.condition_id` no longer has to be hard-coded to a raw numeric ID. Issue: JTFPR-341 PR: [#452](https://github.com/jfrog/terraform-provider-xray/pull/452)
 
+IMPROVEMENTS:
+
+* resource/xray_curation_policy: [terraform-provider-xray] xray_curation_policy should support excluding user groups PR: [#459](https://github.com/jfrog/terraform-provider-xray/pull/459)
+
 BUG FIXES:
 
 * resource/xray_security_policy, resource/xray_license_policy: Fix blank `Unable to Create/Update Resource` error on `terraform apply` when a proxy or load balancer in front of Xray (e.g. a Google load balancer) rejects the read-back `GET` request. The provider was reusing the same HTTP request object for the create/update `POST`/`PUT` and the follow-up `GET`, so the `GET` was sent with the write's leftover JSON body and `Content-Type` header, which such proxies treat as malformed and reject with a non-JSON `400` response. The read-back now uses a fresh request without a body. Additionally, when the API (or an intermediate proxy) returns a non-JSON error response, the provider now surfaces the HTTP status code and raw response body instead of a blank error message. Issue: JTFPR-276

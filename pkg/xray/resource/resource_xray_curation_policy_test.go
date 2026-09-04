@@ -499,6 +499,56 @@ func TestAccCurationPolicy_AllRepos_Manual_DecisionOwners(t *testing.T) {
 	})
 }
 
+// Test all_repos scope with user group include/exclude (GH#434)
+func TestAccCurationPolicy_AllRepos_GroupIncludeExclude(t *testing.T) {
+	_, fqrn, name := testutil.MkNames("test-all-repos-groups", "xray_curation_policy")
+	conditionName := fmt.Sprintf("test-maturity-condition-%d", testutil.RandomInt())
+
+	sharedRepoConfig := getSharedRepoConfig()
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		ExternalProviders:        commonExternalProviders,
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckCurationPolicy),
+		Steps: []resource.TestStep{
+			{
+				Config: sharedRepoConfig,
+				Check:  resource.ComposeTestCheckFunc(getSharedRepoVerification()...),
+			},
+			{
+				Config: sharedRepoConfig +
+					createMaturityCondition(conditionName) + fmt.Sprintf(`
+					resource "xray_curation_policy" "%s" {
+						name          = "%s"
+						condition_id  = xray_custom_curation_condition.%s.id
+						scope         = "all_repos"
+						policy_action = "block"
+						group_exclude = ["readers"]
+						group_include = ["readers", "developers"]
+					}
+				`, name, name, conditionName),
+				Check: resource.ComposeTestCheckFunc(
+					append(getSharedRepoVerification(),
+						resource.TestCheckResourceAttr(fqrn, "name", name),
+						resource.TestCheckResourceAttr(fqrn, "scope", "all_repos"),
+						resource.TestCheckResourceAttr(fqrn, "group_exclude.#", "1"),
+						resource.TestCheckTypeSetElemAttr(fqrn, "group_exclude.*", "readers"),
+						resource.TestCheckResourceAttr(fqrn, "group_include.#", "2"),
+						resource.TestCheckTypeSetElemAttr(fqrn, "group_include.*", "readers"),
+						resource.TestCheckTypeSetElemAttr(fqrn, "group_include.*", "developers"),
+					)...,
+				),
+			},
+			{
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
 // Test all_repos scope with repository exclusions
 func TestAccCurationPolicy_AllRepos_WithExclusions(t *testing.T) {
 	_, fqrn, name := testutil.MkNames("test-all-repos-exclude", "xray_curation_policy")
