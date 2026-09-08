@@ -1,4 +1,4 @@
-## 3.1.14 (September 3, 2026). Tested on JFrog Platform 11.6.3 (Artifactory 7.161.20, Xray 3.150.34, Catalog 1.46.1) with Terraform 1.16.1 and OpenTofu 1.12.6
+## 3.1.14 (September 08, 2026). Tested on JFrog Platform 11.6.3 (Artifactory 7.161.24, Xray 3.150.34, Catalog 1.46.1) with Terraform 1.16.1 and OpenTofu 1.12.6
 
 FEATURES:
 
@@ -8,6 +8,7 @@ BUG FIXES:
 
 * resource/xray_security_policy, resource/xray_license_policy: Fix blank `Unable to Create/Update Resource` error on `terraform apply` when a proxy or load balancer in front of Xray (e.g. a Google load balancer) rejects the read-back `GET` request. The provider was reusing the same HTTP request object for the create/update `POST`/`PUT` and the follow-up `GET`, so the `GET` was sent with the write's leftover JSON body and `Content-Type` header, which such proxies treat as malformed and reject with a non-JSON `400` response. The read-back now uses a fresh request without a body. Additionally, when the API (or an intermediate proxy) returns a non-JSON error response, the provider now surfaces the HTTP status code and raw response body instead of a blank error message. Issue: JTFPR-276
 * resource/xray_binary_manager_release_bundles_v2: Fix `Error: Duplicate Set Element` during plan when Release Bundles V2 with the same name exist in different projects. Release Bundle V2 names are unique per project, but the API returns them as `[<project-key>-release-bundles-v2]/<name>` and the provider stripped that prefix, collapsing bundles from different projects into duplicate set elements. Names are now scoped to the resource's `project_key` before being stored in `indexed_release_bundle_v2` and `non_indexed_release_bundle_v2`.
+* resource/xray_repository_config: Fix xray_repository_config -JAS configuration required for non-JAS environments PR: [#453](https://github.com/jfrog/terraform-provider-xray/pull/453)
 
 NOTES:
 
