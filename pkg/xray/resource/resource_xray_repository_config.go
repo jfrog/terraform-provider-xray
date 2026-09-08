@@ -55,47 +55,49 @@ func (m RepoConfigResourceModel) toAPIModel(_ context.Context, xrayVersion, pack
 		var vulnContextualAnalysis *bool
 		var exposures *ExposuresAPIModel
 
-		if m.JASEnabled.ValueBool() {
-			if slices.Contains(vulnContextualAnalysisPackageTypes(xrayVersion), packageType) {
-				vulnContextualAnalysis = configAttrs["vuln_contextual_analysis"].(types.Bool).ValueBoolPointer()
-			}
+		// The Xray REST API requires `vuln_contextual_analysis` and `exposures` in the
+		// payload regardless of the JAS license state (jas_enabled). Omitting them causes
+		// the server to return: "Request payload is invalid as exposure analysis config is missing".
+		// See GH issue: xray_repository_config - JAS configuration required for non-JAS environments.
+		if slices.Contains(vulnContextualAnalysisPackageTypes(xrayVersion), packageType) {
+			vulnContextualAnalysis = configAttrs["vuln_contextual_analysis"].(types.Bool).ValueBoolPointer()
+		}
 
-			if slices.Contains(exposuresPackageTypes(xrayVersion), packageType) {
-				exps := configAttrs["exposures"].(types.Set).Elements()
+		if slices.Contains(exposuresPackageTypes(xrayVersion), packageType) {
+			exps := configAttrs["exposures"].(types.Set).Elements()
 
-				if len(exps) > 0 {
-					expsAttrs := exps[0].(types.Object).Attributes()
-					scannerCategory := expsAttrs["scanners_category"].(types.Set).Elements()
+			if len(exps) > 0 {
+				expsAttrs := exps[0].(types.Object).Attributes()
+				scannerCategory := expsAttrs["scanners_category"].(types.Set).Elements()
 
-					if len(scannerCategory) > 0 {
-						scannerCategoryAttrs := scannerCategory[0].(types.Object).Attributes()
+				if len(scannerCategory) > 0 {
+					scannerCategoryAttrs := scannerCategory[0].(types.Object).Attributes()
 
-						exp := ExposuresAPIModel{}
+					exp := ExposuresAPIModel{}
 
-						switch packageType {
-						case "docker", "oci":
-							exp.ScannersCategory = map[string]bool{
-								"services_scan":     scannerCategoryAttrs["services"].(types.Bool).ValueBool(),
-								"secrets_scan":      scannerCategoryAttrs["secrets"].(types.Bool).ValueBool(),
-								"applications_scan": scannerCategoryAttrs["applications"].(types.Bool).ValueBool(),
-							}
-						case "maven", "nuget", "generic", "gradle", "gems", "go", "alpine", "debian", "rpm":
-							exp.ScannersCategory = map[string]bool{
-								"secrets_scan": scannerCategoryAttrs["secrets"].(types.Bool).ValueBool(),
-							}
-						case "npm", "pypi":
-							exp.ScannersCategory = map[string]bool{
-								"secrets_scan":      scannerCategoryAttrs["secrets"].(types.Bool).ValueBool(),
-								"applications_scan": scannerCategoryAttrs["applications"].(types.Bool).ValueBool(),
-							}
-						case "terraformbackend":
-							exp.ScannersCategory = map[string]bool{
-								"iac_scan": scannerCategoryAttrs["iac"].(types.Bool).ValueBool(),
-							}
+					switch packageType {
+					case "docker", "oci":
+						exp.ScannersCategory = map[string]bool{
+							"services_scan":     scannerCategoryAttrs["services"].(types.Bool).ValueBool(),
+							"secrets_scan":      scannerCategoryAttrs["secrets"].(types.Bool).ValueBool(),
+							"applications_scan": scannerCategoryAttrs["applications"].(types.Bool).ValueBool(),
 						}
-
-						exposures = &exp
+					case "maven", "nuget", "generic", "gradle", "gems", "go", "alpine", "debian", "rpm":
+						exp.ScannersCategory = map[string]bool{
+							"secrets_scan": scannerCategoryAttrs["secrets"].(types.Bool).ValueBool(),
+						}
+					case "npm", "pypi":
+						exp.ScannersCategory = map[string]bool{
+							"secrets_scan":      scannerCategoryAttrs["secrets"].(types.Bool).ValueBool(),
+							"applications_scan": scannerCategoryAttrs["applications"].(types.Bool).ValueBool(),
+						}
+					case "terraformbackend":
+						exp.ScannersCategory = map[string]bool{
+							"iac_scan": scannerCategoryAttrs["iac"].(types.Bool).ValueBool(),
+						}
 					}
+
+					exposures = &exp
 				}
 			}
 		}
@@ -278,69 +280,71 @@ func (m *RepoConfigResourceModel) fromAPIModel(_ context.Context, xrayVersion, p
 		vulnContextualAnalysis := types.BoolNull()
 		exposures := types.SetNull(configExposuresSetResourceModelElementTypes)
 
-		if m.JASEnabled.ValueBool() {
-			if apiModel.RepoConfig.VulnContextualAnalysis != nil && slices.Contains(vulnContextualAnalysisPackageTypes(xrayVersion), packageType) {
-				vulnContextualAnalysis = types.BoolPointerValue(apiModel.RepoConfig.VulnContextualAnalysis)
+		// Populate vuln_contextual_analysis and exposures from the API based only on
+		// the package type, not on jas_enabled. The API returns these regardless of
+		// the JAS license state, so gating the read on jas_enabled left them null and
+		// caused perpetual state drift for non-JAS environments.
+		if apiModel.RepoConfig.VulnContextualAnalysis != nil && slices.Contains(vulnContextualAnalysisPackageTypes(xrayVersion), packageType) {
+			vulnContextualAnalysis = types.BoolPointerValue(apiModel.RepoConfig.VulnContextualAnalysis)
+		}
+
+		if apiModel.RepoConfig.Exposures != nil && slices.Contains(exposuresPackageTypes(xrayVersion), packageType) {
+			scannersCategoryAttrValues := map[string]attr.Value{
+				"services":     types.BoolNull(),
+				"secrets":      types.BoolNull(),
+				"iac":          types.BoolNull(),
+				"applications": types.BoolNull(),
 			}
 
-			if apiModel.RepoConfig.Exposures != nil && slices.Contains(exposuresPackageTypes(xrayVersion), packageType) {
-				scannersCategoryAttrValues := map[string]attr.Value{
-					"services":     types.BoolNull(),
-					"secrets":      types.BoolNull(),
-					"iac":          types.BoolNull(),
-					"applications": types.BoolNull(),
-				}
-
-				switch packageType {
-				case "docker", "oci":
-					scannersCategoryAttrValues["services"] = types.BoolValue(apiModel.RepoConfig.Exposures.ScannersCategory["services_scan"])
-					scannersCategoryAttrValues["secrets"] = types.BoolValue(apiModel.RepoConfig.Exposures.ScannersCategory["secrets_scan"])
-					scannersCategoryAttrValues["applications"] = types.BoolValue(apiModel.RepoConfig.Exposures.ScannersCategory["applications_scan"])
-				case "maven", "nuget", "generic", "gradle", "gems", "go", "alpine", "debian", "rpm":
-					scannersCategoryAttrValues["secrets"] = types.BoolValue(apiModel.RepoConfig.Exposures.ScannersCategory["secrets_scan"])
-				case "npm", "pypi":
-					scannersCategoryAttrValues["secrets"] = types.BoolValue(apiModel.RepoConfig.Exposures.ScannersCategory["secrets_scan"])
-					scannersCategoryAttrValues["applications"] = types.BoolValue(apiModel.RepoConfig.Exposures.ScannersCategory["applications_scan"])
-				case "terraformbackend":
-					scannersCategoryAttrValues["iac"] = types.BoolValue(apiModel.RepoConfig.Exposures.ScannersCategory["iac_scan"])
-				}
-
-				scannersCategory, d := types.ObjectValue(
-					configExposuresScannersCategoryResourceModelAttributeTypes,
-					scannersCategoryAttrValues,
-				)
-				if d != nil {
-					diags.Append(d...)
-				}
-
-				scannersCategorySet, d := types.SetValue(
-					configExposuresScannersCategorySetResourceModelElementTypes,
-					[]attr.Value{scannersCategory},
-				)
-				if d != nil {
-					diags.Append(d...)
-				}
-
-				exposure, d := types.ObjectValue(
-					configExposuresResourceModelAttributeTypes,
-					map[string]attr.Value{
-						"scanners_category": scannersCategorySet,
-					},
-				)
-				if d != nil {
-					diags.Append(d...)
-				}
-
-				exposuresSet, d := types.SetValue(
-					configExposuresSetResourceModelElementTypes,
-					[]attr.Value{exposure},
-				)
-				if d != nil {
-					diags.Append(d...)
-				}
-
-				exposures = exposuresSet
+			switch packageType {
+			case "docker", "oci":
+				scannersCategoryAttrValues["services"] = types.BoolValue(apiModel.RepoConfig.Exposures.ScannersCategory["services_scan"])
+				scannersCategoryAttrValues["secrets"] = types.BoolValue(apiModel.RepoConfig.Exposures.ScannersCategory["secrets_scan"])
+				scannersCategoryAttrValues["applications"] = types.BoolValue(apiModel.RepoConfig.Exposures.ScannersCategory["applications_scan"])
+			case "maven", "nuget", "generic", "gradle", "gems", "go", "alpine", "debian", "rpm":
+				scannersCategoryAttrValues["secrets"] = types.BoolValue(apiModel.RepoConfig.Exposures.ScannersCategory["secrets_scan"])
+			case "npm", "pypi":
+				scannersCategoryAttrValues["secrets"] = types.BoolValue(apiModel.RepoConfig.Exposures.ScannersCategory["secrets_scan"])
+				scannersCategoryAttrValues["applications"] = types.BoolValue(apiModel.RepoConfig.Exposures.ScannersCategory["applications_scan"])
+			case "terraformbackend":
+				scannersCategoryAttrValues["iac"] = types.BoolValue(apiModel.RepoConfig.Exposures.ScannersCategory["iac_scan"])
 			}
+
+			scannersCategory, d := types.ObjectValue(
+				configExposuresScannersCategoryResourceModelAttributeTypes,
+				scannersCategoryAttrValues,
+			)
+			if d != nil {
+				diags.Append(d...)
+			}
+
+			scannersCategorySet, d := types.SetValue(
+				configExposuresScannersCategorySetResourceModelElementTypes,
+				[]attr.Value{scannersCategory},
+			)
+			if d != nil {
+				diags.Append(d...)
+			}
+
+			exposure, d := types.ObjectValue(
+				configExposuresResourceModelAttributeTypes,
+				map[string]attr.Value{
+					"scanners_category": scannersCategorySet,
+				},
+			)
+			if d != nil {
+				diags.Append(d...)
+			}
+
+			exposuresSet, d := types.SetValue(
+				configExposuresSetResourceModelElementTypes,
+				[]attr.Value{exposure},
+			)
+			if d != nil {
+				diags.Append(d...)
+			}
+
+			exposures = exposuresSet
 		}
 
 		config, d := types.ObjectValue(
@@ -939,11 +943,6 @@ func (r RepoConfigResource) ValidateConfig(ctx context.Context, req resource.Val
 		return
 	}
 
-	// If jas_enabled is not configured, return without warning.
-	if data.JASEnabled.IsNull() || data.JASEnabled.IsUnknown() {
-		return
-	}
-
 	// If config is not configured, return without warning.
 	if data.Config.IsNull() || data.Config.IsUnknown() {
 		return
@@ -953,25 +952,10 @@ func (r RepoConfigResource) ValidateConfig(ctx context.Context, req resource.Val
 	config := configs[0].(types.Object)
 	attrs := config.Attributes()
 
-	if !data.JASEnabled.ValueBool() {
-		if v, ok := attrs["vuln_contextual_analysis"]; ok && !v.IsNull() {
-			resp.Diagnostics.AddAttributeError(
-				path.Root("config").AtSetValue(data.Config).AtName("vuln_contextual_analysis"),
-				"Invalid Attribute Configuration",
-				"config.vuln_contextual_analysis can not be set when jas_enabled is set to 'false'",
-			)
-			return
-		}
-
-		if v, ok := attrs["exposures"]; ok && !v.IsNull() && len(v.(types.Set).Elements()) > 0 {
-			resp.Diagnostics.AddAttributeError(
-				path.Root("config").AtSetValue(data.Config).AtName("exposures"),
-				"Invalid Attribute Configuration",
-				"config.exposures can not be set when jas_enabled is set to 'false'",
-			)
-			return
-		}
-	}
+	// vuln_contextual_analysis and exposures are no longer gated on jas_enabled.
+	// The Xray API requires these fields regardless of the JAS license state, so
+	// the provider must not reject them when jas_enabled = false. Whether a given
+	// field is supported is decided by the package type in toAPIModel/fromAPIModel.
 
 	if data.PathsConfig.IsNull() {
 		if v, ok := attrs["retention_in_days"]; ok && v.IsNull() {

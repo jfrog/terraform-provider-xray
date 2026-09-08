@@ -33,6 +33,14 @@ builds:
     - goos: windows
       goarch: arm
   binary: '{{ .ProjectName }}_v{{ .Version }}'
+snapshot:
+  # `make build` builds an unreleased version, so there is no git tag to derive
+  # the version from. Take it from NEXT_VERSION (set by the GNUmakefile) so the
+  # binary is named terraform-provider-xray_v<NEXT_VERSION> and `make install`
+  # can find it. Relying on GORELEASER_CURRENT_TAG here does not work: goreleaser
+  # validates that the tag exists and silently falls back to v0.0.0 when it does
+  # not, producing a 0.0.0-SNAPSHOT-none binary.
+  version_template: '{{ envOrDefault "NEXT_VERSION" "0.0.0" }}'
 archives:
 - format: zip
   name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
