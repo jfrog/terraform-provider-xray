@@ -33,6 +33,12 @@ builds:
     - goos: windows
       goarch: arm
   binary: '{{ .ProjectName }}_v{{ .Version }}'
+snapshot:
+  # `make install` moves dist/<target>/terraform-provider-xray_v${NEXT_VERSION} into the
+  # local plugin mirror, so a snapshot build has to be named after NEXT_VERSION. The
+  # default template derives the version from the git tag, which is the not-yet-created
+  # release tag and resolves to 0.0.0-SNAPSHOT-none.
+  version_template: '{{ envOrDefault "NEXT_VERSION" "0.0.0" }}'
 archives:
 - format: zip
   name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
