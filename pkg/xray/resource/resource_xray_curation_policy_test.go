@@ -499,6 +499,121 @@ func TestAccCurationPolicy_AllRepos_Manual_DecisionOwners(t *testing.T) {
 	})
 }
 
+// Group scope is resolved per requesting user, so Xray only honors it for packages
+// served from the cache: a policy with group_exclude or group_include is rejected
+// unless block_from_cache is true and the platform-level "Enable Curation for Cached
+// Packages" feature is on. That feature cannot be toggled via a public API, so the
+// group scope tests only run when XRAY_CURATION_BLOCK_FROM_CACHE_ENABLED is set.
+func skipUnlessBlockFromCacheEnabled(t *testing.T) {
+	if os.Getenv("XRAY_CURATION_BLOCK_FROM_CACHE_ENABLED") == "" {
+		t.Skipf("Env var XRAY_CURATION_BLOCK_FROM_CACHE_ENABLED is not set")
+	}
+}
+
+// Returns a policy configuration for the group scope tests, where groupAttr is
+// the group_exclude or group_include attribute under test.
+func createGroupScopePolicy(name string, conditionName string, groupAttr string) string {
+	return createMaturityCondition(conditionName) + fmt.Sprintf(`
+		resource "xray_curation_policy" "%s" {
+			name          = "%s"
+			condition_id  = xray_custom_curation_condition.%s.id
+			scope         = "all_repos"
+			policy_action = "block"
+			waiver_request_config = "forbidden"
+			block_from_cache = true
+			%s
+		}
+	`, name, name, conditionName, groupAttr)
+}
+
+// Test all_repos scope with user groups excluded from the policy scope (GH#434)
+func TestAccCurationPolicy_AllRepos_GroupExclude(t *testing.T) {
+	skipUnlessBlockFromCacheEnabled(t)
+
+	_, fqrn, name := testutil.MkNames("test-all-repos-group-exclude", "xray_curation_policy")
+	conditionName := fmt.Sprintf("test-maturity-condition-%d", testutil.RandomInt())
+
+	sharedRepoConfig := getSharedRepoConfig()
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		ExternalProviders:        commonExternalProviders,
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckCurationPolicy),
+		Steps: []resource.TestStep{
+			{
+				// Step 1: Create shared repositories and verify they exist
+				Config: sharedRepoConfig,
+				Check:  resource.ComposeTestCheckFunc(getSharedRepoVerification()...),
+			},
+			{
+				// Step 2: Create the policy with a user group excluded from its scope
+				Config: sharedRepoConfig +
+					createGroupScopePolicy(name, conditionName, `group_exclude = ["readers"]`),
+				Check: resource.ComposeTestCheckFunc(
+					append(getSharedRepoVerification(),
+						resource.TestCheckResourceAttr(fqrn, "name", name),
+						resource.TestCheckResourceAttr(fqrn, "scope", "all_repos"),
+						resource.TestCheckResourceAttr(fqrn, "group_exclude.#", "1"),
+						resource.TestCheckTypeSetElemAttr(fqrn, "group_exclude.*", "readers"),
+						resource.TestCheckNoResourceAttr(fqrn, "group_include.#"),
+					)...,
+				),
+			},
+			{
+				// Step 3: Verify import round-trips group_exclude without drift
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+// Test all_repos scope with user groups included in the policy scope (GH#434)
+func TestAccCurationPolicy_AllRepos_GroupInclude(t *testing.T) {
+	skipUnlessBlockFromCacheEnabled(t)
+
+	_, fqrn, name := testutil.MkNames("test-all-repos-group-include", "xray_curation_policy")
+	conditionName := fmt.Sprintf("test-maturity-condition-%d", testutil.RandomInt())
+
+	sharedRepoConfig := getSharedRepoConfig()
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		ExternalProviders:        commonExternalProviders,
+		CheckDestroy:             acctest.VerifyDeleted(fqrn, "", acctest.CheckCurationPolicy),
+		Steps: []resource.TestStep{
+			{
+				// Step 1: Create shared repositories and verify they exist
+				Config: sharedRepoConfig,
+				Check:  resource.ComposeTestCheckFunc(getSharedRepoVerification()...),
+			},
+			{
+				// Step 2: Create the policy with a user group included in its scope
+				Config: sharedRepoConfig +
+					createGroupScopePolicy(name, conditionName, `group_include = ["readers"]`),
+				Check: resource.ComposeTestCheckFunc(
+					append(getSharedRepoVerification(),
+						resource.TestCheckResourceAttr(fqrn, "name", name),
+						resource.TestCheckResourceAttr(fqrn, "scope", "all_repos"),
+						resource.TestCheckResourceAttr(fqrn, "group_include.#", "1"),
+						resource.TestCheckTypeSetElemAttr(fqrn, "group_include.*", "readers"),
+						resource.TestCheckNoResourceAttr(fqrn, "group_exclude.#"),
+					)...,
+				),
+			},
+			{
+				// Step 3: Verify import round-trips group_include without drift
+				ResourceName:      fqrn,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
 // Test all_repos scope with repository exclusions
 func TestAccCurationPolicy_AllRepos_WithExclusions(t *testing.T) {
 	_, fqrn, name := testutil.MkNames("test-all-repos-exclude", "xray_curation_policy")

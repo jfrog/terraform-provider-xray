@@ -15,8 +15,14 @@ endif
 PKG_NAME=pkg/xray
 # if this path ever changes, you need to also update the 'ldflags' value in .goreleaser.yml
 PKG_VERSION_PATH=github.com/jfrog/terraform-provider-${PRODUCT}/${PKG_NAME}
-VERSION := $(shell git tag --sort=-creatordate | head -1 | sed  -n 's/v\([0-9]*\).\([0-9]*\).\([0-9]*\)/\1.\2.\3/p')
-NEXT_VERSION := $(shell echo ${VERSION}| awk -F '.' '{print $$1 "." $$2 "." $$3 +1 }' )
+VERSION := $(shell git tag --sort=-creatordate | head -1 | sed  -n 's/^v\([0-9][0-9]*\)\.\([0-9][0-9]*\)\.\([0-9][0-9]*\)$$/\1.\2.\3/p')
+# awk would print "..1" if VERSION is empty (no vX.Y.Z tag). Leave NEXT_VERSION
+# empty in that case so goreleaser's envOrDefault falls back to 0.0.0.
+ifeq ($(strip $(VERSION)),)
+NEXT_VERSION :=
+else
+NEXT_VERSION := $(shell echo $(VERSION) | awk -F. '{print $$1 "." $$2 "." $$3 + 1}')
+endif
 
 TERRAFORM_CLI?=terraform
 
@@ -48,7 +54,7 @@ update_pkg_cache:
 	GOPROXY=https://proxy.golang.org GO111MODULE=on go get github.com/jfrog/terraform-provider-${PRODUCT}@v${VERSION}
 
 build: fmt
-	GORELEASER_CURRENT_TAG=${NEXT_VERSION} goreleaser build --single-target --clean --snapshot
+	$(if $(NEXT_VERSION),NEXT_VERSION=$(NEXT_VERSION) )goreleaser build --single-target --clean --snapshot
 
 test:
 	@echo "==> Starting unit tests"

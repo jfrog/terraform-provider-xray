@@ -1,8 +1,12 @@
-## 3.1.14 (September 3, 2026). Tested on JFrog Platform 11.6.3 (Artifactory 7.161.20, Xray 3.150.34, Catalog 1.46.1) with Terraform 1.16.1 and OpenTofu 1.12.6
+## 3.1.14 (September 8, 2026). Tested on JFrog Platform 11.6.5 (Artifactory 7.161.26, Xray 3.150.37, Catalog 1.46.1). Tested on JFrog Platform 11.6.5 (Artifactory 7.161.26, Xray 3.150.37, Catalog 1.46.1) with Terraform 1.16.2 and OpenTofu 1.12.6
 
 FEATURES:
 
 * data/xray_curation_condition: Add a new data source which looks up a built-in or custom Curation condition by its exact name (case-sensitive) and exposes its numeric `id`, so `xray_curation_policy.condition_id` no longer has to be hard-coded to a raw numeric ID. Issue: JTFPR-341 PR: [#452](https://github.com/jfrog/terraform-provider-xray/pull/452)
+
+IMPROVEMENTS:
+
+* resource/xray_curation_policy: Add `group_exclude` and `group_include` attributes so JFrog Access user groups can be excluded from, or included in, a Curation policy's scope. Group scope is resolved per requesting user and is only enforced on cached packages, so it requires `block_from_cache` to be set to `true`. Issue: [#434](https://github.com/jfrog/terraform-provider-xray/issues/434) PR: [#459](https://github.com/jfrog/terraform-provider-xray/pull/459)
 
 BUG FIXES:
 
