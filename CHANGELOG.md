@@ -6,7 +6,7 @@ FEATURES:
 
 IMPROVEMENTS:
 
-* resource/xray_curation_policy: Add `group_exclude` and `group_include` attributes so JFrog Access user groups can be excluded from, or included in, a Curation policy's scope. Issue: [#434](https://github.com/jfrog/terraform-provider-xray/issues/434) PR: [#459](https://github.com/jfrog/terraform-provider-xray/pull/459)
+* resource/xray_curation_policy: Add `group_exclude` and `group_include` attributes so JFrog Access user groups can be excluded from, or included in, a Curation policy's scope. Group scope is resolved per requesting user and is only enforced on cached packages, so it requires `block_from_cache` to be set to `true`. Issue: [#434](https://github.com/jfrog/terraform-provider-xray/issues/434) PR: [#459](https://github.com/jfrog/terraform-provider-xray/pull/459)
 
 BUG FIXES:
 

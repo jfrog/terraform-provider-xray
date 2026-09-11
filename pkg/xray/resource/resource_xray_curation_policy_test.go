@@ -499,6 +499,17 @@ func TestAccCurationPolicy_AllRepos_Manual_DecisionOwners(t *testing.T) {
 	})
 }
 
+// Group scope is resolved per requesting user, so Xray only honors it for packages
+// served from the cache: a policy with group_exclude or group_include is rejected
+// unless block_from_cache is true and the platform-level "Enable Curation for Cached
+// Packages" feature is on. That feature cannot be toggled via a public API, so the
+// group scope tests only run when XRAY_CURATION_BLOCK_FROM_CACHE_ENABLED is set.
+func skipUnlessBlockFromCacheEnabled(t *testing.T) {
+	if os.Getenv("XRAY_CURATION_BLOCK_FROM_CACHE_ENABLED") == "" {
+		t.Skipf("Env var XRAY_CURATION_BLOCK_FROM_CACHE_ENABLED is not set")
+	}
+}
+
 // Returns a policy configuration for the group scope tests, where groupAttr is
 // the group_exclude or group_include attribute under test.
 func createGroupScopePolicy(name string, conditionName string, groupAttr string) string {
@@ -509,6 +520,7 @@ func createGroupScopePolicy(name string, conditionName string, groupAttr string)
 			scope         = "all_repos"
 			policy_action = "block"
 			waiver_request_config = "forbidden"
+			block_from_cache = true
 			%s
 		}
 	`, name, name, conditionName, groupAttr)
@@ -516,6 +528,8 @@ func createGroupScopePolicy(name string, conditionName string, groupAttr string)
 
 // Test all_repos scope with user groups excluded from the policy scope (GH#434)
 func TestAccCurationPolicy_AllRepos_GroupExclude(t *testing.T) {
+	skipUnlessBlockFromCacheEnabled(t)
+
 	_, fqrn, name := testutil.MkNames("test-all-repos-group-exclude", "xray_curation_policy")
 	conditionName := fmt.Sprintf("test-maturity-condition-%d", testutil.RandomInt())
 
@@ -558,6 +572,8 @@ func TestAccCurationPolicy_AllRepos_GroupExclude(t *testing.T) {
 
 // Test all_repos scope with user groups included in the policy scope (GH#434)
 func TestAccCurationPolicy_AllRepos_GroupInclude(t *testing.T) {
+	skipUnlessBlockFromCacheEnabled(t)
+
 	_, fqrn, name := testutil.MkNames("test-all-repos-group-include", "xray_curation_policy")
 	conditionName := fmt.Sprintf("test-maturity-condition-%d", testutil.RandomInt())
 

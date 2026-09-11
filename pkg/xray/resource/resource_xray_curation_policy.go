@@ -494,12 +494,12 @@ func (r *CurationPolicyResource) Schema(ctx context.Context, req resource.Schema
 			"group_exclude": schema.SetAttribute{
 				Optional:    true,
 				ElementType: types.StringType,
-				Description: "List of user groups to exclude from the policy scope.",
+				Description: "List of user groups to exclude from the policy scope. Requires block_from_cache to be set to true.",
 			},
 			"group_include": schema.SetAttribute{
 				Optional:    true,
 				ElementType: types.StringType,
-				Description: "List of user groups to include in the policy scope.",
+				Description: "List of user groups to include in the policy scope. Requires block_from_cache to be set to true.",
 			},
 			"block_from_cache": schema.BoolAttribute{
 				Optional:    true,
