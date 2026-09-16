@@ -1,3 +1,11 @@
+## 3.1.15 (Unreleased)
+
+FEATURES:
+
+* resource/xray_jira_integration: New resource to manage Xray Jira integration connections. PR: [#392](https://github.com/jfrog/terraform-provider-xray/pull/392)
+
+* resource/xray_watch: Add `create_ticket_enabled`, `ticket_profile`, and `ticket_generation` for Jira ticketing. PR: [#392](https://github.com/jfrog/terraform-provider-xray/pull/392)
+
 ## 3.1.14 (September 08, 2026). Tested on JFrog Platform 11.6.3 (Artifactory 7.161.24, Xray 3.150.34, Catalog 1.46.1) with Terraform 1.16.1 and OpenTofu 1.12.6
 
 FEATURES:

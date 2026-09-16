@@ -585,6 +585,42 @@ func TestAccWatch_repositoryMissingRepoType(t *testing.T) {
 	})
 }
 
+func TestAccWatch_ticketGenerationRequiresProfile(t *testing.T) {
+	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
+	testData := sdk.MergeMaps(testDataWatch)
+
+	testData["resource_name"] = resourceName
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", testutil.RandomInt())
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      util.ExecuteTemplate(fqrn, ticketGenerationMissingProfileWatchTemplate, testData),
+				ExpectError: regexp.MustCompile("`ticket_generation` requires a non-empty `ticket_profile`"),
+			},
+		},
+	})
+}
+
+func TestAccWatch_ticketGenerationRequiresCreateTicketEnabled(t *testing.T) {
+	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
+	testData := sdk.MergeMaps(testDataWatch)
+
+	testData["resource_name"] = resourceName
+	testData["watch_name"] = fmt.Sprintf("xray-watch-%d", testutil.RandomInt())
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      util.ExecuteTemplate(fqrn, ticketGenerationDisabledWatchTemplate, testData),
+				ExpectError: regexp.MustCompile("`ticket_generation` requires `create_ticket_enabled` to be `true`"),
+			},
+		},
+	})
+}
+
 func TestAccWatch_multipleRepositories(t *testing.T) {
 	_, fqrn, resourceName := testutil.MkNames("watch-", "xray_watch")
 	testData := sdk.MergeMaps(testDataWatch)
@@ -2418,6 +2454,57 @@ resource "xray_watch" "{{ .resource_name }}" {
   }
 
   watch_recipients = ["{{ .watch_recipient_0 }}", "{{ .watch_recipient_1 }}"]
+}`
+
+const ticketGenerationMissingProfileWatchTemplate = `resource "xray_watch" "{{ .resource_name }}" {
+  name        = "{{ .watch_name }}"
+  description = "{{ .description }}"
+  active      = {{ .active }}
+
+  create_ticket_enabled = true
+
+  watch_resource {
+    type = "all-repos"
+    filter {
+      type  = "regex"
+      value = ".*"
+    }
+  }
+
+  assigned_policy {
+    name = "dummy-policy"
+    type = "security"
+  }
+
+  ticket_generation {
+    create_tickets_for_ignored_violation = true
+  }
+}`
+
+const ticketGenerationDisabledWatchTemplate = `resource "xray_watch" "{{ .resource_name }}" {
+  name        = "{{ .watch_name }}"
+  description = "{{ .description }}"
+  active      = {{ .active }}
+
+  create_ticket_enabled = false
+  ticket_profile        = "my-jira-profile"
+
+  watch_resource {
+    type = "all-repos"
+    filter {
+      type  = "regex"
+      value = ".*"
+    }
+  }
+
+  assigned_policy {
+    name = "dummy-policy"
+    type = "security"
+  }
+
+  ticket_generation {
+    create_tickets_for_ignored_violation = true
+  }
 }`
 
 func verifyXrayWatch(fqrn string, testData map[string]string) resource.TestCheckFunc {
