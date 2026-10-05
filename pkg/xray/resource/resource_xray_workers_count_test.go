@@ -198,6 +198,8 @@ func TestAccWorkersCount_full(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 				ResourceName:      fqrn,
+				// Import shows every block Xray returns; the config omits these.
+				ImportStateVerifyIgnore: []string{"sbom_cdx_api", "sbom_malicious"},
 			},
 		},
 	})

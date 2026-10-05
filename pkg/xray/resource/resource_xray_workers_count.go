@@ -190,13 +190,12 @@ func newModelToResourceSet(apiModel WorkersCountNewContentAPIModel) (types.Set, 
 	)
 }
 
-// toState refreshes the blocks already in state. On import (no blocks in state) it populates every known block.
-func (r *WorkersCountResourceModelV1) toState(body map[string]json.RawMessage) diag.Diagnostics {
-	diags := diag.Diagnostics{}
+// importPrivateKey marks state written by ImportState, so the next Read populates every block.
+const importPrivateKey = "importing"
 
-	importing := lo.NoneBy(workersCountBlocks, func(b workersCountBlock) bool {
-		return isBlockConfigured(*b.field(r))
-	})
+// toState refreshes the blocks already in state. On import it populates every known block.
+func (r *WorkersCountResourceModelV1) toState(body map[string]json.RawMessage, importing bool) diag.Diagnostics {
+	diags := diag.Diagnostics{}
 
 	for _, b := range workersCountBlocks {
 		field := b.field(r)
@@ -467,26 +466,8 @@ func (r *WorkersCountResource) UpgradeState(ctx context.Context) map[int64]resou
 					return
 				}
 
-				defaultExistingContent, d := newExistingModelToResourceSet(WorkersCountNewExistingContentAPIModel{
-					WorkersCountNewContentAPIModel: WorkersCountNewContentAPIModel{
-						New: 0,
-					},
-					Existing: 0,
-				})
-				resp.Diagnostics.Append(d...)
-				if resp.Diagnostics.HasError() {
-					return
-				}
-
-				defaultNewContent, d := newModelToResourceSet(
-					WorkersCountNewContentAPIModel{
-						New: 0,
-					},
-				)
-				resp.Diagnostics.Append(d...)
-				if resp.Diagnostics.HasError() {
-					return
-				}
+				newExistingNull := types.SetNull(types.ObjectType{AttrTypes: newExistingResourceModelAttributeTypes})
+				newNull := types.SetNull(types.ObjectType{AttrTypes: newResourceModelAttributeTypes})
 
 				upgradedStateData := WorkersCountResourceModelV1{
 					ID:                 priorStateData.ID,
@@ -494,20 +475,20 @@ func (r *WorkersCountResource) UpgradeState(ctx context.Context) map[int64]resou
 					Persist:            priorStateData.Persist,
 					Analysis:           priorStateData.Analysis,
 					PolicyEnforcer:     priorStateData.Alert,
-					SBOM:               defaultExistingContent,
-					UserCatalog:        defaultExistingContent,
-					SBOMImpactAnalysis: defaultExistingContent,
-					MigrationSBOM:      defaultExistingContent,
+					SBOM:               newExistingNull,
+					UserCatalog:        newExistingNull,
+					SBOMImpactAnalysis: newExistingNull,
+					MigrationSBOM:      newExistingNull,
 					ImpactAnalysis:     priorStateData.ImpactAnalysis,
 					Notification:       priorStateData.Notification,
-					Panoramic:          defaultNewContent,
-					SBOMEnricher:       defaultExistingContent,
-					SBOMDependencies:   defaultExistingContent,
-					SBOMDeleter:        defaultExistingContent,
-					PostScan:           types.SetNull(types.ObjectType{AttrTypes: newExistingResourceModelAttributeTypes}),
-					SBOMCleanup:        types.SetNull(types.ObjectType{AttrTypes: newExistingResourceModelAttributeTypes}),
-					SBOMCdxAPI:         types.SetNull(types.ObjectType{AttrTypes: newExistingResourceModelAttributeTypes}),
-					SBOMMalicious:      types.SetNull(types.ObjectType{AttrTypes: newExistingResourceModelAttributeTypes}),
+					Panoramic:          newNull,
+					SBOMEnricher:       newExistingNull,
+					SBOMDependencies:   newExistingNull,
+					SBOMDeleter:        newExistingNull,
+					PostScan:           newExistingNull,
+					SBOMCleanup:        newExistingNull,
+					SBOMCdxAPI:         newExistingNull,
+					SBOMMalicious:      newExistingNull,
 				}
 
 				resp.Diagnostics.Append(resp.State.Set(ctx, upgradedStateData)...)
@@ -622,15 +603,24 @@ func (r *WorkersCountResource) Read(ctx context.Context, req resource.ReadReques
 		return
 	}
 
+	importing, d := req.Private.GetKey(ctx, importPrivateKey)
+	resp.Diagnostics.Append(d...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	// Convert from the API data model to the Terraform data model
 	// and refresh any attribute values.
-	resp.Diagnostics.Append(state.toState(workersCount)...)
+	resp.Diagnostics.Append(state.toState(workersCount, importing != nil)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
+	if importing != nil {
+		resp.Diagnostics.Append(resp.Private.SetKey(ctx, importPrivateKey, nil)...)
+	}
 }
 
 func (r *WorkersCountResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -672,4 +662,5 @@ func (r *WorkersCountResource) Delete(ctx context.Context, req resource.DeleteRe
 // ImportState imports the resource into the Terraform state.
 func (r *WorkersCountResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	resp.Diagnostics.Append(resp.Private.SetKey(ctx, importPrivateKey, []byte("true"))...)
 }

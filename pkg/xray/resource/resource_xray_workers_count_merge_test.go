@@ -3,6 +3,9 @@ package xray
 import (
 	"context"
 	"encoding/json"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -110,7 +113,7 @@ func TestWorkersCountToState(t *testing.T) {
 		state := nullWorkersCountModel()
 		state.Index = mustNewExistingSet(t, 1, 1)
 
-		if ds := state.toState(body); ds.HasError() {
+		if ds := state.toState(body, false); ds.HasError() {
 			t.Fatalf("toState: %v", ds)
 		}
 		if !state.Index.Equal(mustNewExistingSet(t, 16, 4)) {
@@ -121,10 +124,23 @@ func TestWorkersCountToState(t *testing.T) {
 		}
 	})
 
+	t.Run("refresh with no blocks in state adds none", func(t *testing.T) {
+		state := nullWorkersCountModel()
+
+		if ds := state.toState(body, false); ds.HasError() {
+			t.Fatalf("toState: %v", ds)
+		}
+		for _, b := range workersCountBlocks {
+			if !b.field(&state).IsNull() {
+				t.Errorf("%s = %v, want null", b.apiKey, *b.field(&state))
+			}
+		}
+	})
+
 	t.Run("import populates all returned blocks", func(t *testing.T) {
 		state := nullWorkersCountModel()
 
-		if ds := state.toState(body); ds.HasError() {
+		if ds := state.toState(body, true); ds.HasError() {
 			t.Fatalf("toState: %v", ds)
 		}
 		if !state.PostScan.Equal(mustNewExistingSet(t, 8, 4)) {
@@ -156,4 +172,57 @@ func TestWorkersCountSchemaBlocksOptional(t *testing.T) {
 	if len(workersCountSchemaV1.Blocks) != len(workersCountBlocks) {
 		t.Errorf("schema has %d blocks, workersCountBlocks has %d", len(workersCountSchemaV1.Blocks), len(workersCountBlocks))
 	}
+}
+
+func TestWorkersCountUpgradeStateV0LeavesNewBlocksNull(t *testing.T) {
+	ctx := context.Background()
+
+	prior := WorkersCountResourceModelV0{
+		ID:             types.StringValue("abc"),
+		Index:          mustNewExistingSet(t, 8, 4),
+		Persist:        mustNewExistingSet(t, 8, 4),
+		Alert:          mustNewExistingSet(t, 8, 8),
+		Analysis:       mustNewExistingSet(t, 8, 4),
+		ImpactAnalysis: mustNewSet(t, 8),
+		Notification:   mustNewSet(t, 8),
+	}
+	priorState := tfsdk.State{Schema: workersCountSchemaV0, Raw: tftypes.NewValue(workersCountSchemaV0.Type().TerraformType(ctx), nil)}
+	if ds := priorState.Set(ctx, prior); ds.HasError() {
+		t.Fatalf("prior state: %v", ds)
+	}
+
+	req := resource.UpgradeStateRequest{State: &priorState}
+	resp := resource.UpgradeStateResponse{State: tfsdk.State{Schema: workersCountSchemaV1, Raw: tftypes.NewValue(workersCountSchemaV1.Type().TerraformType(ctx), nil)}}
+	(&WorkersCountResource{}).UpgradeState(ctx)[0].StateUpgrader(ctx, req, &resp)
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("upgrade: %v", resp.Diagnostics)
+	}
+
+	var got WorkersCountResourceModelV1
+	if ds := resp.State.Get(ctx, &got); ds.HasError() {
+		t.Fatalf("upgraded state: %v", ds)
+	}
+	carried := map[string]types.Set{
+		"index": prior.Index, "persist": prior.Persist, "policy_enforcer": prior.Alert,
+		"analysis": prior.Analysis, "impact_analysis": prior.ImpactAnalysis, "notification": prior.Notification,
+	}
+	for _, b := range workersCountBlocks {
+		f := *b.field(&got)
+		if want, ok := carried[b.apiKey]; ok {
+			if !f.Equal(want) {
+				t.Errorf("%s = %v, want carried over %v", b.apiKey, f, want)
+			}
+		} else if !f.IsNull() {
+			t.Errorf("%s = %v, want null", b.apiKey, f)
+		}
+	}
+}
+
+func mustNewSet(t *testing.T, n int64) types.Set {
+	t.Helper()
+	set, ds := newModelToResourceSet(WorkersCountNewContentAPIModel{New: n})
+	if ds.HasError() {
+		t.Fatalf("newModelToResourceSet: %v", ds)
+	}
+	return set
 }
