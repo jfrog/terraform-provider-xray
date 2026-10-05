@@ -10,6 +10,8 @@ Provides an Xray Workers Count resource.
 
 ~> Self-Hosted only.
 
+~> Worker types without a block are left unchanged on Xray. The provider reads the current configuration and only overwrites the configured types.
+
 [Official documentation](https://www.jfrog.com/confluence/display/JFROG/Configuring+Xray#ConfiguringXray-AdvancedSettings).
 
 [API documentation](https://www.jfrog.com/confluence/display/JFROG/Xray+REST+API#XrayRESTAPI-ConfiguringtheWorkersCount).
@@ -87,11 +89,15 @@ resource "xray_workers_count" "workers-count" {
 - `panoramic` (Block Set) The number of workers managing panoramic. (see [below for nested schema](#nestedblock--panoramic))
 - `persist` (Block Set) The number of workers managing persistent storage needed to build the artifact relationship graph. (see [below for nested schema](#nestedblock--persist))
 - `policy_enforcer` (Block Set) The number of workers managing policy enforcer. (see [below for nested schema](#nestedblock--policy_enforcer))
+- `post_scan` (Block Set) The number of workers managing post scan. (see [below for nested schema](#nestedblock--post_scan))
 - `sbom` (Block Set) The number of workers managing SBOM. (see [below for nested schema](#nestedblock--sbom))
+- `sbom_cdx_api` (Block Set) The number of workers managing SBOM CycloneDX API. (see [below for nested schema](#nestedblock--sbom_cdx_api))
+- `sbom_cleanup` (Block Set) The number of workers managing SBOM cleanup. (see [below for nested schema](#nestedblock--sbom_cleanup))
 - `sbom_deleter` (Block Set) The number of workers managing SBOM deletion. (see [below for nested schema](#nestedblock--sbom_deleter))
 - `sbom_dependencies` (Block Set) The number of workers managing SBOM dependencies. (see [below for nested schema](#nestedblock--sbom_dependencies))
 - `sbom_enricher` (Block Set) The number of workers managing SBOM enrichment. (see [below for nested schema](#nestedblock--sbom_enricher))
 - `sbom_impact_analysis` (Block Set) The number of workers managing SBOM impact analysis. (see [below for nested schema](#nestedblock--sbom_impact_analysis))
+- `sbom_malicious` (Block Set) The number of workers managing SBOM malicious package detection. (see [below for nested schema](#nestedblock--sbom_malicious))
 - `user_catalog` (Block Set) The number of workers managing user catalog. (see [below for nested schema](#nestedblock--user_catalog))
 
 ### Read-Only
@@ -167,8 +173,35 @@ Required:
 - `new_content` (Number) Number of workers for new content
 
 
+<a id="nestedblock--post_scan"></a>
+### Nested Schema for `post_scan`
+
+Required:
+
+- `existing_content` (Number) Number of workers for existing content
+- `new_content` (Number) Number of workers for new content
+
+
 <a id="nestedblock--sbom"></a>
 ### Nested Schema for `sbom`
+
+Required:
+
+- `existing_content` (Number) Number of workers for existing content
+- `new_content` (Number) Number of workers for new content
+
+
+<a id="nestedblock--sbom_cdx_api"></a>
+### Nested Schema for `sbom_cdx_api`
+
+Required:
+
+- `existing_content` (Number) Number of workers for existing content
+- `new_content` (Number) Number of workers for new content
+
+
+<a id="nestedblock--sbom_cleanup"></a>
+### Nested Schema for `sbom_cleanup`
 
 Required:
 
@@ -205,6 +238,15 @@ Required:
 
 <a id="nestedblock--sbom_impact_analysis"></a>
 ### Nested Schema for `sbom_impact_analysis`
+
+Required:
+
+- `existing_content` (Number) Number of workers for existing content
+- `new_content` (Number) Number of workers for new content
+
+
+<a id="nestedblock--sbom_malicious"></a>
+### Nested Schema for `sbom_malicious`
 
 Required:
 
