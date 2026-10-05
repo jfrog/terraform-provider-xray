@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -108,6 +109,33 @@ func TestWorkersCount_mockImportThenConverge(t *testing.T) {
 			// Drops the imported blocks; with the flag cleared, the post-apply refresh keeps them out.
 			{Config: workersCountNoBlocks},
 			{Config: workersCountNoBlocks, PlanOnly: true},
+		},
+	})
+}
+
+// A 200 with a null body fails the refresh rather than importing nothing.
+func TestWorkersCount_mockNullBodyFailsImport(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if strings.HasSuffix(r.URL.Path, "/configuration/workersCount") {
+			_, _ = w.Write([]byte(`null`))
+			return
+		}
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	t.Cleanup(s.Close)
+	mockProviderEnv(t, s.URL)
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:        workersCountNoBlocks,
+				ResourceName:  "xray_workers_count.this",
+				ImportState:   true,
+				ImportStateId: "workers",
+				ExpectError:   regexp.MustCompile(`unable to parse current workers count`),
+			},
 		},
 	})
 }

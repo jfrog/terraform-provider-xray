@@ -602,6 +602,11 @@ func (r *WorkersCountResource) Read(ctx context.Context, req resource.ReadReques
 		utilfw.UnableToRefreshResourceError(resp, response.String())
 		return
 	}
+	// Keeps the import flag for a retry instead of importing nothing.
+	if workersCount == nil {
+		utilfw.UnableToRefreshResourceError(resp, fmt.Sprintf("unable to parse current workers count: %s", response.String()))
+		return
+	}
 
 	importing, d := req.Private.GetKey(ctx, importPrivateKey)
 	resp.Diagnostics.Append(d...)
