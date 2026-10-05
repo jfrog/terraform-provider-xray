@@ -67,6 +67,14 @@ func TestAccWorkersCount_full(t *testing.T) {
 			new_content      = {{ .newContent }}
 			existing_content = 6
 		}
+		post_scan {
+			new_content      = {{ .newContent }}
+			existing_content = 4
+		}
+		sbom_cleanup {
+			new_content      = {{ .newContent }}
+			existing_content = 2
+		}
 	}`
 
 	params := map[string]interface{}{
@@ -127,6 +135,12 @@ func TestAccWorkersCount_full(t *testing.T) {
 					resource.TestCheckResourceAttr(fqrn, "sbom_deleter.#", "1"),
 					resource.TestCheckResourceAttr(fqrn, "sbom_deleter.0.new_content", "8"),
 					resource.TestCheckResourceAttr(fqrn, "sbom_deleter.0.existing_content", "6"),
+					resource.TestCheckResourceAttr(fqrn, "post_scan.#", "1"),
+					resource.TestCheckResourceAttr(fqrn, "post_scan.0.new_content", "8"),
+					resource.TestCheckResourceAttr(fqrn, "post_scan.0.existing_content", "4"),
+					resource.TestCheckResourceAttr(fqrn, "sbom_cleanup.#", "1"),
+					resource.TestCheckResourceAttr(fqrn, "sbom_cleanup.0.new_content", "8"),
+					resource.TestCheckResourceAttr(fqrn, "sbom_cleanup.0.existing_content", "2"),
 				),
 			},
 			{
@@ -171,6 +185,12 @@ func TestAccWorkersCount_full(t *testing.T) {
 					resource.TestCheckResourceAttr(fqrn, "sbom_deleter.#", "1"),
 					resource.TestCheckResourceAttr(fqrn, "sbom_deleter.0.new_content", updatedParams["newContent"]),
 					resource.TestCheckResourceAttr(fqrn, "sbom_deleter.0.existing_content", "6"),
+					resource.TestCheckResourceAttr(fqrn, "post_scan.#", "1"),
+					resource.TestCheckResourceAttr(fqrn, "post_scan.0.new_content", updatedParams["newContent"]),
+					resource.TestCheckResourceAttr(fqrn, "post_scan.0.existing_content", "4"),
+					resource.TestCheckResourceAttr(fqrn, "sbom_cleanup.#", "1"),
+					resource.TestCheckResourceAttr(fqrn, "sbom_cleanup.0.new_content", updatedParams["newContent"]),
+					resource.TestCheckResourceAttr(fqrn, "sbom_cleanup.0.existing_content", "2"),
 				),
 			},
 			{
@@ -178,6 +198,8 @@ func TestAccWorkersCount_full(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 				ResourceName:      fqrn,
+				// Import shows every block Xray returns; the config omits these.
+				ImportStateVerifyIgnore: []string{"sbom_cdx_api", "sbom_malicious"},
 			},
 		},
 	})
